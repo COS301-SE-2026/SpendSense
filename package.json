@@ -7,7 +7,8 @@
     "doc": "docs"
   },
   "scripts": {
-    "dev:up": "docker compose up --build",
+    "dev:up": "docker compose up -d",
+    "dev:up:build": "docker compose up --build -d",
     "dev:down": "docker compose down",
     "dev:logs": "docker compose logs -f",
     "dev:restart": "docker compose down && docker compose up --build"
