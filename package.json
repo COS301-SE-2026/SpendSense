@@ -1,0 +1,27 @@
+{
+  "name": "spendsense",
+  "version": "1.0.0",
+  "description": "Spendsense 2026 capstone project",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev:up": "docker compose up --build",
+    "dev:down": "docker compose down",
+    "dev:logs": "docker compose logs -f",
+    "dev:restart": "docker compose down && docker compose up --build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/COS301-SE-2026/SpendSense.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/COS301-SE-2026/SpendSense/issues"
+  },
+  "homepage": "https://github.com/COS301-SE-2026/SpendSense#readme"
+}
