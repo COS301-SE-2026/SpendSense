@@ -87,7 +87,6 @@ jobs:
     name: AI lint and test
     runs-on: ubuntu-latest
     needs: secret-scan
-    if: ${{ hashFiles('ai/requirements.txt') != '' }}
 
     defaults:
       run:
