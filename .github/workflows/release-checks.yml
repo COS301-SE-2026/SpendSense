@@ -1,0 +1,15 @@
+name: Release Checks
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release-summary:
+    name: Release workflow placeholder
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Explain release checks
+        run: |
+          echo "Release checks are intentionally manual for Demo 1."
+          echo "Enable automatic release/main checks after the dev workflow is stable."
