@@ -1,5 +1,9 @@
 # SpendSense
 
+![PR Checks](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/pr-checks.yml/badge.svg)
+![Docker Check](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/docker-check.yml/badge.svg)
+![Docs Check](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/docs-check.yml/badge.svg)
+
 SpendSense is the COS301 2026 capstone project monorepo.
 
 The repository currently contains:
@@ -67,8 +71,13 @@ From the repo root:
 npm run dev:up
 npm run dev:up:build
 npm run dev:down
+npm run dev:down:volumes
 npm run dev:logs
+npm run dev:logs:back
+npm run dev:logs:front
+npm run dev:logs:ai
 npm run dev:restart
+npm run test:ci
 ```
 
 What they do:
@@ -76,8 +85,26 @@ What they do:
 - `npm run dev:up`: starts the stack in the background
 - `npm run dev:up:build`: rebuilds images, then starts the stack in the background
 - `npm run dev:down`: stops the stack
+- `npm run dev:down:volumes`: stops the stack and removes Docker volumes, including local database data
 - `npm run dev:logs`: follows container logs
 - `npm run dev:restart`: stops the stack, then starts it again with a rebuild
+- `npm run test:ci`: runs linting, tests, and builds inside Docker
+
+Service-specific shells are available when the stack is running:
+
+```powershell
+npm run dev:shell:back
+npm run dev:shell:front
+npm run dev:shell:ai
+```
+
+Local fallback commands are also available for developers who have Node and Python dependencies installed directly on their machine:
+
+```powershell
+npm run local:lint
+npm run local:test
+npm run local:build
+```
 
 ## First Run Notes
 
@@ -102,3 +129,11 @@ feature branch -> dev -> release -> main
 ```
 
 Do not scaffold the frontend, backend, or AI service again on a fresh clone. Those project files are already tracked in this repository.
+
+Before opening a pull request into `dev`, run:
+
+```powershell
+npm run test:ci
+```
+
+Pull requests into `dev` run GitHub Actions checks for secret scanning, service linting, tests, and builds. Docker configuration is checked separately when Docker-related files change.

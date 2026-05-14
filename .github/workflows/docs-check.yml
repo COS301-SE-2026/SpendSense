@@ -1,0 +1,29 @@
+name: Docs Check
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - '.github/pull_request_template.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/workflows/docs-check.yml'
+
+jobs:
+  docs:
+    name: Documentation structure check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check required documentation structure
+        run: |
+          test -f README.md
+          test -d docs
+          test -f .github/pull_request_template.md
+          test -f .github/ISSUE_TEMPLATE/bug_report.md
+          test -f .github/ISSUE_TEMPLATE/feature_request.md
+          echo "Documentation structure exists."
