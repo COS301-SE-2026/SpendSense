@@ -118,6 +118,15 @@ Once the stack is running, check:
 - AI OpenAPI spec: `http://localhost:8000/openapi.json`
 - MinIO: `http://localhost:9001`
 
+## Environment And Secrets
+
+Real environment files must stay local.
+
+- Commit `.env.example` with safe placeholder values only.
+- Do not commit `.env` or `.env.*` files.
+- Replace `replace_me_*` values in your local `.env` file only.
+- Pull requests run Gitleaks to scan the current repository files for committed secrets.
+
 ## Git Workflow
 
 Normal development should happen from `dev`.
