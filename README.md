@@ -7,13 +7,13 @@
 
 <br><br>
 
-<img src="docs/assets/images/MARK2-logo.png" width="240" alt="Team MARK2" />
+<img src="docs/assets/images/MARK2-logo.png" width="430" alt="Team MARK2" />
 
 <br><br>
 
-<img src="docs/assets/images/epiuse-advance-logo.webp" width="300" alt="EPI-USE Labs & Advance" />
+<img src="docs/assets/images/epiuse-advance-logo.webp" width="330" alt="EPI-USE Labs & Advance" />
 &nbsp;&nbsp;&nbsp;&nbsp;
-<img src="docs/assets/images/up-logo.webp" width="120" alt="University of Pretoria" />
+<img src="docs/assets/images/up-logo.webp" width="150" alt="University of Pretoria" />
 
 <br><br>
 
