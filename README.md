@@ -1,148 +1,404 @@
+<div align="center">
+
+<br>
+
+<!-- replace with spendsense logo -->
+<img src="docs/assets/images/spendsense-logo.png" width="260" alt="SpendSense" />
+
+<br><br>
+
+<img src="docs/assets/images/MARK2-logo.png" width="160" alt="Team MARK2" />
+
+<br><br>
+
+<img src="docs/assets/images/epiuse-advance-logo.webp" width="200" alt="EPI-USE Labs & Advance" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="docs/assets/images/up-logo.webp" width="70" alt="University of Pretoria" />
+
+<br><br>
+
 # SpendSense
 
-![PR Checks](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/pr-checks.yml/badge.svg)
-![Docker Check](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/docker-check.yml/badge.svg)
-![Docs Check](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/docs-check.yml/badge.svg)
+**A gamified financial tracking platform for students and young adults.**
 
-SpendSense is the COS301 2026 capstone project monorepo.
+_COS 301 Capstone 2026 · Team MARK2 · EPI-USE Labs & Advance · University of Pretoria_
 
-The repository currently contains:
+<br>
 
-- `frontend/`: React + TypeScript app created with Vite
-- `backend/`: NestJS API
-- `ai/`: FastAPI placeholder AI service
-- `docs/`: project documentation
-- `scripts/`: helper scripts for local development and automation
-- `docker-compose.yml`: local multi-service development stack
+[![PR Checks](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/pr-checks.yml/badge.svg)](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/pr-checks.yml)
+[![Docker Check](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/docker-check.yml/badge.svg)](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/docker-check.yml)
+[![Docs Check](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/docs-check.yml/badge.svg)](https://github.com/COS301-SE-2026/SpendSense/actions/workflows/docs-check.yml)
 
-## Current Stack
+<br>
 
-The local development environment includes:
+[![Issues](https://img.shields.io/github/issues/COS301-SE-2026/SpendSense?style=for-the-badge&logo=github&logoColor=white&label=Issues)](https://github.com/COS301-SE-2026/SpendSense/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/COS301-SE-2026/SpendSense/dev?style=for-the-badge&label=Last+Commit)](https://github.com/COS301-SE-2026/SpendSense/commits/dev)
+[![Node](https://img.shields.io/badge/Node-%3E%3D20-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 
-- React frontend on `http://localhost:5173`
-- NestJS backend on `http://localhost:3000`
-- FastAPI AI service on `http://localhost:8000`
-- PostgreSQL on port `5432`
-- MinIO on `http://localhost:9001`
+<br>
 
-## Prerequisites
+</div>
 
-Before starting, make sure you have:
+---
 
-- Git
-- Node.js and npm
-- Docker Desktop
+<div align="center">
 
-Docker Desktop must be running before you start the local stack.
+## What Is SpendSense?
+
+</div>
+
+Students juggle rent, subscriptions, BNPL instalments, and informal IOUs scattered across memory, bank apps, chats, and calendar reminders. SpendSense brings all of that into one place.
+
+Track what you owe and when it is due. See exactly how your payment behaviour would affect a simulated credit score, without any real-world risk. Get rewarded for paying on time through streaks, badges, coins, and a mascot that visibly reflects your financial health.
+
+> _"Make the invisible visible, simulate real-world consequences safely, and make good financial habits worth pursuing."_
+
+---
+
+<div align="center">
+
+## Features
+
+</div>
+
+**Core Tracking**
+
+- Manual and receipt-scanned expense tracking
+- Calendar and timeline view of all upcoming payments
+- Simulated credit system with interest, penalties, and a live 0-850 financial health score
+- Smart reminders via push notification, email, or SMS
+- Automatic detection of recurring payment patterns
+
+**Gamification**
+
+- Badges, achievements, and multi-step challenges
+- Payment and knowledge streaks
+- In-app currency earned through good financial behaviour
+- A mascot that reacts to your financial health in real time
+- Cosmetics shop to personalise your mascot with earned coins
+
+**Intelligence**
+
+- AI-driven spending insights and anomaly detection
+- Predictive cash flow forecasting
+- Receipt OCR: photograph a till slip to auto-fill expenses
+
+**Social**
+
+- Friends leaderboard ranked by financial health score
+- 1v1 and group challenges with optional coin stakes
+- Knowledge leaderboard for the financial literacy quiz
+- Anonymised global tier rankings
+
+**Monthly Wrapped**
+
+- A Spotify-Wrapped-style monthly summary with swipeable story cards covering your biggest expenses, score movement, streaks, badges, and financial personality archetype
+- A shareable end card designed to be posted to social media
+
+---
+
+<div align="center">
+
+## Technology Stack
+
+</div>
+
+**Frontend**
+
+![React](https://img.shields.io/badge/React-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
+
+**Backend**
+
+![NestJS](https://img.shields.io/badge/NestJS-%23E0234E.svg?style=for-the-badge&logo=nestjs&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+
+**AI Microservice**
+
+![Python](https://img.shields.io/badge/Python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi&logoColor=white)
+
+**Database & Storage**
+
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![MinIO](https://img.shields.io/badge/MinIO-C72C48?style=for-the-badge&logo=minio&logoColor=white)
+
+**DevOps & Infrastructure**
+
+![Docker](https://img.shields.io/badge/Docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
+
+**Testing**
+
+![Vitest](https://img.shields.io/badge/Vitest-%236E9F18.svg?style=for-the-badge&logo=vitest&logoColor=white)
+![Jest](https://img.shields.io/badge/Jest-%23C21325?style=for-the-badge&logo=jest&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-%232EAD33?style=for-the-badge&logo=playwright&logoColor=white)
+
+---
+
+<div align="center">
+
+## Repository Structure
+
+</div>
+
+```
+SpendSense/
+├── frontend/         # React + TypeScript (Vite)
+├── backend/          # NestJS API
+├── ai/               # Python FastAPI AI microservice
+├── docs/             # Project documentation
+│   └── assets/
+│       └── images/   # Logos, team photos, and other assets
+├── scripts/          # Helper scripts for local development
+└── docker-compose.yml
+```
+
+Services run locally at:
+
+| Service | URL |
+|---|---|
+| Frontend | `http://localhost:5173` |
+| Backend | `http://localhost:3000` |
+| AI service | `http://localhost:8000` |
+| PostgreSQL | `localhost:5432` |
+| MinIO | `http://localhost:9001` |
+
+---
+
+<div align="center">
 
 ## Getting Started
 
-Clone the repository and switch to the shared development branch:
+</div>
 
-```powershell
+**Prerequisites:** Git, Node.js (>=20), Docker Desktop (must be running before you start the stack).
+
+```bash
+# Clone and switch to the dev branch
 git clone https://github.com/COS301-SE-2026/SpendSense.git
 cd SpendSense
 git checkout dev
-```
 
-Create your local environment file:
+# Create your local environment file
+cp .env.example .env          # Linux / Mac / WSL
+# Copy-Item .env.example .env  # PowerShell
 
-```powershell
-Copy-Item .env.example .env
-```
-
-Start the development stack:
-
-```powershell
+# Start the full stack
 npm run dev:up
 ```
 
-If you need Docker to rebuild the images first, use:
+If you need Docker to rebuild images first:
 
-```powershell
+```bash
 npm run dev:up:build
 ```
 
-## Useful Commands
+<details>
+<summary><strong>All available commands</strong></summary>
+<br>
 
-From the repo root:
+| Command | Description |
+|---|---|
+| `npm run dev:up` | Start the stack in the background |
+| `npm run dev:up:build` | Rebuild images, then start the stack |
+| `npm run dev:down` | Stop the stack |
+| `npm run dev:down:volumes` | Stop the stack and remove Docker volumes (including local DB data) |
+| `npm run dev:logs` | Follow all container logs |
+| `npm run dev:logs:back` | Follow backend logs |
+| `npm run dev:logs:front` | Follow frontend logs |
+| `npm run dev:logs:ai` | Follow AI service logs |
+| `npm run dev:restart` | Stop and restart with rebuild |
+| `npm run dev:shell:back` | Shell into the backend container |
+| `npm run dev:shell:front` | Shell into the frontend container |
+| `npm run dev:shell:ai` | Shell into the AI container |
+| `npm run test:ci` | Run linting, tests, and builds inside Docker |
+| `npm run local:lint` | Lint locally (requires local Node/Python deps) |
+| `npm run local:test` | Test locally |
+| `npm run local:build` | Build locally |
 
-```powershell
-npm run dev:up
-npm run dev:up:build
-npm run dev:down
-npm run dev:down:volumes
-npm run dev:logs
-npm run dev:logs:back
-npm run dev:logs:front
-npm run dev:logs:ai
-npm run dev:restart
-npm run test:ci
-```
+</details>
 
-What they do:
+<details>
+<summary><strong>First run notes</strong></summary>
+<br>
 
-- `npm run dev:up`: starts the stack in the background
-- `npm run dev:up:build`: rebuilds images, then starts the stack in the background
-- `npm run dev:down`: stops the stack
-- `npm run dev:down:volumes`: stops the stack and removes Docker volumes, including local database data
-- `npm run dev:logs`: follows container logs
-- `npm run dev:restart`: stops the stack, then starts it again with a rebuild
-- `npm run test:ci`: runs linting, tests, and builds inside Docker
-
-Service-specific shells are available when the stack is running:
-
-```powershell
-npm run dev:shell:back
-npm run dev:shell:front
-npm run dev:shell:ai
-```
-
-Local fallback commands are also available for developers who have Node and Python dependencies installed directly on their machine:
-
-```powershell
-npm run local:lint
-npm run local:test
-npm run local:build
-```
-
-## First Run Notes
-
-On a new machine, the first Docker build may take a long time because base images and dependencies need to be downloaded.
-
-Once the stack is running, check:
+The first Docker build on a new machine may take a while as base images and dependencies need to be downloaded. Once running, check:
 
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:3000`
-- AI health: `http://localhost:8000/health`
+- AI health check: `http://localhost:8000/health`
 - AI OpenAPI spec: `http://localhost:8000/openapi.json`
 - MinIO: `http://localhost:9001`
 
-## Environment And Secrets
+</details>
 
-Real environment files must stay local.
+---
 
-- Commit `.env.example` with safe placeholder values only.
-- Do not commit `.env` or `.env.*` files.
-- Replace `replace_me_*` values in your local `.env` file only.
-- Pull requests run Gitleaks to scan the current repository files for committed secrets.
+<div align="center">
 
 ## Git Workflow
 
-Normal development should happen from `dev`.
+</div>
 
-Intended flow:
+All development happens from `dev`. Feature branches are merged into `dev` via pull request. `dev` merges into `release`, and `release` merges into `main` at milestones.
 
-```text
-feature branch -> dev -> release -> main
 ```
-
-Do not scaffold the frontend, backend, or AI service again on a fresh clone. Those project files are already tracked in this repository.
+feature/your-feature -> dev -> release -> main
+```
 
 Before opening a pull request into `dev`, run:
 
-```powershell
+```bash
 npm run test:ci
 ```
 
-Pull requests into `dev` run GitHub Actions checks for secret scanning, service linting, tests, and builds. Docker configuration is checked separately when Docker-related files change.
+Pull requests into `dev` run GitHub Actions checks for secret scanning, linting, tests, and builds. Docker configuration is checked separately when Docker-related files change.
+
+> **Note:** Never scaffold the frontend, backend, or AI service again on a fresh clone. Those project files are already tracked in this repository.
+
+---
+
+<div align="center">
+
+## Environment and Secrets
+
+</div>
+
+- Commit `.env.example` with safe placeholder values only
+- Never commit `.env` or `.env.*` files
+- Replace `replace_me_*` values in your local `.env` only
+- Pull requests run [Gitleaks](https://github.com/gitleaks/gitleaks) to scan for committed secrets
+
+---
+
+<div align="center">
+
+## Team MARK2
+
+</div>
+
+<table>
+  <tr>
+    <td width="130" valign="top">
+      <img src="docs/assets/images/team/allyson.jpg" width="110" alt="Allyson Andre">
+    </td>
+    <td valign="top">
+      <strong>Allyson Andre</strong> &nbsp; Full-Stack / Auth & Integration<br><br>
+      <details>
+        <summary>About</summary>
+        <br>
+        Final-year CS student with a strong track record in full-stack development, JWT-based authentication, and secure system design. Experienced across service and UI engineering roles, with systems-level proficiency demonstrated through a C++ real-time simulation engine. Brings a creative, detail-oriented approach to building scalable, user-centric software.
+        <br><br>
+        <em>Top languages: C++, Java, Next.js/NestJS, TypeScript/JavaScript, Python</em>
+      </details>
+      <br>
+      <a href="https://github.com/Ally-Andre"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
+      <a href="https://www.linkedin.com/in/allyson-andre"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+    </td>
+  </tr>
+</table>
+
+---
+
+<table>
+  <tr>
+    <td width="130" valign="top">
+      <img src="docs/assets/images/team/morgan.jpg" width="110" alt="Morgan Wattrus">
+    </td>
+    <td valign="top">
+      <strong>Morgan Wattrus</strong> &nbsp; AI Microservice & Data Science<br><br>
+      <details>
+        <summary>About</summary>
+        <br>
+        Third-year CS student with a specialised data science background from Le Wagon training, proficient in Scikit-learn, NumPy, Pandas, and TensorFlow. Experienced in backend API development, rigorous testing with Jest, and object-oriented C++ system design. Bridges statistical modelling and high-performance practical implementation.
+        <br><br>
+        <em>Top languages: C++, Java, PHP/HTML/CSS, TypeScript/JavaScript/Node.js, Python</em>
+      </details>
+      <br>
+      <a href="https://github.com/Morgan-Wat"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
+      <a href="https://www.linkedin.com/in/morgan-wattrus-302711282/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+    </td>
+  </tr>
+</table>
+
+---
+
+<table>
+  <tr>
+    <td width="130" valign="top">
+      <img src="docs/assets/images/team/kahlan.jpeg" width="110" alt="Kahlan Hagerman">
+    </td>
+    <td valign="top">
+      <strong>Kahlan Hagerman</strong> &nbsp; Backend API (NestJS) & Systems Programming<br><br>
+      <details>
+        <summary>About</summary>
+        <br>
+        Final-year CS student with hands-on experience in backend and service engineering, REST API design, Supabase, authentication, role-based access control, and end-to-end testing using Jest, Supertest, and Playwright. Demonstrated systems-level ability through a C++ raycasting engine built with Raylib. Brings a structured, detail-driven approach to secure and scalable backend development.
+        <br><br>
+        <em>Top languages: TypeScript/Node.js/Express, C++, Java, HTML/CSS, JavaScript</em>
+      </details>
+      <br>
+      <a href="https://github.com/kahlanhgrmn"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
+      <a href="https://www.linkedin.com/in/kahlan-hagerman"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+    </td>
+  </tr>
+</table>
+
+---
+
+<table>
+  <tr>
+    <td width="130" valign="top">
+      <img src="docs/assets/images/team/kyle.jpg" width="110" alt="Kyle McCalgan">
+    </td>
+    <td valign="top">
+      <strong>Kyle McCalgan</strong> &nbsp; System Architect / Backend Infrastructure<br><br>
+      <details>
+        <summary>About</summary>
+        <br>
+        Third-year CS student with a holistic understanding of how systems connect, from low-level concurrent architecture and database design to backend APIs and deployment. Personal projects include a multiplayer blackjack game using WebSockets, peer-to-peer mini games, and Redis-based matchmaking, all directly relevant to SpendSense's technical challenges. Owns the Docker setup and deployment pipeline for the team.
+        <br><br>
+        <em>Top languages: C++, Python, Node.js/Express, Lua, Go</em>
+      </details>
+      <br>
+      <a href="https://github.com/KyleMcCalgan"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
+      <a href="https://www.linkedin.com/in/kyle-mccalgan"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+    </td>
+  </tr>
+</table>
+
+---
+
+<table>
+  <tr>
+    <td width="130" valign="top">
+      <img src="docs/assets/images/team/rachel.jpg" width="110" alt="Rachel Clifford">
+    </td>
+    <td valign="top">
+      <strong>Rachel Clifford</strong> &nbsp; Frontend (React) & API Integration<br><br>
+      <details>
+        <summary>About</summary>
+        <br>
+        Third-year CS student with a strong foundation in frontend development and system integration. Experienced in building responsive, accessible user interfaces across HTML, CSS, and PHP, with backend exposure through API endpoint development in Java. Bridges the gap between user-facing interfaces and underlying backend services, with additional breadth in Python and C++ for scripting and performance-sensitive components.
+        <br><br>
+        <em>Top languages: Java, C++, HTML/CSS, Python, JavaScript</em>
+      </details>
+      <br>
+      <a href="https://github.com/rachelclifford27"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
+      <a href="https://www.linkedin.com/in/rachel-clifford-368842401/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+    </td>
+  </tr>
+</table>
+
+<br>
+
+---
+
+**Team contact:** [mark2capstone@gmail.com](mailto:mark2capstone@gmail.com)
+
+<div align="center">
+<sub>Built by Team MARK2 in partnership with EPI-USE Labs & Advance &nbsp;·&nbsp; University of Pretoria &nbsp;·&nbsp; COS 301 Capstone 2026</sub>
+</div>
