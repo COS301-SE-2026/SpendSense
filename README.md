@@ -7,13 +7,13 @@
 
 <br><br>
 
-<img src="docs/assets/images/MARK2-logo.png" width="160" alt="Team MARK2" />
+<img src="docs/assets/images/MARK2-logo.png" width="240" alt="Team MARK2" />
 
 <br><br>
 
-<img src="docs/assets/images/epiuse-advance-logo.webp" width="200" alt="EPI-USE Labs & Advance" />
+<img src="docs/assets/images/epiuse-advance-logo.webp" width="300" alt="EPI-USE Labs & Advance" />
 &nbsp;&nbsp;&nbsp;&nbsp;
-<img src="docs/assets/images/up-logo.webp" width="70" alt="University of Pretoria" />
+<img src="docs/assets/images/up-logo.webp" width="120" alt="University of Pretoria" />
 
 <br><br>
 
@@ -283,7 +283,7 @@ Pull requests into `dev` run GitHub Actions checks for secret scanning, linting,
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/allyson.jpg" width="110" alt="Allyson Andre">
+      <img src="docs/assets/images/team/allyson.jpg" width="140" alt="Allyson Andre">
     </td>
     <td valign="top">
       <strong>Allyson Andre</strong> &nbsp; Full-Stack / Auth & Integration<br><br>
@@ -306,7 +306,7 @@ Pull requests into `dev` run GitHub Actions checks for secret scanning, linting,
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/morgan.jpg" width="110" alt="Morgan Wattrus">
+      <img src="docs/assets/images/team/morgan.jpg" width="140" alt="Morgan Wattrus">
     </td>
     <td valign="top">
       <strong>Morgan Wattrus</strong> &nbsp; AI Microservice & Data Science<br><br>
@@ -329,7 +329,7 @@ Pull requests into `dev` run GitHub Actions checks for secret scanning, linting,
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/kahlan.jpeg" width="110" alt="Kahlan Hagerman">
+      <img src="docs/assets/images/team/kahlan.jpeg" width="140" alt="Kahlan Hagerman">
     </td>
     <td valign="top">
       <strong>Kahlan Hagerman</strong> &nbsp; Backend API (NestJS) & Systems Programming<br><br>
@@ -352,7 +352,7 @@ Pull requests into `dev` run GitHub Actions checks for secret scanning, linting,
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/kyle.jpg" width="110" alt="Kyle McCalgan">
+      <img src="docs/assets/images/team/kyle.jpg" width="140" alt="Kyle McCalgan">
     </td>
     <td valign="top">
       <strong>Kyle McCalgan</strong> &nbsp; System Architect / Backend Infrastructure<br><br>
@@ -375,7 +375,7 @@ Pull requests into `dev` run GitHub Actions checks for secret scanning, linting,
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/rachel.jpg" width="110" alt="Rachel Clifford">
+      <img src="docs/assets/images/team/rachel.jpg" width="140" alt="Rachel Clifford">
     </td>
     <td valign="top">
       <strong>Rachel Clifford</strong> &nbsp; Frontend (React) & API Integration<br><br>
