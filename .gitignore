@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+__pycache__/
+.venv/
+venv/
+
+# environment files
+.env
+.env.*
+!.env.example
+
+# build outputs
+dist/
+build/
+coverage/
+
+# logs
+*.log
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Docker/local data
+*.local
