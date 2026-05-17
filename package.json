@@ -1,0 +1,62 @@
+{
+  "name": "spendsense",
+  "version": "1.0.0",
+  "description": "Spendsense 2026 capstone project",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev:up": "docker compose up -d",
+    "dev:up:build": "docker compose up --build -d",
+    "dev:down": "docker compose down",
+    "dev:down:volumes": "docker compose down -v",
+    "dev:logs": "docker compose logs -f",
+    "dev:logs:back": "docker compose logs -f backend",
+    "dev:logs:front": "docker compose logs -f frontend",
+    "dev:logs:ai": "docker compose logs -f ai",
+    "dev:restart": "docker compose down && docker compose up --build -d",
+    "dev:shell:back": "docker compose exec backend sh",
+    "dev:shell:front": "docker compose exec frontend sh",
+    "dev:shell:ai": "docker compose exec ai sh",
+    "lint": "npm run lint:back && npm run lint:front && npm run lint:ai",
+    "lint:back": "docker compose run --rm --no-deps backend npm run lint",
+    "lint:front": "docker compose run --rm --no-deps frontend npm run lint",
+    "lint:ai": "docker compose run --rm --no-deps ai python -m ruff check .",
+    "test": "npm run test:back && npm run test:front && npm run test:ai",
+    "test:back": "docker compose run --rm --no-deps backend npm run test",
+    "test:back:e2e": "docker compose run --rm backend npm run test:e2e",
+    "test:front": "docker compose run --rm --no-deps frontend npm run test:ci",
+    "test:ai": "docker compose run --rm --no-deps ai python -m pytest",
+    "test:ci": "npm run lint && npm run test && npm run build",
+    "build": "npm run build:back && npm run build:front",
+    "build:back": "docker compose run --rm --no-deps backend npm run build",
+    "build:front": "docker compose run --rm --no-deps frontend npm run build",
+    "docker:check": "docker compose config && docker compose build",
+    "docker:smoke": "docker compose up -d --build && docker compose ps",
+    "local:lint": "npm run local:lint:back && npm run local:lint:front && npm run local:lint:ai",
+    "local:lint:back": "npm --prefix backend run lint",
+    "local:lint:front": "npm --prefix frontend run lint",
+    "local:lint:ai": "cd ai && python -m ruff check .",
+    "local:test": "npm run local:test:back && npm run local:test:front && npm run local:test:ai",
+    "local:test:back": "npm --prefix backend run test",
+    "local:test:back:e2e": "npm --prefix backend run test:e2e",
+    "local:test:front": "npm --prefix frontend run test:ci",
+    "local:test:ai": "cd ai && python -m pytest",
+    "local:build": "npm run local:build:back && npm run local:build:front",
+    "local:build:back": "npm --prefix backend run build",
+    "local:build:front": "npm --prefix frontend run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/COS301-SE-2026/SpendSense.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/COS301-SE-2026/SpendSense/issues"
+  },
+  "homepage": "https://github.com/COS301-SE-2026/SpendSense#readme"
+}

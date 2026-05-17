@@ -1,0 +1,36 @@
+name: Docker Check
+
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'docker-compose.yml'
+      - '.env.example'
+      - 'backend/Dockerfile*'
+      - 'backend/.dockerignore'
+      - 'backend/package*.json'
+      - 'frontend/Dockerfile*'
+      - 'frontend/.dockerignore'
+      - 'frontend/package*.json'
+      - 'ai/Dockerfile*'
+      - 'ai/.dockerignore'
+      - 'ai/requirements*.txt'
+      - '.github/workflows/docker-check.yml'
+
+jobs:
+  docker:
+    name: Docker Compose build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create test env file
+        run: cp .env.example .env
+
+      - name: Validate Docker Compose file
+        run: docker compose config
+
+      - name: Build Docker services
+        run: docker compose build
