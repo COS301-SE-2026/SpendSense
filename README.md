@@ -63,6 +63,16 @@ If you need Docker to rebuild the images first, use:
 npm run dev:up:build
 ```
 
+After a fresh local database is created, apply the Prisma migration and seed the database:
+
+```powershell
+docker compose exec backend npx prisma migrate dev --name init
+docker compose exec backend npm run prisma:seed
+docker compose exec backend npm run prisma:seed:demo
+```
+
+The backend dev container generates Prisma Client on startup, so teammates do not need to run `prisma generate` manually after normal Docker starts.
+
 ## Useful Commands
 
 From the repo root:
@@ -89,6 +99,18 @@ What they do:
 - `npm run dev:logs`: follows container logs
 - `npm run dev:restart`: stops the stack, then starts it again with a rebuild
 - `npm run test:ci`: runs linting, tests, and builds inside Docker
+
+Database commands:
+
+```powershell
+docker compose exec backend npx prisma migrate status
+docker compose exec backend npm run prisma:seed
+docker compose exec backend npm run prisma:seed:demo
+docker compose exec backend npm run prisma:smoke
+docker compose exec backend npx prisma studio
+```
+
+The required seed is safe to rerun without duplicating categories or badge definitions. The demo seed is also rerunnable and recreates only the local demo user's related data.
 
 Service-specific shells are available when the stack is running:
 
@@ -117,6 +139,12 @@ Once the stack is running, check:
 - AI health: `http://localhost:8000/health`
 - AI OpenAPI spec: `http://localhost:8000/openapi.json`
 - MinIO: `http://localhost:9001`
+
+Prisma database docs:
+
+- Schema source of truth: `backend/prisma/schema.prisma`
+- Demo 1 ERD: `docs/database/erd.md`
+- Schema reference: `docs/database/schema-reference.md`
 
 ## Environment And Secrets
 
