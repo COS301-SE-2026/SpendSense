@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -9,6 +10,18 @@ async function bootstrap() {
 
   // all routes under /api/v1
   app.setGlobalPrefix('api/v1');
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('SpendSense Backend API')
+    .setDescription('API documentation for the SpendSense NestJS backend.')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .addServer('http://localhost:3000', 'Local backend')
+    .build();
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/v1/docs', app, swaggerDocument, {
+    jsonDocumentUrl: 'api/v1/docs-json',
+  });
 
   app.useGlobalInterceptors(new ResponseInterceptor());
 
@@ -34,6 +47,10 @@ async function bootstrap() {
 
   // global exception filter: consistent error shape across routes
   app.useGlobalFilters(new HttpExceptionFilter());
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port);
+
+  console.log(`Backend API running at http://localhost:${port}/api/v1`);
+  console.log(`Swagger docs running at http://localhost:${port}/api/v1/docs`);
 }
 void bootstrap();

@@ -7,15 +7,15 @@
     "doc": "docs"
   },
   "scripts": {
-    "dev:up": "docker compose up -d",
-    "dev:up:build": "docker compose up --build -d",
+    "dev:up": "docker compose up -d && node scripts/print-local-links.cjs",
+    "dev:up:build": "docker compose up --build -d && node scripts/print-local-links.cjs",
     "dev:down": "docker compose down",
     "dev:down:volumes": "docker compose down -v",
     "dev:logs": "docker compose logs -f",
     "dev:logs:back": "docker compose logs -f backend",
     "dev:logs:front": "docker compose logs -f frontend",
     "dev:logs:ai": "docker compose logs -f ai",
-    "dev:restart": "docker compose down && docker compose up --build -d",
+    "dev:restart": "docker compose down && docker compose up --build -d && node scripts/print-local-links.cjs",
     "dev:shell:back": "docker compose exec backend sh",
     "dev:shell:front": "docker compose exec frontend sh",
     "dev:shell:ai": "docker compose exec ai sh",
