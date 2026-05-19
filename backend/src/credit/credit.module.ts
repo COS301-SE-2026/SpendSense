@@ -1,4 +1,4 @@
-import {Module} from '@nestjs/common'
+import { Module } from '@nestjs/common';
 
 // CreditModule: simulated credit score profile and score events
 // TODO: implement CreditController and CreditService
@@ -8,4 +8,4 @@ import {Module} from '@nestjs/common'
 // GET /api/v1/credit-profile/events
 
 @Module({})
-export class CreditModule{}
+export class CreditModule {}

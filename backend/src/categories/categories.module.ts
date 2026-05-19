@@ -1,4 +1,4 @@
-import {Module} from '@nestjs/common'
+import { Module } from '@nestjs/common';
 
 // CategoriesModule: expense and obligation category lookup
 // TODO: implement CategoriesController and CategoriesService
@@ -7,4 +7,4 @@ import {Module} from '@nestjs/common'
 // GET /api/v1/categories
 
 @Module({})
-export class CategoriesModule{}
+export class CategoriesModule {}

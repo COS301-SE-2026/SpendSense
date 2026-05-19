@@ -1,4 +1,4 @@
-import {Module} from '@nestjs/common'
+import { Module } from '@nestjs/common';
 
 // NotificationsModule: in app notification management
 // TODO: implement NotificationsController and NotificationsService
@@ -8,4 +8,4 @@ import {Module} from '@nestjs/common'
 // PATCH /api/v1/notifications/:id
 
 @Module({})
-export class NotificationsModule{}
+export class NotificationsModule {}

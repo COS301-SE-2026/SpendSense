@@ -1,4 +1,4 @@
-import {Module} from '@nestjs/common'
+import { Module } from '@nestjs/common';
 
 // PaymentsModule: payment logging and occurrence management
 // TODO: implemetn PaymentsController and PaymentsService
@@ -8,4 +8,4 @@ import {Module} from '@nestjs/common'
 // GET /api/v1/payment-occurrences/upcoming
 
 @Module({})
-export class PaymentsModule{}
+export class PaymentsModule {}

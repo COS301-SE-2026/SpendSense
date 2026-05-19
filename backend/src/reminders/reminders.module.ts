@@ -1,4 +1,4 @@
-import {Module} from '@nestjs/common'
+import { Module } from '@nestjs/common';
 
 // RemindersModule: payment reminder scheduling and delivery
 // TODO: implement RemindersController and RemindersService
@@ -8,4 +8,4 @@ import {Module} from '@nestjs/common'
 // PATCH /api/v1/reminders/:id
 
 @Module({})
-export class RemindersModule{}
+export class RemindersModule {}

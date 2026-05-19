@@ -1,4 +1,4 @@
-import {Module} from '@nestjs/common'
+import { Module } from '@nestjs/common';
 
 // ObligationModule: financial obligation crud
 // TODO: implement ObligationsController and ObligationsService
@@ -11,4 +11,4 @@ import {Module} from '@nestjs/common'
 // DELETE /api/v1/obligations/:id
 
 @Module({})
-export class ObligationsModule{}
+export class ObligationsModule {}

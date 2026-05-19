@@ -1,6 +1,6 @@
-import {createParamDecorator, ExecutionContext} from '@nestjs/common'
-import {Request} from 'express'
-import type {AuthUser} from '../../auth/types/auth-user.type'
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { Request } from 'express';
+import type { AuthUser } from '../../auth/types/auth-user.type';
 
 // param decorator that extracts authenticated user from the request
 // used on routes protected by @UseGuards(SupabaseJwtGuard) (must be used on these)
@@ -14,9 +14,11 @@ import type {AuthUser} from '../../auth/types/auth-user.type'
  */
 
 export const CurrentAuthUser = createParamDecorator(
-    (_data: unknown, ctx: ExecutionContext): AuthUser=>{
-        const request = ctx.switchToHttp().getRequest<Request & {authUser: AuthUser}>()
+  (_data: unknown, ctx: ExecutionContext): AuthUser => {
+    const request = ctx
+      .switchToHttp()
+      .getRequest<Request & { authUser: AuthUser }>();
 
-        return request.authUser
+    return request.authUser;
   },
-)
+);
