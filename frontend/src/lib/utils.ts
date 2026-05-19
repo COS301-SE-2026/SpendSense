@@ -42,3 +42,22 @@ export const buttonVariants = cva(
   }
 )
 export type ButtonVariants=VariantProps<typeof buttonVariants>
+
+export const iconButtonVariants=cva(
+  "inline-flex items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none h-10 w-10",
+  {
+    variants:{
+      variant:{
+        iconBack: "bg-[#FFD9E1] text-[#AC2A5D] hover:bg-[#FFB3c6]",
+        iconRefresh: "bg-[#DCEFE8] text-[#161D1B] hover:bg-[#bee5d6]",
+        iconEdit: "bg-[#E3EAE6] text-[#091828] hover:bg-[#c7d8cf]",
+        iconCancel: "bg-[#FE6A9C] text-[#6E0034] hover:bg-[#fd5c84]",
+        iconNotif: "bg-[#E3EAE6] text-[#091828] hover:bg-[#c7d8cf]",
+      },
+    },
+    defaultVariants:{
+      variant:"iconBack",
+    }
+  }
+)
+export type IconButtonVariants=VariantProps<typeof iconButtonVariants>
