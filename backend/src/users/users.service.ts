@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ScoreTier } from '@prisma/client';
+import { Prisma, ScoreTier } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 
 // UsersService: manages internal user records
@@ -9,6 +9,51 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private readonly userProfileInclude = {
+    preference: {
+      select: {
+        theme: true,
+        currency: true,
+        language: true,
+        reducedMotion: true,
+      },
+    },
+    notificationPreference: {
+      select: {
+        inAppEnabled: true,
+        emailEnabled: true,
+        pushEnabled: true,
+        smsEnabled: true,
+        defaultReminderDaysBefore: true,
+        quietHoursStart: true,
+        quietHoursEnd: true,
+      },
+    },
+    creditProfile: {
+      select: {
+        currentScore: true,
+        previousScore: true,
+        scoreTier: true,
+        onTimePaymentCount: true,
+        latePaymentCount: true,
+        missedPaymentCount: true,
+        lastCalculatedAt: true,
+      },
+    },
+    gamificationProfile: {
+      select: {
+        coinBalance: true,
+        xp: true,
+        mascotLevel: true,
+        mascotMood: true,
+        currentPaymentStreak: true,
+        longestPaymentStreak: true,
+        currentKnowledgeStreak: true,
+        longestKnowledgeStreak: true,
+      },
+    },
+  } satisfies Prisma.UserInclude;
 
   // find/create the internal user for given supabase auth identity
   // on the first login, this creates User + UserPreference + NotificationPreference + CreditProfile + GamificationProfile in a single transactoin
@@ -20,18 +65,7 @@ export class UsersService {
     // fast path for if user already exists
     const existing = await this.prisma.user.findUnique({
       where: { supabaseAuthId },
-      include: {
-        creditProfile: {
-          select: { currentScore: true, scoreTier: true },
-        },
-        gamificationProfile: {
-          select: {
-            coinBalance: true,
-            currentPaymentStreak: true,
-            mascotMood: true,
-          },
-        },
-      },
+      include: this.userProfileInclude,
     });
 
     if (existing) {
@@ -54,18 +88,7 @@ export class UsersService {
           },
           gamificationProfile: { create: {} },
         },
-        include: {
-          creditProfile: {
-            select: { currentScore: true, scoreTier: true },
-          },
-          gamificationProfile: {
-            select: {
-              coinBalance: true,
-              currentPaymentStreak: true,
-              mascotMood: true,
-            },
-          },
-        },
+        include: this.userProfileInclude,
       });
 
       return user;
