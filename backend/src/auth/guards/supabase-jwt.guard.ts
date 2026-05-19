@@ -4,12 +4,13 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { jwtVerify } from 'jose';
+import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify } from 'jose';
 import { Request } from 'express';
 import type { AuthUser } from '../types/auth-user.type';
 
-// supabase jwt guard: validates the Bearer token in the Authorisation header using the
-// SUPABASE_JWT_SECRET (HS256)
+// supabase jwt guard: validates the Bearer token from the Authorization header.
+// supports both legacy HS256 JWT secret verification and modern Supabase JWKS
+// verification for asymmetric signing keys such as ES256/RS256.
 // attached typed AuthUser to request.authUser on success for @CurrentAuthUser()
 /**
  * Usage:
@@ -30,14 +31,8 @@ export class SupabaseJwtGuard implements CanActivate {
       );
     }
 
-    const secret = process.env.SUPABASE_JWT_SECRET;
-    if (!secret) {
-      throw new UnauthorizedException('JWT secret not configured');
-    }
-
     try {
-      const encoder = new TextEncoder();
-      const { payload } = await jwtVerify(token, encoder.encode(secret));
+      const { payload } = await this.verifyToken(token);
 
       const authUser: AuthUser = {
         supabaseAuthId: payload.sub ?? '',
@@ -60,5 +55,40 @@ export class SupabaseJwtGuard implements CanActivate {
     }
 
     return authHeader.slice(7);
+  }
+
+  private async verifyToken(token: string) {
+    const { alg } = decodeProtectedHeader(token);
+
+    if (alg === 'HS256') {
+      const secret = process.env.SUPABASE_JWT_SECRET;
+      if (!secret) {
+        throw new UnauthorizedException('JWT secret not configured');
+      }
+
+      const encoder = new TextEncoder();
+      return jwtVerify(token, encoder.encode(secret));
+    }
+
+    const supabaseUrl = this.getSupabaseUrl();
+    const issuer = `${supabaseUrl}/auth/v1`;
+    const jwks = createRemoteJWKSet(
+      new URL(`${issuer}/.well-known/jwks.json`),
+    );
+
+    return jwtVerify(token, jwks, {
+      issuer,
+    });
+  }
+
+  private getSupabaseUrl(): string {
+    const supabaseUrl =
+      process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+
+    if (!supabaseUrl) {
+      throw new UnauthorizedException('Supabase URL not configured');
+    }
+
+    return supabaseUrl.replace(/\/$/, '');
   }
 }
