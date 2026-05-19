@@ -3,7 +3,7 @@
 <br>
 
 <!-- replace with spendsense logo -->
-<img src="docs/assets/images/spendsense-logo.png" width="260" alt="SpendSense" />
+<img src="docs/assets/images/spendsense-logo-animated.svg" width="260" alt="SpendSense" />
 
 <br><br>
 

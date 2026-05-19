@@ -1,0 +1,57 @@
+<svg width="340" height="120" viewBox="0 0 340 120" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>SpendSense animated logo</title>
+  <desc>Two stacked chevrons with a dot that flies up and bounces them</desc>
+
+  <style>
+    .chev-top    { fill: none; stroke: #1a1a1a; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+    .chev-bottom { fill: none; stroke: #1a1a1a; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.45; }
+    .dot        { fill: #1a1a1a; }
+    .word-spend { fill: #1a1a1a; font-family: Georgia, serif; font-style: italic; font-size: 28px; }
+    .word-sense { fill: #1a1a1a; font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; }
+
+    .dot         { animation: dotLaunch       5s linear      infinite; }
+    .chev-bottom { animation: chevBounceBottom 5s ease-in-out infinite; }
+    .chev-top    { animation: chevBounceTop    5s ease-in-out infinite; }
+
+    @keyframes dotLaunch {
+      0%    { transform: translateY(0);     opacity: 1; }
+      1.9%  { transform: translateY(-20px); opacity: 1; }
+      4.8%  { transform: translateY(-24px); opacity: 1; }
+      7.2%  { transform: translateY(-26px); opacity: 1; }
+      8.6%  { transform: translateY(-26px); opacity: 0; }
+      9.6%  { transform: translateY(-20px); opacity: 0; }
+      14.4% { transform: translateY(-8px);  opacity: 0; }
+      18.2% { transform: translateY(0);     opacity: 0; }
+      21.1% { transform: translateY(0);     opacity: 1; }
+      100%  { transform: translateY(0);     opacity: 1; }
+    }
+
+    @keyframes chevBounceBottom {
+      0%    { transform: translateY(0); }
+      2.9%  { transform: translateY(0); }
+      6.7%  { transform: translateY(-7px); }
+      11%   { transform: translateY(1px); }
+      13.9% { transform: translateY(-2px); }
+      16.8% { transform: translateY(0); }
+      100%  { transform: translateY(0); }
+    }
+
+    @keyframes chevBounceTop {
+      0%    { transform: translateY(0); }
+      6.2%  { transform: translateY(0); }
+      10.1% { transform: translateY(-6px); }
+      13.9% { transform: translateY(1px); }
+      16.8% { transform: translateY(-1.5px); }
+      19.7% { transform: translateY(0); }
+      100%  { transform: translateY(0); }
+    }
+  </style>
+
+  <polyline class="chev-top"    points="28,42 44,28 60,42"/>
+  <polyline class="chev-bottom" points="28,56 44,42 60,56"/>
+  <circle   class="dot"         cx="44" cy="70" r="2.8"/>
+
+  <text x="78" y="66">
+    <tspan class="word-spend">Spend</tspan><tspan class="word-sense">Sense</tspan>
+  </text>
+</svg>
