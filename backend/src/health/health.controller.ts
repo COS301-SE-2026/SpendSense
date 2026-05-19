@@ -35,4 +35,18 @@ export class HealthController{
             return false
         }
     }
+
+    private async checkAiService(): Promise<boolean>{
+        const aiUrl = process.env.AI_SERVICE_URL
+        if(!aiUrl){
+            return false
+        }
+        try{
+            const response = await fetch(`${aiUrl}/health`, {signal: AbortSignal.timeout(3000)})
+            return response.ok
+        }
+        catch{
+            return false
+        }
+    }
 }
