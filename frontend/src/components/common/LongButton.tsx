@@ -3,7 +3,7 @@ import {ArrowRight} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {cn} from "@/lib/utils"
 
-type LongButtonVariant = "primaryDark" | "primaryPink" | "primaryMint" | "primaryYellow" | "outline"
+type LongButtonVariant = "primaryDark" | "primaryPink" | "primaryMint" | "primaryYellow" | "outline" | "primaryPinkBorder"
 type LongButtoneSize= "sm" | "md" | "lg"
 type LongButtonProps=React.ComponentProps<typeof Button>&{
     LongVariant?: LongButtonVariant
@@ -22,11 +22,12 @@ export function LongButton({
     ...props
 }: LongButtonProps){
     const variantStyles: Record<LongButtonVariant,string> ={
+        primaryPinkBorder: "bg-[#FF6B9D] text-[#700034] border-[#FF6B9D] shadow-[3px_4px_0_#0a1929] hover:bg-[#FF85B0]",
         primaryDark: "bg-[#0a1929] text-white border-transparent hover:bg-[#17131f]",
         primaryPink: "bg-[#ac2a5d] text-[#3a0d23] border-transparent hover:bg-[#f74f92]",
         primaryMint: "bg-[#72cdbc] text-[#08060d] border-transparent hover:bg-[#65c4b2]",
         primaryYellow: "bg-[#ffdc8a] text-[#08060d] border-transparent hover:bg-[#ffd372]",
-        outline: "bg-white text-[#08060d] border-[#08060d] hover:bg-[f4f3ec] shadow-[3px_4px_0_#08060d]",
+        outline: "bg-white text-[#08060d] border-[#0a1929] hover:bg-[#f4f3ec] shadow-[3px_4px_0_#0a1929]",
     }
     const sizeStyles: Record<LongButtoneSize,string> ={
         sm: "h-9 px-5 text-xs",
