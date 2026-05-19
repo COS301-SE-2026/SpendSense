@@ -13,7 +13,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseInterceptor())
 
   // cors: allow frontend origins from environment
-  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split('.')?? ['http://localhost:5173',]
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',')?? ['http://localhost:5173',]
 
   app.enableCors({
     origin: allowedOrigins,
