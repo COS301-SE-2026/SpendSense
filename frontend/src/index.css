@@ -1,111 +1,143 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/figtree";
+
+@custom-variant dark (&:is(.dark *)); /*shadcn darm mode setup*/
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
+  --ss-text: #6b6375;
+  --ss-text-h: #08060d;
+  --ss-bg: #fff;
+  --ss-border: oklch(0.922 0 0);
+  --ss-code-bg: #f4f3ec;
+  --ss-accent: oklch(0.97 0 0);
+  --ss-accent-bg: rgba(170, 59, 255, 0.1);
+  --ss-accent-border: rgba(170, 59, 255, 0.5);
+  --ss-social-bg: rgba(244, 243, 236, 0.5);
+  --ss-shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --ss-font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --ss-font-heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --ss-font-mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* shadcn colours mapped to og colours */
+  --background: var(--ss-bg);
+  --foreground: var(--ss-text-h);
+  --card: #ffffff;
+  --card-foreground: var(--ss-text-h);
+  --popover: #ffffff;
+  --popover-foreground: var(--ss-text-h);
+  --primary: var(--ss-text-h);
+  --primary-foreground: #ffffff;
+  --secondary: #f4f3ec;
+  --secondary-foreground: var(--ss-text-h);
+  --muted: #f4f3ec;
+  --muted-foreground: var(--ss-text);
+  --accent: #f4f3ec;
+  --accent-foreground: var(--ss-text-h);
+  --destructive: #dc2626;
+  --border: var(--ss-border);
+  --input: var(--ss-border);
+  --ring: rgba(170,59,255,0.5);
+  --radius: 0.625rem;
+}
 
-  @media (max-width: 1024px) {
+.dark{
+  --ss-text: #9ca3af;
+  --ss-text-h: #f3f4f6;
+  --ss-bg: #16171d;
+  --ss-border: #2e303a;
+  --ss-code-bg: #1f2028;
+  --ss-accent-bg: rgba(192, 132, 252, 0.15);
+  --ss-accent-border: rgba(192, 132, 252, 0.5);
+  --ss-social-bg: rgba(47, 48, 58, 0.5);
+  --ss-shadow:
+    rgba(0, 0, 0, 0.4) 0 10px 15px -3px,
+    rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  --background: var(--ss-bg);
+  --foreground: var(--ss-text-h);
+  --card: #1f2028;
+  --card-foreground: var(--ss-text-h);
+  --popover: #1f2028;
+  --popover-foreground: var(--ss-text-h);
+  --primary: #f3f4f6;
+  --primary-foreground: #08060d;
+  --secondary: #2e303a;
+  --secondary-foreground: #f3f4f6;
+  --muted: #2e303a;
+  --muted-foreground: #9ca3af;
+  --accent: #2e303a;
+  --accent-foreground: #f3f4f6;
+  --destructive: #ef4444;
+  --border: var(--ss-border);
+  --input: var(--ss-border);
+  --ring: rgba(192, 132, 252, 0.5);
+}
+
+@theme inline {
+  --font-sans: var(--ss-font-sans);
+  --font-heading: var(--ss-font-heading);
+  --font-mono: var(--ss-font-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html{
+    font-family: var(--ss-font-sans);
+    font-size: 18px;
+    line-height:145%;
+    letter-spacing: 0.18px;
+    color-scheme: light;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    margin: 0;
+  }
+
+  h1,
+  h2 {
+    font-family: var(--ss-font-heading);
+    font-weight: 500;
+    color: var(--ss-text-h);
+  }
+  p {
+    margin: 0;
+  }
+}
+
+@media(max-width:1024px){
+  html{
     font-size: 16px;
   }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }
