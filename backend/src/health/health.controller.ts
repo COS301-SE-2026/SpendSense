@@ -1,5 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiProperty,
+  ApiTags,
+} from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 
 type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
@@ -40,7 +45,19 @@ export class HealthController {
   @ApiOkResponse({
     description:
       'Backend health summary. The AI service may be down while the backend is still degraded.',
-    type: HealthResponseDto,
+    schema: {
+      example: {
+        data: {
+          status: 'degraded',
+          timestamp: '2026-05-20T10:00:00.000Z',
+          version: '0.0.1',
+          services: {
+            database: 'up',
+            ai: 'down',
+          },
+        },
+      },
+    },
   })
   @Get()
   async health(): Promise<HealthResponseDto> {
