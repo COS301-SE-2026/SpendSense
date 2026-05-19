@@ -144,7 +144,7 @@ Track what you owe and when it is due. See exactly how your payment behaviour wo
 
 </div>
 
-```
+```text
 SpendSense/
 ├── frontend/         # React + TypeScript (Vite)
 ├── backend/          # NestJS API
@@ -196,6 +196,16 @@ If you need Docker to rebuild images first:
 npm run dev:up:build
 ```
 
+After a fresh local database is created, apply the Prisma migration and seed the database:
+
+```bash
+docker compose exec backend npx prisma migrate deploy
+docker compose exec backend npm run prisma:seed
+docker compose exec backend npm run prisma:seed:demo
+```
+
+The backend dev container generates Prisma Client on startup, so teammates do not need to run `prisma generate` manually after normal Docker starts.
+
 <details>
 <summary><strong>All available commands</strong></summary>
 <br>
@@ -218,6 +228,38 @@ npm run dev:up:build
 | `npm run local:lint` | Lint locally (requires local Node/Python deps) |
 | `npm run local:test` | Test locally |
 | `npm run local:build` | Build locally |
+
+</details>
+
+<details>
+<summary><strong>Database commands</strong></summary>
+<br>
+
+| Command | Description |
+|---|---|
+| `docker compose exec backend npx prisma migrate status` | Show migration status |
+| `docker compose exec backend npx prisma migrate deploy` | Apply committed migrations to the local database |
+| `docker compose exec backend npm run prisma:seed` | Seed required reference data |
+| `docker compose exec backend npm run prisma:seed:demo` | Seed demo walkthrough data |
+| `docker compose exec backend npm run prisma:smoke` | Verify the core Prisma relation chain |
+| `docker compose exec backend npm run prisma:studio` | Open Prisma Studio |
+
+The required seed is safe to rerun without duplicating categories or badge definitions. The demo seed is also rerunnable and recreates only the local demo user's related data.
+
+If a container starts with stale dependencies after switching branches, recreate only that service and its anonymous `node_modules` volume:
+
+```bash
+docker compose rm -sfv backend
+docker compose up -d --build backend
+```
+
+Use `frontend` instead of `backend` for the frontend service. Avoid `npm run dev:down:volumes` unless you deliberately want to remove the local Postgres and MinIO data volumes too.
+
+Prisma docs:
+
+- Schema source of truth: `backend/prisma/schema.prisma`
+- Demo 1 ERD: `docs/database/erd.md`
+- Schema reference: `docs/database/schema-reference.md`
 
 </details>
 
@@ -245,7 +287,7 @@ The first Docker build on a new machine may take a while as base images and depe
 
 All development happens from `dev`. Feature branches are merged into `dev` via pull request. `dev` merges into `release`, and `release` merges into `main` at milestones.
 
-```
+```text
 feature/your-feature -> dev -> release -> main
 ```
 
@@ -271,6 +313,26 @@ Pull requests into `dev` run GitHub Actions checks for secret scanning, linting,
 - Never commit `.env` or `.env.*` files
 - Replace `replace_me_*` values in your local `.env` only
 - Pull requests run [Gitleaks](https://github.com/gitleaks/gitleaks) to scan for committed secrets
+
+For Supabase Auth, each developer needs these values in their local `.env`:
+
+| Key | Used by | Notes |
+|---|---|---|
+| `VITE_SUPABASE_URL` | Frontend | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Frontend | Public anon/publishable key |
+| `SUPABASE_JWT_SECRET` | Backend | JWT secret used to verify Supabase access tokens |
+| `VITE_API_URL` | Frontend | Local backend API base, normally `http://localhost:3000/api/v1` |
+
+The frontend signs users in with Supabase Auth, then sends the Supabase access token to NestJS as `Authorization: Bearer <token>`. Protected backend routes use that token to identify the Supabase user.
+
+The first protected endpoint to verify is:
+
+```http
+GET /api/v1/users/me
+Authorization: Bearer <supabase_access_token>
+```
+
+On first call, the backend creates the internal SpendSense `User` plus default preferences, notification preferences, credit profile, and gamification profile. Later feature work should scope user-owned records by the internal `User.id`, not directly by the Supabase auth ID.
 
 ---
 
