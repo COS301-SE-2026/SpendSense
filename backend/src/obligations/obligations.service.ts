@@ -1,5 +1,5 @@
 import{
-    Injectible,
+    Injectable,
     NotFoundException,
     BadRequestException,
 }from '@nestjs/common';
@@ -105,7 +105,7 @@ export class ObligationsService{
         const daysBefore = dto.reminders?.daysBefore ?? [3];
         const channels = dto.reminders?.channels ?? [ReminderChannel.IN_APP];
 
-        const createdReminders = [];
+        const createdReminders: Array<{ id: string; occurrenceId: string; channel: string; scheduledFor: Date; status: string }> = [];
         if(remindersEnabled){
             for(const occurrence of occurrences){
                 for(const days of daysBefore){

@@ -11,6 +11,7 @@ import{
   ScheduleFrequency,
 }from '@prisma/client';
 import type {AuthUser} from '../auth/types/auth-user.type';
+import '@jest/globals';
 
 const mockAuthUser: AuthUser ={
     supabaseAuthId: 'test-supabase-id',

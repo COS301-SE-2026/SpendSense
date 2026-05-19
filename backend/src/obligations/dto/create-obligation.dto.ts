@@ -27,7 +27,7 @@ import{
 export class CreateScheduleDto{
     @ApiProperty({enum: ScheduleFrequency, example: 'MONTHLY'})
     @IsEnum(ScheduleFrequency)
-    frequency: ScheduleFrequency;
+    frequency!: ScheduleFrequency;
 
     @ApiPropertyOptional({example: 1, default: 1})
     @IsOptional()
@@ -74,7 +74,7 @@ export class CreateObligationDto{
     @IsString()
     @MinLength(1)
     @MaxLength(120)
-    name: string;
+    name!: string;
 
     @ApiPropertyOptional({example: 'Monthly streaming subscription'})
     @IsOptional()
@@ -84,16 +84,16 @@ export class CreateObligationDto{
 
     @ApiProperty({enum: ObligationType, example: 'SUBSCRIPTION'})
     @IsEnum(ObligationType)
-    type: ObligationType;
+    type!: ObligationType;
 
     @ApiProperty({example: 'cat_subscriptions', description: 'Valid category ID'})
     @IsString()
-    categoryId: string;
+    categoryId!: string;
 
     @ApiProperty({example: 199.0})
     @IsNumber({maxDecimalPlaces: 2})
     @IsPositive()
-    amount: number;
+    amount!: number;
 
     @ApiPropertyOptional({enum: Currency, example: 'ZAR', default: 'ZAR'})
     @IsOptional()
@@ -107,7 +107,7 @@ export class CreateObligationDto{
 
     @ApiProperty({example: '2026-05-01'})
     @IsDateString()
-    startDate: string;
+    startDate!: string;
 
     @ApiPropertyOptional({example: null})
     @IsOptional()
@@ -117,7 +117,7 @@ export class CreateObligationDto{
     @ApiProperty({type: CreateScheduleDto})
     @ValidateNested()
     @Type(()=>CreateScheduleDto)
-    schedule: CreateScheduleDto;
+    schedule!: CreateScheduleDto;
 
     @ApiPropertyOptional({type: CreateRemindersDto})
     @IsOptional()
