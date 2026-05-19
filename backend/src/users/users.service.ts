@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, ScoreTier } from '@prisma/client';
+import {
+  Prisma,
+  ScoreTier,
+  UserEventSourceType,
+  UserEventType,
+} from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 
 // UsersService: manages internal user records
@@ -91,8 +96,19 @@ export class UsersService {
         include: this.userProfileInclude,
       });
 
+      await tx.userEvent.create({
+        data: {
+          userId: user.id,
+          eventType: UserEventType.USER_CREATED,
+          sourceType: UserEventSourceType.USER,
+          sourceId: user.id,
+          metadata: {
+            supabaseAuthId,
+          },
+        },
+      });
+
       return user;
     });
   }
 }
-// will need to also add UserEvent when full obligations and payments flow implemented
