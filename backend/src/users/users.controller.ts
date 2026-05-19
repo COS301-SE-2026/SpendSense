@@ -34,6 +34,6 @@ export class UsersController{
     async getMe(@CurrentAuthUser() authUser: AuthUser){
         const user = await this.usersService.findOrCreateUser(authUser)
 
-        return {data: user}
+        return user
     }
 }

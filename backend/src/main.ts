@@ -2,11 +2,15 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common'
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
+import { ResponseInterceptor } from './common/interceptors/response.interceptor'
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   // all routes under /api/v1
   app.setGlobalPrefix('api/v1')
+
+  app.useGlobalInterceptors(new ResponseInterceptor())
 
   // cors: allow frontend origins from environment
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split('.')?? ['http://localhost:5173',]
