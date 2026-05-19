@@ -11,6 +11,8 @@ import { CreditModule } from './credit/credit.module'
 import { GamificationModule } from './gamification/gamification.module'
 import { DashboardModule } from './dashboard/dashboard.module'
 import { RemindersModule } from './reminders/reminders.module'
+import { CategoriesModule } from './categories/categories.module'
+import { NotificationsModule } from './notifications/notifications.module'
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { RemindersModule } from './reminders/reminders.module'
     GamificationModule,
     DashboardModule,
     RemindersModule,
+    CategoriesModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
