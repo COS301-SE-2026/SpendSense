@@ -14,13 +14,14 @@ export class HealthController{
     @Get()
     async health(){
         const dbHealthy = await this.checkDatabase()
+        const aiHealthy = await this.checkAiService()
 
         return{
-            status: dbHealthy? 'healthy' : 'degraded',
+            status: !dbHealthy ? 'unhealthy' : aiHealthy ? 'healthy' : 'degraded',
             timestamp: new Date().toISOString(),
             services:{
                 database: dbHealthy? 'up' : 'down',
-            // ai service check can be added here when integration is wired
+                ai: aiHealthy? 'up' : 'down',
             },
         }
     }
