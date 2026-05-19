@@ -120,3 +120,29 @@ function App() {
 }
 
 export default App
+
+//Ally testing for buttons
+// import {LongButton} from "@/components/common/LongButton"
+// export default function App(){
+//   return(
+//     <main className="min-h-screen bg-[#f4fbf7] p-8">
+//       <div className="mx-auto flex max-w-sm flex-col gap-6">
+//         <LongButton LongVariant="primaryDark" showArrow>
+//           Primary Dark
+//         </LongButton>
+//         <LongButton LongVariant="primaryPink" showArrow>
+//           Primary Pink
+//         </LongButton>
+//         <LongButton LongVariant="primaryMint" showArrow>
+//           Primary Mint
+//         </LongButton>
+//         <LongButton LongVariant="primaryYellow" showArrow>
+//           Primary Yellow
+//         </LongButton>
+//         <LongButton LongVariant="outline" showArrow>
+//           Outline (for google)
+//         </LongButton>
+//       </div>
+//     </main>
+//   )
+// }
