@@ -16,7 +16,7 @@ async function bootstrap() {
     .setDescription('API documentation for the SpendSense NestJS backend.')
     .setVersion('1.0')
     .addBearerAuth()
-    .addServer('http://localhost:3000/api/v1', 'Local backend')
+    .addServer('http://localhost:3000', 'Local backend')
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/v1/docs', app, swaggerDocument, {
