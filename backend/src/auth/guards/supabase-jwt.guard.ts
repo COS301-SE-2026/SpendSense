@@ -33,28 +33,46 @@ export class SupabaseJwtGuard implements CanActivate {
 
     try {
       const { payload } = await this.verifyToken(token);
-
-      const authUser: AuthUser = {
-        supabaseAuthId: payload.sub ?? '',
-        email: (payload.email as string | undefined) ?? null,
-      };
+      const authUser = this.buildAuthUser(payload);
 
       // attach to request in order for @CurrentAuthUser() to read
       (request as Request & { authUser: AuthUser }).authUser = authUser;
 
       return true;
-    } catch {
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
       throw new UnauthorizedException('Invalid or expired token');
     }
   }
 
   private extractBearerToken(request: Request): string | null {
-    const authHeader = request.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
+    const authHeader = request.headers.authorization?.trim();
+    if (!authHeader) {
       return null;
     }
 
-    return authHeader.slice(7);
+    const [scheme, ...tokenParts] = authHeader.split(' ');
+    const token = tokenParts.join(' ').trim();
+
+    if (scheme?.toLowerCase() !== 'bearer' || !token) {
+      return null;
+    }
+
+    return token;
+  }
+
+  private buildAuthUser(payload: { sub?: string; email?: unknown }): AuthUser {
+    if (!payload.sub) {
+      throw new UnauthorizedException('Token subject is missing');
+    }
+
+    return {
+      supabaseAuthId: payload.sub,
+      email: typeof payload.email === 'string' ? payload.email : null,
+    };
   }
 
   private async verifyToken(token: string) {
