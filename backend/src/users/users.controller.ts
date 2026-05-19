@@ -40,8 +40,33 @@ export class UsersController {
   })
   @Get('me')
   async getMe(@CurrentAuthUser() authUser: AuthUser) {
-    const user = await this.usersService.findOrCreateUser(authUser);
+    const userProfile = await this.usersService.findOrCreateUser(authUser);
+    const {
+      preference,
+      notificationPreference,
+      creditProfile,
+      gamificationProfile,
+      id,
+      email,
+      displayName,
+      avatarUrl,
+      onboardingCompleted,
+      createdAt,
+    } = userProfile;
 
-    return user;
+    return {
+      user: {
+        id,
+        email,
+        displayName,
+        avatarUrl,
+        onboardingCompleted,
+        createdAt,
+      },
+      preferences: preference,
+      notificationPreferences: notificationPreference,
+      creditProfile,
+      gamificationProfile,
+    };
   }
 }
