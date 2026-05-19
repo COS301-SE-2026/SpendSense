@@ -16,6 +16,7 @@
     "dev:logs:front": "docker compose logs -f frontend",
     "dev:logs:ai": "docker compose logs -f ai",
     "dev:restart": "docker compose down && docker compose up --build --renew-anon-volumes -d && node scripts/print-local-links.cjs",
+    "dev:token": "node scripts/print-supabase-swagger-token.cjs",
     "dev:shell:back": "docker compose exec backend sh",
     "dev:shell:front": "docker compose exec frontend sh",
     "dev:shell:ai": "docker compose exec ai sh",
