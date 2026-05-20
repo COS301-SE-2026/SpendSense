@@ -27,7 +27,6 @@ import {CurrentAuthUser} from '../common/decorators/current-auth-user.decorator'
 import {UsersService} from '../users/users.service';
 import type {AuthUser} from '../auth/types/auth-user.type';
 import {UpdateObligationDto} from './dto/update-obligation.dto';
-import {ListObligationsDto} from './dto/list-obligations.dto';
 
 
 @ApiTags('obligations')

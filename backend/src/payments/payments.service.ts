@@ -1,8 +1,24 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PaymentOccurrenceStatus, PaymentRecordStatus, Prisma } from '@prisma/client';
+import {
+    MascotMood,
+    PaymentOccurrenceStatus,
+    PaymentRecordStatus,
+    Prisma,
+    RewardTransactionType,
+    ScoreEventType,
+    ScoreTier,
+    UserEventSourceType,
+    UserEventType,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LogPaymentDto } from './dto/log-payment.dto';
 
+const ON_TIME_SCORE_DELTA = 8;
+const LATE_SCORE_DELTA = -8;
+const ON_TIME_COINS = 15;
+const ON_TIME_XP = 10;
+const MIN_SCORE = 0;
+const MAX_SCORE = 850;
 
 @Injectable()
 export class PaymentsService {
@@ -15,6 +31,13 @@ export class PaymentsService {
             where: {
                 id: dto.occurrenceId,
                 userId: userId,
+            },
+            include: {
+                obligation: {
+                    select: {
+                        name: true,
+                    },
+                },
             },
         });
 
@@ -46,7 +69,8 @@ export class PaymentsService {
         const daysLate = isLate ? Math.ceil(((paidDate.getTime() - occurrence.dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
         const simulatedInterestCalculation = daysLate*2 ;
 
-        const paymentRecord = await this.prisma.paymentRecord.create({
+        return this.prisma.$transaction(async (tx) => {
+        const paymentRecord = await tx.paymentRecord.create({
             data: {
                 userId: occurrence.userId,
                 occurrenceId: occurrence.id,
@@ -63,7 +87,7 @@ export class PaymentsService {
 
 
         // belowe we are updating the STTAUS of the Occurance:
-        const updateOccurrence = await this.prisma.paymentOccurrence.update({
+        const updateOccurrence = await tx.paymentOccurrence.update({
             where: {
                 id: occurrence.id,
             },
@@ -72,23 +96,174 @@ export class PaymentsService {
                 paidAt: paidDate,
             },
         });
-            console.log({
-            paidDate,
-            dueDate: occurrence.dueDate,
-            diff: paidDate.getTime() - occurrence.dueDate.getTime(),
-            daysLate,
-            simulatedInterestCalculation,
+
+        const paymentEvent = await tx.userEvent.create({
+            data: {
+                userId,
+                eventType: isLate ? UserEventType.PAYMENT_LATE : UserEventType.PAYMENT_ON_TIME,
+                sourceType: UserEventSourceType.PAYMENT_RECORD,
+                sourceId: paymentRecord.id,
+                metadata: {
+                    occurrenceId: occurrence.id,
+                    obligationId: occurrence.obligationId,
+                    daysLate,
+                },
+            },
+        });
+
+        const creditProfile = await tx.creditProfile.upsert({
+            where: { userId },
+            update: {},
+            create: {
+                userId,
+                currentScore: 600,
+                previousScore: 600,
+                scoreTier: ScoreTier.GOOD,
+            },
+        });
+
+        const scoreBefore = creditProfile.currentScore;
+        const scoreDelta = isLate ? LATE_SCORE_DELTA : ON_TIME_SCORE_DELTA;
+        const scoreAfter = clampScore(scoreBefore + scoreDelta);
+        const tierBefore = creditProfile.scoreTier;
+        const tierAfter = resolveScoreTier(scoreAfter);
+
+        await tx.creditProfile.update({
+            where: { id: creditProfile.id },
+            data: {
+                previousScore: scoreBefore,
+                currentScore: scoreAfter,
+                scoreTier: tierAfter,
+                lastCalculatedAt: new Date(),
+                onTimePaymentCount: isLate
+                    ? creditProfile.onTimePaymentCount
+                    : creditProfile.onTimePaymentCount + 1,
+                latePaymentCount: isLate
+                    ? creditProfile.latePaymentCount + 1
+                    : creditProfile.latePaymentCount,
+            },
+        });
+
+        const scoreEvent = await tx.scoreEvent.create({
+            data: {
+                userId,
+                creditProfileId: creditProfile.id,
+                occurrenceId: occurrence.id,
+                paymentRecordId: paymentRecord.id,
+                eventType: isLate ? ScoreEventType.PAYMENT_LATE : ScoreEventType.PAYMENT_ON_TIME,
+                pointsDelta: scoreDelta,
+                scoreBefore,
+                scoreAfter,
+                explanation: isLate
+                    ? `Paid ${occurrence.obligation.name} ${daysLate} day${daysLate === 1 ? '' : 's'} late.`
+                    : `Paid ${occurrence.obligation.name} on time.`,
+                calculationMetadata: {
+                    daysLate,
+                    simulatedInterest: simulatedInterestCalculation,
+                },
+            },
+        });
+
+        const gamificationProfile = await tx.gamificationProfile.upsert({
+            where: { userId },
+            update: {},
+            create: { userId },
+        });
+
+        const coinsAwarded = isLate ? 0 : ON_TIME_COINS;
+        const xpAwarded = isLate ? 0 : ON_TIME_XP;
+        const currentPaymentStreak = isLate
+            ? 0
+            : gamificationProfile.currentPaymentStreak + 1;
+        const longestPaymentStreak = Math.max(
+            gamificationProfile.longestPaymentStreak,
+            currentPaymentStreak,
+        );
+        const coinBalance = gamificationProfile.coinBalance + coinsAwarded;
+        const xp = gamificationProfile.xp + xpAwarded;
+
+        await tx.gamificationProfile.update({
+            where: { id: gamificationProfile.id },
+            data: {
+                coinBalance,
+                xp,
+                currentPaymentStreak,
+                longestPaymentStreak,
+                mascotMood: isLate ? MascotMood.STRESSED : MascotMood.HAPPY,
+            },
+        });
+
+        if (coinsAwarded > 0) {
+            await tx.rewardTransaction.create({
+                data: {
+                    userId,
+                    sourceEventId: paymentEvent.id,
+                    type: RewardTransactionType.EARNED,
+                    amount: coinsAwarded,
+                    balanceAfter: coinBalance,
+                    reason: 'On-time payment reward',
+                },
             });
-            
+        }
+
         return {
             message: 'Success. Users payment has been logged',
-            paymentRecord,
-            occurrence: updateOccurrence,
-            isLate,
-            daysLate,
-            simulatedInterestCalculation,
+            payment: {
+                id: paymentRecord.id,
+                occurrenceId: paymentRecord.occurrenceId,
+                obligationId: paymentRecord.obligationId,
+                amountPaid: Number(paymentRecord.amountPaid),
+                currency: paymentRecord.currency,
+                paidDate: paymentRecord.paidDate,
+                paymentStatus: paymentRecord.paymentStatus,
+                daysLate: paymentRecord.daysLate,
+                simulatedInterest: Number(paymentRecord.simulatedInterest),
+                notes: paymentRecord.notes,
+            },
+            occurrence: {
+                id: updateOccurrence.id,
+                status: updateOccurrence.status,
+                paidAt: updateOccurrence.paidAt,
+            },
+            scoreImpact: {
+                scoreEventId: scoreEvent.id,
+                previousScore: scoreBefore,
+                currentScore: scoreAfter,
+                delta: scoreDelta,
+                tierBefore,
+                tierAfter,
+                explanation: scoreEvent.explanation,
+            },
+            rewards: {
+                coinsAwarded,
+                xpAwarded,
+                coinBalance,
+                xp,
+                currentPaymentStreak,
+                longestPaymentStreak,
+                mascotMood: isLate ? MascotMood.STRESSED : MascotMood.HAPPY,
+                badgesEarned: [],
+            },
+            paymentImpact: {
+                isLate,
+                daysLate,
+                simulatedInterest: simulatedInterestCalculation,
+            },
         };
+        });
     }
+}
+
+function clampScore(score: number): number {
+    return Math.max(MIN_SCORE, Math.min(MAX_SCORE, score));
+}
+
+function resolveScoreTier(score: number): ScoreTier {
+    if (score >= 800) return ScoreTier.ELITE;
+    if (score >= 700) return ScoreTier.EXCELLENT;
+    if (score >= 600) return ScoreTier.GOOD;
+    if (score >= 500) return ScoreTier.FAIR;
+    return ScoreTier.BUILDING;
 }
 
 /**

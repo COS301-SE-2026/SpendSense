@@ -1,7 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { Currency, PaymentOccurrenceStatus, PaymentRecordStatus, Prisma, } from '@prisma/client';
+import {
+  Currency,
+  MascotMood,
+  PaymentOccurrenceStatus,
+  PaymentRecordStatus,
+  Prisma,
+  RewardTransactionType,
+  ScoreEventType,
+  ScoreTier,
+  UserEventSourceType,
+  UserEventType,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 // to run the tests in this file by itself: npm test -- payments.service.spec.ts
@@ -18,6 +29,30 @@ describe('PaymentsService', () => {
     paymentRecord: {
       create: jest.fn(), // we're going to be creating a PaymentRecord
     },
+
+    userEvent: {
+      create: jest.fn(),
+    },
+
+    creditProfile: {
+      upsert: jest.fn(),
+      update: jest.fn(),
+    },
+
+    scoreEvent: {
+      create: jest.fn(),
+    },
+
+    gamificationProfile: {
+      upsert: jest.fn(),
+      update: jest.fn(),
+    },
+
+    rewardTransaction: {
+      create: jest.fn(),
+    },
+
+    $transaction: jest.fn((callback) => callback(mockPrismaService)),
   };
 
   const currentUserId = 'user-id';
@@ -39,6 +74,9 @@ describe('PaymentsService', () => {
     createdAt: new Date('2026-05-01T00:00:00.000Z'),
     updatedAt: new Date('2026-05-01T00:00:00.000Z'),
     deletedAt: null,
+    obligation: {
+      name: 'Mock obligation',
+    },
   };
 
   // this is the dto that's being sent from the front end (what the user ented)
@@ -69,6 +107,63 @@ describe('PaymentsService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPrismaService.$transaction.mockImplementation((callback) => callback(mockPrismaService));
+    mockPrismaService.userEvent.create.mockResolvedValue({
+      id: 'payment-event-1',
+      userId: currentUserId,
+      eventType: UserEventType.PAYMENT_ON_TIME,
+      sourceType: UserEventSourceType.PAYMENT_RECORD,
+      sourceId: basePaymentRecord.id,
+      metadata: {},
+      createdAt: new Date(),
+    });
+    mockPrismaService.creditProfile.upsert.mockResolvedValue({
+      id: 'credit-profile-1',
+      userId: currentUserId,
+      currentScore: 600,
+      previousScore: 600,
+      scoreTier: ScoreTier.GOOD,
+      onTimePaymentCount: 0,
+      latePaymentCount: 0,
+      missedPaymentCount: 0,
+      currentUtilisationScore: null,
+      lastCalculatedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    });
+    mockPrismaService.creditProfile.update.mockResolvedValue({});
+    mockPrismaService.scoreEvent.create.mockResolvedValue({
+      id: 'score-event-1',
+      userId: currentUserId,
+      creditProfileId: 'credit-profile-1',
+      occurrenceId: baseOccurrence.id,
+      paymentRecordId: basePaymentRecord.id,
+      eventType: ScoreEventType.PAYMENT_ON_TIME,
+      pointsDelta: 8,
+      scoreBefore: 600,
+      scoreAfter: 608,
+      explanation: 'Paid Mock obligation on time.',
+      calculationMetadata: {},
+      createdAt: new Date(),
+    });
+    mockPrismaService.gamificationProfile.upsert.mockResolvedValue({
+      id: 'gamification-profile-1',
+      userId: currentUserId,
+      coinBalance: 0,
+      xp: 0,
+      mascotLevel: 1,
+      mascotMood: MascotMood.NEUTRAL,
+      currentPaymentStreak: 0,
+      longestPaymentStreak: 0,
+      currentKnowledgeStreak: 0,
+      longestKnowledgeStreak: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    });
+    mockPrismaService.gamificationProfile.update.mockResolvedValue({});
+    mockPrismaService.rewardTransaction.create.mockResolvedValue({});
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsService,
@@ -109,6 +204,13 @@ describe('PaymentsService', () => {
         id: dto.occurrenceId,
         userId: currentUserId,
       },
+      include: {
+        obligation: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
 
     expect(mockPrismaService.paymentRecord.create).toHaveBeenCalledWith({
@@ -134,10 +236,27 @@ describe('PaymentsService', () => {
     });
 
     expect(result.message).toBe('Success. Users payment has been logged');
-    expect(result.paymentRecord).toEqual(mockPaymentRecord);
-    expect(result.occurrence).toEqual(mockUpdateOccurance);
-    expect(result.isLate).toBe(false);
-    expect(result.daysLate).toBe(0);
+    expect(result.payment).toEqual(expect.objectContaining({
+      id: mockPaymentRecord.id,
+      amountPaid: 751.83,
+      paymentStatus: PaymentRecordStatus.ON_TIME,
+    }));
+    expect(result.occurrence).toEqual(expect.objectContaining({
+      id: mockUpdateOccurance.id,
+      status: PaymentOccurrenceStatus.PAID,
+    }));
+    expect(result.scoreImpact).toEqual(expect.objectContaining({
+      previousScore: 600,
+      currentScore: 608,
+      delta: 8,
+    }));
+    expect(result.rewards).toEqual(expect.objectContaining({
+      coinsAwarded: 15,
+      xpAwarded: 10,
+      currentPaymentStreak: 1,
+    }));
+    expect(result.paymentImpact.isLate).toBe(false);
+    expect(result.paymentImpact.daysLate).toBe(0);
   });
 
 
@@ -153,6 +272,7 @@ describe('PaymentsService', () => {
       ...basePaymentRecord, //use the base payment record
       paymentStatus: PaymentRecordStatus.LATE, // but change the status to LATE
       daysLate: 3, // and it was paid 3 days late
+      simulatedInterest: new Prisma.Decimal(6),
     };
 
     const mockUpdatedOccurrence = {
@@ -164,14 +284,34 @@ describe('PaymentsService', () => {
     mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence);
     mockPrismaService.paymentRecord.create.mockResolvedValue(mockPaymentRecord);
     mockPrismaService.paymentOccurrence.update.mockResolvedValue(mockUpdatedOccurrence);
+    mockPrismaService.scoreEvent.create.mockResolvedValue({
+      id: 'score-event-1',
+      userId: currentUserId,
+      creditProfileId: 'credit-profile-1',
+      occurrenceId: baseOccurrence.id,
+      paymentRecordId: mockPaymentRecord.id,
+      eventType: ScoreEventType.PAYMENT_LATE,
+      pointsDelta: -8,
+      scoreBefore: 600,
+      scoreAfter: 592,
+      explanation: 'Paid Mock obligation 3 days late.',
+      calculationMetadata: {},
+      createdAt: new Date(),
+    });
 
     const result = await service.logPayment(dto, currentUserId);
 
-    console.log(result);
     expect(mockPrismaService.paymentOccurrence.findFirst).toHaveBeenCalledWith({
       where: {
         id: dto.occurrenceId,
         userId: currentUserId,
+      },
+      include: {
+        obligation: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
     expect(mockPrismaService.paymentRecord.create).toHaveBeenCalledWith({
@@ -191,9 +331,12 @@ describe('PaymentsService', () => {
       },
     });
 
-    expect(result.isLate).toBe(true);
-    expect(result.daysLate).toBe(3);
-    expect(result.simulatedInterestCalculation).toBe(6);
+    expect(result.paymentImpact.isLate).toBe(true);
+    expect(result.paymentImpact.daysLate).toBe(3);
+    expect(result.paymentImpact.simulatedInterest).toBe(6);
+    expect(result.scoreImpact.delta).toBe(-8);
+    expect(result.rewards.coinsAwarded).toBe(0);
+    expect(result.rewards.currentPaymentStreak).toBe(0);
   });
 
 
@@ -233,6 +376,13 @@ describe('PaymentsService', () => {
       where: {
         id: dto.occurrenceId,
         userId: differentUserId,
+      },
+      include: {
+        obligation: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
