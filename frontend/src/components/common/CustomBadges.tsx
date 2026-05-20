@@ -9,7 +9,7 @@ interface CustomBadgeProps{
     children: React.ReactNode
     variant?:BadgeVariant
     size?:BadgeSize
-    className?:String
+    className?:string
 }
 
 export function CustomBadge({
