@@ -196,3 +196,18 @@ export default App
 //     </main>
 //   );
 // }
+
+//testing for badges
+// import { CustomBadge } from "@/components/common/CustomBadges"
+// export default function App(){
+//   return(
+//     <main className="min-h-screen bg-[#f4fbf7] p-8">
+//       <div className="mx-auto flex max-w-md flex-col gap-6">
+//         <CustomBadge variant="xp">+25 XP</CustomBadge>
+//         <CustomBadge variant="tier">Rare Tier</CustomBadge>
+//         <CustomBadge variant="streak">7 Day Streak</CustomBadge>
+//         <CustomBadge variant="level">Lvl 4</CustomBadge>
+//       </div>
+//     </main>
+//   );
+// }
