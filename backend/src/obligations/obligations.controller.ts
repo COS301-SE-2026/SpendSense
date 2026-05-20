@@ -8,6 +8,8 @@ import{
     UseGuards,
     HttpCode,
     HttpStatus,
+    Patch,
+    Delete,
 }from '@nestjs/common';
 import{
     ApiTags,
@@ -23,9 +25,8 @@ import {SupabaseJwtGuard} from '../auth/guards/supabase-jwt.guard';
 import {CurrentAuthUser} from '../common/decorators/current-auth-user.decorator';
 import {UsersService} from '../users/users.service';
 import type {AuthUser} from '../auth/types/auth-user.type';
-import { Patch, Delete } from '@nestjs/common';
-import { ApiBody } from '@nestjs/swagger';
-import { UpdateObligationDto } from './dto/update-obligation.dto';
+import {UpdateObligationDto} from './dto/update-obligation.dto';
+import {ListObligationsDto} from './dto/list-obligations.dto';
 
 
 @ApiTags('obligations')

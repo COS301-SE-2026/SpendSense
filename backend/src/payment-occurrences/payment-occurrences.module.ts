@@ -10,4 +10,4 @@ import {UsersModule} from '../users/users.module';
     providers: [PaymentOccurrencesService],
     exports: [PaymentOccurrencesService],
 })
-export class PaymentOccurrencesModul{}
+export class PaymentOccurrencesModule{}
