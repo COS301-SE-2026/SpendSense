@@ -14,7 +14,7 @@ import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {signIn} from "../features/auth/auth.service";
-import { Link, Navigate} from "react-router-dom";
+import { Link, useNavigate} from "react-router-dom";
 import logo from "../components/SpendSenseLogoLight.svg";
 import { LongButton } from "../components/common/LongButton";
 import { CustomInput } from "../components/common/CustomInput";
@@ -33,7 +33,7 @@ const loginSchema=z.object({
 type LoginFormData=z.infer<typeof loginSchema>;
 
 export default function LoginPage(){
-    // const navigate=useNavigate();
+    const navigate=useNavigate();
     const [error,setError]=useState<string|null>(null);
     const [isLoading,setIsLoading]=useState(false);
     const {register,handleSubmit,formState:{errors}}=useForm<LoginFormData>({
@@ -44,7 +44,7 @@ export default function LoginPage(){
         setError(null);
         try{
             await signIn(data.email,data.password);
-            // Navigate("/domains/dashboard");
+            navigate("/domains/dashboard");
         }catch(err:unknown){
             setError(err instanceof Error ? err.message:"Login failed.");
         }finally{
