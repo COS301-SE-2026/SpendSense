@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
+import { CreditController } from './credit.controller';
+import { CreditService } from './credit.service';
 
-// CreditModule: simulated credit score profile and score events
-// TODO: implement CreditController and CreditService
-
-// planned endpoints:
-// GET /api/v1/credit-profile
-// GET /api/v1/credit-profile/events
-
-@Module({})
+@Module({
+  imports: [AuthModule, UsersModule],
+  controllers: [CreditController],
+  providers: [CreditService],
+  exports: [CreditService],
+})
 export class CreditModule {}
