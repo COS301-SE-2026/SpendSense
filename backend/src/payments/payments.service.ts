@@ -42,14 +42,8 @@ export class PaymentsService {
         // Calculating weather or not this payment is happening on time or - if not - how may days late it is 
         const paidDate = new Date(dto.paidDate);
         const isLate = paidDate.getTime() > occurrence.dueDate.getTime();
-        const daysLate = isLate ? ((paidDate.getTime() - occurrence.dueDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-
-        let simulatedInterest = 0;
-        if (daysLate > 0 && daysLate <= 5) {
-            simulatedInterest = daysLate * 2;
-        } else {
-            simulatedInterest = 10 + ((daysLate - 5) * 5);
-        }
+        const daysLate = isLate ? Math.ceil(((paidDate.getTime() - occurrence.dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+        const simulatedInterestCalculation = daysLate*2 ;
 
         const paymentRecord = await this.prisma.paymentRecord.create({
             data: {
@@ -61,7 +55,7 @@ export class PaymentsService {
                 paidDate,
                 paymentStatus: isLate ? PaymentRecordStatus.LATE : PaymentRecordStatus.ON_TIME,
                 daysLate,
-                simulatedInterest,
+                simulatedInterest: simulatedInterestCalculation ,
                 notes: dto.notes,
             },
         });
@@ -77,13 +71,21 @@ export class PaymentsService {
                 paidAt: paidDate,
             },
         });
-
+            console.log({
+            paidDate,
+            dueDate: occurrence.dueDate,
+            diff: paidDate.getTime() - occurrence.dueDate.getTime(),
+            daysLate,
+            simulatedInterestCalculation,
+            });
+            
         return {
             message: 'Success. Users payment has been logged',
             paymentRecord,
             occurrence: updateOccurrence,
             isLate,
             daysLate,
+            simulatedInterestCalculation,
         };
     }
 }

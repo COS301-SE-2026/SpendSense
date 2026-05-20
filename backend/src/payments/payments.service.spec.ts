@@ -140,7 +140,7 @@ describe('PaymentsService', () => {
 
 
   // Test case for LATE payments
-  it('PaymentsService should successfully log a LATE payment', async () => {
+  it('PaymentsService should successfully log and SIMULATE INTEREST a LATE payment', async () => {
     const dto = {
       ...baseDto, // reference the base dto fields 
       paidDate: '2026-05-23', // but use this new date
@@ -164,7 +164,7 @@ describe('PaymentsService', () => {
 
     const result = await service.logPayment(dto);
 
-    //console.log(result) ;
+    console.log(result) ;
 
     expect(mockPrismaService.paymentRecord.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -183,9 +183,14 @@ describe('PaymentsService', () => {
       },
     });
 
+    
+
     expect(result.isLate).toBe(true);
     expect(result.daysLate).toBe(3);
+    expect(result.simulatedInterestCalculation).toBe(6);
   });
+
+  
 
   //////////////////////////////////////////////////////////////////////////////
   it("should throw NotFoundExpectuon when occurenceId does not exist", async () => {
@@ -202,7 +207,9 @@ describe('PaymentsService', () => {
     expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
 
   });
+  //////////////////////////////////////////////////////////////////////////////
 
+  
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -289,5 +296,8 @@ describe('PaymentsService', () => {
     expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
     expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
   });
+
+
+  //////////////////////////////////////////////////////////////////////////////
 
 });
