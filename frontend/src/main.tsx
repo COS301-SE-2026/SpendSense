@@ -1,13 +1,12 @@
-import { StrictMode } from 'react'
+import React, { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import DashboardPage from '@/features/dashboard/DashboardPage'
-import {BrowserRouter, Routes, Route} from "react-router-dom";
 import './index.css'
-import App from './App.tsx'
-import LoginPage from './domains/LoginPage';
+const LoginPage = React.lazy(() => import('./domains/LoginPage'));
+import CalendarPage from '@/features/calendar/CalendarPage'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -16,7 +15,8 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<DashboardPage />} />
         <Route path="/dev" element={<App />} />
         <Route path="/" element={<App />}/>
-        <Route path="/login" element={<LoginPage />}/>
+        <Route path="/calendar" element={<CalendarPage />}/>
+        <Route path="/login" element={<Suspense fallback={null}><LoginPage /></Suspense>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
