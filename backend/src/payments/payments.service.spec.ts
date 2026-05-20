@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { Currency, PaymentOccurrenceStatus, PaymentRecordStatus, Prisma, } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -183,5 +184,23 @@ describe('PaymentsService', () => {
     expect(result.isLate).toBe(true);
     expect(result.daysLate).toBe(3);
   });
+
+  //////////////////////////////////////////////////////////////////////////////
+  it("should throw NotFoundExpectuon when occurenceId does not exist", async () => {
+    const dto = {
+      ...baseDto,
+      occurrenceId: 'non-existing-occurence-id',
+    };
+
+    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue(null);
+
+    await expect(service.logPayment(dto)).rejects.toThrow(NotFoundException);
+
+    expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
+    expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
+
+  });
+  //////////////////////////////////////////////////////////////////////////////
+
 
 });
