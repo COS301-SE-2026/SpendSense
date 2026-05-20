@@ -26,6 +26,7 @@ export class PaymentsService {
         }
 
 
+
         // Calculating weather or not this payment is happening on time or - if not - how may days late it is 
         const paidDate = new Date(dto.paidDate);
         const isLate = paidDate.getTime() > occurrence.dueDate.getTime();
@@ -46,10 +47,22 @@ export class PaymentsService {
             },
         });
 
+
+        // belowe we are updating the STTAUS of the Occurance:
+        const updateOccurrence = await this.prisma.paymentOccurrence.update({
+            where: {
+                id: occurrence.id,
+            },
+            data: {
+                status: isLate? PaymentOccurrenceStatus.PAID_LATE :PaymentOccurrenceStatus.PAID,  
+                paidAt: paidDate,
+            },
+        });
+
         return {
             message: 'Success. Users payment has been logged',
             paymentRecord,
-            occurrence,
+            occurrence, // updateOccurrence, 
             isLate,
             daysLate,
         };
