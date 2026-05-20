@@ -24,7 +24,7 @@ export class PaymentsService {
         if (occurrence.status === PaymentOccurrenceStatus.PAID || occurrence.status === PaymentOccurrenceStatus.PAID_LATE) {
             throw new BadRequestException("Error. There is already and existing payment for this occuranceId.")
         }
-        
+
         if (occurrence.status === PaymentOccurrenceStatus.MISSED || occurrence.status === PaymentOccurrenceStatus.CANCELLED) {
             throw new BadRequestException("This Occurance Has Been Missed Or cancelled, User cannot try pay for ti.")
         }
@@ -44,6 +44,13 @@ export class PaymentsService {
         const isLate = paidDate.getTime() > occurrence.dueDate.getTime();
         const daysLate = isLate ? ((paidDate.getTime() - occurrence.dueDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
+        let simulatedInterest = 0;
+        if (daysLate > 0 && daysLate <= 5) {
+            simulatedInterest = daysLate * 2;
+        } else {
+            simulatedInterest = 10 + ((daysLate - 5) * 5);
+        }
+
         const paymentRecord = await this.prisma.paymentRecord.create({
             data: {
                 userId: occurrence.userId,
@@ -54,7 +61,7 @@ export class PaymentsService {
                 paidDate,
                 paymentStatus: isLate ? PaymentRecordStatus.LATE : PaymentRecordStatus.ON_TIME,
                 daysLate,
-                simulatedInterest: 0,
+                simulatedInterest,
                 notes: dto.notes,
             },
         });
