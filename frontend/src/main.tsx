@@ -4,6 +4,10 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import DashboardPage from '@/features/dashboard/DashboardPage'
+import {BrowserRouter, Routes, Route} from "react-router-dom";
+import './index.css'
+import App from './App.tsx'
+import LoginPage from './domains/LoginPage';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -11,7 +15,9 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/dev" element={<App />} />
+        <Route path="/" element={<App />}/>
+        <Route path="/login" element={<LoginPage />}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
-)
+);
