@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PaymentOccurrenceStatus, PaymentRecordStatus } from '@prisma/client';
+import { PaymentOccurrenceStatus, PaymentRecordStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LogPaymentDto } from './dto/log-payment.dto';
 
@@ -24,6 +24,18 @@ export class PaymentsService {
         if (occurrence.status === PaymentOccurrenceStatus.PAID || occurrence.status === PaymentOccurrenceStatus.PAID_LATE) {
             throw new BadRequestException("Error. There is already and existing payment for this occuranceId.")
         }
+        
+        if (occurrence.status === PaymentOccurrenceStatus.MISSED || occurrence.status === PaymentOccurrenceStatus.CANCELLED) {
+            throw new BadRequestException("This Occurance Has Been Missed Or cancelled, User cannot try pay for ti.")
+        }
+
+        // for demo 1, we're assuming the idea clinet that pays the expected amount due: 
+        const amountPaid = new Prisma.Decimal(dto.amountPaid);
+        if (!amountPaid.equals(occurrence.amountDue)) {
+            throw new BadRequestException(
+                `Amount paid must equal the amount due. Expected ${occurrence.amountDue.toString()}, received ${amountPaid.toString()}.`,
+            );
+        }
 
 
 
@@ -37,7 +49,7 @@ export class PaymentsService {
                 userId: occurrence.userId,
                 occurrenceId: occurrence.id,
                 obligationId: occurrence.obligationId,
-                amountPaid: dto.amountPaid,
+                amountPaid,
                 currency: occurrence.currency,
                 paidDate,
                 paymentStatus: isLate ? PaymentRecordStatus.LATE : PaymentRecordStatus.ON_TIME,
@@ -54,7 +66,7 @@ export class PaymentsService {
                 id: occurrence.id,
             },
             data: {
-                status: isLate? PaymentOccurrenceStatus.PAID_LATE :PaymentOccurrenceStatus.PAID,  
+                status: isLate ? PaymentOccurrenceStatus.PAID_LATE : PaymentOccurrenceStatus.PAID,
                 paidAt: paidDate,
             },
         });
@@ -62,7 +74,7 @@ export class PaymentsService {
         return {
             message: 'Success. Users payment has been logged',
             paymentRecord,
-            occurrence : updateOccurrence, 
+            occurrence: updateOccurrence,
             isLate,
             daysLate,
         };
