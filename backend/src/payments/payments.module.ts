@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
-import { PrismaModule } from '../prisma/prisma.module';
-
+import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 // PaymentsModule: payment logging and occurrence management
 // TODO: implemetn PaymentsController and PaymentsService
 
@@ -11,9 +11,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 // GET /api/v1/payment-occurrences/upcoming
 
 @Module({
-  imports: [PrismaModule],
+  imports: [AuthModule, UsersModule],
   controllers: [PaymentsController],
-  providers: [PaymentsService]
+  providers: [PaymentsService],
+  exports: [PaymentsService],
 })
 export class PaymentsModule { }
 

@@ -3,17 +3,18 @@ import { PaymentOccurrenceStatus, PaymentRecordStatus, Prisma } from '@prisma/cl
 import { PrismaService } from '../prisma/prisma.service';
 import { LogPaymentDto } from './dto/log-payment.dto';
 
-// This is the pa
+
 @Injectable()
 export class PaymentsService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async logPayment(dto: LogPaymentDto) {
+    async logPayment(dto: LogPaymentDto, userId: string) {
         // below means "go to the "PaymentOccurance" table and find the row where 'id' = 'occuranceId' 
         // NOTE AGAIN - this 'occuranceId' is passed from the frontent
-        const occurrence = await this.prisma.paymentOccurrence.findUnique({
+        const occurrence = await this.prisma.paymentOccurrence.findFirst({
             where: {
                 id: dto.occurrenceId,
+                userId: userId,
             },
         });
 
