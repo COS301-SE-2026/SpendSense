@@ -13,12 +13,15 @@ interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement>{
     inputSize?: InputSize;
 }
 
-export function CustomInput({
-    className,
-    variant="form",
-    inputSize="md",
-    ...props
-}:CustomInputProps){
+export const CustomInput=React.forwardRef<HTMLInputElement,CustomInputProps>(({
+        className,
+        variant="form",
+        inputSize="md",
+        id,
+        ...props
+    },
+    ref
+)=>{
     const variantStyles:Record<InputVariant,string>={
         regLog:"bg-white border border-[#DBE2DE] rounded-full text-[#787A80]",
         form:"bg-white text-[#787A80] shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none",
@@ -30,6 +33,8 @@ export function CustomInput({
     }
     return(
         <input
+            id={id}
+            ref={ref}
             className={cn(
                 "rounded-lg transition-shadow focus:shadow-md",
                 variantStyles[variant],
@@ -39,4 +44,5 @@ export function CustomInput({
             {...props}
         />
     )
-}
+});
+CustomInput.displayName="CustomImput";
