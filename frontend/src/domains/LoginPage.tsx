@@ -13,15 +13,15 @@ import {useState} from "react";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {signIn} from "@/./features/auth/auth.service";
+import {signIn} from "../features/auth/auth.service";
 import { Link, Navigate} from "react-router-dom";
-import logo from "@/components/SpendSenseLogoLight.svg";
-import { LongButton } from "@/components/common/LongButton";
-import { CustomInput } from "@/components/common/CustomInput";
+import logo from "../components/SpendSenseLogoLight.svg";
+import { LongButton } from "../components/common/LongButton";
+import { CustomInput } from "../components/common/CustomInput";
 
 //validation rules
 const loginSchema=z.object({
-    identifier: z
+    email: z
         .string()
         .min(1,"Email is required.")
         .email("Please enter a valid email address"),
@@ -43,7 +43,7 @@ export default function LoginPage(){
         setIsLoading(true);
         setError(null);
         try{
-            await signIn(data.identifier,data.password);
+            await signIn(data.email,data.password);
             // Navigate("/domains/dashboard");
         }catch(err:unknown){
             setError(err instanceof Error ? err.message:"Login failed.");
@@ -67,11 +67,11 @@ export default function LoginPage(){
                         {/* forgotpassword goes here */}
                         <CustomInput
                             variant="regLog"
-                            {...register("identifier")}
+                            {...register("email")}
                             placeholder="ally@tuks.co.za"
                             className="w-full"
                         />
-                        {errors.identifier && (<p className="text-xs text-red-600">{errors.identifier.message}</p>)}
+                        {errors.email && (<p className="text-xs text-red-600">{errors.email.message}</p>)}
                     </div>
                     <div className="space-y-3">
                         <label className="text-xs font-semibold text-[#091828]">Password</label>
