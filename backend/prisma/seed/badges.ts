@@ -1,6 +1,7 @@
 import {
   BadgeCategory,
   BadgeCriteriaType,
+  Prisma,
   type PrismaClient,
 } from '@prisma/client';
 
@@ -55,7 +56,7 @@ export const defaultBadges = [
     iconKey: 'sparkles',
     isActive: true,
   },
-];
+] satisfies Prisma.BadgeDefinitionCreateInput[];
 
 export async function seedBadges(prisma: PrismaClient) {
   for (const badge of defaultBadges) {

@@ -16,6 +16,7 @@
     "dev:logs:front": "docker compose logs -f frontend",
     "dev:logs:ai": "docker compose logs -f ai",
     "dev:restart": "docker compose down && docker compose up --build --renew-anon-volumes -d && node scripts/print-local-links.cjs",
+    "dev:token": "node scripts/print-supabase-swagger-token.cjs",
     "dev:shell:back": "docker compose exec backend sh",
     "dev:shell:front": "docker compose exec frontend sh",
     "dev:shell:ai": "docker compose exec ai sh",
@@ -63,5 +64,9 @@
   "bugs": {
     "url": "https://github.com/COS301-SE-2026/SpendSense/issues"
   },
-  "homepage": "https://github.com/COS301-SE-2026/SpendSense#readme"
+  "homepage": "https://github.com/COS301-SE-2026/SpendSense#readme",
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.15.0",
+    "prisma-erd-generator": "^2.4.2"
+  }
 }

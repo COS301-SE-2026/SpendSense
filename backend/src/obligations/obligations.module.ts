@@ -1,14 +1,13 @@
 import { Module } from '@nestjs/common';
+import { ObligationsController } from './obligations.controller';
+import { ObligationsService } from './obligations.service';
+import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 
-// ObligationModule: financial obligation crud
-// TODO: implement ObligationsController and ObligationsService
-
-//planned endppoints:
-// POST /api/v1/obligations
-// GET /api/v1/obligations
-// GET /api/v1/obligations/:id
-// PATCH /api/v1/obligations/:id
-// DELETE /api/v1/obligations/:id
-
-@Module({})
+@Module({
+  imports: [AuthModule, UsersModule],
+  controllers: [ObligationsController],
+  providers: [ObligationsService],
+  exports: [ObligationsService],
+})
 export class ObligationsModule {}
