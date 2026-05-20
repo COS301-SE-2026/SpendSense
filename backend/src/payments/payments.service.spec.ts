@@ -11,7 +11,7 @@ describe('PaymentsService', () => {
   const mockPrismaService = {
 
     paymentOccurrence: {
-      findUnique: jest.fn(), // the occuranceId has to exits and be unique
+      findFirst: jest.fn(),
       update: jest.fn(),
     },
 
@@ -20,10 +20,12 @@ describe('PaymentsService', () => {
     },
   };
 
+  const currentUserId = 'user-id';
+
   // this is what is a PaymentOccurance that is expected of the user
   const baseOccurrence = {
     id: 'baseOccurrence-id',
-    userId: 'user-id',
+    userId: currentUserId,
     obligationId: 'obligation-id',
     scheduleId: 'schedule-id',
     dueDate: new Date('2026-05-20T00:00:00.000Z'),
@@ -96,15 +98,16 @@ describe('PaymentsService', () => {
 
     };
 
-    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue(baseOccurrence);
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence);
     mockPrismaService.paymentRecord.create.mockResolvedValue(mockPaymentRecord);
     mockPrismaService.paymentOccurrence.update.mockResolvedValue(mockUpdateOccurance);
 
-    const result = await service.logPayment(dto);
+    const result = await service.logPayment(dto, currentUserId);
 
-    expect(mockPrismaService.paymentOccurrence.findUnique).toHaveBeenCalledWith({
+    expect(mockPrismaService.paymentOccurrence.findFirst).toHaveBeenCalledWith({
       where: {
         id: dto.occurrenceId,
+        userId: currentUserId,
       },
     });
 
@@ -158,14 +161,19 @@ describe('PaymentsService', () => {
       paidAt: new Date(dto.paidDate),
     };
 
-    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue(baseOccurrence);
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence);
     mockPrismaService.paymentRecord.create.mockResolvedValue(mockPaymentRecord);
     mockPrismaService.paymentOccurrence.update.mockResolvedValue(mockUpdatedOccurrence);
 
-    const result = await service.logPayment(dto);
+    const result = await service.logPayment(dto, currentUserId);
 
-    console.log(result) ;
-
+    console.log(result);
+    expect(mockPrismaService.paymentOccurrence.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: dto.occurrenceId,
+        userId: currentUserId,
+      },
+    });
     expect(mockPrismaService.paymentRecord.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         paymentStatus: PaymentRecordStatus.LATE,
@@ -183,33 +191,54 @@ describe('PaymentsService', () => {
       },
     });
 
-    
-
     expect(result.isLate).toBe(true);
     expect(result.daysLate).toBe(3);
     expect(result.simulatedInterestCalculation).toBe(6);
   });
 
-  
+
 
   //////////////////////////////////////////////////////////////////////////////
+
   it("should throw NotFoundExpectuon when occurenceId does not exist", async () => {
     const dto = {
       ...baseDto,
       occurrenceId: 'non-existing-occurence-id',
     };
 
-    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue(null);
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(null);
 
-    await expect(service.logPayment(dto)).rejects.toThrow(NotFoundException);
+    await expect(service.logPayment(dto, currentUserId)).rejects.toThrow(NotFoundException);
 
     expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
     expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
 
   });
+  
   //////////////////////////////////////////////////////////////////////////////
 
-  
+  it('should throw NotFoundException when occurrence does not belong to current user', async () => {
+    const dto = {
+      ...baseDto,
+      occurrenceId: 'baseOccurrence-id',
+    };
+
+    const differentUserId = 'another-user-id';
+
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(null);
+
+    await expect(service.logPayment(dto, differentUserId)).rejects.toThrow(NotFoundException);
+
+    expect(mockPrismaService.paymentOccurrence.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: dto.occurrenceId,
+        userId: differentUserId,
+      },
+    });
+
+    expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
+    expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
+  });
 
   //////////////////////////////////////////////////////////////////////////////
 
@@ -217,65 +246,65 @@ describe('PaymentsService', () => {
   it('should throw BadRequestException when occurrence is already PAID', async () => {
     const dto = { ...baseDto };
 
-    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue({
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue({
       ...baseOccurrence, // use that base occurance
       status: PaymentOccurrenceStatus.PAID, // but it has a PAID status instead. 
     });
 
-    await expect(service.logPayment(dto)).rejects.toThrow(BadRequestException);
+    await expect(service.logPayment(dto, currentUserId)).rejects.toThrow(BadRequestException);
 
     expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
     expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
   });
 
-  
+
   //////////////////////////////////////////////////////////////////////////////
 
 
   it('should throw BadRequestException when occurrence is already PAID', async () => {
     const dto = { ...baseDto };
 
-    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue({
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue({
       ...baseOccurrence, // use that base occurance
       status: PaymentOccurrenceStatus.PAID_LATE, // but it has a PAID status instead. 
     });
 
-    await expect(service.logPayment(dto)).rejects.toThrow(BadRequestException);
+    await expect(service.logPayment(dto, currentUserId)).rejects.toThrow(BadRequestException);
 
     expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
     expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
   });
 
-    //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
 
 
   it('should throw BadRequestException when occurrence is already MISSED', async () => {
     const dto = { ...baseDto };
 
-    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue({
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue({
       ...baseOccurrence, // use that base occurance
       status: PaymentOccurrenceStatus.MISSED, // but it has a PAID status instead. 
     });
 
-    await expect(service.logPayment(dto)).rejects.toThrow(BadRequestException);
+    await expect(service.logPayment(dto, currentUserId)).rejects.toThrow(BadRequestException);
 
     expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
     expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
   });
-  
 
-    //////////////////////////////////////////////////////////////////////////////
+
+  //////////////////////////////////////////////////////////////////////////////
 
 
   it('should throw BadRequestException when occurrence is already CANCELLED', async () => {
     const dto = { ...baseDto };
 
-    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue({
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue({
       ...baseOccurrence, // use that base occurance
       status: PaymentOccurrenceStatus.CANCELLED, // but it has a PAID status instead. 
     });
 
-    await expect(service.logPayment(dto)).rejects.toThrow(BadRequestException);
+    await expect(service.logPayment(dto, currentUserId)).rejects.toThrow(BadRequestException);
 
     expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
     expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
@@ -284,14 +313,14 @@ describe('PaymentsService', () => {
   //////////////////////////////////////////////////////////////////////////////
 
   it('should throw BadRequestException when dto.amountPaid does not equal occurrence.amountDue', async () => {
-    const dto = { 
-      ...baseDto ,
+    const dto = {
+      ...baseDto,
       amountPaid: 700, // use the base dto but change its amount form 713 to 700. 
     };
 
-    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue(baseOccurrence)
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence)
 
-    await expect(service.logPayment(dto)).rejects.toThrow(BadRequestException);
+    await expect(service.logPayment(dto, currentUserId)).rejects.toThrow(BadRequestException);
 
     expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
     expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
