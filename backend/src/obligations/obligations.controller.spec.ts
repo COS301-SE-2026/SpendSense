@@ -12,6 +12,7 @@ import{
 }from '@prisma/client';
 import type {AuthUser} from '../auth/types/auth-user.type';
 import '@jest/globals';
+import { jest } from '@jest/globals';
 
 const mockAuthUser: AuthUser ={
     supabaseAuthId: 'test-supabase-id',
@@ -57,6 +58,8 @@ describe('ObligationsController', ()=>{
                     provide: ObligationsService,
                     useValue:{
                         create: jest.fn(),
+                        list: jest.fn(),
+                        findOne: jest.fn(),
                     },
                 },
 
@@ -97,6 +100,37 @@ describe('ObligationsController', ()=>{
             expect(usersService.findOrCreateUser).toHaveBeenCalledWith(mockAuthUser);
             expect(obligationsService.create).toHaveBeenCalledWith(mockInternalUser.id, dto);
             expect(result).toEqual(mockObligationResult);
+        });
+    });
+
+    describe('list()', ()=>{
+        it("returns only the authenticated user's obligations", async ()=>{
+            const listResult ={
+                data: [mockObligationResult.obligation],
+                meta: {page: 1, perPage: 20, total: 1, totalPages: 1},
+            };
+
+            obligationsService.list.mockResolvedValue(listResult as any);
+
+            const result = await controller.list(mockAuthUser, {page: 1, perPage: 20} as any);
+
+            expect(obligationsService.list).toHaveBeenCalledWith(mockInternalUser.id,{
+                page: 1,
+                perPage: 20,
+            });
+
+            expect(result).toEqual(listResult);
+        });
+    });
+
+    describe('findOne()', ()=>{
+        it('returns the obligation detail for the authenticated user', async ()=>{
+            obligationsService.findOne.mockResolvedValue({data: mockObligationResult} as any);
+
+            const result = await controller.findOne(mockAuthUser, 'obl-1');
+
+            expect(obligationsService.findOne).toHaveBeenCalledWith(mockInternalUser.id, 'obl-1');
+            expect(result).toBeDefined();
         });
     });
 });

@@ -1,7 +1,10 @@
 import{
     Controller,
     Post,
+    Get,
     Body,
+    Param,
+    Query,
     UseGuards,
     HttpCode,
     HttpStatus,
@@ -12,6 +15,7 @@ import{
     ApiBearerAuth,
     ApiBody,
     ApiResponse,
+    ApiParam,
 }from '@nestjs/swagger';
 import {ObligationsService} from './obligations.service';
 import {CreateObligationDto} from './dto/create-obligation.dto';
@@ -19,6 +23,7 @@ import {SupabaseJwtGuard} from '../auth/guards/supabase-jwt.guard';
 import {CurrentAuthUser} from '../common/decorators/current-auth-user.decorator';
 import {UsersService} from '../users/users.service';
 import type {AuthUser} from '../auth/types/auth-user.type';
+
 
 @ApiTags('obligations')
 @ApiBearerAuth()
@@ -42,5 +47,25 @@ export class ObligationsController{
         const user = await this.usersService.findOrCreateUser(authUser);
         
         return this.obligationsService.create(user.id, dto);
+    }
+
+    @Get()
+    @ApiOperation({summary: "List the authenticated user's financial obligations"})
+    @ApiResponse({status: 200, description: 'Obligations list returned'})
+    @ApiResponse({status: 401, description: 'Unauthorised'})
+    async list(@CurrentAuthUser() authUser: AuthUser, @Query() query: ListObligationsDto,){
+        const user = await this.usersService.findOrCreateUser(authUser);
+        return this.obligationsService.list(user.id, query);
+    }
+
+    @Get(':id')
+    @ApiOperation({summary: 'Get one obligation with schedule, upcoming occurrences, and recent payments'})
+    @ApiParam({name: 'id', description: 'Obligation ID'})
+    @ApiResponse({status: 200, description: 'Obligation detail returned'})
+    @ApiResponse({status: 401, description: 'Unauthorised'})
+    @ApiResponse({status: 404, description: 'Financial obligation not found'})
+    async findOne(@CurrentAuthUser() authUser: AuthUser, @Param('id') id: string,){
+        const user = await this.usersService.findOrCreateUser(authUser);
+        return this.obligationsService.findOne(user.id, id);
     }
 }

@@ -16,6 +16,7 @@ import{
     UserEventType,
 }from '@prisma/client';
 import {CreateObligationDto} from './dto/create-obligation.dto';
+import { ListObligationsDto } from './dto/list-obligations.dto';
 
 const OCCURRENCE_HORIZON_MONTHS = 6;
 
@@ -165,6 +166,140 @@ export class ObligationsService{
             },
         };
         });
+    }
+
+        async list(userId: string, query: ListObligationsDto){
+        const {page, perPage, status, type, categoryId, dueSoon} = query;
+        const skip = (page - 1) * perPage;
+
+        const where ={
+            userId,
+            deletedAt: null,
+            ...(status ? {status} : {status: ObligationStatus.ACTIVE}),
+            ...(type ? {type} : {}),
+            ...(categoryId ? {categoryId} : {}),
+        };
+
+        const [obligations, total] = await Promise.all([
+            this.prisma.financialObligation.findMany({
+                where,
+                skip,
+                take: perPage,
+                orderBy: dueSoon ? undefined : {createdAt: 'desc'},
+                include:{
+                category:{ select: {id: true, name: true, iconKey: true}},
+                occurrences:{
+                    where:{
+                    status:{in: [PaymentOccurrenceStatus.PENDING, PaymentOccurrenceStatus.OVERDUE]},
+                    deletedAt: null,
+                    },
+                    orderBy: {dueDate: 'asc'},
+                    take: 1,
+                    select: {id: true, dueDate: true, status: true, amountDue: true},
+                },
+                },
+            }),
+            this.prisma.financialObligation.count({ where }),
+        ]);
+
+        const data = obligations.map((o)=>({
+            id: o.id,
+            name: o.name,
+            type: o.type,
+            status: o.status,
+            amount: Number(o.amount),
+            currency: o.currency,
+            priority: o.priority,
+            category: o.category,
+            nextOccurrence: o.occurrences[0]?
+            {
+                    id: o.occurrences[0].id,
+                    dueDate: o.occurrences[0].dueDate,
+                    status: o.occurrences[0].status,
+                    amountDue: Number(o.occurrences[0].amountDue),
+                } : null,
+            createdAt: o.createdAt,
+        }));
+
+        return{
+            data,
+            meta:{
+                page,
+                perPage,
+                total,
+                totalPages: Math.ceil(total / perPage),
+            },
+        };
+    }
+
+    async findOne(userId: string, id: string){
+        const obligation = await this.prisma.financialObligation.findFirst({
+        where: {id, userId, deletedAt: null},
+            include:{
+                category:{select: {id: true, name: true, iconKey: true}},
+                schedules: {
+                where: {isActive: true, deletedAt: null},
+                take: 1,
+                },
+                occurrences:{
+                where:{
+                    status: {in: [PaymentOccurrenceStatus.PENDING, PaymentOccurrenceStatus.OVERDUE]},
+                    deletedAt: null,
+                },
+                orderBy: {dueDate: 'asc'},
+                take: 5,
+                select: {id: true, dueDate: true, status: true, amountDue: true, sequenceNumber: true},
+                },
+                payments:{
+                where: {deletedAt: null},
+                orderBy: {paidDate: 'desc'},
+                take: 5,
+                select: {id: true, amountPaid: true, paidDate: true, paymentStatus: true, daysLate: true},
+                },
+            },
+        });
+
+        if(!obligation){
+            throw new NotFoundException('Financial obligation not found');
+        }
+
+        const activeSchedule = obligation.schedules[0] ?? null;
+
+        return{
+            data:{
+                obligation:{
+                id: obligation.id,
+                name: obligation.name,
+                description: obligation.description,
+                type: obligation.type,
+                status: obligation.status,
+                amount: Number(obligation.amount),
+                currency: obligation.currency,
+                priority: obligation.priority,
+                startDate: obligation.startDate,
+                endDate: obligation.endDate,
+                category: obligation.category,
+                createdAt: obligation.createdAt,
+                },
+                schedule: activeSchedule?
+                {
+                    id: activeSchedule.id,
+                    frequency: activeSchedule.frequency,
+                    interval: activeSchedule.interval,
+                    dayOfMonth: activeSchedule.dayOfMonth,
+                    isActive: activeSchedule.isActive,
+                } : null,
+
+                upcomingOccurrences: obligation.occurrences.map((o)=>({
+                ...o,
+                amountDue: Number(o.amountDue),
+                })),
+                recentPayments: obligation.payments.map((p)=>({
+                ...p,
+                amountPaid: Number(p.amountPaid),
+                })),
+            },
+        };
     }
 }
 
