@@ -233,8 +233,8 @@ describe('DashboardService', () => {
 		});
 
 
-		it('should retunr a user summar for the currect user', async () => {
-			
+		it('should return a user summary for the Correct user', async () => {
+
 			mockPrismaService.user.findFirst.mockResolvedValue(mockUserSummary);
 			mockPrismaService.creditProfile.findFirst.mockResolvedValue(mockCreditProfile);
 			mockPrismaService.scoreEvent.findMany.mockResolvedValue(mockRecentScoreEvents);

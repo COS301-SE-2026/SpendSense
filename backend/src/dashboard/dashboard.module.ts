@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
-import { UsersModule } from 'src/users/users.module';
+import { UsersModule } from '../users/users.module';
+import { PrismaModule } from '../prisma/prisma.module';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 
@@ -11,7 +12,7 @@ import { DashboardService } from './dashboard.service';
 // GET /api/v1/dashboard
 
 @Module({
-  imports: [AuthModule, UsersModule],
+  imports: [AuthModule, UsersModule, PrismaModule],
   controllers: [DashboardController],
   providers: [DashboardService],
 })
