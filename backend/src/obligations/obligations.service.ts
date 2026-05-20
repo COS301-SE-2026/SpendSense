@@ -17,6 +17,7 @@ import{
 }from '@prisma/client';
 import {CreateObligationDto} from './dto/create-obligation.dto';
 import { ListObligationsDto } from './dto/list-obligations.dto';
+import { UpdateObligationDto } from './dto/update-obligation.dto';
 
 const OCCURRENCE_HORIZON_MONTHS = 6;
 
@@ -166,6 +167,8 @@ export class ObligationsService{
             },
         };
         });
+
+
     }
 
         async list(userId: string, query: ListObligationsDto){
@@ -300,6 +303,141 @@ export class ObligationsService{
                 })),
             },
         };
+    }
+
+    async update(userId: string, id: string, dto: UpdateObligationDto){
+        const obligation = await this.prisma.financialObligation.findFirst({
+            where: {id, userId, deletedAt: null},
+            include: {schedules: {where: {isActive: true}, take: 1}},
+        });
+
+        if(!obligation){
+        throw new NotFoundException('Financial obligation not found');
+        }
+
+        return this.prisma.$transaction(async (tx)=>{
+        const updated = await tx.financialObligation.update({
+            where: {id},
+            data:{
+                ...(dto.name !== undefined && {name: dto.name}),
+                ...(dto.description !== undefined && {description: dto.description}),
+                ...(dto.amount !== undefined && {amount: dto.amount}),
+                ...(dto.priority !== undefined && {priority: dto.priority}),
+                ...(dto.status !== undefined && {status: dto.status}),
+                ...(dto.endDate !== undefined && { endDate: dto.endDate ? new Date(dto.endDate) : null,}),
+            },
+        });
+
+        const activeSchedule = obligation.schedules[0];
+        if (dto.schedule && activeSchedule){
+            await tx.paymentSchedule.update({
+                where: {id: activeSchedule.id},
+                data:{
+                    ...(dto.schedule.frequency && { frequency: dto.schedule.frequency }),
+                    ...(dto.schedule.interval && { interval: dto.schedule.interval }),
+                    ...(dto.schedule.dayOfMonth !== undefined && {dayOfMonth: dto.schedule.dayOfMonth,}),
+                },
+            });
+        }
+
+        let futureOccurrencesRegenerated = false;
+        if(dto.regenerateFutureOccurrences && activeSchedule){
+            // cancel any pending or overdue futre payments
+            await tx.paymentOccurrence.updateMany({
+            where:{
+                obligationId: id,
+                status:{
+                    in: [PaymentOccurrenceStatus.PENDING, PaymentOccurrenceStatus.OVERDUE],
+                },
+                deletedAt: null,
+            },
+            data: {status: PaymentOccurrenceStatus.CANCELLED},
+            });
+
+            // regen from today using the schedule
+            const newSchedule = dto.schedule ?? {};
+            const newDates = generateOccurrenceDates(
+                ((newSchedule.frequency ?? activeSchedule.frequency) as ScheduleFrequency),
+                newSchedule.interval ?? activeSchedule.interval,
+                newSchedule.dayOfMonth ?? activeSchedule.dayOfMonth ?? undefined,
+                new Date(),
+                updated.endDate,
+                activeSchedule.totalOccurrences ?? null,
+            );
+
+            const maxSeq = await tx.paymentOccurrence.aggregate({
+                _max: {sequenceNumber: true},
+                where: {obligationId: id},
+            });
+            let seq = (maxSeq._max.sequenceNumber ?? 0) + 1;
+
+            for(const dueDate of newDates){
+                await tx.paymentOccurrence.create({
+                    data:{
+                    userId,
+                    obligationId: id,
+                    scheduleId: activeSchedule.id,
+                    dueDate,
+                    amountDue: dto.amount ?? updated.amount,
+                    currency: updated.currency,
+                    status: PaymentOccurrenceStatus.PENDING,
+                    sequenceNumber: seq++,
+                    },
+                });
+            }
+
+            futureOccurrencesRegenerated = true;
+        }
+
+        return{
+            data:{
+                obligation:{
+                    id: updated.id,
+                    name: updated.name,
+                    amount: Number(updated.amount),
+                    updatedAt: updated.updatedAt,
+                },
+            futureOccurrencesRegenerated,
+            },
+        };
+        });
+    }
+
+    async archive(userId: string, id: string){
+        const obligation = await this.prisma.financialObligation.findFirst({
+            where: {id, userId, deletedAt: null},
+        });
+
+        if(!obligation){
+            throw new NotFoundException('Financial obligation not found');
+        }
+
+        return this.prisma.$transaction(async (tx)=>{
+        await tx.financialObligation.update({
+            where: {id},
+            data: {deletedAt: new Date(), status: ObligationStatus.CANCELLED},
+        });
+
+        const cancelled = await tx.paymentOccurrence.updateMany({
+            where:{
+                obligationId: id,
+                status:{
+                    in: [PaymentOccurrenceStatus.PENDING, PaymentOccurrenceStatus.OVERDUE],
+                },
+                deletedAt: null,
+            },
+            data: {status: PaymentOccurrenceStatus.CANCELLED},
+        });
+
+        return{
+            data:{
+            id,
+            status: 'CANCELLED',
+            deletedAt: new Date(),
+            futureOccurrencesCancelled: cancelled.count,
+            },
+        };
+        });
     }
 }
 

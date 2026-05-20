@@ -8,6 +8,8 @@ import{
     UseGuards,
     HttpCode,
     HttpStatus,
+    Patch,
+    Delete,
 }from '@nestjs/common';
 import{
     ApiTags,
@@ -24,6 +26,8 @@ import {SupabaseJwtGuard} from '../auth/guards/supabase-jwt.guard';
 import {CurrentAuthUser} from '../common/decorators/current-auth-user.decorator';
 import {UsersService} from '../users/users.service';
 import type {AuthUser} from '../auth/types/auth-user.type';
+import {UpdateObligationDto} from './dto/update-obligation.dto';
+import {ListObligationsDto} from './dto/list-obligations.dto';
 
 
 @ApiTags('obligations')
@@ -68,5 +72,28 @@ export class ObligationsController{
     async findOne(@CurrentAuthUser() authUser: AuthUser, @Param('id') id: string,){
         const user = await this.usersService.findOrCreateUser(authUser);
         return this.obligationsService.findOne(user.id, id);
+    }
+
+    @Patch(':id')
+    @ApiOperation({summary: 'Update an obligation and optionally regenerate future occurrences'})
+    @ApiParam({name: 'id', description: 'Obligation ID'})
+    @ApiBody({type: UpdateObligationDto})
+    @ApiResponse({status: 200, description: 'Obligation updated'})
+    @ApiResponse({status: 401, description: 'Unauthorised'})
+    @ApiResponse({status: 404, description: 'Financial obligation not found'})
+    async update(@CurrentAuthUser() authUser: AuthUser, @Param('id') id: string, @Body() dto: UpdateObligationDto,){
+        const user = await this.usersService.findOrCreateUser(authUser);
+        return this.obligationsService.update(user.id, id, dto);
+    }
+
+    @Delete(':id')
+    @ApiOperation({summary: 'Archive (soft-delete) an obligation and cancel future occurrences'})
+    @ApiParam({name: 'id', description: 'Obligation ID'})
+    @ApiResponse({status: 200, description: 'Obligation archived'})
+    @ApiResponse({status: 401, description: 'Unauthorised'})
+    @ApiResponse({status: 404, description: 'Financial obligation not found'})
+    async archive(@CurrentAuthUser() authUser: AuthUser, @Param('id') id: string,){
+        const user = await this.usersService.findOrCreateUser(authUser);
+        return this.obligationsService.archive(user.id, id);
     }
 }
