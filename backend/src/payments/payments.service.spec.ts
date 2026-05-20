@@ -83,6 +83,8 @@ describe('PaymentsService', () => {
     expect(service).toBeDefined();
   });
 
+
+  // Test case for ON-TIME payments
   it("successfully logging an ON-TIME payment", async () => {
     const dto = { ...baseDto };
     const mockPaymentRecord = { ...basePaymentRecord };
@@ -132,6 +134,54 @@ describe('PaymentsService', () => {
     expect(result.occurrence).toEqual(mockUpdateOccurance);
     expect(result.isLate).toBe(false);
     expect(result.daysLate).toBe(0);
+  });
+
+
+
+  // Test case for LATE payments
+  it('PaymentsService should successfully log a LATE payment', async () => {
+    const dto = {
+      ...baseDto, // reference the base dto fields 
+      paidDate: '2026-05-23', // but use this new date
+    };
+
+    const mockPaymentRecord = {
+      ...basePaymentRecord, //use the base payment record
+      paymentStatus: PaymentRecordStatus.LATE, // but change the status to LATE
+      daysLate: 3, // and it was paid 3 days late
+    };
+
+    const mockUpdatedOccurrence = {
+      ...baseOccurrence,
+      status: PaymentOccurrenceStatus.PAID_LATE,
+      paidAt: new Date(dto.paidDate),
+    };
+
+    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue(baseOccurrence);
+    mockPrismaService.paymentRecord.create.mockResolvedValue(mockPaymentRecord);
+    mockPrismaService.paymentOccurrence.update.mockResolvedValue(mockUpdatedOccurrence);
+
+    const result = await service.logPayment(dto);
+
+    expect(mockPrismaService.paymentRecord.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        paymentStatus: PaymentRecordStatus.LATE,
+        daysLate: 3,
+      }),
+    });
+
+    expect(mockPrismaService.paymentOccurrence.update).toHaveBeenCalledWith({
+      where: {
+        id: baseOccurrence.id,
+      },
+      data: {
+        status: PaymentOccurrenceStatus.PAID_LATE,
+        paidAt: new Date(dto.paidDate),
+      },
+    });
+
+    expect(result.isLate).toBe(true);
+    expect(result.daysLate).toBe(3);
   });
 
 });
