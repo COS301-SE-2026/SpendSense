@@ -59,7 +59,7 @@ function Gauge({
       aria-valuenow={clamped}
       aria-label={ariaLabel ?? `${clamped} out of ${max}`}
       className={cn("relative inline-block shrink-0", className)}
-      style={{ width, height: height + Math.round(width * 0.35) }}
+      style={{ width, height }}
       {...props}
     >
       <svg
@@ -86,9 +86,13 @@ function Gauge({
           className={cn(gaugeIndicatorVariants({ tone }))}
         />
       </svg>
- 
+
+      {/* anchor children just above the arc base (SVG y=100 out of 110 = 90.9% from top) */}
       {children && (
-        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end pb-1 text-center">
+        <div
+          className="absolute inset-x-0 flex flex-col items-center text-center"
+          style={{ bottom: Math.round(height * 0.12) }}
+        >
           {children}
         </div>
       )}
