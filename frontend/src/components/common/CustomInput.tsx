@@ -1,15 +1,14 @@
 import * as React from "react"
-import {Input} from "@/components/ui/input"
 import {cn} from "@/lib/utils"
 
 type InputVariant= "regLog"|"form"
 type InputSize="sm"|"md"|"lg"
-interface CustomInputProps extends React.ComponentProps<typeof Input>{
-    label?: string;
-    plaeholder?:string;
-    value:string;
-    type?:string;
-    onChange:(e:React.ChangeEvent<HTMLInputElement>)=>void;
+interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement>{
+    // label?: string;
+    // plaeholder?:string;
+    // value:string;
+    // type?:string;
+    // onChange:(e:React.ChangeEvent<HTMLInputElement>)=>void;
     variant?:InputVariant;
     inputSize?: InputSize;
 }
@@ -32,7 +31,7 @@ export function CustomInput({
     return(
         <input
             className={cn(
-                "rounded-lg transiton-shadow focus:shadow-md",
+                "rounded-lg transition-shadow focus:shadow-md",
                 variantStyles[variant],
                 sizeStyles[inputSize],
                 className
