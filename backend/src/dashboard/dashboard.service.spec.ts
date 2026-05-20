@@ -217,7 +217,18 @@ describe('DashboardService', () => {
 			mockPrismaService.userBadge.findMany.mockResolvedValue(mockRecentBadges);
 			mockPrismaService.notification.findMany.mockResolvedValue(mockUnreadNotifications);
 
-			
+			const result = await service.getDashboard(userId);
+
+			expect(result).toEqual({
+				userSummary: mockUserSummary,
+				creditProfile: mockCreditProfile,
+				recentScoreEvents: mockRecentScoreEvents,
+				gamificationProfile: mockGamificationProfile,
+				upcomingPayments: mockUpcomingPayments,
+				overduePayments: mockOverduePayments,
+				recentBadges: mockRecentBadges,
+				unreadNotifications: mockUnreadNotifications,
+			});
 
 		});
 	});
