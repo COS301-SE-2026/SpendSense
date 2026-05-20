@@ -139,7 +139,7 @@ export default function RegisterPage(){
 					{/* login with google butt */}
 					<div>
 						<LongButton type="submit" LongVariant="outline"  disabled fullWidth>
-							{isLoading ? "Loading...":"Will be sign up with Google"}
+							{isLoading ? "Loading...":"Sign up with Google"}
 						</LongButton>
 					</div>
 					<div className="text-center text-[#44474C]">
