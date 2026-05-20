@@ -1,5 +1,7 @@
+import path from 'path'
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { defineConfig } from 'vitest/config'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths'
 

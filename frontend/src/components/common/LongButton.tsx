@@ -18,6 +18,7 @@ export function LongButton({
     LongSize="md",
     fullWidth=true,
     showArrow=true,
+    asChild=false,
     className,
     ...props
 }: LongButtonProps){
@@ -36,6 +37,7 @@ export function LongButton({
     }
     return(
         <Button
+            asChild={asChild}
             className={cn(
                 "rounded-full border-2 font-bold transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
                 fullWidth && "w-full",
@@ -44,8 +46,12 @@ export function LongButton({
                 className
             )}{...props}
         >
-            {children}
-            {showArrow && <ArrowRight className="ml-2 h-4 w-4"/>}
+            {asChild ? children : (
+                <>
+                    {children}
+                    {showArrow && <ArrowRight className="ml-2 h-4 w-4"/>}
+                </>
+            )}
         </Button>
     )
 }
