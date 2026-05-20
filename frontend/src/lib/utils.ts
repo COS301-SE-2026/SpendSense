@@ -61,3 +61,73 @@ export const iconButtonVariants=cva(
   }
 )
 export type IconButtonVariants=VariantProps<typeof iconButtonVariants>
+
+
+//CVA for Sticker Variants
+
+export const stickerVariants = cva(
+"relative inline-flex items-center justify-center shrink-0 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  {
+    variants: {
+      tone: {
+        pink:"bg-[#FCE0E8] text-[#AC2A5D]",
+        yellow:"bg-[#FFE7AE] text-[#7A4A00]",
+        slate:"bg-[#D7DEE4] text-[#3E4A55]",
+        mint:"bg-[#DCEFE8] text-[#16635A]",
+        blue:"bg-[#DCE8F7] text-[#1E4FAE]",
+        maroon:"bg-[#6E0034] text-[#FFFFFF]",
+        hotpink: "bg-[#FF6B9D] text-[#700034]",
+      },
+      shape: {
+        circle:"rounded-full",
+        squircle:"rounded-[32%]",
+      },
+      size: {
+        sm:"size-16[&_svg:not([class*='size-'])]:size-7",
+        md:"size-24[&_svg:not([class*='size-'])]:size-10",
+        lg:"size-32[&_svg:not([class*='size-'])]:size-14",
+        xl:"size-44[&_svg:not([class*='size-'])]:size-20",
+      },
+      state: {
+        earned: "",
+        locked:"bg-transparent text-[#A8B4AE] border-2 border-dashed border-[#A8B4AE] [&_svg]:opacity-70",
+      },
+      tilt: {
+        none:"",
+        left: "-rotate-3",
+        right:"rotate-3",
+      },
+    },
+    defaultVariants: {
+      tone:"pink",
+      shape:"circle",
+      size: "md",
+      state: "earned",
+      tilt: "none",
+    },
+  }
+)
+export type StickerVariants = VariantProps<typeof stickerVariants>
+
+export const stickerToastVariants = cva(
+  "flex items-center gap-3 rounded-2xl border-2 border-[#0a1929] px-4 py-3 shadow-[3px_4px_0_#0a1929] w-full max-w-sm",
+  {
+    variants: {
+      tone: {
+        pink:"bg-[#FCE0E8]",
+        yellow:"bg-[#FFE7AE]",
+        mint:"bg-[#DCEFE8]",
+        blue:"bg-[#DCE8F7]",
+        slate:"bg-[#D7DEE4]",
+        maroon:"bg-[#FFD9E1]",
+        hotpink:"bg-[#FFD9E1]",
+        white:"bg-white",
+      },
+    },
+    defaultVariants: {
+      tone:"pink",
+    },
+  }
+)
+export type StickerToastVariants = VariantProps<typeof stickerToastVariants>
+ 
