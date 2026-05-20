@@ -1,4 +1,4 @@
-import { ScoreTier } from '@prisma/client';
+import { ScoreEventType, ScoreTier } from '@prisma/client';
 import { CreditService } from './credit.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { UsersService } from '../users/users.service';
@@ -8,6 +8,9 @@ describe('CreditService', () => {
   let prisma: {
     creditProfile: {
       create: jest.Mock;
+    };
+    scoreEvent: {
+      findMany: jest.Mock;
     };
   };
   let usersService: jest.Mocked<Pick<UsersService, 'findOrCreateUser'>>;
@@ -21,6 +24,9 @@ describe('CreditService', () => {
     prisma = {
       creditProfile: {
         create: jest.fn(),
+      },
+      scoreEvent: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
     };
     usersService = {
@@ -102,5 +108,54 @@ describe('CreditService', () => {
         lastCalculatedAt: true,
       },
     });
+  });
+
+  it('returns the current user score event history ordered newest first', async () => {
+    const createdAt = new Date('2026-05-20T10:00:00.000Z');
+    const events = [
+      {
+        id: 'score-event-1',
+        eventType: ScoreEventType.PAYMENT_ON_TIME,
+        pointsDelta: 8,
+        scoreBefore: 704,
+        scoreAfter: 712,
+        explanation: 'Paid Subscription on time.',
+        createdAt,
+      },
+    ];
+
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+    prisma.scoreEvent.findMany.mockResolvedValue(events);
+
+    await expect(service.getCreditProfileEvents(authUser)).resolves.toEqual(
+      events,
+    );
+    expect(prisma.scoreEvent.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        id: true,
+        eventType: true,
+        pointsDelta: true,
+        scoreBefore: true,
+        scoreAfter: true,
+        explanation: true,
+        createdAt: true,
+      },
+    });
+  });
+
+  it('returns an empty score event history when the user has no events', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    await expect(service.getCreditProfileEvents(authUser)).resolves.toEqual([]);
   });
 });
