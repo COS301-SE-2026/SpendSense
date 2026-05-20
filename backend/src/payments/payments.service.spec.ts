@@ -239,4 +239,39 @@ describe('PaymentsService', () => {
     expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
   });
 
+    //////////////////////////////////////////////////////////////////////////////
+
+
+  it('should throw BadRequestException when occurrence is already MISSED', async () => {
+    const dto = { ...baseDto };
+
+    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue({
+      ...baseOccurrence, // use that base occurance
+      status: PaymentOccurrenceStatus.MISSED, // but it has a PAID status instead. 
+    });
+
+    await expect(service.logPayment(dto)).rejects.toThrow(BadRequestException);
+
+    expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
+    expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
+  });
+  
+
+    //////////////////////////////////////////////////////////////////////////////
+
+
+  it('should throw BadRequestException when occurrence is already CANCELLED', async () => {
+    const dto = { ...baseDto };
+
+    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue({
+      ...baseOccurrence, // use that base occurance
+      status: PaymentOccurrenceStatus.CANCELLED, // but it has a PAID status instead. 
+    });
+
+    await expect(service.logPayment(dto)).rejects.toThrow(BadRequestException);
+
+    expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
+    expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
+  });
+
 });
