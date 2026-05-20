@@ -274,4 +274,20 @@ describe('PaymentsService', () => {
     expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
   });
 
+  //////////////////////////////////////////////////////////////////////////////
+
+  it('should throw BadRequestException when dto.amountPaid does not equal occurrence.amountDue', async () => {
+    const dto = { 
+      ...baseDto ,
+      amountPaid: 700, // use the base dto but change its amount form 713 to 700. 
+    };
+
+    mockPrismaService.paymentOccurrence.findUnique.mockResolvedValue(baseOccurrence)
+
+    await expect(service.logPayment(dto)).rejects.toThrow(BadRequestException);
+
+    expect(mockPrismaService.paymentRecord.create).not.toHaveBeenCalled();
+    expect(mockPrismaService.paymentOccurrence.update).not.toHaveBeenCalled();
+  });
+
 });
