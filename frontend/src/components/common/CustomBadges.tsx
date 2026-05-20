@@ -1,14 +1,11 @@
 import * as React from "react"
 import {Badge} from "@/components/ui/badge";
-import {badgeVariants, cn} from "@/lib/utils"
-
-type BadgeVariant="xp"|"tier"|"streak"|"level"
-type BadgeSize="sm"|"md"|"lg"
+import {cn, badgeVariants, type BadgeVariants} from "@/lib/utils"
 
 interface CustomBadgeProps{
     children: React.ReactNode
-    variant?:BadgeVariant
-    size?:BadgeSize
+    variant?:BadgeVariants["variant"]
+    size?:BadgeVariants["size"]
     className?:string
 }
 
