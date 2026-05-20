@@ -62,7 +62,7 @@ export class PaymentsService {
         return {
             message: 'Success. Users payment has been logged',
             paymentRecord,
-            occurrence, // updateOccurrence, 
+            occurrence : updateOccurrence, 
             isLate,
             daysLate,
         };
