@@ -155,3 +155,32 @@ export default App
 //     </main>
 //   )
 // }
+
+//Ally testing for cards
+// import { CustomCard } from "@/components/ui/CustomCard";
+// export default function App() {
+//   const variants = ["greenShaddow","navyShaddow","navyBorder"] as const;
+//   const sizes = ["sm", "md", "lg"] as const;
+
+//   return (
+//     <main className="min-h-screen bg-[#f4fbf7] p-8">
+//       <div className="mx-auto flex max-w-md flex-col gap-6">
+//         {variants.map((variant)=>(
+//           <div key={variant} className="flex flex-col gap-4">
+//             <h2 className="font-semibold text-lg">{variant}</h2>
+//             {sizes.map((size)=>(
+//               <CustomCard
+//                 key={`${variant}-${size}`}
+//                 variant={variant}
+//                 size={size}
+//                 title={`Title ${variant}-${size}`}
+//               >
+//                 <span className="text-gray-700">This is a {variant} card of size {size}</span>
+//               </CustomCard>
+//             ))}
+//           </div>
+//         ))}
+//       </div>
+//     </main>
+//   );
+// }
