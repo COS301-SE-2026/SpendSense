@@ -231,5 +231,37 @@ describe('DashboardService', () => {
 			});
 
 		});
+
+
+		it('should retunr a user summar for the currect user', async () => {
+			
+			mockPrismaService.user.findFirst.mockResolvedValue(mockUserSummary);
+			mockPrismaService.creditProfile.findFirst.mockResolvedValue(mockCreditProfile);
+			mockPrismaService.scoreEvent.findMany.mockResolvedValue(mockRecentScoreEvents);
+			mockPrismaService.gamificationProfile.findFirst.mockResolvedValue(mockGamificationProfile);
+			mockPrismaService.paymentOccurrence.findMany.mockResolvedValueOnce(mockUpcomingPayments).mockResolvedValueOnce(mockOverduePayments);
+			mockPrismaService.userBadge.findMany.mockResolvedValue(mockRecentBadges);
+			mockPrismaService.notification.findMany.mockResolvedValue(mockUnreadNotifications);
+
+			await service.getDashboard(userId);
+
+			expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith({
+				where: {
+					id: userId,
+					deletedAt: null,
+				},
+				select: {
+					id: true,
+					email: true,
+					displayName: true,
+					avatarUrl: true,
+					onboardingCompleted: true,
+					createdAt: true,
+				},
+			});
+		});
+
+
+
 	});
 });
