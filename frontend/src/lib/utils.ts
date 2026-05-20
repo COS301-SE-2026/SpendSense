@@ -155,3 +155,97 @@ export const stickerToastVariants = cva(
 )
 export type StickerToastVariants = VariantProps<typeof stickerToastVariants>
  
+
+//CVA fo progress feedback components
+
+export const progressTrackVariants = cva(
+  "relative w-full overflow-hidden rounded-full bg-[#E8EFEC]",
+  {
+    variants: {
+      size: {
+        sm:"h-2",
+        md:"h-3",
+        lg:"h-4",
+      },
+    },
+    defaultVariants: { size: "md" },
+  }
+)
+export type ProgressTrackVariants = VariantProps<typeof progressTrackVariants>
+
+
+export const progressIndicatorVariants = cva(
+  "h-full transition-[width] duration-500 ease-out",
+  {
+    variants: {
+      tone: {
+        pink:"bg-[#AC2A5D]",
+        mint:"bg-[#6FC9B0]",
+        yellow:"bg-[#F2BF3C]",
+        slate:"bg-[#091828]",
+      },
+    },
+    defaultVariants: { tone: "pink" },
+  }
+)
+export type ProgressIndicatorVariants = VariantProps<typeof progressIndicatorVariants>
+
+
+export const xpPillVariants = cva(
+  "inline-flex items-center justify-center gap-1 rounded-full border-2 font-bold whitespace-nowrap transition-opacity",
+  {
+    variants: {
+      tone: {
+        yellow:"bg-[#FFDF9A] text-[#201600] border-[#091828] shadow-[2px_3px_0_#091828]",
+        muted:"bg-[#E8EFEC] text-[#091828]/50 border-[#091828]/30 shadow-none",
+      },
+      size: {
+        sm:"h-7  px-3 text-xs",
+        md:"h-9  px-4 text-sm",
+        lg:"h-11 px-5 text-base",
+      },
+    },
+    defaultVariants: {
+      tone:"yellow",
+      size:"md",
+    },
+  }
+)
+export type XpPillVariants = VariantProps<typeof xpPillVariants>
+ 
+
+export const streakTickVariants = cva(
+  "inline-flex items-center justify-center rounded-full border-2 shrink-0",
+  {
+    variants: {
+      state: {
+        complete:"bg-[#F2BF3C] border-[#091828] text-[#091828]",
+        current:"bg-[#E8EFEC] border-[#C4C6CC] text-transparent",
+        upcoming:"bg-[#E8EFEC] border-[#C4C6CC] text-transparent",
+      },
+      size: {
+        sm:"size-6 [&_svg]:size-3",
+        md:"size-9 [&_svg]:size-4",
+        lg:"size-11 [&_svg]:size-5",
+      },
+    },
+    defaultVariants: { state: "upcoming", size: "md" },
+  }
+)
+export type StreakTickVariants = VariantProps<typeof streakTickVariants>
+ 
+
+export const gaugeIndicatorVariants = cva("transition-[stroke-dashoffset] duration-700 ease-out", {
+  variants: {
+    tone: {
+      pink:"stroke-[#AC2A5D]",
+      mint:"stroke-[#6FC9B0]",
+      yellow:"stroke-[#F2BF3C]",
+      red:"stroke-[#BA1A1A]",
+      slate:"stroke-[#091828]",
+    },
+  },
+  defaultVariants: { tone: "pink" },
+})
+export type GaugeIndicatorVariants = VariantProps<typeof gaugeIndicatorVariants>
+ 
