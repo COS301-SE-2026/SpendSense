@@ -7,7 +7,6 @@
 // 3. redirect to /dashboard on success
 // 4. display error messages inline
 "use client";
-import React from "react";
 import {useState} from "react";
 // import { useNavigate } from "react-router-dom";
 import {useForm} from "react-hook-form";

@@ -44,7 +44,7 @@ describe("LoginPage Component", () => {
         vi.spyOn(authService, "signIn").mockResolvedValue({ 
             user: { email: "ally@tuks.co.za" },
             session: {}
-        } as any);
+        } as unknown as Awaited<ReturnType<typeof authService.signIn>>);
         render(<LoginPage />);
         fireEvent.change(screen.getByPlaceholderText("ally@tuks.co.za"), {
             target: { value: "ally@tuks.co.za" },
