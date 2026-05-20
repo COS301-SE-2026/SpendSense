@@ -60,6 +60,8 @@ describe('ObligationsController', ()=>{
                         create: jest.fn(),
                         list: jest.fn(),
                         findOne: jest.fn(),
+                        update: jest.fn(),
+                        archive:jest.fn(),
                     },
                 },
 
@@ -131,6 +133,48 @@ describe('ObligationsController', ()=>{
 
             expect(obligationsService.findOne).toHaveBeenCalledWith(mockInternalUser.id, 'obl-1');
             expect(result).toBeDefined();
+        });
+    });
+
+    describe('update()', ()=>{
+        it('updates the obligation and returns the result', async()=>{
+            const updateResult ={
+                data:{
+                obligation: {id: 'obl-1', name: 'Netflix Premium', amount: 229, updatedAt: new Date()},
+                futureOccurrencesRegenerated: false,
+                },
+            };
+            obligationsService.update.mockResolvedValue(updateResult as any);
+
+            const dto = {name: 'Netflix Premium', amount: 229};
+            const result = await controller.update(mockAuthUser, 'obl-1', dto as any);
+
+            expect(obligationsService.update).toHaveBeenCalledWith(
+                mockInternalUser.id,
+                'obl-1',
+                dto,
+            );
+
+            expect(result).toEqual(updateResult);
+        });
+    });
+
+    describe('archive()', ()=>{
+        it('archives the obligation and returns cancelled occurrence count', async()=>{
+            const archiveResult ={
+                data:{
+                id: 'obl-1',
+                status: 'CANCELLED',
+                deletedAt: new Date(),
+                futureOccurrencesCancelled: 3,
+                },
+            };
+            obligationsService.archive.mockResolvedValue(archiveResult as any);
+
+            const result = await controller.archive(mockAuthUser, 'obl-1');
+
+            expect(obligationsService.archive).toHaveBeenCalledWith(mockInternalUser.id, 'obl-1');
+            expect(result).toEqual(archiveResult);
         });
     });
 });

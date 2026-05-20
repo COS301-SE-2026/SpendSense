@@ -13,6 +13,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { CategoriesModule } from './categories/categories.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PaymentOccurrencesModule } from './payment-occurrences/payment-occurrences.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     RemindersModule,
     CategoriesModule,
     NotificationsModule,
+    PaymentOccurrencesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
