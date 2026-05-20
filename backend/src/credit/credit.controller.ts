@@ -46,4 +46,35 @@ export class CreditController {
   async getCreditProfile(@CurrentAuthUser() authUser: AuthUser) {
     return this.creditService.getCreditProfile(authUser);
   }
+
+  @ApiOperation({
+    summary: 'List authenticated user credit score events',
+    description:
+      'Returns the score history for the Supabase-authenticated user, ordered newest first.',
+  })
+  @ApiOkResponse({
+    description: 'Credit score events, wrapped by the global response envelope.',
+    schema: {
+      example: {
+        data: [
+          {
+            id: 'score_event_1',
+            eventType: 'PAYMENT_ON_TIME',
+            pointsDelta: 8,
+            scoreBefore: 704,
+            scoreAfter: 712,
+            explanation: 'Paid Netflix Subscription on time.',
+            createdAt: '2026-05-20T10:00:00.000Z',
+          },
+        ],
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, or invalid Supabase Bearer token.',
+  })
+  @Get('events')
+  async getCreditProfileEvents(@CurrentAuthUser() authUser: AuthUser) {
+    return this.creditService.getCreditProfileEvents(authUser);
+  }
 }
