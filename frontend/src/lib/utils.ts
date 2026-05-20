@@ -62,6 +62,30 @@ export const iconButtonVariants=cva(
 )
 export type IconButtonVariants=VariantProps<typeof iconButtonVariants>
 
+//cva for badges
+export const badgeVariants=cva(
+  "inline-flex items-center justify-center rounded-full font-bold transition-all select-none",
+  {
+    variants:{
+      variant:{
+        xp:"bg-[#f2bf3c] border border-[#0a1929] shadow-[3px_4px_0_#0a1929] text-[#0a1929]",
+        tier:"bg-[#E0B0FF] border border-[#0a1929] shadow-[3px_4px_0_#0a1929] text-[#6E0034]",
+        streak:"bg-[#AC2B5E] border-none text-white",
+        level:"bg-[#0a1929] text-white border-none",
+      },
+      size:{
+        sm:"text-xs px-2 py-1",
+        md:"text-sm px-3 py-1.5",
+        lg:"text-base px-4 py-2"
+      },
+    },
+    defaultVariants:{
+      variant:"xp",
+      size: "md",
+    },
+  }
+)
+export type BadgeVariants=VariantProps<typeof badgeVariants>
 
 //CVA for Sticker Variants
 
