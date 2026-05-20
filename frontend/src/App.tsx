@@ -156,6 +156,18 @@ export default App
 //   )
 // }
 
+//testing for input
+// import { CustomInput } from "@/components/common/CustomInput";
+// export default function App(){
+//   return(  
+//     <main className="min-h-screen bg-[#f4fbf7] p-8">
+//       <div className="mx-auto flex max-w-sm flex-col gap-6">
+//           <CustomInput variant="form" placeholder="Form input component"/>
+//           <CustomInput variant="regLog" placeholder="Reg/Loging input component"/>
+//       </div>
+//     </main>
+//   )
+// }
 //Ally testing for cards
 // import { CustomCard } from "@/components/ui/CustomCard";
 // export default function App() {
