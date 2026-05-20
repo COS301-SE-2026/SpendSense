@@ -5,8 +5,13 @@ import {cn} from "@/lib/utils"
 type InputVariant= "regLog"|"form"
 type InputSize="sm"|"md"|"lg"
 interface CustomInputProps extends React.ComponentProps<typeof Input>{
-    variant?:InputVariant
-    inputSize?: InputSize
+    label?: string;
+    plaeholder?:string;
+    value:string;
+    type?:string;
+    onChange:(e:React.ChangeEvent<HTMLInputElement>)=>void;
+    variant?:InputVariant;
+    inputSize?: InputSize;
 }
 
 export function CustomInput({
