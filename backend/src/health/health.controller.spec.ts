@@ -1,18 +1,24 @@
 import { HealthController } from './health.controller';
 import { PrismaService } from '../prisma/prisma.service';
 
+type PrismaHealthMock = {
+  $queryRaw: jest.Mock<Promise<unknown>, [TemplateStringsArray]>;
+};
+
 describe('HealthController', () => {
   let controller: HealthController;
-  let prisma: jest.Mocked<Pick<PrismaService, '$queryRaw'>>;
+  let prisma: PrismaHealthMock;
+  let fetchMock: jest.MockedFunction<typeof fetch>;
   const originalAiServiceUrl = process.env.AI_SERVICE_URL;
   const originalPackageVersion = process.env.npm_package_version;
   const originalFetch = global.fetch;
 
   beforeEach(() => {
     prisma = {
-      $queryRaw: jest.fn(),
+      $queryRaw: jest.fn<Promise<unknown>, [TemplateStringsArray]>(),
     };
     controller = new HealthController(prisma as unknown as PrismaService);
+    fetchMock = jest.fn() as jest.MockedFunction<typeof fetch>;
     process.env.npm_package_version = '1.2.3-test';
   });
 
@@ -25,8 +31,9 @@ describe('HealthController', () => {
 
   it('returns healthy when the database and AI service are reachable', async () => {
     process.env.AI_SERVICE_URL = 'http://localhost:8000';
-    prisma.$queryRaw.mockResolvedValue([{ '?column?': 1 }] as never);
-    global.fetch = jest.fn().mockResolvedValue({ ok: true } as Response);
+    prisma.$queryRaw.mockResolvedValue([{ '?column?': 1 }]);
+    fetchMock.mockResolvedValue({ ok: true } as Response);
+    global.fetch = fetchMock;
 
     await expect(controller.health()).resolves.toMatchObject({
       status: 'healthy',
@@ -39,14 +46,14 @@ describe('HealthController', () => {
     expect(global.fetch).toHaveBeenCalledWith(
       new URL('http://localhost:8000/health'),
       expect.objectContaining({
-        signal: expect.any(AbortSignal),
+        signal: expect.any(AbortSignal) as AbortSignal,
       }),
     );
   });
 
   it('returns degraded when the database is reachable but AI is unavailable', async () => {
     process.env.AI_SERVICE_URL = undefined;
-    prisma.$queryRaw.mockResolvedValue([{ '?column?': 1 }] as never);
+    prisma.$queryRaw.mockResolvedValue([{ '?column?': 1 }]);
 
     await expect(controller.health()).resolves.toMatchObject({
       status: 'degraded',
@@ -60,7 +67,8 @@ describe('HealthController', () => {
   it('returns unhealthy when the database check fails', async () => {
     process.env.AI_SERVICE_URL = 'http://localhost:8000';
     prisma.$queryRaw.mockRejectedValue(new Error('connection failed'));
-    global.fetch = jest.fn().mockResolvedValue({ ok: true } as Response);
+    fetchMock.mockResolvedValue({ ok: true } as Response);
+    global.fetch = fetchMock;
 
     await expect(controller.health()).resolves.toMatchObject({
       status: 'unhealthy',
@@ -78,7 +86,8 @@ describe('HealthController', () => {
     prisma.$queryRaw.mockRejectedValue(
       new Error('postgresql://user:password@localhost:5432/spendsense'),
     );
-    global.fetch = jest.fn().mockRejectedValue(new Error('network failure'));
+    fetchMock.mockRejectedValue(new Error('network failure'));
+    global.fetch = fetchMock;
 
     const response = await controller.health();
     const serializedResponse = JSON.stringify(response);
@@ -88,7 +97,7 @@ describe('HealthController', () => {
     expect(serializedResponse).not.toContain('ai-service.local');
     expect(response).toEqual({
       status: 'unhealthy',
-      timestamp: expect.any(String),
+      timestamp: expect.any(String) as string,
       version: '1.2.3-test',
       services: {
         database: 'down',

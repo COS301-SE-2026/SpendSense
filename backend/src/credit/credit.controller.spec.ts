@@ -18,7 +18,9 @@ describe('CreditController', () => {
       getCreditProfileEvents: jest.fn(),
     };
 
-    controller = new CreditController(creditService as unknown as CreditService);
+    controller = new CreditController(
+      creditService as unknown as CreditService,
+    );
   });
 
   it('returns the authenticated user credit profile from the service', async () => {

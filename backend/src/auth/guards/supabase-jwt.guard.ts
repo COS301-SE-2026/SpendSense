@@ -90,9 +90,7 @@ export class SupabaseJwtGuard implements CanActivate {
 
     const supabaseUrl = this.getSupabaseUrl();
     const issuer = `${supabaseUrl}/auth/v1`;
-    const jwks = createRemoteJWKSet(
-      new URL(`${issuer}/.well-known/jwks.json`),
-    );
+    const jwks = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
 
     return jwtVerify(token, jwks, {
       issuer,

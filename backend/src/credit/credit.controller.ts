@@ -24,7 +24,8 @@ export class CreditController {
       'Returns the current simulated credit profile for the Supabase-authenticated user.',
   })
   @ApiOkResponse({
-    description: 'The current credit profile, wrapped by the global response envelope.',
+    description:
+      'The current credit profile, wrapped by the global response envelope.',
     schema: {
       example: {
         data: {
@@ -53,7 +54,8 @@ export class CreditController {
       'Returns the score history for the Supabase-authenticated user, ordered newest first.',
   })
   @ApiOkResponse({
-    description: 'Credit score events, wrapped by the global response envelope.',
+    description:
+      'Credit score events, wrapped by the global response envelope.',
     schema: {
       example: {
         data: [

@@ -6,13 +6,11 @@ import type { AuthUser } from 'src/auth/types/auth-user.type';
 import { LogPaymentDto } from './dto/log-payment.dto';
 
 describe('PaymentsController', () => {
-
   let controller: PaymentsController;
   const mockPaymentsService = { logPayment: jest.fn() };
   const mockUsersService = { findOrCreateUser: jest.fn() };
 
   beforeEach(async () => {
-
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PaymentsController],
       providers: [
@@ -68,7 +66,7 @@ describe('PaymentsController', () => {
 
     const result = await controller.logPayment(authUser, dto);
     expect(mockUsersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
-    expect(mockPaymentsService.logPayment).toHaveBeenCalledWith(dto,user.id);
+    expect(mockPaymentsService.logPayment).toHaveBeenCalledWith(dto, user.id);
     expect(result).toEqual(serviceResult);
   });
 });

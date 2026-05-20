@@ -23,7 +23,8 @@ export class CategoriesController {
       'Returns seeded reference categories for the authenticated user flow. Use the optional type query to filter obligation, expense, both, or all categories.',
   })
   @ApiOkResponse({
-    description: 'Seeded reference categories, wrapped by the global response envelope.',
+    description:
+      'Seeded reference categories, wrapped by the global response envelope.',
     schema: {
       example: {
         data: [

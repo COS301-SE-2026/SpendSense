@@ -27,7 +27,9 @@ export class CategoriesService {
     });
   }
 
-  private buildWhereClause(type?: CategoryFilterValue): Prisma.CategoryWhereInput {
+  private buildWhereClause(
+    type?: CategoryFilterValue,
+  ): Prisma.CategoryWhereInput {
     switch (type) {
       case CategoryType.OBLIGATION:
         return {

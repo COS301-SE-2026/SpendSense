@@ -8,7 +8,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { decodeProtectedHeader, jwtVerify } from 'jose';
 import request from 'supertest';
-import { App } from 'supertest/types';
+import type { App } from 'supertest/types';
 import { SupabaseJwtGuard } from './guards/supabase-jwt.guard';
 import { CategoriesController } from '../categories/categories.controller';
 import { CategoriesService } from '../categories/categories.service';
@@ -81,7 +81,7 @@ describe('Protected route auth errors', () => {
       expect(response.body).toEqual({
         statusCode: 401,
         message: 'Missing or malformed Authorization header',
-        timestamp: expect.any(String),
+        timestamp: expect.any(String) as string,
         path,
       });
       expect(usersService.findOrCreateUser).not.toHaveBeenCalled();
@@ -100,7 +100,7 @@ describe('Protected route auth errors', () => {
       expect(response.body).toEqual({
         statusCode: 401,
         message: 'Missing or malformed Authorization header',
-        timestamp: expect.any(String),
+        timestamp: expect.any(String) as string,
         path,
       });
       expect(usersService.findOrCreateUser).not.toHaveBeenCalled();
@@ -121,7 +121,7 @@ describe('Protected route auth errors', () => {
       expect(response.body).toEqual({
         statusCode: 401,
         message: 'Invalid or expired token',
-        timestamp: expect.any(String),
+        timestamp: expect.any(String) as string,
         path,
       });
       expect(usersService.findOrCreateUser).not.toHaveBeenCalled();

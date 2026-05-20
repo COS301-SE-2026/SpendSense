@@ -19,7 +19,10 @@ class HealthServicesDto {
 }
 
 class HealthResponseDto {
-  @ApiProperty({ enum: ['healthy', 'degraded', 'unhealthy'], example: 'degraded' })
+  @ApiProperty({
+    enum: ['healthy', 'degraded', 'unhealthy'],
+    example: 'degraded',
+  })
   status!: HealthStatus;
 
   @ApiProperty({ example: '2026-05-20T10:00:00.000Z' })

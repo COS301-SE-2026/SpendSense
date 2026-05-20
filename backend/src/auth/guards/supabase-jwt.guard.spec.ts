@@ -1,10 +1,6 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
-import {
-  createRemoteJWKSet,
-  decodeProtectedHeader,
-  jwtVerify,
-} from 'jose';
+import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify } from 'jose';
 import { SupabaseJwtGuard } from './supabase-jwt.guard';
 
 jest.mock('jose', () => ({
@@ -13,9 +9,7 @@ jest.mock('jose', () => ({
   jwtVerify: jest.fn(),
 }));
 
-function createExecutionContext(
-  request: Partial<Request>,
-): ExecutionContext {
+function createExecutionContext(request: Partial<Request>): ExecutionContext {
   return {
     switchToHttp: () => ({
       getRequest: () => request,
