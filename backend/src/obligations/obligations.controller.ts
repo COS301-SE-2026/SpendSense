@@ -19,6 +19,7 @@ import{
 }from '@nestjs/swagger';
 import {ObligationsService} from './obligations.service';
 import {CreateObligationDto} from './dto/create-obligation.dto';
+import {ListObligationsDto} from './dto/list-obligations.dto';
 import {SupabaseJwtGuard} from '../auth/guards/supabase-jwt.guard';
 import {CurrentAuthUser} from '../common/decorators/current-auth-user.decorator';
 import {UsersService} from '../users/users.service';
