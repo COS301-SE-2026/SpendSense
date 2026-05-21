@@ -38,7 +38,7 @@ const registrationSchema=z.object({
 	}
 	return true;
 },{
-	message:"Passwords do no match",
+	message:"Passwords do not match",
 	path:["confirmPassword"],
 });
 

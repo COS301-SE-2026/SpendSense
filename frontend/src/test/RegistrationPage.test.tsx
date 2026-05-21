@@ -69,7 +69,7 @@ describe("RegisterPage Component",()=>{
         await user.type(screen.getByLabelText(/^password$/i),"SuperSecret123");
         await user.type(screen.getByLabelText(/confirm password/i),"DifferentSecret123");
         await user.click(screen.getByRole("button",{name:/join the quest/i}));
-        expect(await screen.findByText("Passwords do no match")).toBeInTheDocument();
+        expect(await screen.findByText("Passwords do not match")).toBeInTheDocument();
    });
 
     //path submission and reg
