@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
-
+import { PaymentsController } from './payments.controller';
+import { PaymentsService } from './payments.service';
+import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 // PaymentsModule: payment logging and occurrence management
 // TODO: implemetn PaymentsController and PaymentsService
 
@@ -7,5 +10,25 @@ import { Module } from '@nestjs/common';
 // POST /api/v1/payments/log
 // GET /api/v1/payment-occurrences/upcoming
 
-@Module({})
+@Module({
+  imports: [AuthModule, UsersModule],
+  controllers: [PaymentsController],
+  providers: [PaymentsService],
+  exports: [PaymentsService],
+})
 export class PaymentsModule {}
+
+/**
+ * Users Logs a Payment against a due occurance
+ *  - PaymentRecord is created
+ *  - PaymentOccurrence status is updated
+ *  - daysLate is calculated
+ *  - simulatedInterest is calculated if late
+ *  - ScoreEvent is created
+ *  - CreditProfile is updated
+ *  - UserEvent is created
+ *  - GamificationProfile is updated
+ *  - RewardTransaction is created if coins/xp awarded
+ *  - UserBadge progress is checked
+ *  - Notification may be created
+ */
