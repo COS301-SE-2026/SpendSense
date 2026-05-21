@@ -106,7 +106,7 @@ export default function LoginPage(){
                     </div>
                     <div className="text-center text-[#44474C]">
                         New Here?{" "}
-                        <Link to="/domains/registration" className="text-[#AC2A5D] text-princple hover:underline">
+                        <Link to="/register" className="text-[#AC2A5D] text-princple hover:underline">
                             Sign up
                         </Link>
                     </div>

@@ -16,6 +16,7 @@ import { Link, useNavigate} from "react-router-dom";
 import logo from "../components/SpendSenseLogoLight.svg";
 import { LongButton } from "../components/common/LongButton";
 import { CustomInput } from "../components/common/CustomInput";
+import { getMe } from "../features/users/usersApi";
 
 //validation rules
 const registrationSchema=z.object({
@@ -54,10 +55,15 @@ export default function RegisterPage(){
 		setIsLoading(true);
 		setError(null);
 		try{
-			await signUp(data.email,data.password);
-			navigate("/domains/dashboard");
+			const result = await signUp(data.email, data.password, data.displayName);
+			if (result.session) {
+				await getMe();
+				navigate("/domains/dashboard");
+			} else {
+				setError("Check your email to confirm your account before signing in.");
+			}
 		}catch(err:unknown){
-			setError(err instanceof Error ? err.message:"Login failed.");
+			setError(err instanceof Error ? err.message:"Registration failed.");
 		}finally{
 			setIsLoading(false);
 		}
@@ -144,7 +150,7 @@ export default function RegisterPage(){
 					</div>
 					<div className="text-center text-[#44474C]">
 						Already have an account?{" "}
-						<Link to="/domains/LoginPage" className="text-[#AC2A5D] text-princple hover:underline">
+						<Link to="/login" className="text-[#AC2A5D] text-princple hover:underline">
 							Log in
 						</Link>
 					</div>
