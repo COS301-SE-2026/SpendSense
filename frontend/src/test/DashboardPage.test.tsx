@@ -1,9 +1,10 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 import DashboardPage from '../domains/DashboardPage'
 import'@testing-library/jest-dom'
+import { signOut } from '../features/auth/auth.service'
 
 vi.mock('@hugeicons/react', () => ({
   HugeiconsIcon: () => null,
@@ -30,6 +31,10 @@ vi.mock('../features/dashboard/dashboardApi', () => ({
       unreadNotifications: [],
     },
   }),
+}))
+
+vi.mock('../features/auth/auth.service', () => ({
+  signOut: vi.fn(),
 }))
 
 function renderDashboard() {
@@ -127,5 +132,25 @@ describe('DashboardPage', () => {
     const obligationLink = screen.getByRole('link', { name: /obligation/i })
     expect(paymentLink).toHaveAttribute('href', '/paymentForm')
     expect(obligationLink).toHaveAttribute('href', '/obligationForm')
+  })
+
+  it('signs out and navigates to login', async () => {
+    vi.mocked(signOut).mockResolvedValue(undefined)
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/login" element={<div>Login page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /sign out/i }))
+
+    await waitFor(() => {
+      expect(signOut).toHaveBeenCalledOnce()
+      expect(screen.getByText('Login page')).toBeInTheDocument()
+    })
   })
 })
