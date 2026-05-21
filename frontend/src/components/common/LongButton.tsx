@@ -3,7 +3,7 @@ import {ArrowRight} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {cn} from "@/lib/utils"
 
-type LongButtonVariant = "primaryDark" | "primaryPink" | "primaryMint" | "primaryYellow" | "outline" | "primaryPinkBorder"
+type LongButtonVariant = "primaryDark" | "primaryPink" | "primaryMint" | "primaryYellow" | "outline" | "primaryPinkBorder"|"form"
 type LongButtoneSize= "sm" | "md" | "lg"
 type LongButtonProps=React.ComponentProps<typeof Button>&{
     LongVariant?: LongButtonVariant
@@ -18,6 +18,7 @@ export function LongButton({
     LongSize="md",
     fullWidth=true,
     showArrow=true,
+    asChild=false,
     className,
     ...props
 }: LongButtonProps){
@@ -28,6 +29,7 @@ export function LongButton({
         primaryMint: "bg-[#72cdbc] text-[#08060d] border-transparent hover:bg-[#65c4b2]",
         primaryYellow: "bg-[#ffdc8a] text-[#08060d] border-transparent hover:bg-[#ffd372]",
         outline: "bg-white text-[#08060d] border-[#0a1929] hover:bg-[#f4f3ec] shadow-[3px_4px_0_#0a1929]",
+        form:"bg-white text-[#787A80] shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none",
     }
     const sizeStyles: Record<LongButtoneSize,string> ={
         sm: "h-9 px-5 text-xs",
@@ -36,6 +38,7 @@ export function LongButton({
     }
     return(
         <Button
+            asChild={asChild}
             className={cn(
                 "rounded-full border-2 font-bold transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none",
                 fullWidth && "w-full",
@@ -44,8 +47,12 @@ export function LongButton({
                 className
             )}{...props}
         >
-            {children}
-            {showArrow && <ArrowRight className="ml-2 h-4 w-4"/>}
+            {asChild ? children : (
+                <>
+                    {children}
+                    {showArrow && <ArrowRight className="ml-2 h-4 w-4"/>}
+                </>
+            )}
         </Button>
     )
 }
