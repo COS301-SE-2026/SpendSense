@@ -95,6 +95,8 @@ BadgeDefinition -> UserBadge
 
 It creates and removes only its own temporary records.
 
+For a frontend walkthrough account, use `docs/backend/demo-seeding.md`. The demo seed relies on the schema relation chain above and requires the seeded internal `User.supabaseAuthId` to match the Supabase Auth user ID used by the frontend login token.
+
 ## Visual reference
 
 See `docs/database/erd.md` for the implemented Demo 1 ERD.
