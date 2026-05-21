@@ -52,7 +52,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
         expect(screen.getByRole("heading",{ name: /add payment/i })).toBeInTheDocument();
         expect(screen.getByLabelText(/occurence id/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/amount paid/i)).toBeInTheDocument();
-        expect(screen.getByRole("button",{ name: /may 21, 2026/i })).toBeInTheDocument();
+        expect(screen.getByRole("button",{ name: /\w+ \d{1,2}, \d{4}/i })).toBeInTheDocument()
         expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
         expect(screen.getByRole("button",{ name: /log payment/i })).toBeInTheDocument();
     });

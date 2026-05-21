@@ -28,7 +28,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/register" element={<RegisterPage/>}/>
         <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm/></ProtectedRoute>}/>
         <Route path="/stickers" element={<StickerAlbumPage />}/>
-        <Route path="/stickers/:badgeId" element={<StickerDetailPage />}/>
+        <Route path="/stickers/:badgeKey" element={<StickerDetailPage />}/>
         <Route path="/paymentForm" element={<PaymentForm/>}/>
       </Routes>
     </BrowserRouter>
