@@ -60,7 +60,6 @@ export default function DashboardPage() {
 	const creditProfile = dashboard?.creditProfile
 	const gamificationProfile = dashboard?.gamificationProfile
 	const upcomingPayments = dashboard?.upcomingPayments ?? []
-	const unreadNotifications = dashboard?.unreadNotifications ?? []
 
 	const name = userSummary?.displayName
 
@@ -73,21 +72,6 @@ export default function DashboardPage() {
 		next: 1200,
 		nextLevel: (gamificationProfile?.mascotLevel ?? 1) + 1,
 	}
-
-
-
-	React.useEffect(() => {
-
-		if (!dashboard) return
-
-		console.log("userSummary:", userSummary)
-		console.log("creditProfile:", creditProfile)
-		console.log("gamificationProfile:", gamificationProfile)
-		console.log("upcomingPayments:", upcomingPayments)
-		console.log("unreadNotifications:", unreadNotifications)
-
-	}, [dashboard])
-
 
 	return (
 		<div className="min-h-screen bg-[#F4FBF7] pb-24">
