@@ -26,25 +26,56 @@ import { cn } from "@/lib/utils"
 import { getDashboard } from "@/features/dashboard/dashboardApi"
 
 export default function DashboardPage() {
+
+  // mock data 
     const user = { initials: "RC", firstName: "Rachel" }
     const score = 742
     const level = 4
     const streakDays = 7
     const xp = { current: 850, next: 1200, nextLevel: 5 }
 
+    const [dashboard, setDashboard] = React.useState<any>(null) 
 
-    // testing the getDashboard function:
+
+    // loading and detting the dashboard 
     React.useEffect(() => {
-      async function testGetDashboard() {
+      async function loadDashboard() {
         try {
-          const dashboard = await getDashboard()
-          console.log("getDashboard response: ", dashboard)
+          const response = await getDashboard()
+          console.log("getDashboard response: ", response)
+          setDashboard(response.data)
+          
         } catch (error) {
           console.error("getDashboard response: ", error)
         }
       }
-      testGetDashboard()
-    })
+      loadDashboard()
+
+      function test() {
+        console.log("Test")
+
+      }
+      test()
+    }, [])
+
+
+    React.useEffect(() => {
+      if (!dashboard) return
+
+      const userSummary = dashboard?.userSummary
+      const creditProfile = dashboard?.creditProfile
+      const gamificationProfile = dashboard?.gamificationProfile
+      const upcomingPayments = dashboard?.upcomingPayments ?? []
+      const unreadNotifications = dashboard?.unreadNotifications ?? []
+
+      console.log("userSummary:", userSummary)
+      console.log("creditProfile:", creditProfile)
+      console.log("gamificationProfile:", gamificationProfile)
+      console.log("upcomingPayments:", upcomingPayments)
+      console.log("unreadNotifications:", unreadNotifications)
+
+    }, [dashboard])
+
     
     return (
         <div className="min-h-screen bg-[#F4FBF7] pb-24">
