@@ -1,13 +1,13 @@
 "use client";
 import {useState} from "react";
-import {useForm,Controller,type Resolver} from "react-hook-form";
+import {useForm,Controller,useWatch, type Resolver} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {format} from "date-fns";
 import * as z from "zod";
-import {Link, useNavigate} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import {LongButton} from "../components/common/LongButton";
 import {CustomInput} from "../components/common/CustomInput";
-import {createObligation} from "../features/obligations/obligationsApi";
+// import {createObligation} from "../features/obligations/obligationsApi"; mocked for now
 import {Popover,PopoverContent, PopoverTrigger} from "../components/ui/popover";
 import {Calendar as CalenderIcon} from "lucide-react";
 import {IconButton} from "@/components/common/IconButton";
@@ -78,7 +78,6 @@ export default function ObligationForm(){
         register,
         handleSubmit,
         control,
-        watch,
         reset,
         formState:{errors},
    }=useForm<ObligationFormData>({
@@ -105,6 +104,7 @@ export default function ObligationForm(){
            }
        }satisfies ObligationFormData,
    });
+    const remindersEnabled=useWatch({control,name:"reminders.enabled"});
     const onSubmit=async (formData:ObligationFormData)=>{
         const data=formData as ObligationFormData;
         setSubmitting(true);
@@ -113,13 +113,13 @@ export default function ObligationForm(){
                 ...data,
                 startDate:data.startDate.toISOString(),
                 endDate:data.endDate ? data.endDate.toISOString() : null,
-           };
-            await createObligation(payload);
+            };
+            console.log("Mock obligation created: ",payload);
             setShowPopup(true);
             setTimeout(()=>{
                 setShowPopup(false);
                 reset();
-            });
+            },5000);
        }catch(error){
             console.error("Failed to create obligation: ",error);
        }finally{
@@ -148,7 +148,10 @@ export default function ObligationForm(){
                 {/* header -> cancel button(IconVariant="iconCancel"),heading*/}
                 <div className="flex items-center justify-between gap-3 mb-2">
                     <div className="flex-shrink-0">
-                        <IconButton IconVariant="iconCancel"/>    
+                        <IconButton 
+                            type="button" IconVariant="iconCancel"
+                            aria-label="Clear form"
+                            onClick={()=>navigate("/")}/>    
                     </div>   
                     <h1 className="text-center text-[#091828] text-3xl font-bold">New obligation</h1>
                     <div className="flex-shrink-0">
@@ -158,9 +161,10 @@ export default function ObligationForm(){
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
                     {/* What is this for-input InputVariant="form" */}
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold text-[#091828]">What is this for?</label>
+                        <label htmlFor="name" className="text-xs font-semibold text-[#091828]">What is this for?</label>
                         <CustomInput
                             variant="form"
+                            id="name"
                             {...register("name")}
                             placeholder="e.g. Netflix Subscription"
                             className="w-full"
@@ -169,9 +173,10 @@ export default function ObligationForm(){
                     {errors.name?.message && <p className="text-xs text-red-500">{errors.name.message}</p>}
                     {/* description */}
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold text-[#091828]">Description</label>
+                        <label htmlFor="description" className="text-xs font-semibold text-[#091828]">Description</label>
                         <CustomInput
                             variant="form"
+                            id="description"
                             {...register("description")}
                             placeholder="Optional notes"
                             className="w-full"
@@ -180,8 +185,9 @@ export default function ObligationForm(){
                     {errors.description?.message && <p className="text-xs text-red-500">{errors.description.message}</p>}
                     {/* type-dropdown e.g. subscription */}
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold text-[#091828]">Type</label>
+                        <label htmlFor="type" className="text-xs font-semibold text-[#091828]">Type</label>
                         <select
+                        id="type"
                         {...register("type")}
                         className="h-12 px-6 text-sm w-full bg-white text-[#787A80] shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none rounded-lg transition-shadow focus:shadow-md"
                         >
@@ -196,9 +202,10 @@ export default function ObligationForm(){
                     {errors.type?.message && <p className="text-xs text-red-500">{errors.type.message}</p>}
                     {/* category e.g. Netflix category is the specialisation of type */}
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold text-[#091828]">Category</label>
+                        <label htmlFor="categoryId" className="text-xs font-semibold text-[#091828]">Category</label>
                         <CustomInput
                             variant="form"
+                            id="categoryId"
                             {...register("categoryId")}
                             placeholder="e.g. Netflix"
                             className="w-full"
@@ -207,9 +214,10 @@ export default function ObligationForm(){
                     {errors.categoryId?.message && <p className="text-xs text-red-500">{errors.categoryId.message}</p>}
                     {/* amount -input InputVariant="form"*/}
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold text-[#091828]">Amount</label>
+                        <label htmlFor="amount" className="text-xs font-semibold text-[#091828]">Amount</label>
                         <CustomInput
                             variant="form"
+                            id="amount"
                             {...register("amount")}
                             placeholder="R0.00"
                             className="w-full"
@@ -218,8 +226,9 @@ export default function ObligationForm(){
                     {errors.amount?.message && <p className="text-xs text-red-500">{errors.amount.message}</p>}
                     {/* priority default to med */}
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold text-[#091828]">Priority</label>
+                        <label htmlFor="priority" className="text-xs font-semibold text-[#091828]">Priority</label>
                         <select
+                        id="priority"
                         {...register("priority")}
                         className="h-12 px-6 text-sm w-full bg-white text-[#787A80] shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none rounded-lg transition-shadow focus:shadow-md"
                         >
@@ -233,7 +242,7 @@ export default function ObligationForm(){
                     <div className="flex items-center gap-5 mb-2">
                             {/* start date-calender input */}
                         <div className="space-y-1">
-                            <label className="text-xs font-semibold text-[#091828] mb-1">Due date</label>
+                            <label htmlFor="startDate" className="text-xs font-semibold text-[#091828] mb-1">Due date</label>
                             <Controller
                                 control={control}
                                 name="startDate"
@@ -268,7 +277,7 @@ export default function ObligationForm(){
                         {errors.startDate?.message && <p className="text-xs text-red-500">{errors.startDate.message}</p>}
                         {/* end date */}
                         <div className="space-y-1">
-                            <label className="text-xs font-semibold text-[#091828] mb-1">End date</label>
+                            <label htmlFor="endDate" className="text-xs font-semibold text-[#091828] mb-1">End date</label>
                             <Controller
                                 control={control}
                                 name="endDate"
@@ -304,8 +313,9 @@ export default function ObligationForm(){
                     </div>
                     {/* frequency-dropdown('ONCE' | 'WEEKLY' | 'MONTHLY' | 'FIXED_INSTALLMENTS') */}
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold text-[#091828]">Frequency</label>
+                        <label htmlFor="frequency" className="text-xs font-semibold text-[#091828]">Frequency</label>
                         <select
+                        id="frequency"
                         {...register("schedule.frequency")}
                         className="h-12 px-6 text-sm w-full bg-white text-[#787A80] shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none rounded-lg transition-shadow focus:shadow-md"
                         >
@@ -318,9 +328,10 @@ export default function ObligationForm(){
                     {errors.schedule?.frequency?.message && <p className="text-xs text-red-500">{errors.schedule?.frequency.message}</p>}
                     {/* Total occurences - number of payments */}
                     <div className="space-y-1">
-                        <label className="text-xs font-semibold text-[#091828]">Total occurences</label>
+                        <label htmlFor="totalOccurrences" className="text-xs font-semibold text-[#091828]">Total occurences</label>
                         <CustomInput
                             variant="form"
+                            id="totalOccurrences"
                             {...register("schedule.totalOccurrences")}
                             placeholder="32"
                             className="w-full"
@@ -353,7 +364,7 @@ export default function ObligationForm(){
                                 )}
                             />
                         </div>
-                        {watch("reminders.enabled") ? (
+                        {remindersEnabled ? (
                             <div className="bg-white/50 border border-dashed border-[#DDE4E0] rounded-xl p-3 text-xs text-[#091828] flex items-center justify-between animate-fadeIn">
                                 <span>Notification Channels:</span>
                                 <div className="flex gap-1">
@@ -376,20 +387,10 @@ export default function ObligationForm(){
             </div>
             {showPopup && (
                 <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 z-50 bg-[#FF6B9D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-[#091828] animate-in fade-in slide-in-from-bottom-5 duration-300">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#48BB78]">
-                        <svg className="h-5 w-5 text-[#6E0034]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </div>
                     <div className="flex flex-col">
                         <span className="text-sm font-bold">Added new obligation!</span>
                         <CustomBadge variant="xp">+10 xp</CustomBadge>
                     </div>
-
-                    {/* Tiny XP Badge Component */}
-                    <span className="bg-[#E8F8F0] text-[#2F855A] font-bold text-xs px-2.5 py-1 rounded-full border border-emerald-200">
-                        +10XP
-                    </span>
                 </div>
             )}
         </div>

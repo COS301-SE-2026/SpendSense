@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect } from 'vitest'
-import DashboardPage from '@/features/dashboard/DashboardPage'
+import DashboardPage from '../features/dashboard/DashboardPage'
 
 function renderDashboard() {
   return render(
@@ -34,7 +34,7 @@ describe('DashboardPage', () => {
 
   it('renders the XP progress section', () => {
     renderDashboard()
-    expect(screen.getByText('850 / 1,200 XP')).toBeInTheDocument()
+    expect(screen.getByText('850 / 1200 XP')).toBeInTheDocument()
     expect(screen.getByText('Next Level: 5')).toBeInTheDocument()
   })
 

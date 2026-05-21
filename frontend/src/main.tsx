@@ -1,10 +1,10 @@
-import React, { StrictMode, Suspense } from 'react'
+import { StrictMode} from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
-import DashboardPage from '@/features/dashboard/DashboardPage'
-import CalendarPage from '@/features/calendar/CalendarPage'
+import DashboardPage from './features/dashboard/DashboardPage'
+import CalendarPage from './features/calendar/CalendarPage'
 import LoginPage from './domains/LoginPage';
 import RegisterPage from './domains/RegisterPage.tsx';
 import ObligationForm from './domains/ObligationForm.tsx'
