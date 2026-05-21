@@ -14,6 +14,7 @@ import {initAuthListener} from './features/auth/auth.service'
 import ProtectedRoute from './components/ProtectedRoute'
 
 initAuthListener()
+import PaymentForm from './domains/PaymentForm.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -29,6 +30,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/obligationForm" element={<ObligationForm/>}/>
         <Route path="/stickers" element={<StickerAlbumPage />}/>
         <Route path="/stickers/:badgeId" element={<StickerDetailPage />}/>
+        <Route path="/paymentForm" element={<PaymentForm/>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
