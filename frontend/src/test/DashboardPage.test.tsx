@@ -1,9 +1,18 @@
 import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import DashboardPage from '../domains/DashboardPage'
 import'@testing-library/jest-dom'
+
+vi.mock('@hugeicons/react', () => ({
+  HugeiconsIcon: () => null,
+}))
+vi.mock('@hugeicons/core-free-icons', () => ({
+  SparklesIcon: null,
+  FireIcon: null,
+  SunriseIcon: null,
+}))
 
 function renderDashboard() {
   return render(
