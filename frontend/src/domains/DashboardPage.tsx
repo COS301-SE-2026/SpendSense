@@ -23,7 +23,7 @@ import { XpPill } from "@/components/common/XpPill"
  
 import { cn } from "@/lib/utils"
  
-
+import { getDashboard } from "@/features/dashboard/dashboardApi"
 
 export default function DashboardPage() {
     const user = { initials: "RC", firstName: "Rachel" }
@@ -31,6 +31,20 @@ export default function DashboardPage() {
     const level = 4
     const streakDays = 7
     const xp = { current: 850, next: 1200, nextLevel: 5 }
+
+
+    // testing the getDashboard function:
+    React.useEffect(() => {
+      async function testGetDashboard() {
+        try {
+          const dashboard = await getDashboard()
+          console.log("getDashboard response: ", dashboard)
+        } catch (error) {
+          console.error("getDashboard response: ", error)
+        }
+      }
+      testGetDashboard()
+    })
     
     return (
         <div className="min-h-screen bg-[#F4FBF7] pb-24">
