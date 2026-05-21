@@ -1,7 +1,7 @@
 /// <reference types="@testing-library/jest-dom"/>
 import React from 'react'
 import {render, screen, waitFor, fireEvent} from '@testing-library/react'
-import {MemoryRouter} from 'react-router-dom '
+import {MemoryRouter} from 'react-router-dom'
 import {it, describe, expect, beforeEach, vi, afterEach} from 'vitest'
 import StickerAlbumPage from '../domains/StickerAlbumPage'
 
@@ -42,7 +42,7 @@ describe('StickerAlbumPage', ()=>{
     // header
     it('renders Sticker Album heading on the page', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=>expect(
             screen.getByText('Sticker Album')
         ).toBeInTheDocument()
@@ -51,7 +51,7 @@ describe('StickerAlbumPage', ()=>{
 
     it('renders the back button', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=> expect(
             screen.getByRole('button',{name: /go back/i})
         ).toBeInTheDocument())
@@ -59,7 +59,7 @@ describe('StickerAlbumPage', ()=>{
  
     it('renders search button', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=> expect(
             screen.getByRole('button',{name: /search stickers/i})
         ).toBeInTheDocument())
@@ -67,7 +67,7 @@ describe('StickerAlbumPage', ()=>{
 
     it('calls navigate(-1) when back button clicked', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=> screen.getByRole('button',{name: /go back/i}))
         fireEvent.click(screen.getByRole('button',{name: /go back/i}))
         expect(mockNav).toHaveBeenCalledWith(-1)
@@ -75,7 +75,7 @@ describe('StickerAlbumPage', ()=>{
  
     it('renders stickers found count', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=> expect(
             screen.getByText('Stickers Found')
         ).toBeInTheDocument())
@@ -83,7 +83,7 @@ describe('StickerAlbumPage', ()=>{
 
     it('renders the completion percentage', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=> expect(
             screen.getByText(/completion:/i)
         ).toBeInTheDocument())
@@ -91,7 +91,7 @@ describe('StickerAlbumPage', ()=>{
  
     it('renders core milestone category', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=> expect(
             screen.getByText('Core Milestones')
         ).toBeInTheDocument())
@@ -99,7 +99,7 @@ describe('StickerAlbumPage', ()=>{
 
     it('renders savings quest category', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=> expect(
             screen.getByText('Savings Quests')
         ).toBeInTheDocument())
@@ -107,7 +107,7 @@ describe('StickerAlbumPage', ()=>{
 
     it('renders special events category', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=> expect(
             screen.getByText('Special Events')
         ).toBeInTheDocument())
@@ -116,7 +116,7 @@ describe('StickerAlbumPage', ()=>{
 
     it('renders names of earned stickers', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=>{
             expect(screen.getByText('First Quest')).toBeInTheDocument()
             expect(screen.getByText('7-Day Streak')).toBeInTheDocument()
@@ -127,7 +127,7 @@ describe('StickerAlbumPage', ()=>{
 
     it('renders locked stickers', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=>{
             const lockedLabels = screen.getAllByText('Locked')
             expect(lockedLabels.length).toBeGreaterThan(0)
@@ -136,7 +136,7 @@ describe('StickerAlbumPage', ()=>{
 
     it('stickers earned buttons have accessible label', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=> expect(
             screen.getByRole('button',{name: /first quest sticker, tap to view/i})
         ).toBeInTheDocument())
@@ -144,7 +144,7 @@ describe('StickerAlbumPage', ()=>{
 
     it('locked stickers diables', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(() => {
             const lockedBtn = screen.getByRole('button',{name: /early bird locked/i})
             expect(lockedBtn).toBeDisabled()
@@ -153,7 +153,7 @@ describe('StickerAlbumPage', ()=>{
  
     it('goes to sticker detail page when sticker is clicked', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(()=>screen.getByRole('button',{name: /first quest sticker, tap to view/i}))
         fireEvent.click(screen.getByRole('button',{name: /first quest sticker, tap to view/i}))
         expect(mockNav).toHaveBeenCalledWith('/stickers/ub1')
@@ -161,7 +161,7 @@ describe('StickerAlbumPage', ()=>{
     
     it('will not navigate when a locked sticker is clicked', async()=>{
         renderAlbum()
-        vi.runAllTimers()
+        vi.runAllTimersAsync()
         await waitFor(() => screen.getByRole('button',{name: /early bird locked/i}))
         fireEvent.click(screen.getByRole('button',{name: /early bird locked/i}))
         expect(mockNav).not.toHaveBeenCalled()

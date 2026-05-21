@@ -41,7 +41,7 @@ describe('StickerDetailPage', ()=>{
         const skel = document.querySelector('.animate-pulse')
         expect(skel).toBeInTheDocument()
     })
- 
+
     // header
     it('renders quest reward heading', async()=>{
         renderDetail('ub3')
@@ -59,22 +59,23 @@ describe('StickerDetailPage', ()=>{
         ).toBeInTheDocument())
     })
 
-    it('renders the share button', async()=>{
+    // uses exact match to avoid colliding with the "Share the Win" button
+    it('renders the share icon button', async()=>{
         renderDetail('ub3')
         vi.runAllTimersAsync()
         await waitFor(()=> expect(
-            screen.getByRole('button',{name: /share/i})
+            screen.getByRole('button', {name: /share icon/i})
         ).toBeInTheDocument())
     })
- 
+
     it('calls navigate to /stickers when back button clicked', async()=>{
         renderDetail('ub3')
         vi.runAllTimersAsync()
-        await waitFor(()=> screen.getByRole('button',{name: /go back/i}))
+        await waitFor(()=> screen.getByRole('button', {name: /go back/i}))
         screen.getByRole('button', {name: /go back/i}).click()
         expect(mockNav).toHaveBeenCalledWith('/stickers')
     })
- 
+
     // badge content
     it('renders the badge name', async()=>{
         renderDetail('ub3')
@@ -165,7 +166,7 @@ describe('StickerDetailPage', ()=>{
             screen.getByText(/sticker not found/i)
         ).toBeInTheDocument())
     })
- 
+
     it('renders back to album link on the not found screen', async()=>{
         renderDetail('does-not-exist')
         vi.runAllTimersAsync()
