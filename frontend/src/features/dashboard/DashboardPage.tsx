@@ -5,13 +5,12 @@ import {
   Calendar as CalendarIcon,
   Trophy,
   User,
-  Plus,
   Wifi,
   ShoppingBag,
 } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { SparklesIcon, FireIcon, SunriseIcon } from "@hugeicons/core-free-icons"
- 
+import { AddTransactionButton } from "@/components/common/AddTransactionButton"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { Progress } from "@/components/ui/progress"
 import { Sticker } from "@/components/ui/sticker"
@@ -248,16 +247,10 @@ function BottomNav({ active }: { active: BottomNavTab }) {
         <BottomNavItem to="/calendar"  icon={<CalendarIcon className="size-5" />} label="Calendar" active={active === "calendar"} />
  
         {/* Floating + action */}
-        <Link
-          to="/transactions/new"
-          aria-label="Add expense"
-          className="flex size-14 -translate-y-3 items-center justify-center rounded-full bg-[#0a1929] text-white shadow-lg ring-4 ring-white"
-        >
-          <Plus className="size-6" />
-        </Link>
+        <AddTransactionButton/>
  
-        <BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} />
-        <BottomNavItem to="/profile" icon={<User className="size-5" />}  label="Profile"  active={active === "profile"} />
+        <BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"}  disabled={true} />
+        <BottomNavItem to="/profile" icon={<User className="size-5" />}  label="Profile"  active={active === "profile"}  disabled={true}/>
       </div>
     </nav>
   )
@@ -268,20 +261,29 @@ function BottomNavItem({
   icon,
   label,
   active,
+  disabled,
 }: {
   to: string
   icon: React.ReactNode
   label: string
   active: boolean
+  disabled?:boolean
 }) {
   return (
     <Link
       to={to}
+      aria-disabled={disabled}
+      onClick={(e)=>{
+        if(disabled){
+          e.preventDefault();
+        }
+      }}
       className={cn(
         "flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition",
         active
           ? "bg-[#FFD8E6] text-[#ac2a5d]"
           : "text-[#6b6375] hover:text-[#091828]",
+        disabled && "opacity-35 pointer-events-none cursor-not-allowed select-none"
       )}
       aria-current={active ? "page" : undefined}
     >
