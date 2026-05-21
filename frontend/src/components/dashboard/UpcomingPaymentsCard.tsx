@@ -1,4 +1,3 @@
-import * as React from "react"
 import { Link } from "react-router-dom"
 import { Wifi } from "lucide-react"
 import { CustomCard } from "@/components/ui/CustomCard"
