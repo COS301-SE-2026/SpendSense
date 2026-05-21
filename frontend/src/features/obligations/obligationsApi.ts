@@ -1,5 +1,46 @@
 import {apiFetch} from '../../lib/api'
 
+export type ObligationType =
+    | 'RENT'
+    | 'SUBSCRIPTION'
+    | 'BNPL'
+    | 'UTILITY'
+    | 'IOU'
+    | 'CUSTOM'
+
+export type ObligationPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+
+export type ScheduleFrequency =
+    | 'ONCE'
+    | 'WEEKLY'
+    | 'MONTHLY'
+    | 'FIXED_INSTALLMENT'
+
+export type ReminderChannel = 'IN_APP' | 'EMAIL' | 'PUSH' | 'SMS'
+
+export type CreateObligationRequest = {
+    name: string
+    description?: string
+    type: ObligationType
+    categoryId: string
+    amount: number
+    currency: string
+    priority?: ObligationPriority
+    startDate: string
+    endDate?: string | null
+    schedule: {
+        frequency: ScheduleFrequency
+        interval: number
+        dayOfMonth?: number
+        totalOccurrences?: number | null
+    }
+    reminders?: {
+        enabled: boolean
+        daysBefore: number[]
+        channels: ReminderChannel[]
+    }
+}
+
 // obligationsApi: financial obligation CRUD
 // POST creates the obligation, schedule, payment occurrences, reminders, & a UserEvent
 // all in a single backend transaction (never userId in the request body)
@@ -12,24 +53,7 @@ import {apiFetch} from '../../lib/api'
 // PATCH /api/v1/obligations/:id
 // DELETE /api/v1/obligations/:id
 
-export async function createObligation(body:{
-    name: string
-    description?: string
-    type: 'RENT' | 'SUBSCRIPTION' | 'BNPL' | 'UTILITY' | 'IOU' | 'CUSTOM'
-    categoryId: string
-    amount: number
-    currency: string
-    priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-    startDate: string
-    endDate?: string | null
-    schedule:{
-        frequency: 'ONCE' | 'WEEKLY' | 'MONTHLY' | 'FIXED_INSTALLMENTS'
-        interval: number
-        dayOfMonth?: number
-        totalOccurrences?: number | null
-    }
-    reminders?: {enabled: boolean; daysBefore: number[]; channels: string[]}
-}) 
+export async function createObligation(body: CreateObligationRequest)
 {
     return apiFetch('/obligations', {method: 'POST', body: JSON.stringify(body)})
 }

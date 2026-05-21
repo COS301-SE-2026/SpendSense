@@ -26,7 +26,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/calendar" element={<CalendarPage />}/>
         <Route path="/login" element={<LoginPage />}/>
         <Route path="/register" element={<RegisterPage/>}/>
-        <Route path="/obligationForm" element={<ObligationForm/>}/>
+        <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm/></ProtectedRoute>}/>
         <Route path="/stickers" element={<StickerAlbumPage />}/>
         <Route path="/stickers/:badgeId" element={<StickerDetailPage />}/>
         <Route path="/paymentForm" element={<PaymentForm/>}/>

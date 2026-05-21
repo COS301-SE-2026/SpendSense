@@ -1,12 +1,13 @@
 "use client";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {useForm,Controller,useWatch, type Resolver} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {useNavigate} from "react-router-dom";
 import {LongButton} from "../components/common/LongButton";
 import {CustomInput} from "../components/common/CustomInput";
-// import {createObligation} from "../features/obligations/obligationsApi"; mocked for now
+import {createObligation} from "../features/obligations/obligationsApi";
+import {getCategories, type Category} from "../features/categories/categoriesApi";
 import {Popover,PopoverContent, PopoverTrigger} from "../components/ui/popover";
 import {Calendar as CalenderIcon} from "lucide-react";
 import {IconButton} from "@/components/common/IconButton";
@@ -43,7 +44,7 @@ const obligationSchema=z.object({
     schedule:z
         .object({
             frequency:z
-                .enum(['ONCE', 'WEEKLY', 'MONTHLY', 'FIXED_INSTALLMENTS']),
+                .enum(['ONCE', 'WEEKLY', 'MONTHLY', 'FIXED_INSTALLMENT']),
             interval: z
                 .coerce.number()
                 .default(1),
@@ -62,7 +63,7 @@ const obligationSchema=z.object({
             daysBefore: z
                 .array(z.number()),
             channels:z
-                .array(z.string()),
+                .array(z.enum(["IN_APP","EMAIL","PUSH","SMS"])),
        })
         .optional()
 });
@@ -73,10 +74,15 @@ export default function ObligationForm(){
     const navigate=useNavigate();
     const [showPopup,setShowPopup]=useState(false);
     const [isSubmitting,setSubmitting]=useState(false);
+    const [categories,setCategories]=useState<Category[]>([]);
+    const [isLoadingCategories,setLoadingCategories]=useState(true);
+    const [categoryLoadError,setCategoryLoadError]=useState<string | null>(null);
+    const [submitError,setSubmitError]=useState<string | null>(null);
     const{
         register,
         handleSubmit,
         control,
+        setError,
         reset,
         formState:{errors},
    }=useForm<ObligationFormData>({
@@ -98,22 +104,93 @@ export default function ObligationForm(){
            },
             reminders:{
                 enabled:true,
-                daysBefore:[1],
-                channels:["EMAIL"],
+                daysBefore:[3,1],
+                channels:["IN_APP"],
            }
        }satisfies ObligationFormData,
    });
     const remindersEnabled=useWatch({control,name:"reminders.enabled"});
+
+    useEffect(()=>{
+        let isMounted=true;
+
+        async function loadCategories(){
+            setLoadingCategories(true);
+            setCategoryLoadError(null);
+
+            try{
+                const response=await getCategories("OBLIGATION");
+                if(isMounted){
+                    setCategories(response.data);
+                }
+            }catch(error){
+                if(isMounted){
+                    console.error("Failed to load obligation categories: ",error);
+                    setCategoryLoadError("Could not load categories. Please try again.");
+                }
+            }finally{
+                if(isMounted){
+                    setLoadingCategories(false);
+                }
+            }
+        }
+
+        void loadCategories();
+
+        return ()=>{
+            isMounted=false;
+        };
+    },[]);
+
     const onSubmit=async (formData:ObligationFormData)=>{
         const data=formData as ObligationFormData;
         setSubmitting(true);
+        setSubmitError(null);
         try{
+            const isFixedInstallment=data.schedule.frequency==="FIXED_INSTALLMENT";
+            const totalOccurrences=data.schedule.totalOccurrences;
+
+            if(isFixedInstallment && (!totalOccurrences || totalOccurrences < 1)){
+                setError("schedule.totalOccurrences",{
+                    type:"manual",
+                    message:"Total occurrences is required for fixed installments",
+                });
+                return;
+            }
+
+            const dayOfMonth=Math.min(data.startDate.getDate(),28);
             const payload={
-                ...data,
-                startDate:data.startDate.toISOString(),
-                endDate:data.endDate ? data.endDate.toISOString() : null,
+                name:data.name,
+                description:data.description,
+                type:data.type,
+                categoryId:data.categoryId,
+                amount:data.amount,
+                currency:data.currency,
+                priority:data.priority,
+                startDate:formatDateForApi(data.startDate),
+                endDate:data.endDate ? formatDateForApi(data.endDate) : null,
+                schedule:{
+                    frequency:data.schedule.frequency,
+                    interval:data.schedule.interval,
+                    dayOfMonth:
+                        data.schedule.frequency==="MONTHLY" || isFixedInstallment
+                            ? dayOfMonth
+                            : undefined,
+                    totalOccurrences:isFixedInstallment ? totalOccurrences : null,
+                },
+                reminders:data.reminders?.enabled
+                    ? {
+                        enabled:true,
+                        daysBefore:data.reminders.daysBefore,
+                        channels:data.reminders.channels,
+                    }
+                    : {
+                        enabled:false,
+                        daysBefore:[],
+                        channels:["IN_APP" as const],
+                    },
             };
-            console.log("Mock obligation created: ",payload);
+            await createObligation(payload);
             setShowPopup(true);
             setTimeout(()=>{
                 setShowPopup(false);
@@ -121,6 +198,7 @@ export default function ObligationForm(){
             },5000);
        }catch(error){
             console.error("Failed to create obligation: ",error);
+            setSubmitError("Could not create obligation. Please check the form and try again.");
        }finally{
             setSubmitting(false);
        }
@@ -202,15 +280,24 @@ export default function ObligationForm(){
                     {/* category e.g. Netflix category is the specialisation of type */}
                     <div className="space-y-1">
                         <label htmlFor="categoryId" className="text-xs font-semibold text-[#091828]">Category</label>
-                        <CustomInput
-                            variant="form"
+                        <select
                             id="categoryId"
                             {...register("categoryId")}
-                            placeholder="e.g. Netflix"
-                            className="w-full"
-                        />
+                            disabled={isLoadingCategories || Boolean(categoryLoadError)}
+                            className="h-12 px-6 text-sm w-full bg-white text-[#787A80] shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none rounded-lg transition-shadow focus:shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                            <option value="">
+                                {isLoadingCategories ? "Loading categories..." : "Select a category"}
+                            </option>
+                            {categories.map((category)=>(
+                                <option key={category.id} value={category.id}>
+                                    {category.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     {errors.categoryId?.message && <p className="text-xs text-red-500">{errors.categoryId.message}</p>}
+                    {categoryLoadError && <p className="text-xs text-red-500">{categoryLoadError}</p>}
                     {/* amount -input InputVariant="form"*/}
                     <div className="space-y-1">
                         <label htmlFor="amount" className="text-xs font-semibold text-[#091828]">Amount</label>
@@ -321,7 +408,7 @@ export default function ObligationForm(){
                             <option value="ONCE">Once off</option>
                             <option value="WEEKLY">Weekly</option>
                             <option value="MONTHLY">Monthly</option>
-                            <option value="FIXED_INSTALLMENTS">Fixed Installments</option>
+                            <option value="FIXED_INSTALLMENT">Fixed Installments</option>
                         </select>
                     </div>
                     {errors.schedule?.frequency?.message && <p className="text-xs text-red-500">{errors.schedule?.frequency.message}</p>}
@@ -368,7 +455,7 @@ export default function ObligationForm(){
                                 <span>Notification Channels:</span>
                                 <div className="flex gap-1">
                                     <span className="bg-[#E8F8F0] text-[#2F855A] font-medium px-2 py-0.5 rounded text-[10px]">
-                                        EMAIL
+                                        IN_APP
                                     </span>
                                 </div>
                             </div>
@@ -382,6 +469,7 @@ export default function ObligationForm(){
                     >
                         {isSubmitting ? "Saving..." : "Log Obligation"}
                     </LongButton>
+                    {submitError && <p className="text-center text-xs text-red-500">{submitError}</p>}
                 </form>
             </div>
             {showPopup && (
@@ -394,4 +482,12 @@ export default function ObligationForm(){
             )}
         </div>
     )
+}
+
+function formatDateForApi(date:Date){
+    const year=date.getFullYear();
+    const month=String(date.getMonth()+1).padStart(2,"0");
+    const day=String(date.getDate()).padStart(2,"0");
+
+    return `${year}-${month}-${day}`;
 }
