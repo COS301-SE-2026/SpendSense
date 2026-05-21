@@ -2,7 +2,6 @@
 import {useState} from "react";
 import {useForm,Controller, type Resolver} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
-import {format} from "date-fns";
 import * as z from "zod";
 import {useNavigate} from "react-router-dom";
 import {LongButton} from "../components/common/LongButton";
@@ -122,7 +121,7 @@ export default function ObligationForm(){
                                     >
                                     <CalenderIcon className="mr-2 h-4 w-4 text-gray-500" />
                                     {field.value ? (
-                                        format(field.value, "PPP")
+                                        new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(field.value))
                                     ) : (
                                         <span className="text-gray-400">Select date</span>
                                     )}

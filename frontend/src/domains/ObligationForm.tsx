@@ -2,7 +2,6 @@
 import {useState} from "react";
 import {useForm,Controller,useWatch, type Resolver} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
-import {format} from "date-fns";
 import * as z from "zod";
 import {useNavigate} from "react-router-dom";
 import {LongButton} from "../components/common/LongButton";
@@ -256,11 +255,11 @@ export default function ObligationForm(){
                                             className="rounded-lg w-full justify-start text-left font-normal flex items-center"
                                         >
                                         <CalenderIcon className="mr-2 h-4 w-4 text-gray-500" />
-                                        {field.value ? (
-                                            format(field.value, "PPP")
-                                        ) : (
-                                            <span className="text-gray-400">Select date</span>
-                                        )}
+                                            {field.value ? (
+                                                    new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(field.value))
+                                                ) : (
+                                                    <span className="text-gray-400">Start Date</span>
+                                            )}
                                         </LongButton>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-0 bg-white border rounded-md shadow-md" align="start">
@@ -292,9 +291,9 @@ export default function ObligationForm(){
                                         >
                                         <CalenderIcon className="mr-2 h-4 w-4 text-gray-500" />
                                         {field.value ? (
-                                            format(field.value, "PPP")
-                                        ) : (
-                                            <span className="text-gray-400">Select date</span>
+                                            new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(field.value))
+                                            ) : (
+                                                <span className="text-gray-400">End Date</span>
                                         )}
                                         </LongButton>
                                     </PopoverTrigger>
