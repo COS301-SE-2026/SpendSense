@@ -34,6 +34,7 @@ _COS 301 Capstone 2026 · Team MARK2 · EPI-USE Labs & Advance · University of 
 [![Issues](https://img.shields.io/github/issues/COS301-SE-2026/SpendSense?style=for-the-badge&logo=github&logoColor=white&label=Issues)](https://github.com/COS301-SE-2026/SpendSense/issues)
 [![Last Commit](https://img.shields.io/github/last-commit/COS301-SE-2026/SpendSense/dev?style=for-the-badge&label=Last+Commit)](https://github.com/COS301-SE-2026/SpendSense/commits/dev)
 [![Node](https://img.shields.io/badge/Node-%3E%3D20-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Project Board](https://img.shields.io/badge/Project_Board-View-0075ca?style=for-the-badge&logo=github&logoColor=white)](https://github.com/orgs/COS301-SE-2026/projects/83)
 
 <br>
 
