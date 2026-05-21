@@ -81,7 +81,7 @@ export default function DashboardPage() {
             className="mt-5"
             >
             <div className="flex items-center justify-between text-xs font-semibold text-[#091828]">
-                <span>{xp.current} / {xp.next} XP</span>
+                <span>{xp.current.toLocaleString()} / {xp.next.toLocaleString()} XP</span>
                 <span className="text-[#6b6375]">Next Level: {xp.nextLevel}</span>
             </div>
             <Progress
