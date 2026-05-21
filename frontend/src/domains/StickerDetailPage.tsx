@@ -231,90 +231,92 @@ export default function StickerDetailPage(){
         }) : ""
 
     return(
-        <div className="min-h-screen bg-[#F5F0E8]">
-            <header className="px-5 pt-5 flex items-center justify-between">
-                <button
-                type="button"
-                onClick={()=>navigate("/stickers")}
-                className="size-9 flex items-center justify-center rounded-full bg-white/60 text-[#091828]"
-                aria-label="Go back">
+        <div className="min-h-screen bg-[#F0F7F4] flex flex-col items-center">
+            <div className="w-full max-w-sm flex flex-col min-h-screen">
+                <header className="px-5 pt-5 flex items-center justify-between">
+                    <button
+                    type="button"
+                    onClick={()=>navigate("/stickers")}
+                    className="size-9 flex items-center justify-center rounded-full bg-white/60 text-[#091828]"
+                    aria-label="Go back">
 
-                    <ArrowLeft size={20}/>
-                </button>
-                <h1 className="text-base font-bold text-[#091828]">Quest Reward</h1>
-                <button
-                type="button"
-                className="size-9 flex items-center justify-center rounded-full bg-white/60 text-[#091828]"
-                aria-label="Share icon">
+                        <ArrowLeft size={20}/>
+                    </button>
+                    <h1 className="text-base font-bold text-[#091828]">Quest Reward</h1>
+                    <button
+                    type="button"
+                    className="size-9 flex items-center justify-center rounded-full bg-white/60 text-[#091828]"
+                    aria-label="Share icon">
 
-                    {/* implement sharing features once thats done */}
-                    <Share2 size={20}/>
-                </button>
-            </header>
+                        {/* implement sharing features once thats done */}
+                        <Share2 size={20}/>
+                    </button>
+                </header>
 
-            <main className="px-6 pt-6 pb-12 flex flex-col items-center gap-6 max-w-sm mx-auto">
+                <main className="px-6 pt-6 pb-12 flex flex-col items-center gap-6 max-w-sm mx-auto">
 
-                {/* sparkle sticker card */}
-                <div className="relative">
-                    <SparkleDecor className="absolute -top-3 -right-2" color="#F2BF3C" size={24}/>
-                    <SparkleDecor className="absolute top-4 -right-6" color="#F2BF3C" size={16}/>
-                    <SparkleDecor className="absolute -bottom-2 -left-5" color="#FF6B9D" size={20}/>
-                    <SparkleDecor className="absolute bottom-6 -left-7" color="#FF6B9D" size={13}/>
+                    {/* sparkle sticker card */}
+                    <div className="relative">
+                        <SparkleDecor className="absolute -top-3 -right-2" color="#F2BF3C" size={24}/>
+                        <SparkleDecor className="absolute top-4 -right-6" color="#F2BF3C" size={16}/>
+                        <SparkleDecor className="absolute -bottom-2 -left-5" color="#FF6B9D" size={20}/>
+                        <SparkleDecor className="absolute bottom-6 -left-7" color="#FF6B9D" size={13}/>
 
-                    <div className="w-52 h-52 rounded-[2rem] bg-white border-[3px] border-[#091828] shadow-[4px_5px_0_#091828] flex items-center justify-center">
-                        <div className={cn("size-36 rounded-full flex items-center justify-center", stickerBg)}>
-                            <StickerIconLarge iconKey={def.iconKey} category={def.category}/>
+                        <div className="w-52 h-52 rounded-[2rem] bg-white border-[3px] border-[#091828] shadow-[4px_5px_0_#091828] flex items-center justify-center">
+                            <div className={cn("size-36 rounded-full flex items-center justify-center", stickerBg)}>
+                                <StickerIconLarge iconKey={def.iconKey} category={def.category}/>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <h2 className="text-3xl font-black text-[#091828] text-center">{def.name}</h2>
+                    <h2 className="text-3xl font-black text-[#091828] text-center">{def.name}</h2>
 
-                {/* earned date */}
-                <div className="bg-[#FFE7AE] rounded-full px-5 py-2 border border-[#F2BF3C]/50">
-                    <p className="text-sm font-bold text-[#7A4A00]">Earned on {earnedDate}</p>
-                </div>
-
-                <p className="text-center text-[#091828] text-base leading-relaxed font-medium px-2">
-                    "{def.description}"
-                </p>
-
-                {/* xp and tier */}
-                <div className="flex items-center gap-3">
-                    {xp > 0 &&(
-                        <div className="flex items-center gap-1.5 rounded-full bg-[#FFE7AE] border-2 border-[#091828] shadow-[2px_3px_0_#091828] px-4 py-2">
-                            <Sparkles size={14} className="text-[#7A4A00]"/>
-                            <span className="text-sm font-bold text-[#091828]">+{xp} XP</span>
-                        </div>
-                    )}
-                    <div className={cn(
-                        "flex items-center gap-1.5 rounded-full border-2 border-[#091828] shadow-[2px_3px_0_#091828] px-4 py-2",
-                        tierStyle.bg,
-                        tierStyle.text)}>
-
-                        <span>{tierStyle.icon}</span>
-                        <span className="text-sm font-bold">{tier} Tier</span>
+                    {/* earned date */}
+                    <div className="bg-[#FFE7AE] rounded-full px-5 py-2 border border-[#F2BF3C]/50">
+                        <p className="text-sm font-bold text-[#7A4A00]">Earned on {earnedDate}</p>
                     </div>
-                </div>
 
-                {/* share button, implement once share is implemented */}
-                <button
-                type="button"
-                className="w-full rounded-full bg-[#FF6B9D] border-2 border-[#091828] shadow-[4px_5px_0_#091828] py-4 text-lg font-bold text-[#700034] flex items-center justify-center gap-2 transition-all active:shadow-none active:translate-x-[4px] active:translate-y-[5px] hover:bg-[#ff85b0]">
+                    <p className="text-center text-[#091828] text-base leading-relaxed font-medium px-2">
+                        "{def.description}"
+                    </p>
 
-                    <PartyPopper size={20}/>
-                    Share the Win With Friends
-                </button>
+                    {/* xp and tier */}
+                    <div className="flex items-center gap-3">
+                        {xp > 0 &&(
+                            <div className="flex items-center gap-1.5 rounded-full bg-[#FFE7AE] border-2 border-[#091828] shadow-[2px_3px_0_#091828] px-4 py-2">
+                                <Sparkles size={14} className="text-[#7A4A00]"/>
+                                <span className="text-sm font-bold text-[#091828]">+{xp} XP</span>
+                            </div>
+                        )}
+                        <div className={cn(
+                            "flex items-center gap-1.5 rounded-full border-2 border-[#091828] shadow-[2px_3px_0_#091828] px-4 py-2",
+                            tierStyle.bg,
+                            tierStyle.text)}>
 
-                <button
-                type="button"
-                onClick={()=>navigate("/stickers")}
-                className="text-sm text-[#6b6375] hover:text-[#091828] transition-colors">
+                            <span>{tierStyle.icon}</span>
+                            <span className="text-sm font-bold">{tier} Tier</span>
+                        </div>
+                    </div>
 
-                    Back to Album
-                </button>
+                    {/* share button, implement once share is implemented */}
+                    <button
+                    type="button"
+                    className="w-full rounded-full bg-[#FF6B9D] border-2 border-[#091828] shadow-[4px_5px_0_#091828] py-4 text-lg font-bold text-[#700034] flex items-center justify-center gap-2 transition-all active:shadow-none active:translate-x-[4px] active:translate-y-[5px] hover:bg-[#ff85b0]">
 
-            </main>
+                        <PartyPopper size={20}/>
+                        Share the Win With Friends
+                    </button>
+
+                    <button
+                    type="button"
+                    onClick={()=>navigate("/stickers")}
+                    className="text-sm text-[#6b6375] hover:text-[#091828] transition-colors">
+
+                        Back to Album
+                    </button>
+
+                </main>
+            </div>
         </div>
     )
 }

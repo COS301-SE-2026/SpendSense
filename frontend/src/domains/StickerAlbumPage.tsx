@@ -47,24 +47,24 @@ interface UserBadge{
     badgeDefinition: BadgeDefinition
 }
 
-// SETTING UP VARIABLES FOR DIFFERENT COLOURS, CATEGORIES (USING CAPS TO DISTINGUISH)
+// SETTING UP VARIABLES (CAPS TO DISTINGUISH)
 
 // CATEGORY CONFIGURATION
 
 const CATEGORY_CONFIG: Record<string, {label: string; icon: React.ReactNode}>={
-    CORE_MILESTONES: {label: "Core Milestones", icon: <Award size={20}/>},
-    SAVINGS_QUESTS: {label: "Savings Quests", icon: <PiggyBank size={20}/>},
-    SPECIAL_EVENTS: {label: "Special Events", icon: <Sparkles size={20}/>},
-    PAYMENT: {label: "Payment", icon: <CreditCard size={20}/>},
-    STREAK: {label: "Streak", icon: <Flame size={20}/>},
-    MILESTONE: {label: "Milestones", icon: <Star size={20}/>},
-    KNOWLEDGE: {label: "Knowledge", icon: <BookOpen size={20}/>},
+    CORE_MILESTONES: {label: "Core Milestones", icon: <Award size={18}/>},
+    SAVINGS_QUESTS: {label: "Savings Quests", icon: <PiggyBank size={18}/>},
+    SPECIAL_EVENTS: {label: "Special Events", icon: <Sparkles size={18}/>},
+    PAYMENT: {label: "Payment", icon: <CreditCard size={18}/>},
+    STREAK: {label: "Streak", icon: <Flame size={18}/>},
+    MILESTONE: {label: "Milestones", icon: <Star size={18}/>},
+    KNOWLEDGE: {label: "Knowledge", icon: <BookOpen size={18}/>},
 }
 
 // BACKGROUND AND ICON COLOUR PER CATEGORY
 
 const CATEGORY_BG: Record<string, string>={
-    CORE_MILESTONES: "bg-[#F2D8FF]",
+    CORE_MILESTONES: "bg-[#E8D5F5]",
     SAVINGS_QUESTS: "bg-[#D6EEE8]",
     SPECIAL_EVENTS: "bg-[#1C1028]",
     PAYMENT: "bg-[#DCEFE8]",
@@ -83,9 +83,23 @@ const CATEGORY_ICON_COLOR: Record<string, string>={
     KNOWLEDGE: "text-[#1E4FAE]",
 }
 
+// STICKER SHAPE PER CATEGORY
+// matches the wireframe: core milestones = hexagon-ish, savings = circle, special = circle
+
+function stickerShape(category: string, code: string): string {
+    if(category === "CORE_MILESTONES"){
+        // budget boss and bill slayer = hexagon shape in wireframe
+        if(code === "BUDGET_BOSS") return "rounded-[28%]"
+        if(code === "BILL_SLAYER") return "rounded-[28%]"
+        // first quest and 7-day streak = rounded square
+        return "rounded-[32%]"
+    }
+    return "rounded-full"
+}
+
 // STICKER ICON MAP
 
-function StickerIcon({iconKey, size = 36}: {iconKey: string; size?: number}){
+function StickerIcon({iconKey, size = 32}: {iconKey: string; size?: number}){
     const icons: Record<string, React.ReactNode>={
         sparkles: <Sparkles size={size}/>,
         flame: <Flame size={size}/>,
@@ -104,21 +118,10 @@ function StickerIcon({iconKey, size = 36}: {iconKey: string; size?: number}){
     return <>{icons[iconKey] ?? <Star size={size}/>}</>
 }
 
-// SHAPE PER CATEGORY
-
-function stickerShape(category: string):string{
-    if(category === "CORE_MILESTONES" || category === "MILESTONE"){
-        return "rounded-[28%]"
-    }
-    return "rounded-full"
-}
-
-// IS NEWLY EARNED (so in the last 7 days)
+// IS NEWLY EARNED (within last 7 days)
 
 function isNew(earnedAt: string|null):boolean{
-    if(!earnedAt){
-        return false
-    }
+    if(!earnedAt) return false
     return Date.now() - new Date(earnedAt).getTime() < 7 * 24 * 60 * 60 * 1000
 }
 
@@ -170,7 +173,7 @@ function StickerCell({badge, onPress}: {badge: UserBadge; onPress: ()=>void}){
     const def = badge.badgeDefinition
     const earned = !!badge.earnedAt
     const newBadge = isNew(badge.earnedAt)
-    const shape = stickerShape(def.category)
+    const shape = stickerShape(def.category, def.code)
     const bg = CATEGORY_BG[def.category] ?? "bg-[#DCEFE8]"
     const iconColor = CATEGORY_ICON_COLOR[def.category] ?? "text-[#6b6375]"
     const isSpecial = def.category === "SPECIAL_EVENTS"
@@ -186,7 +189,7 @@ function StickerCell({badge, onPress}: {badge: UserBadge; onPress: ()=>void}){
             <div className="relative">
                 {newBadge &&(
                     <span
-                        className="absolute -top-1 -right-1 z-10 size-4 rounded-full bg-[#FF3B5C] border-2 border-white"
+                        className="absolute -top-1 -right-1 z-10 size-3.5 rounded-full bg-[#FF3B5C] border-2 border-white"
                         aria-label="newly earned"
                     />
                 )}
@@ -196,26 +199,24 @@ function StickerCell({badge, onPress}: {badge: UserBadge; onPress: ()=>void}){
                     "size-[88px] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95",
                     shape,
                     bg,
-                    isSpecial && "border-4 border-[#2D1B4E]"
+                    isSpecial && "border-[3px] border-[#2D1B4E]"
                 )}>
                     <span className={iconColor}>
-                        <StickerIcon iconKey={def.iconKey} size={isSpecial ? 40 : 36}/>
+                        <StickerIcon iconKey={def.iconKey} size={isSpecial ? 36 : 30}/>
                     </span>
                 </div>
                 )
                 :
                 (
-                <div className="size-[88px] rounded-full border-2 border-dashed border-[#B0C4BB] bg-transparent flex items-center justify-center">
-                    <span className="text-[#B0C4BB]">
-                        <HelpCircle size={28}/>
-                    </span>
+                <div className="size-[88px] rounded-full border-2 border-dashed border-[#B8CBBF] bg-transparent flex items-center justify-center">
+                    <HelpCircle size={26} className="text-[#B8CBBF]"/>
                 </div>
                 )}
             </div>
 
             <span className={cn(
-                "text-xs font-semibold text-center leading-tight max-w-[88px]",
-                earned ? "text-[#091828]" : "text-[#B0C4BB]"
+                "text-xs font-semibold text-center leading-tight w-[88px]",
+                earned ? "text-[#091828]" : "text-[#B8CBBF]"
             )}>
                 {earned ? def.name : "Locked"}
             </span>
@@ -230,7 +231,7 @@ function CategorySection({category, badges, onSelect}:{
     badges: UserBadge[]
     onSelect: (b: UserBadge)=>void
 }){
-    const config = CATEGORY_CONFIG[category] ?? {label: category, icon: <Star size={20}/>}
+    const config = CATEGORY_CONFIG[category] ?? {label: category, icon: <Star size={18}/>}
 
     return(
         <section className="space-y-4">
@@ -238,9 +239,12 @@ function CategorySection({category, badges, onSelect}:{
                 {config.label}
                 <span className="text-[#6b6375]">{config.icon}</span>
             </h2>
-            <div className="flex flex-wrap gap-6">
+            {/* 2-column grid matching the wireframe */}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-6">
                 {badges.map(b=>(
-                    <StickerCell key={b.id} badge={b} onPress={()=>onSelect(b)}/>
+                    <div key={b.id} className="flex justify-center">
+                        <StickerCell badge={b} onPress={()=>onSelect(b)}/>
+                    </div>
                 ))}
             </div>
         </section>
@@ -281,8 +285,12 @@ export default function StickerAlbumPage(){
         .filter(g=>g.items.length > 0)
 
     return(
-        <div className="min-h-screen bg-[#F0F7F4]">
-            <header className="bg-[#F0F7F4] px-5 pt-5 pb-3 flex items-center justify-between">
+        // mobile-width centred container
+        <div className="min-h-screen bg-[#F0F7F4] flex flex-col items-center">
+        <div className="w-full max-w-sm flex flex-col min-h-screen">
+
+            {/* HEADER */}
+            <header className="bg-[#F0F7F4] px-4 pt-5 pb-3 flex items-center justify-between">
                 <button
                 type="button"
                 onClick={()=>navigate(-1)}
@@ -291,7 +299,7 @@ export default function StickerAlbumPage(){
 
                     <ArrowLeft size={20}/>
                 </button>
-                <h1 className="text-lg font-bold text-[#091828]">Sticker Album</h1>
+                <h1 className="text-base font-bold text-[#091828]">Sticker Album</h1>
                 <button
                 type="button"
                 className="size-9 flex items-center justify-center rounded-full bg-white/80 text-[#091828] shadow-sm"
@@ -301,34 +309,39 @@ export default function StickerAlbumPage(){
                 </button>
             </header>
 
-            <main className="px-5 pb-28 space-y-8">
-                <div className="pt-2 pb-4 text-center space-y-3">
+            <main className="flex-1 px-4 pb-24 space-y-8 overflow-y-auto">
+
+                {/* PROGRESS HERO - matches wireframe typography */}
+                <div className="pt-2 pb-2 text-center space-y-2">
                     <div>
                         <p className="text-5xl font-black text-[#091828] leading-none">
                             {earned.length} / {total}
                         </p>
                         <p className="text-2xl font-bold text-[#091828] mt-1">Stickers Found</p>
                     </div>
-                    <div className="space-y-1">
-                        <div className="h-3 w-full rounded-full bg-[#D9EDE7] overflow-hidden">
+                    <div className="space-y-1 px-2">
+                        <div className="h-2.5 w-full rounded-full bg-[#D9EDE7] overflow-hidden">
                             <div
                                 className="h-full rounded-full bg-[#3DBFA0] transition-[width] duration-700"
                                 style={{width: `${completionPct}%`}}/>
                         </div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-[#6b6375]">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375]">
                             Completion: {completionPct}%
                         </p>
                     </div>
                 </div>
 
+                {/* BADGE SECTIONS */}
                 {loading?(
                     <div className="space-y-8">
-                        {[5, 4, 2].map((n, i)=>(
+                        {[4, 4, 2].map((n, i)=>(
                             <div key={i} className="space-y-4">
                                 <div className="h-7 w-40 rounded-full bg-[#D9EDE7] animate-pulse"/>
-                                <div className="flex gap-6 flex-wrap">
+                                <div className="grid grid-cols-2 gap-6">
                                     {Array.from({length: n}).map((_, j)=>(
-                                        <div key={j} className="size-[88px] rounded-full bg-[#D9EDE7] animate-pulse"/>
+                                        <div key={j} className="flex justify-center">
+                                            <div className="size-[88px] rounded-full bg-[#D9EDE7] animate-pulse"/>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
@@ -346,6 +359,8 @@ export default function StickerAlbumPage(){
                     ))
                 )}
             </main>
+
+        </div>
         </div>
     )
 }
