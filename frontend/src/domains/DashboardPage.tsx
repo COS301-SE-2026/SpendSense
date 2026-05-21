@@ -1,11 +1,12 @@
 import * as React from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
 	Home,
 	Calendar as CalendarIcon,
 	Trophy,
 	User,
 	ShoppingBag,
+	LogOut,
 } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { SparklesIcon, FireIcon, SunriseIcon } from "@hugeicons/core-free-icons"
@@ -25,10 +26,12 @@ import { cn } from "@/lib/utils"
 import { UpcomingPaymentsCard } from "@/components/dashboard/UpcomingPaymentsCard"
 import { CreditStatsSection } from "@/components/dashboard/CreditStats"
 import { getDashboard } from "@/features/dashboard/dashboardApi"
+import { signOut } from "@/features/auth/auth.service"
 
 import type { DashboardData } from "@/types/DashboardTypes"
 
 export default function DashboardPage() {
+	const navigate = useNavigate()
 
 
 	const [dashboard, setDashboard] = React.useState<DashboardData | null>(null)
@@ -73,6 +76,15 @@ export default function DashboardPage() {
 		nextLevel: (gamificationProfile?.mascotLevel ?? 1) + 1,
 	}
 
+	async function handleSignOut() {
+		try {
+			await signOut()
+			navigate("/login")
+		} catch (error) {
+			console.error("Failed to sign out:", error)
+		}
+	}
+
 	return (
 		<div className="min-h-screen bg-[#F4FBF7] pb-24">
 			<div className="mx-auto w-full max-w-md px-5 pt-6">
@@ -84,15 +96,25 @@ export default function DashboardPage() {
 						</h1>
 					</div>
 
-					<div className="relative">
-						<IconButton
-							IconVariant="iconNotif"
-							aria-label="Notifications"
-						/>
-						<span
-							aria-hidden="true"
-							className="pointer-events-none absolute right-1 top-1 size-2.5 rounded-full bg-[#FF6B9D] ring-2 ring-[#F4FBF7]"
-						/>
+					<div className="flex items-center gap-2">
+						<div className="relative">
+							<IconButton
+								IconVariant="iconNotif"
+								aria-label="Notifications"
+							/>
+							<span
+								aria-hidden="true"
+								className="pointer-events-none absolute right-1 top-1 size-2.5 rounded-full bg-[#FF6B9D] ring-2 ring-[#F4FBF7]"
+							/>
+						</div>
+						<button
+							type="button"
+							aria-label="Sign out"
+							onClick={handleSignOut}
+							className="flex size-10 items-center justify-center rounded-full bg-[#FFD9E1] text-[#AC2A5D] transition hover:bg-[#FFB3C6] active:translate-y-px"
+						>
+							<LogOut className="size-5" />
+						</button>
 					</div>
 				</header>
 

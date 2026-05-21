@@ -5,15 +5,45 @@ import { describe,it,expect,vi,beforeEach} from "vitest";
 import "@testing-library/jest-dom";
 
 import PaymentForm from "../domains/PaymentForm";
+import {logPayment} from "../features/payments/paymentsApi";
 
 const mockNavigate = vi.fn();
+let mockLocationState: unknown = null;
 vi.mock("react-router-dom",()=>({
   useNavigate:()=>mockNavigate,
+  useLocation:()=>({state:mockLocationState}),
 }));
+vi.mock("../features/payments/paymentsApi",()=>({
+  logPayment:vi.fn(),
+}));
+
+const paymentResponse={
+    data:{
+        scoreImpact:{
+            previousScore:712,
+            currentScore:720,
+            delta:8,
+            explanation:"On-time payment recorded.",
+        },
+        rewards:{
+            coinsAwarded:15,
+            xpAwarded:10,
+            currentPaymentStreak:5,
+            mascotMood:"HAPPY",
+        },
+        paymentImpact:{
+            isLate:false,
+            daysLate:0,
+            simulatedInterest:0,
+        },
+    },
+};
 
 describe("PaymentForm (ObligationForm) Component",()=>{
     beforeEach(()=>{
         vi.clearAllMocks();
+        mockLocationState=null;
+        vi.mocked(logPayment).mockResolvedValue(paymentResponse);
     });
 
     //add pament field inputs correctly
@@ -61,10 +91,8 @@ describe("PaymentForm (ObligationForm) Component",()=>{
     });
 
     //popup testing
-    it("should log form values correctly and pop up the gamification alert on success",async ()=>{
-        vi.useFakeTimers({ shouldAdvanceTime:true });
-        const user = userEvent.setup({ advanceTimers:vi.advanceTimersByTime.bind(vi) });
-        const consoleSpy = vi.spyOn(console,"log");
+    it("should log form values correctly and show the payment impact modal on success",async ()=>{
+        const user = userEvent.setup();
         render(<PaymentForm />);
         await user.type(screen.getByLabelText(/occurence id/i),"occ_12345");
         await user.clear(screen.getByLabelText(/amount paid/i));
@@ -72,22 +100,54 @@ describe("PaymentForm (ObligationForm) Component",()=>{
         await user.type(screen.getByLabelText(/notes/i),"Paid in full");
         await user.click(screen.getByRole("button",{ name :/log payment/i }));
         await waitFor(()=>{
-            expect(consoleSpy).toHaveBeenCalledWith(
-            "Mock payment logged successfully: ",
-            expect.objectContaining({
+            expect(logPayment).toHaveBeenCalledWith({
                 occurrenceId:"occ_12345",
                 amountPaid:750,
+                paidDate:expect.any(String),
                 notes:"Paid in full",
-                paidDate:expect.any(Date),
-            })
-            );
+            });
         });
+        expect(screen.getByText("Payment impact")).toBeInTheDocument();
         expect(screen.getByText("Payment made!")).toBeInTheDocument();
-        expect(screen.getByText("+10 xp")).toBeInTheDocument();
-        vi.advanceTimersByTime(5000);
+        expect(screen.getByText("+8 points")).toBeInTheDocument();
+        expect(screen.getByText("712 -> 720")).toBeInTheDocument();
+        expect(screen.getByText("+15")).toBeInTheDocument();
+        expect(screen.getByText("+10")).toBeInTheDocument();
+        expect(screen.getByText("5 days")).toBeInTheDocument();
+
+        await user.click(screen.getByRole("button",{ name:/back to dashboard/i }));
+        expect(mockNavigate).toHaveBeenCalledWith("/");
+        });
+
+    it("should use the selected calendar occurrence when available",async ()=>{
+        const user = userEvent.setup();
+        mockLocationState={
+            occurrence:{
+                id:"occ_from_calendar",
+                amountDue:199,
+                currency:"ZAR",
+                dueDate:"2026-05-25T00:00:00.000Z",
+                status:"PENDING",
+            },
+            obligation:{
+                name:"Netflix",
+                type:"SUBSCRIPTION",
+            },
+        };
+
+        render(<PaymentForm />);
+
+        expect(screen.getByText("Netflix")).toBeInTheDocument();
+        expect(screen.queryByLabelText(/occurence id/i)).not.toBeInTheDocument();
+        expect(screen.getByLabelText(/amount paid/i)).toHaveValue("199");
+
+        await user.click(screen.getByRole("button",{ name :/log payment/i }));
+
         await waitFor(()=>{
-            expect(screen.queryByText("Payment made!")).not.toBeInTheDocument();
+            expect(logPayment).toHaveBeenCalledWith(expect.objectContaining({
+                occurrenceId:"occ_from_calendar",
+                amountPaid:199,
+            }));
         });
-        vi.useRealTimers();
-        });
+    });
 });
