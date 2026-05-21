@@ -68,6 +68,15 @@ const FREQUENCY_OPTIONS = [
     {value: "FIXED_INSTALLMENTS" as const, label: "Fixed Installments"},
 ];
 
+const TYPE_TO_CATEGORY: Record<string, string> = {
+    SUBSCRIPTION: "Subscription",
+    RENT: "Rent",
+    UTILITY: "Utility",
+    BNPL: "BNPL",
+    IOU: "IOU",
+    CUSTOM: "Custom",
+};
+
 export default function ObligationForm() {
     const navigate = useNavigate();
     const [showPopup, setShowPopup] = useState(false);
@@ -101,19 +110,10 @@ export default function ObligationForm() {
     const remindersEnabled = useWatch({control, name: "reminders.enabled"});
     const selectedType = useWatch({control, name: "type"});
 
-    const TYPE_TO_CATEGORY: Record<string, string> = {
-        SUBSCRIPTION: "Subscription",
-        RENT: "Rent",
-        UTILITY: "Utility",
-        BNPL: "BNPL",
-        IOU: "IOU",
-        CUSTOM: "Custom",
-    };
-
     useEffect(() => {
         const match = categories.find(c => c.name === TYPE_TO_CATEGORY[selectedType]);
         if (match) setValue("categoryId", match.id);
-    }, [selectedType, categories]);
+    }, [selectedType, categories, setValue]);
 
     const onSubmit = async (formData: ObligationFormData) => {
         setSubmitting(true);
