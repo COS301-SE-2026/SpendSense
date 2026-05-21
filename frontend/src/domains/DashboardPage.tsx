@@ -5,7 +5,6 @@ import {
 	Calendar as CalendarIcon,
 	Trophy,
 	User,
-	Wifi,
 	ShoppingBag,
 } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -27,10 +26,12 @@ import { UpcomingPaymentsCard } from "@/components/dashboard/UpcomingPaymentsCar
 import { CreditStatsSection } from "@/components/dashboard/CreditStats"
 import { getDashboard } from "@/features/dashboard/dashboardApi"
 
+import type { DashboardData } from "@/types/DashboardTypes"
+
 export default function DashboardPage() {
 
 
-	const [dashboard, setDashboard] = React.useState<any>(null)
+	const [dashboard, setDashboard] = React.useState<DashboardData | null>(null)
 
 
 	// loading and detting the dashboard 
@@ -59,10 +60,7 @@ export default function DashboardPage() {
 	const creditProfile = dashboard?.creditProfile
 	const gamificationProfile = dashboard?.gamificationProfile
 	const upcomingPayments = dashboard?.upcomingPayments ?? []
-	const overduePayments = dashboard?.overduePayments ?? []
-	const recentBadges = dashboard?.recentBadges ?? []
 	const unreadNotifications = dashboard?.unreadNotifications ?? []
-	const recentScoreEvents = dashboard?.recentScoreEvents ?? []
 
 	const name = userSummary?.displayName
 
@@ -77,13 +75,6 @@ export default function DashboardPage() {
 	}
 
 
-
-	const nextPayment = overduePayments[0] ?? upcomingPayments[0]
-
-
-	const unreadCount = unreadNotifications.length
-	const scoreChange = recentScoreEvents.reduce((total: number, event: any) => total + Number(event.pointsDelta ?? 0), 0)
-	const badgeCount = recentBadges.length
 
 	React.useEffect(() => {
 
