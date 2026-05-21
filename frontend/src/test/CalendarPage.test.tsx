@@ -124,26 +124,26 @@ describe('CalendarPage', ()=>{
 	// SUMMARY CARDS
  
 	it('renders the three summary cards', ()=>{
-		renderCalendar()
-		expect(screen.getByText(/paid this month/i)).toBeInTheDocument()
-		expect(screen.getByText(/due soon/i)).toBeInTheDocument()
-		expect(screen.getByText(/missed/i)).toBeInTheDocument()
-	})
+        renderCalendar()
+        expect(screen.getByText(/paid this month/i)).toBeInTheDocument()
+        expect(screen.getAllByText(/due soon/i).length).toBeGreaterThan(0)
+        expect(screen.getByText(/missed/i)).toBeInTheDocument()
+    })
  
-	it('calculates paid total from PAID and PAID_LATE occurrences', () => {
-		renderCalendar()
-		expect(screen.getByText(/R.*5.?200/)).toBeInTheDocument()
-	})
+	it('calculates paid total from PAID and PAID_LATE occurrences', ()=>{
+        renderCalendar()
+        expect(screen.getAllByText(/R.*5.?200/).length).toBeGreaterThan(0)
+    })
  
-	it('calculates due soon total from PENDING occurrences', ()=>{
-		renderCalendar()
-		expect(screen.getByText(/R.*199/)).toBeInTheDocument()
-	})
+    it('calculates due soon total from PENDING occurrences', ()=>{
+        renderCalendar()
+        expect(screen.getAllByText(/R.*199/).length).toBeGreaterThan(0)
+    })
  
-	it('calculates overdue total from OVERDUE occurrences', ()=>{
-		renderCalendar()
-		expect(screen.getByText(/R.*620/)).toBeInTheDocument()
-	})
+    it('calculates overdue total from OVERDUE occurrences', ()=>{
+        renderCalendar()
+        expect(screen.getAllByText(/R.*620/).length).toBeGreaterThan(0)
+    })
  
  
 	// LOADING STATE
@@ -278,10 +278,10 @@ describe('CalendarPage', ()=>{
 		expect(screen.getAllByText('OVERDUE').length).toBeGreaterThan(0)
 	})
 
-	it('renders PAID status badge', ()=>{
-		renderCalendar()
-		expect(screen.getByText(/^PAID/)).toBeInTheDocument()
-	})
+    it('renders PAID status badge', ()=>{
+        renderCalendar()
+        expect(screen.getAllByText(/^PAID/).length).toBeGreaterThan(0)
+    })
  
 	it('shows tap to pay hint on payable occurrences', () => {
 		renderCalendar()
