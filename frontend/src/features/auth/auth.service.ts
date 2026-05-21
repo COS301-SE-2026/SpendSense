@@ -1,10 +1,17 @@
 import {supabase} from '../../lib/supabase'
 import {setToken, clearToken} from '../../lib/tokenStore'
 
-export async function signUp(email: string, password: string) {
-    const {data, error} = await supabase.auth.signUp({ email, password })
-    if (error) 
+export async function signUp(email: string, password: string, displayName?: string) {
+    const {data, error} = await supabase.auth.signUp({
+        email,
+        password,
+        options: displayName ? {data: {display_name: displayName} } : undefined,
+    })
+    if (error)
         throw error
+    if (data.session?.access_token) {
+        setToken(data.session.access_token)
+    }
     return data
 }
 
