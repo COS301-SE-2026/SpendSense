@@ -8,7 +8,7 @@ import { Link, useNavigate} from "react-router-dom";
 import { LongButton } from "../components/common/LongButton";
 import { CustomInput } from "../components/common/CustomInput";
 import {createObligation} from "../features/obligations/obligationsApi";
-import { Popover,PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover,PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { Calendar as CalenderIcon } from "lucide-react";
 import { IconButton } from "@/components/common/IconButton";
 import { Calendar } from "@/components/ui/calendar";
