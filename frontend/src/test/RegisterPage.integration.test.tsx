@@ -138,7 +138,7 @@ describe("Register page integration", () => {
         fireEvent.click(screen.getByRole("button", {name: /join the quest/i}));
 
         await waitFor(() => {
-            expect(screen.getByText("Passwords do no match")).toBeInTheDocument();
+            expect(screen.getByText("Passwords do not match")).toBeInTheDocument();
         });
         expect(signUpSpy).not.toHaveBeenCalled();
     });
