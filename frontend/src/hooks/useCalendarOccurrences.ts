@@ -94,14 +94,24 @@ export function useCalendarOccurrences(): UseCalendarOccurrencesReturn{
     },[displayYear, displayMonth, fetchOccurrences])
     
     const goToPreviousMonth = useCallback(()=>{
-        setDisplayYear((y)=> (displayMonth === 0? y - 1 : y))
-        setDisplayMonth((m)=> (m === 0? 11 : m - 1))
-    },[displayMonth])
-    
+        setDisplayMonth((m)=>{
+            if(m === 0){
+                setDisplayYear((y)=> y - 1)
+                return 11
+            }
+            return m - 1
+        })
+    },[])
+
     const goToNextMonth = useCallback(()=>{
-        setDisplayYear((y)=> (displayMonth === 11? y + 1 : y))
-        setDisplayMonth((m)=> (m === 11? 0 : m + 1))
-    },[displayMonth])
+        setDisplayMonth((m)=>{
+            if(m === 11){
+                setDisplayYear((y)=> y + 1)
+                return 0
+            }
+            return m + 1
+        })
+    },[])
     
     const refetch = useCallback(()=>{
         void fetchOccurrences(displayYear, displayMonth)
