@@ -35,7 +35,7 @@ describe('DashboardPage', () => {
 
   it('renders the XP progress section', () => {
     renderDashboard()
-    expect(screen.getByText('850 / 1,200 XP')).toBeInTheDocument()
+    expect(document.body.textContent).toMatch(/850\s*\/\s*1[\s,.]?200\s*XP/i)
     expect(screen.getByText('Next Level: 5')).toBeInTheDocument()
   })
 

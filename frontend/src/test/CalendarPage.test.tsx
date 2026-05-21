@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect } from 'vitest'
-import CalendarPage from '@/features/calendar/CalendarPage'
+import CalendarPage from '../domains/CalendarPage'
 
 function renderCalendar() {
   return render(
