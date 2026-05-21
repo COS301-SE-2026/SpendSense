@@ -1,4 +1,5 @@
 import {supabase} from './supabase'
+import {getToken} from './tokenStore'
 
 const apiBaseUrl = import.meta.env.VITE_API_URL
 
@@ -10,8 +11,11 @@ export async function apiFetch<T>(
     path: string,
     options: RequestInit = {},
 ): Promise<T> {
-    const {data: sessionData} = await supabase.auth.getSession()
-    const token = sessionData.session?.access_token
+    let token = getToken()
+    if(!token){
+        const {data: sessionData} = await supabase.auth.getSession()
+        token = sessionData.session?.access_token ?? null
+    }
 
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',

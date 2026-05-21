@@ -10,6 +10,7 @@ import RegisterPage from './domains/RegisterPage.tsx'
 import StickerAlbumPage from './domains/StickerAlbumPage'
 import StickerDetailPage from './domains/StickerDetailPage'
 import {initAuthListener} from './features/auth/auth.service'
+import ProtectedRoute from './components/ProtectedRoute'
 
 initAuthListener()
 
@@ -17,8 +18,8 @@ createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<DashboardPage />}/>
-                <Route path="/domains/dashboard" element={<DashboardPage />}/>
+                <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}/>
+                <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}/>
                 <Route path="/dev" element={<App />}/>
                 <Route path="/calendar" element={<CalendarPage />}/>
                 <Route path="/login" element={<LoginPage />}/>
