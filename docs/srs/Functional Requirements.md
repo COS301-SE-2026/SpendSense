@@ -1,15 +1,8 @@
 >**A NOTE ON JARGON:** 
->A **Financial obligation** refers to something that the user must pay for. 
->A **Payment** (In the context of these *Functional Requirements*) is the action the user is taking to satisfy the  financial obligation. 
->***For Example:*** 
->	*John Doe, logs a **payment** for **rent*** 
->	The **Financial Obligation** is **rent.** 
->	The **payment** is the money that he is spending to satisfy the rent.
+* A **Financial Obligation** Refers to some expense that the logged-in user will have to satisfy buy some due date.
+* The term **Payment** will be used in regards to the user action of **Logging a *Payment***.
 
->**A NOTE ON THE PROVIDED EXAMPLES:**
->For each functional requirement an example is required (*according to the SRS template provided for Mini-Project*). 
->The Examples I have provided below ( *as of 19-May-2026*) are to Illustrate the basic functionality the system should provide and may not necessarily appear directly in the application. 
->For Example, in **FR3.13** I listed potential mascot outfits as “Superman”, “Bunny”, and “Batman”, these *exact* outfits may not appear in the application and are purely to showcase the idea of the outfit changing mechanism.  
+The examples provided below the functionaly requirements will further emphasize this distincition. 
 
 
 

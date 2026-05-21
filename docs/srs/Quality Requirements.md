@@ -1,14 +1,3 @@
-> Note:  This document is still a work in progress. (19-May)
-> 
-> To My Understanding, "Quality Requirements" refer to the "Non-Functional Requirements"
-> In COS301 Lecture-13 (13-April) Non-Functional Requirements are (*Performance, Usability, Security, Risk Assessment, Reliability, Maintainability, Portability*)
-> .
-> All Requirements listed below come from the SpendSense Specification under the headings (Architecture Requirements, Design Requirements, Delivery Requirements and Contraints). 
-> .
-> I have grouped the requirements that were listed underneath those SpendSense Specification headings according to the COS301 Lecture-13. 
-
-
- 
 # QR1: Performance
 
 * **QR1.1:** The System Shall return AI predictions within 2 seconds.
