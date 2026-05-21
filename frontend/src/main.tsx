@@ -8,6 +8,8 @@ import CalendarPage from './features/calendar/CalendarPage'
 import LoginPage from './domains/LoginPage';
 import RegisterPage from './domains/RegisterPage.tsx';
 import ObligationForm from './domains/ObligationForm.tsx'
+import StickerAlbumPage from './domains/StickerAlbumPage'
+import StickerDetailPage from './domains/StickerDetailPage'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -20,7 +22,9 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/login" element={<LoginPage />}/>
         <Route path="/register" element={<RegisterPage/>}/>
         <Route path="/obligationForm" element={<ObligationForm/>}/>
+        <Route path="/stickers" element={<StickerAlbumPage />}/>
+        <Route path="/stickers/:badgeId" element={<StickerDetailPage />}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
-);
+)
