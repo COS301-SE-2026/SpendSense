@@ -2,7 +2,7 @@ import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect } from 'vitest'
-import DashboardPage from '../features/dashboard/DashboardPage'
+import DashboardPage from '../domains/DashboardPage'
 import'@testing-library/jest-dom'
 
 function renderDashboard() {
