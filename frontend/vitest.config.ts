@@ -1,14 +1,16 @@
 import path from 'path'
-//eslint-disable @typescript-eslint/no-explicit-any
-import { defineConfig } from 'vitest/config'
-//eslint-disable-next-line @typescript-eslint/no-explicit-any
+import { defineConfig,InlineConfig,UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
+interface VitestUserConfig extends UserConfig{
+  test?:InlineConfig
+}
+
 export default defineConfig({
   plugins: [
-    react() as any,
-    tsconfigPaths() as any
+    react(),
+    tsconfigPaths()
   ],
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
@@ -25,4 +27,4 @@ export default defineConfig({
       }
     }
   },
-})
+}as VitestUserConfig)
