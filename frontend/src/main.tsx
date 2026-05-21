@@ -23,7 +23,6 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}/>
         <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/dev" element={<App />} />
-        <Route path="/" element={<App />}/>
         <Route path="/calendar" element={<CalendarPage />}/>
         <Route path="/login" element={<LoginPage />}/>
         <Route path="/register" element={<RegisterPage/>}/>

@@ -5,7 +5,6 @@ import {
   Calendar as CalendarIcon,
   Trophy,
   User,
-  Plus,
   ChevronLeft,
   ChevronRight,
   Radio,
@@ -17,7 +16,7 @@ import {
   Wifi,
   Tv,
 } from "lucide-react"
-
+import { AddTransactionButton } from "@/components/common/AddTransactionButton"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { cn } from "@/lib/utils"
 
@@ -420,33 +419,34 @@ function BottomNav({ active }: { active: BottomNavTab }) {
         <BottomNavItem to="/"  icon={<Home className="size-5" />} label="Home" active={active === "home"} />
         <BottomNavItem to="/calendar" icon={<CalendarIcon className="size-5" />} label="Calendar" active={active === "calendar"} />
 
-        <Link
-          to="/transactions/new"
-          aria-label="Add expense"
-          className="flex size-14 -translate-y-3 items-center justify-center rounded-full bg-[#0a1929] text-white shadow-lg ring-4 ring-white"
-        >
-          <Plus className="size-6" />
-        </Link>
+        <AddTransactionButton/>
 
-        <BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} />
-        <BottomNavItem to="/profile" icon={<User className="size-5" />} label="Profile" active={active === "profile"} />
+        <BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} disabled={true}/>
+        <BottomNavItem to="/profile" icon={<User className="size-5" />} label="Profile" active={active === "profile"} disabled={true}/>
       </div>
     </nav>
   )
 }
 
 function BottomNavItem({
-  to, icon, label, active,
+  to, icon, label, active,disabled
 }: {
-  to: string; icon: React.ReactNode; label: string; active: boolean
+  to: string; icon: React.ReactNode; label: string; active: boolean, disabled?:boolean
 }) {
   return (
     <Link
       to={to}
       aria-current={active ? "page" : undefined}
+      aria-disabled={disabled}
+      onClick={(e)=>{
+        if(disabled){
+          e.preventDefault();
+        }
+      }}
       className={cn(
         "flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition",
         active ? "bg-[#FFD8E6] text-[#ac2a5d]" : "text-[#6b6375] hover:text-[#091828]",
+        disabled && "opacity-35 pointer-events-none cursor-not-allowed select-none"
       )}
     >
       {icon}
