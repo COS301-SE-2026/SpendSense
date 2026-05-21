@@ -10,6 +10,7 @@ import RegisterPage from './domains/RegisterPage.tsx';
 import ObligationForm from './domains/ObligationForm.tsx'
 import StickerAlbumPage from './domains/StickerAlbumPage'
 import StickerDetailPage from './domains/StickerDetailPage'
+import PaymentForm from './domains/PaymentForm.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -24,6 +25,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/obligationForm" element={<ObligationForm/>}/>
         <Route path="/stickers" element={<StickerAlbumPage />}/>
         <Route path="/stickers/:badgeId" element={<StickerDetailPage />}/>
+        <Route path="/paymentForm" element={<PaymentForm/>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
