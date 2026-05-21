@@ -14,6 +14,24 @@ vi.mock('@hugeicons/core-free-icons', () => ({
   SunriseIcon: null,
 }))
 
+vi.mock('../features/dashboard/dashboardApi', () => ({
+  getDashboard: () => Promise.resolve({
+    data: {
+      userSummary: { displayName: 'Rachel' },
+      creditProfile: { currentScore: 742 },
+      gamificationProfile: { xp: 850, mascotLevel: 4, currentPaymentStreak: 7 },
+      upcomingPayments: [{
+        id: 'payment-1',
+        amountDue: 54,
+        currency: 'ZAR',
+        status: 'PENDING',
+        obligation: { name: 'Internet Service' },
+      }],
+      unreadNotifications: [],
+    },
+  }),
+}))
+
 function renderDashboard() {
   return render(
     <MemoryRouter>
@@ -22,34 +40,39 @@ function renderDashboard() {
   )
 }
 
+async function renderLoadedDashboard() {
+  renderDashboard()
+  await screen.findByText('742')
+}
+
 describe('DashboardPage', () => {
-  it('renders the user greeting', () => {
-    renderDashboard()
+  it('renders the user greeting', async () => {
+    await renderLoadedDashboard()
     const heading = screen.getByRole('heading', { level: 1 })
     expect(heading).toHaveTextContent('Hey')
     expect(heading).toHaveTextContent('Rachel')
   })
 
-  it('renders the credit score', () => {
-    renderDashboard()
+  it('renders the credit score', async () => {
+    await renderLoadedDashboard()
     expect(screen.getByText('742')).toBeInTheDocument()
     expect(screen.getByText('CREDIT SCORE')).toBeInTheDocument()
   })
 
-  it('renders the streak and level badges', () => {
-    renderDashboard()
+  it('renders the streak and level badges', async () => {
+    await renderLoadedDashboard()
     expect(screen.getByText('7 day streak')).toBeInTheDocument()
     expect(screen.getByText('Lvl 4')).toBeInTheDocument()
   })
 
-  it('renders the XP progress section', () => {
-    renderDashboard()
+  it('renders the XP progress section', async () => {
+    await renderLoadedDashboard()
     expect(document.body.textContent).toMatch(/850\s*\/\s*1[\s,.]?200\s*XP/i)
     expect(screen.getByText('Next Level: 5')).toBeInTheDocument()
   })
 
-  it('renders the Coming Up section with a bill', () => {
-    renderDashboard()
+  it('renders the Coming Up section with a bill', async () => {
+    await renderLoadedDashboard()
     expect(screen.getByText('Coming Up')).toBeInTheDocument()
     expect(screen.getByText('Internet Service')).toBeInTheDocument()
     expect(screen.getByText('R 54.00')).toBeInTheDocument()
