@@ -150,11 +150,32 @@ SpendSense/
 ├── backend/          # NestJS API
 ├── ai/               # Python FastAPI AI microservice
 ├── docs/             # Project documentation
+│   ├── srs/          # Software Requirements Specification
 │   └── assets/
 │       └── images/   # Logos, team photos, and other assets
 ├── scripts/          # Helper scripts for local development
 └── docker-compose.yml
 ```
+
+---
+
+<div align="center">
+
+## Documentation
+
+</div>
+
+| Document | Link |
+|---|---|
+| SRS Folder | [`docs/srs/`](docs/srs/) |
+| Functional Requirements | [`docs/srs/Functional Requirements.md`](docs/srs/Functional%20Requirements.md) |
+| User Stories | [`docs/srs/User Stories.md`](docs/srs/User%20Stories.md) |
+| Use Cases | [`docs/srs/Use Cases.md`](docs/srs/Use%20Cases.md) |
+| Quality Requirements | [`docs/srs/Quality Requirements.md`](docs/srs/Quality%20Requirements.md) |
+| Domain Model Explanation | [`docs/srs/Domain-Model-Explanation.md`](docs/srs/Domain-Model-Explanation.md) |
+| API Contract | [`docs/srs/api-contract.md`](docs/srs/api-contract.md) |
+
+---
 
 Services run locally at:
 
