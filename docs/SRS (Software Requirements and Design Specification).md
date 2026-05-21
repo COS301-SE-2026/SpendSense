@@ -10,8 +10,8 @@
 | Allyson* | Andre    | u23525984      |
 | Morgan   | Wattrus  | u23541068      |
 | Kyle     | McCalgan | u24648826      |
-| Kahlan   | Hagerman |                |
-| Rachel   | Clifford |                |
+| Kahlan   | Hagerman | u24601358      |
+| Rachel   | Clifford | u24647374      |
 
 
 # 1. Project Owner and Introduction
@@ -312,8 +312,35 @@ _Your system will have different target users and different types of users. Your
 * **QR7.6:** The System Shall be deployable using the provided setup instructions.
 * **QR7.7:** The System Shall be configurable for deployment in a cloud production environment.
 
-# 8 Traceability Matrix
+# 8. Architecture Diagram
+<img width="6004" height="2568" alt="image" src="https://github.com/user-attachments/assets/004a7881-1d4f-4cf2-bc41-663fbf0218e5" />
 
+# 9.Traceability matrix
+| Functional Requirement | UC1: Financial Obligation Management | UC2: Logging Payments | UC3: Gamification & Rewards |
+|-----------------------------|:----------------------------------:|:-------------------:|:--------------------------:|
+| FR1.1 | X |  |  |
+| FR1.2 | X |  |  |
+| FR1.3 | X |  |  |
+| FR1.4 | X |  |  |
+| FR1.5 | X |  |  |
+| FR1.6 | X |  |  |
+| FR2.1 |  | X |  |
+| FR2.2 |  | X |  |
+| FR2.3 |  | X |  |
+| FR2.4 |  | X |  |
+| FR2.5 |  | X |  |
+| FR3.1 |  |  | X |
+| FR3.2 |  |  | X |
+| FR3.3 |  |  | X |
+| FR3.4 |  |  | X |
+| FR3.5 |  |  | X |
+| FR3.6 |  |  | X |
+| FR3.7 |  |  | X |
+| FR3.8 |  |  | X |
+| FR3.9 |  |  | X |
+| FR3.10 |  |  | X |
+| FR3.11 |  |  | X |
+| FR3.12 |  |  | X |
 
 
 
