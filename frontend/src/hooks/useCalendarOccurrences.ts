@@ -1,6 +1,6 @@
 import {useState, useCallback, useEffect} from 'react'
 import {getUpcomingOccurrences} from '@/features/payments/paymentsApi'
-import { yearsToQuarters } from 'date-fns'
+
 
 //this endpoint will double wrap: response.data.data is array, response.data.meta is the pagination object
 // this will handle the extraction so CalendarPage wont have tp
@@ -66,7 +66,7 @@ export function useCalendarOccurrences(): UseCalendarOccurrencesReturn{
             const response  = await getUpcomingOccurrences({
                 from,
                 to,
-                status: 'PENDING_OVERDUE',
+                status: 'PENDING,OVERDUE',
                 perPage: 100,
             })
 
