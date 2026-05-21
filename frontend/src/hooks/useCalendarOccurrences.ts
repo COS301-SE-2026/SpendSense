@@ -90,6 +90,7 @@ export function useCalendarOccurrences(): UseCalendarOccurrencesReturn{
     }, [])
 
     useEffect(()=>{
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         void fetchOccurrences(displayYear, displayMonth)
     },[displayYear, displayMonth, fetchOccurrences])
     
