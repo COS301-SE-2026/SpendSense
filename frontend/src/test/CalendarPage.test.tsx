@@ -196,7 +196,6 @@ describe('CalendarPage', ()=>{
 			defaultHookState({ displayYear: now.getFullYear(), displayMonth: now.getMonth() })
 		)
 		renderCalendar()
-		const todayBtn = screen.getByRole('button', { name: new RegExp(`${now.getDate()}`) })
 		const currentDates = document.querySelectorAll('[aria-current="date"]')
 		expect(currentDates.length).toBe(1)
 	})
@@ -281,7 +280,7 @@ describe('CalendarPage', ()=>{
 
 	it('renders PAID status badge', ()=>{
 		renderCalendar()
-		expect(screen.getByText(/PAID/)).toBeInTheDocument()
+		expect(screen.getByText(/^PAID/)).toBeInTheDocument()
 	})
  
 	it('shows tap to pay hint on payable occurrences', () => {
