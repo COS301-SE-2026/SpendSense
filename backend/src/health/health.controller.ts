@@ -1,0 +1,116 @@
+import { Controller, Get } from '@nestjs/common';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiProperty,
+  ApiTags,
+} from '@nestjs/swagger';
+import { PrismaService } from '../prisma/prisma.service';
+
+type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
+type ServiceStatus = 'up' | 'down';
+
+class HealthServicesDto {
+  @ApiProperty({ enum: ['up', 'down'], example: 'up' })
+  database!: ServiceStatus;
+
+  @ApiProperty({ enum: ['up', 'down'], example: 'down' })
+  ai!: ServiceStatus;
+}
+
+class HealthResponseDto {
+  @ApiProperty({
+    enum: ['healthy', 'degraded', 'unhealthy'],
+    example: 'degraded',
+  })
+  status!: HealthStatus;
+
+  @ApiProperty({ example: '2026-05-20T10:00:00.000Z' })
+  timestamp!: string;
+
+  @ApiProperty({ example: '0.0.1' })
+  version!: string;
+
+  @ApiProperty({ type: HealthServicesDto })
+  services!: HealthServicesDto;
+}
+
+@ApiTags('health')
+@Controller('health')
+export class HealthController {
+  constructor(private readonly prisma: PrismaService) {}
+
+  @ApiOperation({
+    summary: 'Check backend health',
+    description:
+      'Reports high-level database and AI service availability without exposing connection details or secrets.',
+  })
+  @ApiOkResponse({
+    description:
+      'Backend health summary. The AI service may be down while the backend is still degraded.',
+    schema: {
+      example: {
+        data: {
+          status: 'degraded',
+          timestamp: '2026-05-20T10:00:00.000Z',
+          version: '0.0.1',
+          services: {
+            database: 'up',
+            ai: 'down',
+          },
+        },
+      },
+    },
+  })
+  @Get()
+  async health(): Promise<HealthResponseDto> {
+    const dbHealthy = await this.checkDatabase();
+    const aiHealthy = await this.checkAiService();
+
+    return {
+      status: this.getOverallStatus(dbHealthy, aiHealthy),
+      timestamp: new Date().toISOString(),
+      version: process.env.npm_package_version ?? '0.0.1',
+      services: {
+        database: dbHealthy ? 'up' : 'down',
+        ai: aiHealthy ? 'up' : 'down',
+      },
+    };
+  }
+
+  private async checkDatabase(): Promise<boolean> {
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async checkAiService(): Promise<boolean> {
+    const aiUrl = process.env.AI_SERVICE_URL;
+    if (!aiUrl) {
+      return false;
+    }
+    try {
+      const healthUrl = new URL('/health', aiUrl);
+      const response = await fetch(healthUrl, {
+        signal: AbortSignal.timeout(3000),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  private getOverallStatus(
+    dbHealthy: boolean,
+    aiHealthy: boolean,
+  ): HealthStatus {
+    if (!dbHealthy) {
+      return 'unhealthy';
+    }
+
+    return aiHealthy ? 'healthy' : 'degraded';
+  }
+}
