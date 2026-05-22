@@ -1,0 +1,60 @@
+<svg width="500" height="180" viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>SpendSense animated logo</title>
+  <desc fill="#000000">Two stacked chevrons with a dot that flies up and bounces them</desc>
+
+  <!-- dark pill background so logo is visible on both light and dark GitHub themes -->
+  <rect x="0" y="0" width="500" height="180" rx="16" ry="16" fill="#f4fbf7"/>
+
+  <style>
+    .chev-top    { fill: none; stroke: #091828; stroke-width: 5.5; stroke-linecap: round; stroke-linejoin: round; }
+    .chev-bottom { fill: none; stroke: #091828; stroke-width: 3;   stroke-linecap: round; stroke-linejoin: round; opacity: 0.45; }
+    .dot         { fill: #091828; }
+    .word-spend  { fill: #091828; font-family: Georgia, serif; font-style: italic; font-size: 52px; }
+    .word-sense  { fill: #091828; font-family: Arial, Helvetica, sans-serif; font-size: 52px; font-weight: 700; }
+
+    .dot         { animation: dotLaunch       5s linear      infinite; }
+    .chev-bottom { animation: chevBounceBottom 5s ease-in-out infinite; }
+    .chev-top    { animation: chevBounceTop    5s ease-in-out infinite; }
+
+    @keyframes dotLaunch {
+      0%    { transform: translateY(0);     opacity: 1; }
+      1.9%  { transform: translateY(-38px); opacity: 1; }
+      4.8%  { transform: translateY(-46px); opacity: 1; }
+      7.2%  { transform: translateY(-50px); opacity: 1; }
+      8.6%  { transform: translateY(-50px); opacity: 0; }
+      9.6%  { transform: translateY(-38px); opacity: 0; }
+      14.4% { transform: translateY(-15px); opacity: 0; }
+      18.2% { transform: translateY(0);     opacity: 0; }
+      21.1% { transform: translateY(0);     opacity: 1; }
+      100%  { transform: translateY(0);     opacity: 1; }
+    }
+
+    @keyframes chevBounceBottom {
+      0%    { transform: translateY(0); }
+      2.9%  { transform: translateY(0); }
+      6.7%  { transform: translateY(-13px); }
+      11%   { transform: translateY(2px); }
+      13.9% { transform: translateY(-4px); }
+      16.8% { transform: translateY(0); }
+      100%  { transform: translateY(0); }
+    }
+
+    @keyframes chevBounceTop {
+      0%    { transform: translateY(0); }
+      6.2%  { transform: translateY(0); }
+      10.1% { transform: translateY(-11px); }
+      13.9% { transform: translateY(2px); }
+      16.8% { transform: translateY(-3px); }
+      19.7% { transform: translateY(0); }
+      100%  { transform: translateY(0); }
+    }
+  </style>
+
+  <polyline class="chev-top" points="42,78  66,52  90,78" fill="#000000"/>
+  <polyline class="chev-bottom" points="42,104 66,78  90,104" fill="#000000"/>
+  <circle class="dot" cx="66" cy="126" r="5" fill="#000000"/>
+
+  <text x="114" y="116" fill="#000000">
+    <tspan class="word-spend" fill="#000000">Spend</tspan><tspan class="word-sense" fill="#000000">Sense</tspan>
+  </text>
+</svg>

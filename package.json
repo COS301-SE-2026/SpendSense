@@ -7,18 +7,24 @@
     "doc": "docs"
   },
   "scripts": {
-    "dev:up": "docker compose up -d",
-    "dev:up:build": "docker compose up --build -d",
+    "dev:up": "docker compose up -d && node scripts/print-local-links.cjs",
+    "dev:up:build": "docker compose up --build --renew-anon-volumes -d && node scripts/print-local-links.cjs",
     "dev:down": "docker compose down",
     "dev:down:volumes": "docker compose down -v",
     "dev:logs": "docker compose logs -f",
     "dev:logs:back": "docker compose logs -f backend",
     "dev:logs:front": "docker compose logs -f frontend",
     "dev:logs:ai": "docker compose logs -f ai",
-    "dev:restart": "docker compose down && docker compose up --build -d",
+    "dev:restart": "docker compose down && docker compose up --build --renew-anon-volumes -d && node scripts/print-local-links.cjs",
+    "dev:token": "node scripts/print-supabase-swagger-token.cjs",
     "dev:shell:back": "docker compose exec backend sh",
     "dev:shell:front": "docker compose exec frontend sh",
     "dev:shell:ai": "docker compose exec ai sh",
+    "dev:db:migrate": "docker compose exec backend npm run prisma:migrate -- --name init",
+    "dev:db:seed": "docker compose exec backend npm run prisma:seed",
+    "dev:db:seed:demo": "docker compose exec backend npm run prisma:seed:demo",
+    "dev:db:studio": "docker compose exec backend npm run prisma:studio",
+    "dev:db:reset": "docker compose exec backend npm run prisma:reset",
     "lint": "npm run lint:back && npm run lint:front && npm run lint:ai",
     "lint:back": "docker compose run --rm --no-deps backend npm run lint",
     "lint:front": "docker compose run --rm --no-deps frontend npm run lint",
@@ -58,5 +64,9 @@
   "bugs": {
     "url": "https://github.com/COS301-SE-2026/SpendSense/issues"
   },
-  "homepage": "https://github.com/COS301-SE-2026/SpendSense#readme"
+  "homepage": "https://github.com/COS301-SE-2026/SpendSense#readme",
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.15.0",
+    "prisma-erd-generator": "^2.4.2"
+  }
 }

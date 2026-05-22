@@ -120,3 +120,94 @@ function App() {
 }
 
 export default App
+
+// Ally testing for buttons
+// import {LongButton} from "@/components/common/LongButton"
+// import { IconButton } from "@/components/common/IconButton";
+// export default function App(){
+//   return(
+//     <main className="min-h-screen bg-[#f4fbf7] p-8">
+//       <div className="mx-auto flex max-w-sm flex-col gap-6">
+//         <LongButton LongVariant="primaryDark" showArrow>
+//           Primary Dark
+//         </LongButton>
+//         <LongButton LongVariant="primaryPink" showArrow>
+//           Primary Pink
+//         </LongButton>
+//         <LongButton LongVariant="primaryMint" showArrow>
+//           Primary Mint
+//         </LongButton>
+//         <LongButton LongVariant="primaryYellow" showArrow>
+//           Primary Yellow
+//         </LongButton>
+//         <LongButton LongVariant="outline" showArrow>
+//           Outline (for google)
+//         </LongButton>
+//         <LongButton LongVariant="primaryPinkBorder">
+//           PrimaryPinkBorder
+//         </LongButton>
+//         <IconButton IconVariant="iconBack"/>
+//         <IconButton IconVariant="iconRefresh"/>
+//         <IconButton IconVariant="iconEdit"/>
+//         <IconButton IconVariant="iconCancel"/>
+//         <IconButton IconVariant="iconNotif"/>
+//       </div>
+//     </main>
+//   )
+// }
+
+//testing for input
+// import { CustomInput } from "@/components/common/CustomInput";
+// export default function App(){
+//   return(  
+//     <main className="min-h-screen bg-[#f4fbf7] p-8">
+//       <div className="mx-auto flex max-w-sm flex-col gap-6">
+//           <CustomInput variant="form" placeholder="Form input component"/>
+//           <CustomInput variant="regLog" placeholder="Reg/Loging input component"/>
+//       </div>
+//     </main>
+//   )
+// }
+//Ally testing for cards
+// import { CustomCard } from "@/components/ui/CustomCard";
+// export default function App() {
+//   const variants = ["greenShaddow","navyShaddow","navyBorder"] as const;
+//   const sizes = ["sm", "md", "lg"] as const;
+
+//   return (
+//     <main className="min-h-screen bg-[#f4fbf7] p-8">
+//       <div className="mx-auto flex max-w-md flex-col gap-6">
+//         {variants.map((variant)=>(
+//           <div key={variant} className="flex flex-col gap-4">
+//             <h2 className="font-semibold text-lg">{variant}</h2>
+//             {sizes.map((size)=>(
+//               <CustomCard
+//                 key={`${variant}-${size}`}
+//                 variant={variant}
+//                 size={size}
+//                 title={`Title ${variant}-${size}`}
+//               >
+//                 <span className="text-gray-700">This is a {variant} card of size {size}</span>
+//               </CustomCard>
+//             ))}
+//           </div>
+//         ))}
+//       </div>
+//     </main>
+//   );
+// }
+
+//testing for badges
+// import { CustomBadge } from "@/components/common/CustomBadges"
+// export default function App(){
+//   return(
+//     <main className="min-h-screen bg-[#f4fbf7] p-8">
+//       <div className="mx-auto flex max-w-md flex-col gap-6">
+//         <CustomBadge variant="xp">+25 XP</CustomBadge>
+//         <CustomBadge variant="tier">Rare Tier</CustomBadge>
+//         <CustomBadge variant="streak">7 Day Streak</CustomBadge>
+//         <CustomBadge variant="level">Lvl 4</CustomBadge>
+//       </div>
+//     </main>
+//   );
+// }
