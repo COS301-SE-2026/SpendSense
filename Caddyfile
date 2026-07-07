@@ -1,0 +1,9 @@
+{
+	email {$CADDY_ACME_EMAIL:you@example.com}
+}
+
+{$CADDY_HOSTNAME} {
+	encode gzip
+
+	reverse_proxy backend:3000
+}
