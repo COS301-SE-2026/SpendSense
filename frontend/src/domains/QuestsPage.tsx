@@ -102,11 +102,11 @@ function Section({
 	title,
 	children,
 	className,
-}: {
+}: Readonly<{
 	title: string
 	children: React.ReactNode
 	className?: string
-}) {
+}>) {
 	return (
 		<section className={className}>
 			<h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#6b6375]">{title}</h2>
@@ -125,7 +125,7 @@ function QuestCard({
     onAction,
     asLink,
     to,
-}: {
+}: Readonly<{
     icon: React.ReactNode
     tone: "pink" | "mint" | "yellow" | "lilac"
     title: string
@@ -135,10 +135,12 @@ function QuestCard({
     onAction?: () => void
     asLink?: boolean
     to?: string
-}) {
+}>) {
+
+    //shadow is misspelled as "greenShaddow" in CustomCard.tsx.
     return(
 
-        <CustomCard variant="greenShaddow" size="sm"> //shadow misspelled in CustomCard.tsx.
+        <CustomCard variant="greenShaddow" size="sm"> 
                     <div className="flex items-start gap-3">
                         <QuestIcon tone={tone}>{icon}</QuestIcon>
                         <div className="min-w-0 flex-1">
@@ -167,10 +169,10 @@ function QuestCard({
 function QuestIcon({
     tone,
     children,
-}: {
+}: Readonly<{
     tone: "mint" | "lilac" | "pink" | "yellow"
     children: React.ReactNode
-}) {
+}>) {
     const toneClass: Record<typeof tone, string> = {
         pink: "bg-[#FFD8E6] text-[#ac2a5d]",
         mint: "bg-[#DCEFE8] text-[#091828]",
@@ -196,7 +198,7 @@ function BottomNav({ active }: { active: BottomNavTab }) {
                 <BottomNavItem to="/" icon={<Home className="size-5" />} label="Home" active={active === "home"} />
                 <BottomNavItem to="/calendar" icon={<CalendarIcon className="size-5" />} label="Calendar" active={active === "calendar"} />
 
-                {/* Floating + action */}
+                {/* floating + action */}
                 <AddTransactionButton />
 
                 <BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} />
@@ -212,13 +214,13 @@ function BottomNavItem({
     label,
     active,
     disabled,
-}: {
+}: Readonly<{
     to: string
     icon: React.ReactNode
     label: string
     active: boolean
     disabled?: boolean
-}) {
+}>) {
     return (
         <Link
             to={to}
