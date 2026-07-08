@@ -12,6 +12,7 @@ import StickerAlbumPage from './domains/StickerAlbumPage'
 import StickerDetailPage from './domains/StickerDetailPage'
 import {initAuthListener} from './features/auth/auth.service'
 import ProtectedRoute from './components/ProtectedRoute'
+import InsightsPage from './domains/InsightsPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -30,6 +31,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/stickers" element={<StickerAlbumPage />}/>
         <Route path="/stickers/:badgeKey" element={<StickerDetailPage />}/>
         <Route path="/paymentForm" element={<PaymentForm/>}/>
+        <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
