@@ -7,6 +7,8 @@ import {
 	User,
 	ShoppingBag,
 	LogOut,
+    TrendingUp,
+    ChevronRight,
 } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { SparklesIcon, FireIcon, SunriseIcon } from "@hugeicons/core-free-icons"
@@ -188,6 +190,23 @@ export default function DashboardPage() {
                 <Link to="/transactions">See all transactions</Link>
             </LongButton>
             </CustomCard>
+
+
+            <Link to = "/insights" className="mt-6 block">
+                <CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3">
+                    <CategoryIcon tone="pink">
+                        <TrendingUp className="size-5"/>
+                    </CategoryIcon>
+
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-[#091828]">Insights</p>
+                        <p className="text-xs text-[#6b6375]">10% more was spent on Food this week than last week.</p>
+                    </div>
+
+                    <ChevronRight className="size-4 shrink-0 text-[#6b6375]"/>
+                </CustomCard>
+            </Link>
+
 
 				<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
 
