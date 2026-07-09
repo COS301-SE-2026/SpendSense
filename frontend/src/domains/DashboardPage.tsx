@@ -66,7 +66,7 @@ export default function DashboardPage() {
 
 	const name = userSummary?.displayName
 
-	const score_ = creditProfile?.currentScore ?? 0
+	const score_ = creditProfile?.currentScore ?? 0 // cuyrrent credit score 
 	const level_ = gamificationProfile?.mascotLevel ?? 1
 	const streakDays_ = gamificationProfile?.currentPaymentStreak ?? 0
 
