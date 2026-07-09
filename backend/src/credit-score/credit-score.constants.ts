@@ -1,7 +1,7 @@
 // contains the necessary constatnts for current spendSense credit model
 import { ObligationPriority } from "@prisma/client";
 
-export const CREDIT_SCORE_MODEL_VERSIONS = 'V1' ; // current versions of the Credit Model
+export const CREDIT_SCORE_MODEL_VERSION = 'V1' ; // current versions of the Credit Model
 
 export const CREDIT_SCORE_RANGE = {
     MIN: 300,
