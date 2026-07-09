@@ -39,6 +39,12 @@ function calculateBudgetPressureScore(ratio : number): number {
     if (ratio <= 0.7) return 0.75;
     if (ratio <= 0.9) return 0.5;
     if (ratio <= 1) return 0.2;
+    return 0;
+}
 
+function calculateSavingsBufferScore(ratio: number): number {
+    if (ratio >= 0.2) return 1;
+    if (ratio >= 0.1) return 0.7;
+    if (ratio >= 0) return 0.3;
     return 0;
 }
