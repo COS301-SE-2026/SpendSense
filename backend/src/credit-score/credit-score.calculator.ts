@@ -1,17 +1,16 @@
 
 import { ScoreTier } from "@prisma/client";
 import { CREDIT_SCORE_COMPONENT_WEIGHTS, CREDIT_SCORE_MODEL_VERSION, CREDIT_SCORE_RANGE, PRIORITY_WEIGHTS, RISK_CAPS } from './credit-score.constants';
-import { PaymentHistoryItem } from "./credit-score.types";
+import { ConfidenceLevel, PaymentHistoryItem } from "./credit-score.types";
 
+// Getters for Various Ranges required for credit score calculations 
 function getPaymentOutcomeScore(payment: PaymentHistoryItem): number {
-
   if (payment.missed) return 0;
   if (payment.daysLate <= 0) return 1;
   if (payment.daysLate <= 3) return 0.85;
   if (payment.daysLate <= 7) return 0.7;
   if (payment.daysLate <= 14) return 0.5;
   if (payment.daysLate <= 30) return 0.25;
-
   return 0.05;
 }
 
