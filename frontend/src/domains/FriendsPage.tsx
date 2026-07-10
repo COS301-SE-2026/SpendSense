@@ -4,18 +4,18 @@ import {
 	Users,
 	UserPlus,
 	Trophy,
-	Swords,
+	//Swords,
 	Activity,
 	ChevronRight,
 	Home,
 	Calendar as CalendarIcon,
 	User,
-	Search,
+	//Search,
 } from "lucide-react"
 
 import { CustomCard } from "@/components/ui/CustomCard"
-import {LongButton} from "@/components/common/LongButton"
-import { CustomBadge } from "@/components/common/CustomBadges"
+//import {LongButton} from "@/components/common/LongButton"
+//import { CustomBadge } from "@/components/common/CustomBadges"
 import { AddTransactionButton } from "@/components/common/AddTransactionButton"
 import { cn } from "@/lib/utils"
 
@@ -148,7 +148,7 @@ function HubLinkCard({
 	return(
 		<Link to={to}>
 			<CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3">
-				<div className={"flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${toneClasses[tone]}" }>
+				<div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${toneClasses[tone]}`}>
 					{icon}
 				</div>
 				<div className="min-w-0 flex-1">
