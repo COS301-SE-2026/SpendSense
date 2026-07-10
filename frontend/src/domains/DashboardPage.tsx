@@ -189,6 +189,39 @@ export default function DashboardPage() {
             </LongButton>
             </CustomCard>
 
+
+
+			{/*friends hub card*/}
+
+			<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
+ 
+				<SectionHeader title="Friends" meta="See what friends are up to" />
+
+				<div className="mt-4 flex items-center gap-3 rounded-2xl bg-[#F4FBF7] p-4">
+					<CategoryIcon tone="mint">
+						<User className="size-5" />
+					</CategoryIcon>
+					<div className="min-w-0 flex-1">
+						<p className="text-sm font-bold text-[#091828]">Friends Hub</p>
+						{/*TO DO: avatar row and online count when friends endpoint exists */}
+						<p className="text-xs text-[#6b6375]">Connect, compete and celebrate together.</p>
+					</div>
+				</div>
+
+				<LongButton
+					LongVariant="primaryMint"
+					LongSize="md"
+					className="mt-4"
+					showArrow={false}
+					asChild
+				>
+					<Link to="/friends">View Friends</Link>
+				</LongButton>
+			</CustomCard>
+ 
+
+			{/*sticker album card*/}
+
 				<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
 
 					<SectionHeader title="Stickers" meta="24 collected · 32 to go" />
