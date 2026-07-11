@@ -8,12 +8,11 @@ export default function LandingPage(){
             <div className="w-full max-w-sm space-y-6 text-center">
 
                 <div className="flex items-center justify-center gap-2">
-                    <img src= {logo} alt="" className="h-8 w-8"/>
-                    <span className="text-lg font-extrabold text-[#091828]">SpendSense</span>
+                    <img src= {logo} alt="SpendSense" className="w-60 h-auto"/>
                 </div>
 
                 <div className="space-y-2">
-                    <h1 className="text-3xl font-extrabold leading-tight text-[#091828]">Take control over your finances.</h1>
+                    <h1 className="text-3xl font-extrabold leading-tight text-[#091828]">Take control of your finances.</h1>
                     <p className="text-sm text-[#6b6375]">Track your spending, make payments, and build lasting habits.</p>
                 </div>
 
