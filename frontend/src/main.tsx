@@ -15,6 +15,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import InsightsPage from './domains/InsightsPage.tsx'
 import ProfilePage from './domains/ProfilePage.tsx'
 import LandingPage from './domains/LandingPage.tsx'
+import OnboardingPage from './domains/OnboardingPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -36,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
         <Route path="/insights" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
         <Route path="/landing" element={<LandingPage/>}/>
+        <Route path="/onboarding" element={<OnboardingPage/>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
