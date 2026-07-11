@@ -14,6 +14,7 @@ import {initAuthListener} from './features/auth/auth.service'
 import ProtectedRoute from './components/ProtectedRoute'
 import InsightsPage from './domains/InsightsPage.tsx'
 import ProfilePage from './domains/ProfilePage.tsx'
+import LandingPage from './domains/LandingPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -34,6 +35,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/paymentForm" element={<PaymentForm/>}/>
         <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
         <Route path="/insights" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
+        <Route path="/landing" element={<LandingPage/>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
