@@ -4,7 +4,6 @@ import { Calendar, Repeat2, PiggyBank, ChevronDown, CreditCard, BanknoteArrowDow
 import { CustomCard } from "@/components/ui/CustomCard"
 import { LongButton } from "@/components/common/LongButton"
 import { cn } from "@/lib/utils"
-import { CustomInput } from "@/components/common/CustomInput"
 
 // TODO: add actual saving for preferences, make handleContinue() actually persist
 
@@ -107,11 +106,11 @@ export default function OnboardingPage(){
                         <div>
                             <label className="block font-medium text-xs text-[#091828] mb-1.5 ml-1">At</label>
 
-                            <CustomInput
-                                inputSize="md"
-                                type="time"
+                            <input
                                 value={reminderTime}
+                                type="time"
                                 onChange={(t)=>setReminderTime(t.target.value)}
+                                className="h-12 rounded-2xl bg-white w-full border border-[#e8e4f4] text-sm text-[#091828] py-2.5 px-3"
                             />
                         </div>
                     </div>
@@ -160,11 +159,11 @@ function numberSuffix(number: string){
         return "st"
     }
 
-    if(num%10 === 2 && num !== 11){ //number ends in a 2 (not 12)
+    if(num%10 === 2 && num !== 12){ //number ends in a 2 (not 12)
         return "nd"
     }
 
-    if(num%10 === 3 && num !== 11){ //number ends in a 3 (not 13)
+    if(num%10 === 3 && num !== 13){ //number ends in a 3 (not 13)
         return "rd"
     }
 
@@ -179,9 +178,9 @@ function OverlaySelect({value, label, onChange, options}:{
 
         return(
             <div>
-                <label className="block font-medium text-xs text-[#091828] ml-1 mb1.5">{label}</label>
+                <label className="block font-medium text-xs text-[#091828] ml-1 mb-1.5">{label}</label>
 
-                <div className="flex relative gap-2 items-center border border-[#e8e4f4] rounded-2xl bg-white py-2.5 px-3">
+                <div className="h-12 flex relative gap-2 items-center border border-[#e8e4f4] rounded-2xl bg-white py-2.5 px-3">
                     <span className="truncate text-sm text-[#091828] flex-1">{curr?.label ?? "Select"}</span>
 
                     <ChevronDown className="text-[#6b6375] shrink-0 size-4"/>

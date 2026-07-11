@@ -37,7 +37,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
         <Route path="/insights" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
         <Route path="/landing" element={<LandingPage/>}/>
-        <Route path="/onboarding" element={<OnboardingPage/>}/>
+        <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
