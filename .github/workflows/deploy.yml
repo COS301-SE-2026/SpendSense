@@ -5,11 +5,7 @@ name: Deploy
 # workflow trusts release's CI and focuses purely on shipping.
 on:
   push:
-    branches: [main]
-  # TEMPORARY: allows me to manually run the pipeline against the Deployment
-  # branch to validate it, before merging into dev/release/main.
-  # Will remove this trigger once the first real deploy is for sure working.
-  workflow_dispatch:
+    branches: [main, Deployment]
 
 concurrency:
   group: deploy-production
