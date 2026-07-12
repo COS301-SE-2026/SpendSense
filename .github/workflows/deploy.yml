@@ -140,6 +140,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             cd /app/spendsense
             git pull
             GHCR_OWNER=${{ needs.build-and-push-images.outputs.owner }} IMAGE_TAG=${{ github.sha }} \
