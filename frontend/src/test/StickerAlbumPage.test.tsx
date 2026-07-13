@@ -95,10 +95,10 @@ describe('StickerAlbumPage', ()=>{
 		expect(screen.getByRole('button', {name: /search stickers/i})).toBeInTheDocument()
 	})
 
-	it('calls navigate(-1) when back button is clicked', ()=>{
+	it('calls navigate("/") when back button is clicked', ()=>{
 		renderAlbum()
 		fireEvent.click(screen.getByRole('button', {name: /go back/i}))
-		expect(mockNavigate).toHaveBeenCalledWith(-1)
+		expect(mockNavigate).toHaveBeenCalledWith("/")
 	})
 
 
