@@ -36,7 +36,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/stickers/:badgeKey" element={<StickerDetailPage />}/>
         <Route path="/paymentForm" element={<PaymentForm/>}/>
         <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
-        <Route path="/insights" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
         <Route path="/landing" element={<LandingPage/>}/>
         <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
