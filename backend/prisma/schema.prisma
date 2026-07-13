@@ -167,6 +167,7 @@ model User {
   supabaseAuthId         String                  @unique
   email                  String                  @unique
   displayName            String?
+  monthlyBudget          Decimal?
   avatarUrl              String?
   onboardingCompleted    Boolean                 @default(false)
   createdAt              DateTime                @default(now())
