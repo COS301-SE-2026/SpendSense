@@ -16,6 +16,11 @@ import QuizPage from './domains/QuizPage'
 import FriendsPage from './domains/FriendsPage'
 import { FriendsListPage, AddFriendPage, FriendProfilePage, FriendActivityPage, LeaderboardPage } from './domains/FriendsSubPages'
 import ProtectedRoute from './components/ProtectedRoute'
+import InsightsPage from './domains/InsightsPage.tsx'
+import ProfilePage from './domains/ProfilePage.tsx'
+import LandingPage from './domains/LandingPage.tsx'
+import OnboardingPage from './domains/OnboardingPage.tsx'
+import NotificationsPage from './domains/NotificationsPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -34,6 +39,11 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/stickers" element={<StickerAlbumPage />}/>
         <Route path="/stickers/:badgeKey" element={<StickerDetailPage />}/>
         <Route path="/paymentForm" element={<PaymentForm/>}/>
+        <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
+        <Route path="/landing" element={<LandingPage/>}/>
+        <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
+        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
          <Route path="/quests" element={<QuestsPage/>}/>
          <Route path="/quiz" element={<QuizPage/>}/>
          <Route path="/friends" element={<FriendsPage/>}/>
