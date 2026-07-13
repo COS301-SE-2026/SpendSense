@@ -610,8 +610,8 @@ function BottomNav({ active }: { active: BottomNavTab }) {
         <BottomNavItem to="/"        icon={<Home className="size-5" />}        label="Home"     active={active === "home"} />
         <BottomNavItem to="/calendar" icon={<CalendarIcon className="size-5" />} label="Calendar" active={active === "calendar"} />
         <AddTransactionButton />
-        <BottomNavItem to="/quests"  icon={<Trophy className="size-5" />}      label="Quests"   active={active === "quests"}  disabled={true} />
-        <BottomNavItem to="/profile" icon={<User className="size-5" />}        label="Profile"  active={active === "profile"} disabled={true} />
+        <BottomNavItem to="/quests"  icon={<Trophy className="size-5" />}      label="Quests"   active={active === "quests"}  disabled={false} />
+        <BottomNavItem to="/profile" icon={<User className="size-5" />}        label="Profile"  active={active === "profile"} disabled={false} />
       </div>
     </nav>
   )
