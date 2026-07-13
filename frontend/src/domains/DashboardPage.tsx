@@ -7,6 +7,8 @@ import {
 	User,
 	ShoppingBag,
 	LogOut,
+    TrendingUp,
+    ChevronRight,
 } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { SparklesIcon, FireIcon, SunriseIcon } from "@hugeicons/core-free-icons"
@@ -101,6 +103,7 @@ export default function DashboardPage() {
 							<IconButton
 								IconVariant="iconNotif"
 								aria-label="Notifications"
+                                onClick={() => navigate("/notifications")}
 							/>
 							<span
 								aria-hidden="true"
@@ -188,6 +191,54 @@ export default function DashboardPage() {
                 <Link to="/transactions">See all transactions</Link>
             </LongButton>
             </CustomCard>
+
+
+            <Link to = "/insights" className="mt-6 block">
+                <CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3">
+                    <CategoryIcon tone="pink">
+                        <TrendingUp className="size-5"/>
+                    </CategoryIcon>
+
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-[#091828]">Insights</p>
+                        <p className="text-xs text-[#6b6375]">10% more was spent on Food this week than last week.</p>
+                    </div>
+
+                    <ChevronRight className="size-4 shrink-0 text-[#6b6375]"/>
+                </CustomCard>
+            </Link>
+
+
+			{/*friends hub card*/}
+
+			<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
+ 
+				<SectionHeader title="Friends" meta="See what friends are up to" />
+
+				<div className="mt-4 flex items-center gap-3 rounded-2xl bg-[#F4FBF7] p-4">
+					<CategoryIcon tone="mint">
+						<User className="size-5" />
+					</CategoryIcon>
+					<div className="min-w-0 flex-1">
+						<p className="text-sm font-bold text-[#091828]">Friends Hub</p>
+						{/*TO DO: avatar row and online count when friends endpoint exists */}
+						<p className="text-xs text-[#6b6375]">Connect, compete and celebrate together.</p>
+					</div>
+				</div>
+
+				<LongButton
+					LongVariant="primaryMint"
+					LongSize="md"
+					className="mt-4"
+					showArrow={false}
+					asChild
+				>
+					<Link to="/friends">View Friends</Link>
+				</LongButton>
+			</CustomCard>
+ 
+
+			{/*sticker album card*/}
 
 				<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
 
@@ -287,8 +338,8 @@ function BottomNav({ active }: { active: BottomNavTab }) {
 				{/* Floating + action */}
 				<AddTransactionButton />
 
-				<BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} disabled={true} />
-				<BottomNavItem to="/profile" icon={<User className="size-5" />} label="Profile" active={active === "profile"} disabled={true} />
+				<BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} />
+				<BottomNavItem to="/profile" icon={<User className="size-5" />} label="Profile" active={active === "profile"} disabled={false} />
 			</div>
 		</nav>
 	)

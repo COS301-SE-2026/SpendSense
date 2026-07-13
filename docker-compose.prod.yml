@@ -1,0 +1,43 @@
+services:
+  backend:
+    image: ghcr.io/${GHCR_OWNER}/spendsense-backend:${IMAGE_TAG:-latest}
+    container_name: spendsense_backend
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    depends_on:
+      - ai
+    networks:
+      - spendsense
+
+  ai:
+    image: ghcr.io/${GHCR_OWNER}/spendsense-ai:${IMAGE_TAG:-latest}
+    container_name: spendsense_ai
+    restart: unless-stopped
+    networks:
+      - spendsense
+
+  caddy:
+    image: caddy:2
+    container_name: spendsense_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - .env.production
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+    networks:
+      - spendsense
+
+networks:
+  spendsense:
+
+volumes:
+  caddy_data:
+  caddy_config:
