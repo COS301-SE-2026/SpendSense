@@ -111,14 +111,19 @@ describe('DashboardPage', () => {
     expect(homeLink).toHaveAttribute('aria-current', 'page')
   })
 
-  it('disables Quests and Profile navigation tabs', () => {
+  it('disables Quests navigation tabs', () => {
     renderDashboard()
     const questsLink = screen.getByRole('link', { name: /quests/i })
-    const profileLink = screen.getByRole('link', { name: /profile/i })
     expect(questsLink).toHaveAttribute('aria-disabled', 'true')
-    expect(profileLink).toHaveAttribute('aria-disabled', 'true')
     expect(questsLink).toHaveClass('pointer-events-none')
-    expect(profileLink).toHaveClass('pointer-events-none')
+    
+  })
+
+  it('enables Profile navigation tab', async () =>{
+    await renderLoadedDashboard()
+    const profileLink = screen.getByRole('link', { name: /profile/i })
+    expect(profileLink).not.toHaveAttribute('aria-disabled', 'true')
+    expect(profileLink).not.toHaveClass('pointer-events-none')
   })
 
   it('renders nav links pointing to correct routes', async () => {
