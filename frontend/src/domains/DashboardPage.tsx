@@ -307,7 +307,7 @@ function BottomNav({ active }: { active: BottomNavTab }) {
 				{/* Floating + action */}
 				<AddTransactionButton />
 
-				<BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} disabled={true} />
+				<BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} />
 				<BottomNavItem to="/profile" icon={<User className="size-5" />} label="Profile" active={active === "profile"} disabled={false} />
 			</div>
 		</nav>

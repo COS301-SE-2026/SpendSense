@@ -111,11 +111,11 @@ describe('DashboardPage', () => {
     expect(homeLink).toHaveAttribute('aria-current', 'page')
   })
 
-  it('disables Quests navigation tabs', () => {
-    renderDashboard()
+  it('enables Quests navigation tabs', async () => {
+    await renderLoadedDashboard()
     const questsLink = screen.getByRole('link', { name: /quests/i })
-    expect(questsLink).toHaveAttribute('aria-disabled', 'true')
-    expect(questsLink).toHaveClass('pointer-events-none')
+    expect(questsLink).not.toHaveAttribute('aria-disabled', 'true')
+    expect(questsLink).not.toHaveClass('pointer-events-none')
     
   })
 
