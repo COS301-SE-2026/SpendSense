@@ -1,15 +1,135 @@
 name: Release Checks
 
+# Gates dev -> release merges with the same checks as pr-checks.yml, plus
+# coverage where the tooling exists today. This is the last real test gate
+# before code becomes deploy-eligible — deploy.yml itself runs no tests at
+# all and trusts this workflow already passed.
 on:
-  workflow_dispatch:
+  pull_request:
+    branches: [release]
 
 jobs:
-  release-summary:
-    name: Release workflow placeholder
+  secret-scan:
+    name: Secret scan
     runs-on: ubuntu-latest
 
     steps:
-      - name: Explain release checks
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Gitleaks
+        run: docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest detect --source=/repo --no-git --verbose
+
+  backend:
+    name: Backend lint, test + coverage, build
+    runs-on: ubuntu-latest
+    needs: secret-scan
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint backend
+        run: npm run lint -- --max-warnings=0
+
+      # Jest's --coverage is built in, no extra dependency needed.
+      - name: Test backend with coverage
+        run: npm run test:cov
+
+      - name: Upload backend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
+
+      - name: Build backend
+        run: npm run build
+
+  frontend:
+    name: Frontend lint, test, build
+    runs-on: ubuntu-latest
+    needs: secret-scan
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint -- --max-warnings=0
+
+      # No coverage here yet: vitest needs @vitest/coverage-v8 installed
+      # before --coverage works, and it isn't in package.json today.
+      # Tracked as a follow-up, not blocking this gate.
+      - name: Test frontend
+        run: npm run test:ci
+
+      - name: Build frontend
+        run: npm run build
+
+  ai:
+    name: AI lint and test
+    runs-on: ubuntu-latest
+    needs: secret-scan
+
+    defaults:
+      run:
+        working-directory: ai
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
         run: |
-          echo "Release checks are intentionally manual for Demo 1."
-          echo "Enable automatic release/main checks after the dev workflow is stable."
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Lint AI service
+        run: python -m ruff check .
+
+      # No --cov here yet: pytest-cov isn't in requirements-dev.txt today.
+      # Tracked as a follow-up, not blocking this gate.
+      - name: Test AI service
+        run: python -m pytest
+
+  release-ready:
+    name: Release ready
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, ai]
+    steps:
+      - name: All checks passed
+        run: echo "backend, frontend, and ai all passed — this branch is deploy-eligible."
