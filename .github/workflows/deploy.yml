@@ -1,11 +1,11 @@
 name: Deploy
 
 # Only main triggers this — main only ever receives merges from release,
-# and ci-release.yml already gated that merge. No tests run here; this
+# and release-checks.yml already gated that merge. No tests run here; this
 # workflow trusts release's CI and focuses purely on shipping.
 on:
   push:
-    branches: [main, Deployment]
+    branches: [main]
 
 concurrency:
   group: deploy-production
@@ -32,8 +32,6 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      # VITE_* values are baked into the JS bundle right here, at build time.
-      # There is no later point where these can be changed without rebuilding.
       - name: Build frontend
         working-directory: frontend
         run: npm run build
@@ -62,8 +60,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # GHCR requires a lowercase image path; the GitHub org/user name
-      # itself may not be lowercase, so this can't be skipped.
       - name: Normalize repository owner to lowercase
         id: owner
         run: echo "lowercase=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
@@ -106,15 +102,10 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
-      # Full npm ci (not --omit=dev) because the prisma CLI itself is a
-      # devDependency — this runs on the disposable GitHub runner, not on
-      # EC2, so image-size concerns from Dockerfile.prod don't apply here.
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
 
-      # Applies only pending migration files already committed under
-      # backend/prisma/migrations/. Existing data is never touched.
       - name: Run pending migrations
         working-directory: backend
         run: npx prisma migrate deploy
@@ -126,13 +117,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [deploy-frontend, build-and-push-images, migrate-database]
     steps:
-      # Note: this step does NOT write backend/ai runtime secrets (DATABASE_URL,
-      # SUPABASE_JWT_SECRET, S3 credentials, ALLOWED_ORIGINS, CADDY_HOSTNAME, etc).
-      # Those live only in EC2's local .env.production, created once by hand
-      # during the one-time setup checklist — this pipeline only ever ships
-      # new code/images, it never touches that file. Updating a runtime secret
-      # requires SSHing in and editing .env.production directly, then re-running
-      # `docker compose up --detach` — a deliberate, not accidental, gap.
       - name: SSH in, pull new images, restart
         uses: appleboy/ssh-action@v1
         with:
@@ -148,10 +132,6 @@ jobs:
             GHCR_OWNER=${{ needs.build-and-push-images.outputs.owner }} IMAGE_TAG=${{ github.sha }} \
               docker compose -f docker-compose.prod.yml up --detach
 
-      # If this never returns 200, the job fails loudly — but the previous
-      # containers were never torn down (docker compose up only recreates
-      # containers whose image actually changed), so a failed deploy leaves
-      # the last-known-good version still serving traffic.
       - name: Poll health check
         run: |
           for i in $(seq 1 10); do
