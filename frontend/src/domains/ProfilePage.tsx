@@ -37,10 +37,10 @@ type MenuItem={
 const menuItems: MenuItem[]=[
     {label: "Edit Profile", icon: <User className="size-5"/>, to: "/edit-profile", enabled: false},
     {label: "Settings", icon: <Settings className="size-5"/>, to: "/settings", enabled: false},
-    {label: "Friends & Social", icon: <Users className="size-5"/>, to: "/friends", enabled: false},
+    {label: "Friends & Social", icon: <Users className="size-5"/>, to: "/friends", enabled: true},
     {label: "Sticker Album", icon: <Star className="size-5"/>, to: "/stickers", enabled: true},
-    {label: "Wrapped", icon: <Gift className="size-5"/>, to: "/wrapped", enabled: false},
-    {label: "Mascot Home", icon: <Smile className="size-5"/>, to: "/mascot", enabled: false},
+    {label: "Wrapped", icon: <Gift className="size-5"/>, to: "/wrapped", enabled: true},
+    {label: "Mascot Home", icon: <Smile className="size-5"/>, to: "/mascot", enabled: true},
     {label: "Help & Support", icon: <CircleQuestionMark className="size-5"/>, to: "/help", enabled: false},
 
 

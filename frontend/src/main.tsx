@@ -22,6 +22,7 @@ import LandingPage from './domains/LandingPage.tsx'
 import OnboardingPage from './domains/OnboardingPage.tsx'
 import NotificationsPage from './domains/NotificationsPage.tsx'
 import MascotPage from './domains/MascotPage.tsx'
+import WrappedPage from './domains/WrappedPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -54,6 +55,7 @@ createRoot(document.getElementById('root')!).render(
          <Route path="/friends/activity" element={<FriendActivityPage/>}/>
          <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
         <Route path="/mascot" element={<MascotPage/>}/>
+        <Route path="/wrapped" element={<WrappedPage/>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
