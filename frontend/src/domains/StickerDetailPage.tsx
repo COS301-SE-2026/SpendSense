@@ -161,7 +161,7 @@ export default function StickerDetailPage(){
             <header className="px-5 pt-5 flex items-center justify-between">
                 <button
                     type="button"
-                    onClick={()=>navigate(-1)}
+                    onClick={()=>navigate("/stickers")}
                     className="size-9 flex items-center justify-center rounded-full bg-white/60 text-[#091828]"
                     aria-label="Go back"
                 >

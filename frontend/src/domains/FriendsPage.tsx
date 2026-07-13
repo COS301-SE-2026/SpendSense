@@ -178,7 +178,7 @@ function BottomNav({ active }: Readonly<{ active: BottomNavTab }>) {
 				<AddTransactionButton />
  
 				<BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} />
-				<BottomNavItem to="/profile" icon={<User className="size-5" />} label="Profile" active={active === "profile"} disabled={true} />
+				<BottomNavItem to="/profile" icon={<User className="size-5" />} label="Profile" active={active === "profile"} />
 			</div>
 		</nav>
 	)
