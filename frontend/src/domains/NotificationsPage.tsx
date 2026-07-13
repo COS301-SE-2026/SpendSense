@@ -18,8 +18,6 @@ export default function NotificationsPage(){
     async function loadNotifications(){
         try{
             // getNotifications must still be added to notificationsApi.ts
-            setLoading(true)
-
             const resp = (await getNotifications()) as {data: Notification[]}
             setNotifications(resp.data)
             setErr(null)
@@ -35,7 +33,26 @@ export default function NotificationsPage(){
         }
     }
 
-    React.useEffect(()=>{loadNotifications()}, [])
+    React.useEffect(()=>{
+        async function load(){
+            try{
+                const response = (await getNotifications()) as {data: Notification[]}
+                setNotifications(response.data)
+                setErr(null)
+            }
+
+            catch(error){
+                console.error("getNotifications error: ", error)
+                setErr("Could not load notifications.")
+            }
+
+            finally{
+                setLoading(false)
+            }
+        }
+
+        load()
+    },[])
 
     // so below is based on the comment in the notificationsApi.ts; so readAt is set server side, call markAsRead, and then refetch from server
 
