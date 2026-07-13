@@ -246,7 +246,7 @@ export default function StickerAlbumPage(){
             <header className="bg-[#F0F7F4] px-4 pt-5 pb-3 flex items-center justify-between">
                 <button
                     type="button"
-                    onClick={()=>navigate(-1)}
+                    onClick={()=>navigate("/")}
                     className="size-9 flex items-center justify-center rounded-full bg-white/80 text-[#091828] shadow-sm"
                     aria-label="Go back">
 

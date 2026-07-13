@@ -84,7 +84,7 @@ describe('StickerDetailPage', ()=>{
 	it('calls navigate to /stickers when go back is clicked', ()=>{
 		renderWithState()
 		fireEvent.click(screen.getByRole('button', {name: /go back/i}))
-		expect(mockNav).toHaveBeenCalledWith(-1)
+		expect(mockNav).toHaveBeenCalledWith("/stickers")
 	})
 
 
