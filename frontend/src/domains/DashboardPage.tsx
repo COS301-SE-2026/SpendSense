@@ -103,6 +103,7 @@ export default function DashboardPage() {
 							<IconButton
 								IconVariant="iconNotif"
 								aria-label="Notifications"
+                                onClick={() => navigate("/notifications")}
 							/>
 							<span
 								aria-hidden="true"
