@@ -11,6 +11,10 @@ import ObligationForm from './domains/ObligationForm.tsx'
 import StickerAlbumPage from './domains/StickerAlbumPage'
 import StickerDetailPage from './domains/StickerDetailPage'
 import {initAuthListener} from './features/auth/auth.service'
+import QuestsPage from './domains/QuestsPage'
+import QuizPage from './domains/QuizPage'
+import FriendsPage from './domains/FriendsPage'
+import { FriendsListPage, AddFriendPage, FriendProfilePage, FriendActivityPage, LeaderboardPage } from './domains/FriendsSubPages'
 import ProtectedRoute from './components/ProtectedRoute'
 import InsightsPage from './domains/InsightsPage.tsx'
 import ProfilePage from './domains/ProfilePage.tsx'
@@ -40,6 +44,14 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/landing" element={<LandingPage/>}/>
         <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
+         <Route path="/quests" element={<QuestsPage/>}/>
+         <Route path="/quiz" element={<QuizPage/>}/>
+         <Route path="/friends" element={<FriendsPage/>}/>
+         <Route path="/friends/list" element={<FriendsListPage/>}/>
+         <Route path="/friends/add" element={<AddFriendPage/>}/>
+         <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
+         <Route path="/friends/activity" element={<FriendActivityPage/>}/>
+         <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
