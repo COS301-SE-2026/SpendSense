@@ -69,7 +69,7 @@ export async function getQuizSession(sessionId:string,options?:RequestOptions,):
 
 // POST /api/v1/quiz/sessions/:id/answer
 export async function submitQuizAnswer(sessionId:string,answer:SubmitQuizAnswerRequest,options?:RequestOptions,):Promise<SubmitQuizAnswerResponse>{
-    const res=await apiFetch<Container<SubmitQuizAnswerResponse>>('/api/v1/quiz/sessions/${sessionId}/answer',{
+    const res=await apiFetch<Container<SubmitQuizAnswerResponse>>(`/api/v1/quiz/sessions/${sessionId}/answer`,{
         method:'POST',
         body:JSON.stringify(answer),
         signal:options?.signal,
