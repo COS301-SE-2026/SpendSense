@@ -1,7 +1,7 @@
 
 import { ScoreTier } from "@prisma/client";
 import { CREDIT_SCORE_COMPONENT_WEIGHTS, CREDIT_SCORE_MODEL_VERSION, CREDIT_SCORE_RANGE, PRIORITY_WEIGHTS, RISK_CAPS } from './credit-score.constants';
-import { ConfidenceLevel, PaymentHistoryItem } from "./credit-score.types";
+import { ConfidenceLevel, PaymentHistoryItem, CreditScoreInput,  CreditScoreResult} from "./credit-score.types";
 
 // Getters for Various Ranges required for credit score calculations 
 function getPaymentOutcomeScore(payment: PaymentHistoryItem): number {
@@ -60,4 +60,8 @@ function calculatePaymentHistoryScore(paymentHistoryItems: PaymentHistoryItem[])
     }
 
     return totalWeight === 0 ? 0.65 : weightedTotal / totalWeight;
+}
+
+function calculateRiskCap(input: CreditScoreInput, budgetPressureRatio: number | null) : {} {
+
 }
