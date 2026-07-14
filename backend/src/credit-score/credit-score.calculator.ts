@@ -62,6 +62,14 @@ function calculatePaymentHistoryScore(paymentHistoryItems: PaymentHistoryItem[])
     return totalWeight === 0 ? 0.65 : weightedTotal / totalWeight;
 }
 
-function calculateRiskCap(input: CreditScoreInput, budgetPressureRatio: number | null) : {} {
+function calculateRiskCap(input: CreditScoreInput, budgetPressureRatio: number | null) : {pointsCap: number, appliedCaps: string[]} {
+
+    const caps: {cap:number, reason: string}[] = [] ;
+
+    const strictestCap = caps.reduce((lowest, current) => current.cap <lowest.cap ? current : lowest ); 
+    return {
+        pointsCap: strictestCap.cap,
+        appliedCaps:caps.map((cap) => cap.reason),
+    }
 
 }
