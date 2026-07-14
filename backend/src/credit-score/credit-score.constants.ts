@@ -36,3 +36,13 @@ export const RISK_CAPS = {
   OVER_BUDGET: 670,
   NONE: 850,
 } as const;
+
+export const RISK_CAPS_REASONS = {
+  NO_PAYMENT_HISTORY: "Payment history not built up yet",
+  CURRENT_OVERDUE_PAYMENT: "Existing overdue payment",
+  RECENT_LATE_15_TO_30: "Payment 15-30 days late in last 90 days",
+  RECENT_MISSED_PAYMENT: "Missed payment in last 90 days'",
+  RECENT_MISSED_CRITICAL_OBLIGATION: "Missed critical obligation in last 90 days",
+  OVER_BUDGET: "User is over budget this month",
+  NONE: 850,
+} as const;

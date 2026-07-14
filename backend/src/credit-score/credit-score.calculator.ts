@@ -1,6 +1,6 @@
 
 import { ScoreTier } from "@prisma/client";
-import { CREDIT_SCORE_COMPONENT_WEIGHTS, CREDIT_SCORE_MODEL_VERSION, CREDIT_SCORE_RANGE, PRIORITY_WEIGHTS, RISK_CAPS } from './credit-score.constants';
+import { CREDIT_SCORE_COMPONENT_WEIGHTS, CREDIT_SCORE_MODEL_VERSION, CREDIT_SCORE_RANGE, PRIORITY_WEIGHTS, RISK_CAPS, RISK_CAPS_REASONS } from './credit-score.constants';
 import { ConfidenceLevel, PaymentHistoryItem, CreditScoreInput,  CreditScoreResult} from "./credit-score.types";
 
 // Getters for Various Ranges required for credit score calculations 
@@ -65,6 +65,31 @@ function calculatePaymentHistoryScore(paymentHistoryItems: PaymentHistoryItem[])
 function calculateRiskCap(input: CreditScoreInput, budgetPressureRatio: number | null) : {pointsCap: number, appliedCaps: string[]} {
 
     const caps: {cap:number, reason: string}[] = [] ;
+
+    // CASE: No payment history
+    if (input.paymentHistoryItems.length === 0){
+        caps.push({
+            cap: RISK_CAPS.NO_PAYMENT_HISTORY,
+            reason: RISK_CAPS_REASONS.NO_PAYMENT_HISTORY,
+        }) ;
+    } 
+
+    // CASE: Exisiting overdue payments
+    if(input.hasCurrentOverduePayment){}
+
+    // CASE: EXISTING Two+ weeks late payment (largely outside any grace period)
+    if (input.hasRecentLate15To30) {}
+
+    // CASE: Exisitng Missed payment
+    if (input.hasRecentMissedPayment) {}
+
+    // CASE: Exisitng Missed Critical Obligation
+    if (input.hasRecentMissedCriticalObligation) {}
+
+    // CASE: Over budget
+
+
+    // Otherwise no risk caps appliable 
 
     const strictestCap = caps.reduce((lowest, current) => current.cap <lowest.cap ? current : lowest ); 
     return {
