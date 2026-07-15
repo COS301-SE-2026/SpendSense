@@ -1,6 +1,6 @@
 import {Link,useNavigate,useParams} from "react-router-dom"
 import {LongButton} from "@/components/common/LongButton"
-import {getDailyQuiz,getQuizTopic} from "@/features/quiz/quizApi"
+import {getDailyQuiz,getQuizTopic,getQuizTopics} from "@/features/quiz/quizApi"
 import type {DailyQuizState,QuizSessionType,QuizTopic,QuizTopicDetail} from "@/features/quiz/quizTypes"
 import {useQuizSession} from "@/hooks/useQuizSession"
 import {useCallback,useEffect,useState} from "react"
@@ -28,6 +28,10 @@ type QuizEntryData=|{
     }|{
         type:"TOPIC"
         value:QuizTopicDetail
+        rewardPreview:{
+            xp:number
+            coins:number
+        }|null
     }
 
 function useQuizEntryData(
@@ -54,10 +58,15 @@ function useQuizEntryData(
                 setError("This quiz topic is invalid.")
                 return
             }
-            const res=await getQuizTopic(topic,{signal})
+            const [topicDetail,topics]=await Promise.all([
+                getQuizTopic(topic,{signal}),
+                getQuizTopics({signal}),
+            ])
+            const topicSummary=topics.find(item=>item.key===topic)
             setData({
                 type:"TOPIC",
-                value:res,
+                value:topicDetail,
+                rewardPreview:topicSummary?.rewardPreview??null,
             })
         }catch(err){
             if(isAbortError(err)){
@@ -129,6 +138,7 @@ export default function QuizPage(){
     }
     if(data.type==="TOPIC"){
         const topicData=data.value
+        const rewardPreview=data.rewardPreview
         return (
             <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center">
                 <h1 className="text-2xl font-extrabold text-[#091828]">
@@ -136,7 +146,15 @@ export default function QuizPage(){
                 </h1>
                 <p className="text-sm font-medium text-[#091828]"> Quiz type: Topic</p>
                 <p className="max-w-xs text-sm text-[#6b6375]">{topicData.description}</p>
-                <p className="text-sm text-[#6b6375]">{topicData.questionCount} questions</p>
+                <p className="text-sm text-[#6b6375]">
+                    {topicData.questionCount} questions
+                    {rewardPreview && (
+                        <>
+                            {" • +"}{rewardPreview.xp} XP
+                            {" • +"}{rewardPreview.coins} coins
+                        </>
+                    )}
+                </p>
                 {!topicData.available && (
                     <p className="text-sm text-[#6b6375]">This topic quiz is not available yet.</p>
                 )}
