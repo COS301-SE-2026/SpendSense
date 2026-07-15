@@ -14,6 +14,7 @@ import { RemindersModule } from './reminders/reminders.module';
 import { CategoriesModule } from './categories/categories.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentOccurrencesModule } from './payment-occurrences/payment-occurrences.module';
+import { InsightsModule } from './insights/insights.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { PaymentOccurrencesModule } from './payment-occurrences/payment-occurren
     CategoriesModule,
     NotificationsModule,
     PaymentOccurrencesModule,
+    InsightsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
