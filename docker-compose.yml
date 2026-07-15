@@ -38,7 +38,7 @@ services:
       - "3000:3000"
       - "5555:5555"
     volumes:
-      - ./backend:/app
+      - ./backend:/app:z
       - /app/node_modules
     depends_on:
       - postgres
