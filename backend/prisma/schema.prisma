@@ -125,6 +125,7 @@ enum UserEventType {
   PAYMENT_ON_TIME
   PAYMENT_LATE
   PAYMENT_OVERDUE
+  QUIZ_COMPLETED
   SCORE_UPDATED
   REWARD_GRANTED
   BADGE_EARNED
@@ -136,9 +137,30 @@ enum UserEventSourceType {
   PAYMENT_OCCURRENCE
   PAYMENT_RECORD
   SCORE_EVENT
+  QUIZ
   REWARD_TRANSACTION
   BADGE
   SYSTEM
+}
+
+enum QuizTopic {
+  BUDGETING
+  CREDIT_SCORE
+  INTEREST
+  DEBT
+  BNPL
+  SUBSCRIPTIONS
+}
+
+enum QuizSessionType {
+  DAILY
+  TOPIC
+}
+
+enum QuizSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
 }
 
 enum RewardTransactionType {
@@ -168,6 +190,7 @@ model User {
   email                  String                  @unique
   displayName            String?
   avatarUrl              String?
+  monthlyBudget          Decimal?                @db.Decimal(12, 2)
   onboardingCompleted    Boolean                 @default(false)
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
@@ -185,6 +208,7 @@ model User {
   userEvents             UserEvent[]
   rewardTransactions     RewardTransaction[]
   badges                 UserBadge[]
+  quizSessions           QuizSession[]
 
   @@index([email])
   @@index([deletedAt])
@@ -421,6 +445,58 @@ model ScoreEvent {
   @@index([userId, createdAt])
   @@index([creditProfileId])
   @@index([eventType])
+}
+
+model QuizQuestion {
+  id                String              @id @default(uuid())
+  topic             QuizTopic
+  prompt            String
+  options           Json
+  correctOptionKey  String
+  explanation       String
+  difficulty        Int                 @default(1)
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  sessionAnswers    QuizSessionAnswer[]
+
+  @@index([topic, isActive])
+}
+
+model QuizSession {
+  id                String              @id @default(uuid())
+  userId            String
+  type              QuizSessionType
+  topic             QuizTopic?
+  quizDate          DateTime?
+  status            QuizSessionStatus   @default(IN_PROGRESS)
+  startedAt         DateTime            @default(now())
+  completedAt       DateTime?
+  score             Int                 @default(0)
+  totalQuestions    Int
+  coinsAwarded      Int                 @default(0)
+  xpAwarded         Int                 @default(0)
+  user              User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  answers           QuizSessionAnswer[]
+
+  @@unique([userId, type, quizDate])
+  @@index([userId, status])
+  @@index([userId, quizDate])
+}
+
+model QuizSessionAnswer {
+  id                 String        @id @default(uuid())
+  sessionId          String
+  questionId         String
+  selectedOptionKey  String
+  isCorrect          Boolean
+  attemptNumber      Int
+  answeredAt         DateTime      @default(now())
+  session            QuizSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question           QuizQuestion  @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@index([sessionId, answeredAt])
+  @@index([questionId])
 }
 
 model GamificationProfile {
