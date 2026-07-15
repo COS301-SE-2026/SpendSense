@@ -10,7 +10,7 @@ import {apiFetch} from '../../lib/api'
 // GET   /api/v1/wrapped/latest
 
 export interface UserPreferences{
-    theme: 'SYSTEM'|'lIGHT'|'DARK'
+    theme: 'SYSTEM'|'LIGHT'|'DARK'
     currency: string
     language: string
     reducedMotion: boolean
