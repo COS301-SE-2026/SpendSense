@@ -25,11 +25,8 @@ export interface WrappedSummary{
     noSpendDays: number
 }
 
-export async function getUserProfile(){
-    return apiFetch('/users/me')
-}
 
-export async function updateUserProfile(updates: Partial<UserPreferences>){
+export async function updatePreferences(updates: Partial<UserPreferences>){
     return apiFetch('/users/me/preferences', {method: 'PATCH', body: JSON.stringify(updates)})
 }
 
