@@ -5,4 +5,4 @@ import { calculateSpendSenseScore } from './credit-score.calculator';
 import {CreditScoreResult, PaymentHistoryItem} from './credit-score.types';
 
 @Injectable()
-export class CreditProfileService {}
+export class CreditScoreService {}
