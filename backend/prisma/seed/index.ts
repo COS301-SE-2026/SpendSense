@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { seedBadges } from './badges';
 import { seedCategories } from './categories';
+import { seedQuizzes } from './quizzes';
 
 const prisma = new PrismaClient();
 
@@ -8,6 +9,7 @@ async function main() {
   console.log('Seeding required SpendSense reference data...');
   await seedCategories(prisma);
   await seedBadges(prisma);
+  await seedQuizzes(prisma);
   console.log('Required seed completed.');
 }
 
