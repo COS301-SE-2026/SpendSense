@@ -3,15 +3,16 @@ import "@testing-library/jest-dom/vitest";
 import {describe,it,expect,vi,beforeEach} from "vitest";
 import {render,screen,waitFor} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import {MemoryRouter} from "react-router-dom";
+import {MemoryRouter,Route,Routes} from "react-router-dom";
 import QuizPage from "../domains/QuizPage";
-import {getDailyQuiz} from "../features/quiz/quizApi";
+import {getDailyQuiz,getQuizTopic} from "../features/quiz/quizApi";
 import {useQuizSession} from "../hooks/useQuizSession";
-import type { DailyQuizAvailable,DailyQuizCompleted,DailyQuizInProgress } from "../features/quiz/quizTypes";
+import type {DailyQuizAvailable,DailyQuizCompleted,DailyQuizInProgress,QuizTopicDetail} from "../features/quiz/quizTypes";
 
 //mocked stuff
 const mockNav=vi.fn();
-vi.mock("react-router-dom",async ()=>{
+
+vi.mock("react-router-dom",async()=>{
     const actual=await vi.importActual<typeof import("react-router-dom")>(
         "react-router-dom"
     );
@@ -23,6 +24,7 @@ vi.mock("react-router-dom",async ()=>{
 
 vi.mock("../features/quiz/quizApi",()=>({
     getDailyQuiz:vi.fn(),
+    getQuizTopic:vi.fn(),
 }));
 
 vi.mock("../hooks/useQuizSession",()=>({
@@ -40,12 +42,15 @@ vi.mock("@/components/common/LongButton",()=>({
             return <>{children}</>;
         }
         return(
-            <button onClick={onClick} disabled={disabled}>{children}</button>
+            <button onClick={onClick} disabled={disabled}>
+                {children}
+            </button>
         );
     },
 }));
 
 const mockedGetDailyQuiz=vi.mocked(getDailyQuiz);
+const mockedGetQuizTopic=vi.mocked(getQuizTopic);
 const mockedUseQuizSession=vi.mocked(useQuizSession);
 
 //unmocked stuff
@@ -88,8 +93,42 @@ const COMPLETED:DailyQuizCompleted={
     reward:{xp:50,coins:25},
 };
 
+const TOPIC:QuizTopicDetail={
+    key:"BUDGETING",
+    name:"Budgeting",
+    description:"Learn how to plan and manage your spending.",
+    teachingContent:{
+        title:"Budgeting basics",
+        body:"A budget helps you plan where your money goes.",
+        keyPoints:[
+            "Track income",
+            "Plan expenses",
+            "Review spending",
+        ],
+    },
+    available:true,
+    questionCount:6,
+};
+
+const UNAVAILABLE_TOPIC:QuizTopicDetail={
+    key:"INTEREST",
+    name:"Interest",
+    description:"Learn how interest affects saving and borrowing.",
+    teachingContent:{
+        title:"Interest basics",
+        body:"Interest affects both debt and savings.",
+        keyPoints:[
+            "Interest rates",
+            "Saving",
+            "Borrowing",
+        ],
+    },
+    available:false,
+    questionCount:5,
+};
+
 function buildUseQuizSession(overrides:Partial<ReturnType<typeof useQuizSession>>={}){
-    return {
+    return{
         session:null,
         currentQuestion:null,
         feedback:null,
@@ -111,15 +150,17 @@ function buildUseQuizSession(overrides:Partial<ReturnType<typeof useQuizSession>
     };
 }
 
-function renderQuizPage(){
+function renderQuizPage(path="/quiz"){
     return render(
-        <MemoryRouter>
-            <QuizPage />
+        <MemoryRouter initialEntries={[path]}>
+            <Routes>
+                <Route path="/quiz" element={<QuizPage/>}/>
+                <Route path="/quiz/topics/:topic" element={<QuizPage/>}/>
+            </Routes>
         </MemoryRouter>
     );
 }
 
-//tests assert on loading stage before data asyncWrapProviders,resolves getDailyQuiz thereafter
 function deferred<T>(){
     let resolve!:(value:T)=>void;
     let reject!:(reason?:unknown)=>void;
@@ -127,7 +168,7 @@ function deferred<T>(){
         resolve=res;
         reject=rej;
     });
-    return {promise,resolve,reject};
+    return{promise,resolve,reject};
 }
 
 beforeEach(()=>{
@@ -135,156 +176,231 @@ beforeEach(()=>{
     mockedUseQuizSession.mockReturnValue(buildUseQuizSession());
 });
 
-//loading stat
+//loading state
 describe("QuizPage - loading state",()=>{
-    it("Shows a loading message while the daily quiz status is being fetched",async ()=>{
+    it("shows a loading message while the daily quiz is being fetched",()=>{
         const {promise}=deferred<DailyQuizAvailable>();
         mockedGetDailyQuiz.mockReturnValue(promise);
         renderQuizPage();
         expect(screen.getByText(/loading today's quiz/i)).toBeInTheDocument();
     });
+    it("shows a loading message while a topic quiz is being fetched",()=>{
+        const {promise}=deferred<QuizTopicDetail>();
+        mockedGetQuizTopic.mockReturnValue(promise);
+        renderQuizPage("/quiz/topics/BUDGETING");
+        expect(screen.getByText(/loading topic quiz/i)).toBeInTheDocument();
+    });
 });
 
-//err state
-describe("QuizPage — error state",()=>{
-    it("shows an error message with Retry and Back to Quests when the fetch fails",async ()=>{
-        mockedGetDailyQuiz.mockRejectedValueOnce(new Error("network down"));
+//error state
+describe("QuizPage - error state",()=>{
+    it("shows an error message with Retry and Back to Quests when the daily fetch fails",async()=>{
+        mockedGetDailyQuiz.mockRejectedValueOnce(new Error("Network down"));
         renderQuizPage();
-        expect(
-        await screen.findByText(/we couldn't load the quiz right now/i)
-        ).toBeInTheDocument();
+        expect(await screen.findByText(/network down/i)).toBeInTheDocument();
         expect(screen.getByRole("button",{name:/retry/i})).toBeInTheDocument();
-        expect(
-        screen.getByRole("link",{name:/back to quests/i})
-        ).toHaveAttribute("href","/quests");
+        expect(screen.getByRole("link",{name:/back to quests/i})).toHaveAttribute("href","/quests");
     });
-    it("refetches when Retry is clicked",async ()=>{
+    it("refetches when Retry is clicked",async()=>{
         const user=userEvent.setup();
-        mockedGetDailyQuiz.mockRejectedValueOnce(new Error("network down"));
+        mockedGetDailyQuiz.mockRejectedValueOnce(new Error("Network down"));
         mockedGetDailyQuiz.mockResolvedValueOnce(AVAILABLE);
         renderQuizPage();
-        await screen.findByText(/we couldn't load the quiz right now/i);
+        expect(await screen.findByText(/network down/i)).toBeInTheDocument();
         expect(mockedGetDailyQuiz).toHaveBeenCalledTimes(1);
         await user.click(screen.getByRole("button",{name:/retry/i}));
-        await screen.findByRole("button",{name:/start quiz/i});
+        expect(await screen.findByRole("button",{name:/start daily quiz/i})).toBeInTheDocument();
         expect(mockedGetDailyQuiz).toHaveBeenCalledTimes(2);
     });
-    it("does not treat an aborted request as an error",async ()=>{
-        const abortError=Object.assign(new Error("aborted"),{
-      name:"AbortError",
-        });
+    it("does not treat an aborted request as an error",async()=>{
+        const abortError=Object.assign(new Error("Aborted"),{ name:"AbortError",});
         mockedGetDailyQuiz.mockRejectedValueOnce(abortError);
         renderQuizPage();
         await waitFor(()=>{
-        expect(mockedGetDailyQuiz).toHaveBeenCalled();
+            expect(mockedGetDailyQuiz).toHaveBeenCalledTimes(1);
         });
-        expect(screen.queryByText(/we couldn't load the quiz right now/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/aborted/i)).not.toBeInTheDocument();
+    });
+    it("shows an error for an invalid topic without calling the API",async()=>{
+        renderQuizPage("/quiz/topics/NOT_REAL");
+        expect(await screen.findByText(/this quiz topic is invalid/i)).toBeInTheDocument();
+        expect(mockedGetQuizTopic).not.toHaveBeenCalled();
+        expect(mockedGetDailyQuiz).not.toHaveBeenCalled();
     });
 });
 
-//completestate
-describe("QuizPage — completed state",()=>{
-    it("shows the come-back-tomorrow message and today's reward",async ()=>{
+//completed daily state
+describe("QuizPage - completed daily state",()=>{
+    it("shows the completed message and reward",async()=>{
         mockedGetDailyQuiz.mockResolvedValueOnce(COMPLETED);
         renderQuizPage();
-        expect(await screen.findByText(/already completed today's quiz/i)).toBeInTheDocument();
+        expect(await screen.findByText(/quiz type:\s*daily/i)).toBeInTheDocument();
+        expect(screen.getByText(/already completed today's quiz/i)).toBeInTheDocument();
         expect(screen.getByText(/earned 50 xp and 25 coins/i)).toBeInTheDocument();
         expect(screen.getByRole("link",{name:/back to quests/i})).toHaveAttribute("href","/quests");
-        expect(screen.queryByRole("button",{name:/start quiz|resume quiz/i})).not.toBeInTheDocument();
+        expect(screen.queryByRole("button",{name:/start daily quiz|resume daily quiz/i})).not.toBeInTheDocument();
     });
 });
 
-//available state
-describe("QuizPage — available state",()=>{
-  it("shows question count,reward preview,streak,and a Start Quiz button",async ()=>{
-    mockedGetDailyQuiz.mockResolvedValueOnce(AVAILABLE);
-    renderQuizPage();
-    expect(await screen.findByText(/5 questions/i)).toBeInTheDocument();
-    expect(screen.getByText(/50 xp/i)).toBeInTheDocument();
-    expect(screen.getByText(/25 coins/i)).toBeInTheDocument();
-    expect(screen.getByText(/knowledge streak:\s*3\s*\(best 7\)/i)).toBeInTheDocument();
-    expect(screen.getByRole("button",{name:/^start quiz$/i})).toBeInTheDocument();
-    expect(screen.queryByText(/in progress/i)).not.toBeInTheDocument();
-  });
-});
-
-//in-prog state
-describe("QuizPage — in-progress state",()=>{
-  it("shows a Resume Quiz button and the current progress instead of Start",async ()=>{
-    mockedGetDailyQuiz.mockResolvedValueOnce(IN_PROGRESS);
-    renderQuizPage();
-    expect(await screen.findByRole("button",{name:/resume quiz/i})).toBeInTheDocument();
-    expect(screen.getByText(/3 of 5 answered so far/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button",{name:/^start quiz$/i})).not.toBeInTheDocument();
-    expect(screen.queryByText(/knowledge streak/i)).not.toBeInTheDocument();
-  });
-});
-
-
-//start/resume sessions
-describe("QuizPage — starting a session",()=>{
-    it("calls clearError then startDailyQuiz,and navigates to the new session on success",async ()=>{
-        const user=userEvent.setup();
+//available daily state
+describe("QuizPage - available daily state",()=>{
+    it("shows the daily quiz details and Start button",async()=>{
         mockedGetDailyQuiz.mockResolvedValueOnce(AVAILABLE);
-        const startDailyQuiz=vi.fn().mockResolvedValue({ id:"session-xyz" });
-        const clearError=vi.fn();
-        mockedUseQuizSession.mockReturnValue(buildUseQuizSession({ startDailyQuiz,clearError }));
         renderQuizPage();
-        const startButton=await screen.findByRole("button",{name:/^start quiz$/i,});
-        await user.click(startButton);
+        expect(await screen.findByText(/quiz type:\s*daily/i)).toBeInTheDocument();
+        expect(screen.getByText(/5 questions/i)).toBeInTheDocument();
+        expect(screen.getByText(/50 xp/i)).toBeInTheDocument();
+        expect(screen.getByText(/25 coins/i)).toBeInTheDocument();
+        expect(screen.getByText(/knowledge streak:\s*3\s*\(best 7\)/i)).toBeInTheDocument();
+        expect(screen.getByRole("button",{name:/start daily quiz/i})).toBeInTheDocument();
+        expect(screen.queryByText(/in progress/i)).not.toBeInTheDocument();
+    });
+    it("loads the daily API and not the topic API",async()=>{
+        mockedGetDailyQuiz.mockResolvedValueOnce(AVAILABLE);
+        renderQuizPage();
+        expect(await screen.findByText(/quiz type:\s*daily/i)).toBeInTheDocument();
+        expect(mockedGetDailyQuiz).toHaveBeenCalledTimes(1);
+        expect(mockedGetQuizTopic).not.toHaveBeenCalled();
+    });
+});
+
+//in-progress daily state
+describe("QuizPage - in-progress daily state",()=>{
+    it("shows the progress and Resume daily quiz button",async()=>{
+        mockedGetDailyQuiz.mockResolvedValueOnce(IN_PROGRESS);
+        renderQuizPage();
+        expect(await screen.findByRole("button",{name:/resume daily quiz/i})).toBeInTheDocument();
+        expect(screen.getByText(/3 of 5 answered so far/i)).toBeInTheDocument();
+        expect(screen.queryByRole("button",{name:/start daily quiz/i})).not.toBeInTheDocument();
+        expect(screen.queryByText(/knowledge streak/i)).not.toBeInTheDocument();
+    });
+});
+
+//starting daily sessions
+describe("QuizPage - starting a daily session",()=>{
+    it("calls clearError then startDailyQuiz and navigates on success",async()=>{
+        const user=userEvent.setup();
+        const startDailyQuiz=vi.fn().mockResolvedValue({id:"session-xyz"});
+        const clearError=vi.fn();
+        mockedGetDailyQuiz.mockResolvedValueOnce(AVAILABLE);
+        mockedUseQuizSession.mockReturnValue(buildUseQuizSession({
+            startDailyQuiz,
+            clearError,
+        }));
+        renderQuizPage();
+        await user.click(await screen.findByRole("button",{name:/start daily quiz/i}));
         expect(clearError).toHaveBeenCalledTimes(1);
         expect(startDailyQuiz).toHaveBeenCalledTimes(1);
         await waitFor(()=>{
             expect(mockNav).toHaveBeenCalledWith("/quiz/sessions/session-xyz");
         });
     });
-    it("does not navigate if starting the session fails",async ()=>{
+    it("does not navigate if starting the daily session fails",async()=>{
         const user=userEvent.setup();
-        mockedGetDailyQuiz.mockResolvedValueOnce(AVAILABLE);
         const startDailyQuiz=vi.fn().mockResolvedValue(null);
+        mockedGetDailyQuiz.mockResolvedValueOnce(AVAILABLE);
         mockedUseQuizSession.mockReturnValue(buildUseQuizSession({
             startDailyQuiz,
             error:"Couldn't start the quiz. Please try again.",
         }));
         renderQuizPage();
-        const startButton=await screen.findByRole("button",{name:/^start quiz$/i,});
-        await user.click(startButton);
+        await user.click(await screen.findByRole("button",{name:/start daily quiz/i}));
         expect(startDailyQuiz).toHaveBeenCalledTimes(1);
         expect(mockNav).not.toHaveBeenCalled();
         expect(screen.getByText(/couldn't start the quiz\. please try again\./i)).toBeInTheDocument();
     });
-    it("disables the button and shows a starting label while the session is being created",async ()=>{
+    it("disables the button and shows Starting while the daily session is loading",async()=>{
         mockedGetDailyQuiz.mockResolvedValueOnce(AVAILABLE);
-        mockedUseQuizSession.mockReturnValue(buildUseQuizSession({ isLoading:true }));
+        mockedUseQuizSession.mockReturnValue(buildUseQuizSession({isLoading:true,}));
         renderQuizPage();
-        const startingButton=await screen.findByRole("button",{name:/starting/i,});
-        expect(startingButton).toBeDisabled();
+        expect(await screen.findByRole("button",{name:/starting/i})).toBeDisabled();
     });
-    it("resuming an in-progress session also goes through startDailyQuiz (idempotent POST per contract)",async ()=>{
+    it("uses startDailyQuiz when resuming an in-progress session",async()=>{
         const user=userEvent.setup();
+        const startDailyQuiz=vi.fn().mockResolvedValue({id:IN_PROGRESS.session.id,});
         mockedGetDailyQuiz.mockResolvedValueOnce(IN_PROGRESS);
-        const startDailyQuiz=vi.fn().mockResolvedValue({ id:IN_PROGRESS.session.id });
-        mockedUseQuizSession.mockReturnValue(buildUseQuizSession({ startDailyQuiz }));
+        mockedUseQuizSession.mockReturnValue(buildUseQuizSession({startDailyQuiz,}));
         renderQuizPage();
-        const resumeButton=await screen.findByRole("button",{name:/resume quiz/i,});
-        await user.click(resumeButton);
+        await user.click(await screen.findByRole("button",{name:/resume daily quiz/i}));
         expect(startDailyQuiz).toHaveBeenCalledTimes(1);
         await waitFor(()=>{
             expect(mockNav).toHaveBeenCalledWith(`/quiz/sessions/${IN_PROGRESS.session.id}`);
         });
     });
+    it("shows Resuming while the daily session is loading",async()=>{
+        mockedGetDailyQuiz.mockResolvedValueOnce(IN_PROGRESS);
+        mockedUseQuizSession.mockReturnValue(buildUseQuizSession({isLoading:true,}));
+        renderQuizPage();
+        expect(await screen.findByRole("button",{name:/resuming/i})).toBeDisabled();
+    });
 });
 
-//nav present in every non loading state
-describe("QuizPage — back navigation",()=>{
+//topic state
+describe("QuizPage - topic state",()=>{
+    it("loads and displays the selected topic",async()=>{
+        mockedGetQuizTopic.mockResolvedValueOnce(TOPIC);
+        renderQuizPage("/quiz/topics/BUDGETING");
+        expect(await screen.findByText(/quiz type:\s*topic/i)).toBeInTheDocument();
+        expect(screen.getByRole("heading",{name:/budgeting/i})).toBeInTheDocument();
+        expect(screen.getByText(/learn how to plan and manage your spending/i)).toBeInTheDocument();
+        expect(screen.getByText(/6 questions/i)).toBeInTheDocument();
+        expect(screen.getByRole("button",{name:/start topic quiz/i})).toBeEnabled();
+        expect(mockedGetQuizTopic).toHaveBeenCalledWith("BUDGETING",expect.objectContaining({signal:expect.anything()}));
+        expect(mockedGetDailyQuiz).not.toHaveBeenCalled();
+    });
+    it("normalises a lowercase topic from the URL",async()=>{
+        mockedGetQuizTopic.mockResolvedValueOnce(TOPIC);
+        renderQuizPage("/quiz/topics/budgeting");
+        expect(await screen.findByText(/quiz type:\s*topic/i)).toBeInTheDocument();
+        expect(mockedGetQuizTopic).toHaveBeenCalledWith("BUDGETING",expect.any(Object));
+    });
+    it("disables the start button when the topic is unavailable",async()=>{
+        mockedGetQuizTopic.mockResolvedValueOnce(UNAVAILABLE_TOPIC);
+        renderQuizPage("/quiz/topics/INTEREST");
+        expect(await screen.findByText(/this topic quiz is not available yet/i)).toBeInTheDocument();
+        expect(screen.getByRole("button",{name:/start topic quiz/i})).toBeDisabled();
+    });
+});
+
+//starting topic sessions
+describe("QuizPage - starting a topic session",()=>{
+    it("calls startTopicQuiz with the selected topic and navigates",async()=>{
+        const user=userEvent.setup();
+        const startTopicQuiz=vi.fn().mockResolvedValue({id:"topic-session-123",});
+        const clearError=vi.fn();
+        mockedGetQuizTopic.mockResolvedValueOnce(TOPIC);
+        mockedUseQuizSession.mockReturnValue(buildUseQuizSession({startTopicQuiz,clearError, }));
+        renderQuizPage("/quiz/topics/BUDGETING");
+        await user.click(await screen.findByRole("button",{name:/start topic quiz/i}));
+        expect(clearError).toHaveBeenCalledTimes(1);
+        expect(startTopicQuiz).toHaveBeenCalledTimes(1);
+        expect(startTopicQuiz).toHaveBeenCalledWith("BUDGETING");
+        await waitFor(()=>{
+            expect(mockNav).toHaveBeenCalledWith("/quiz/sessions/topic-session-123");
+        });
+    });
+    it("disables the button and shows Starting while the topic session is loading",async()=>{
+        mockedGetQuizTopic.mockResolvedValueOnce(TOPIC);
+        mockedUseQuizSession.mockReturnValue(buildUseQuizSession({isLoading:true,}));
+        renderQuizPage("/quiz/topics/BUDGETING");
+        expect(await screen.findByRole("button",{name:/starting/i})).toBeDisabled();
+    });
+});
+
+//back navigation
+describe("QuizPage - back navigation",()=>{
     it.each([
         ["available",AVAILABLE],
         ["in progress",IN_PROGRESS],
         ["completed",COMPLETED],
-    ])("shows a Back to Quests link in the %s state",async (_label,fixture)=>{
+    ])("shows a Back to Quests link in the %s daily state",async(_label,fixture)=>{
         mockedGetDailyQuiz.mockResolvedValueOnce(fixture);
         renderQuizPage();
-        const link=await screen.findByRole("link",{name:/back to quests/i});
-        expect(link).toHaveAttribute("href","/quests");
+        expect(await screen.findByRole("link",{name:/back to quests/i})).toHaveAttribute("href","/quests");
+    });
+    it("shows a Back to Quests link for a topic quiz",async()=>{
+        mockedGetQuizTopic.mockResolvedValueOnce(TOPIC);
+        renderQuizPage("/quiz/topics/BUDGETING");
+        expect(await screen.findByRole("link",{name:/back to quests/i})).toHaveAttribute("href","/quests");
     });
 });

@@ -45,7 +45,10 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
          <Route path="/quests" element={<QuestsPage/>}/>
+         {/* <Route path="/quiz" element={<ProtectedRoute><QuizPage/></ProtectedRoute>}/>
+         <Route path="/quiz/topics/:topic" element={<ProtectedRoute><QuizPage/></ProtectedRoute>}/> */}
          <Route path="/quiz" element={<QuizPage/>}/>
+         <Route path="/quiz/topics/:topic" element={<QuizPage/>}/>
          <Route path="/friends" element={<FriendsPage/>}/>
          <Route path="/friends/list" element={<FriendsListPage/>}/>
          <Route path="/friends/add" element={<AddFriendPage/>}/>
