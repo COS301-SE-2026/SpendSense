@@ -1,5 +1,5 @@
 import { expectTypeOf } from 'vitest'
-import type {ApiErrorResponse,QuizTopic,QuizSessionType,QuizSessionStatus,QuizOption,QuizQuestion,QuizProgress,QuizRewardpReview,QuizReward,QuizKnowledgeStreak,QuizKnowledgeStreakUpdate,DailyQuizState,QuizTopicSummary,QuizTopicDetail,CreateQuizSessionRequest,QuizSession,QuizSessionResult,SubmitQuizAnswerRequest,QuizAnswerFeedback,SubmitQuizAnswerResponse} from '../features/quiz/quizTypes'
+import type {ApiErrorResponse,QuizTopic,QuizSessionType,QuizSessionStatus,QuizOption,QuizQuestion,DailyQuizState,QuizTopicSummary,QuizTopicDetail,CreateQuizSessionRequest,QuizSession,SubmitQuizAnswerRequest,QuizAnswerFeedback,SubmitQuizAnswerResponse} from '../features/quiz/quizTypes'
 
 const topics:QuizTopic[]=[
     'BUDGETING',
@@ -248,7 +248,7 @@ const apiError:ApiErrorResponse={
 expectTypeOf(apiError.statusCode).toBeNumber()
 
 //Prevent "declared but never read" lint noise for the fixtures above.
-void [
+expectTypeOf([
     dailyAvailable,
     dailyInProgress,
     dailyCompleted,
@@ -265,4 +265,4 @@ void [
     finalAnswer,
     apiError,
     option,
-]
+]).toBeArray()
