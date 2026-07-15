@@ -190,6 +190,7 @@ model User {
   email                  String                  @unique
   displayName            String?
   avatarUrl              String?
+  monthlyBudget          Decimal?                @db.Decimal(12, 2)
   onboardingCompleted    Boolean                 @default(false)
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
