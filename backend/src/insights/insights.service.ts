@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class InsightsService {
-    getInsights() {
+    getInsights(userId: string) {
         return {
             cards: [],
         };

@@ -1,12 +1,19 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InsightsService } from './insights.service';
+import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
+import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
+import type { AuthUser } from '../auth/types/auth-user.type';
+import { UsersService } from '../users/users.service';
 
 @ApiTags('Insights')
 @ApiBearerAuth()
 @Controller('insights')
 export class InsightsController {
-    constructor(private readonly insightsService: InsightsService){}
+    constructor(
+        private readonly insightsService: InsightsService,
+        private readonly usersService: UsersService,
+    ){}
 
     @Get()
     @ApiOperation({
@@ -22,7 +29,8 @@ export class InsightsController {
             },
         },
     })
-    getInsights() {
-        return this.insightsService.getInsights();
+    async getInsights(@CurrentAuthUser() authUser: AuthUser) {
+        const user = await this.usersService.findOrCreateUser(authUser);
+        return this.insightsService.getInsights(user.id);
     }
 }
