@@ -6,14 +6,14 @@ function getErrorMessage(error:unknown){
     if(error instanceof Error){
         return error.message
     }
-    if(typeof error==='object' && error!==null && 'message' in error && typeof error.message==='string'){
+    if(typeof error==='object'&&error!==null&&'message' in error&&typeof error.message==='string'){
         return error.message
     }
-    return "Something went wrong loading the quiz"
+    return 'Something went wrong loading the quiz'
 }
 
 function isAbortError(error:unknown){
-    return error instanceof Error && error.name==='AbortError'
+    return typeof error==='object' && error!==null && 'name' in error && error.name==='AbortError'
 }
 
 export function useQuizSession(){
@@ -50,6 +50,7 @@ export function useQuizSession(){
         submitController.current?.abort()
         submitRequestId.current+=1
         submittingRef.current=false
+        setIsSubmitting(false);
         loadController.current?.abort()
         const controller=new AbortController()
         const requestId=loadRequestId.current+1
@@ -102,6 +103,7 @@ export function useQuizSession(){
         submitController.current?.abort()
         submitRequestId.current+=1
         submittingRef.current=false
+        setIsSubmitting(false)
         loadController.current?.abort()
         const controller=new AbortController()
         const requestId=loadRequestId.current+1
