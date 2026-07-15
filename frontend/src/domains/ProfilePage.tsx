@@ -14,6 +14,8 @@ import {
     Smile,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useUserProfile, initialsFor } from "@/hooks/useUserProfile"
+import { BottomNav } from "@/components/common/BottomNav"
 
 
 const mockUser={
@@ -84,6 +86,7 @@ export default function ProfilePage(){
                 </CustomCard>
 
             </div>
+            <BottomNav active ="profile"/>
         </div>
 
     )
