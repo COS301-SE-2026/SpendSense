@@ -5,9 +5,9 @@ import {render,screen,waitFor} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {MemoryRouter,Route,Routes} from "react-router-dom";
 import QuizPage from "../domains/QuizPage";
-import {getDailyQuiz,getQuizTopic} from "../features/quiz/quizApi";
+import {getDailyQuiz,getQuizTopic,getQuizTopics} from "../features/quiz/quizApi";
 import {useQuizSession} from "../hooks/useQuizSession";
-import type {DailyQuizAvailable,DailyQuizCompleted,DailyQuizInProgress,QuizTopicDetail} from "../features/quiz/quizTypes";
+import type {DailyQuizAvailable,DailyQuizCompleted,DailyQuizInProgress,QuizTopicDetail,QuizTopicSummary} from "../features/quiz/quizTypes";
 
 //mocked stuff
 const mockNav=vi.fn();
@@ -25,6 +25,7 @@ vi.mock("react-router-dom",async()=>{
 vi.mock("../features/quiz/quizApi",()=>({
     getDailyQuiz:vi.fn(),
     getQuizTopic:vi.fn(),
+    getQuizTopics:vi.fn(),
 }));
 
 vi.mock("../hooks/useQuizSession",()=>({
@@ -52,6 +53,7 @@ vi.mock("@/components/common/LongButton",()=>({
 const mockedGetDailyQuiz=vi.mocked(getDailyQuiz);
 const mockedGetQuizTopic=vi.mocked(getQuizTopic);
 const mockedUseQuizSession=vi.mocked(useQuizSession);
+const mockedGetQuizTopics=vi.mocked(getQuizTopics);
 
 //unmocked stuff
 const AVAILABLE:DailyQuizAvailable={
@@ -127,6 +129,20 @@ const UNAVAILABLE_TOPIC:QuizTopicDetail={
     questionCount:5,
 };
 
+const TOPIC_SUMMARIES:QuizTopicSummary[]=[
+    {
+        key:"BUDGETING",
+        name:"Budgeting",
+        description:"Learn how to plan and manage your spending.",
+        available:true,
+        questionCount:6,
+        rewardPreview:{
+            xp:30,
+            coins:15,
+        },
+    },
+];
+
 function buildUseQuizSession(overrides:Partial<ReturnType<typeof useQuizSession>>={}){
     return{
         session:null,
@@ -174,6 +190,7 @@ function deferred<T>(){
 beforeEach(()=>{
     vi.clearAllMocks();
     mockedUseQuizSession.mockReturnValue(buildUseQuizSession());
+    mockedGetQuizTopics.mockResolvedValue(TOPIC_SUMMARIES);
 });
 
 //loading state
@@ -226,6 +243,7 @@ describe("QuizPage - error state",()=>{
         expect(await screen.findByText(/this quiz topic is invalid/i)).toBeInTheDocument();
         expect(mockedGetQuizTopic).not.toHaveBeenCalled();
         expect(mockedGetDailyQuiz).not.toHaveBeenCalled();
+        expect(mockedGetQuizTopics).not.toHaveBeenCalled();
     });
 });
 
@@ -337,15 +355,24 @@ describe("QuizPage - starting a daily session",()=>{
 
 //topic state
 describe("QuizPage - topic state",()=>{
-    it("loads and displays the selected topic",async()=>{
+    it("loads and displays the selected topic with its reward preview",async()=>{
         mockedGetQuizTopic.mockResolvedValueOnce(TOPIC);
         renderQuizPage("/quiz/topics/BUDGETING");
         expect(await screen.findByText(/quiz type:\s*topic/i)).toBeInTheDocument();
         expect(screen.getByRole("heading",{name:/budgeting/i})).toBeInTheDocument();
-        expect(screen.getByText(/learn how to plan and manage your spending/i)).toBeInTheDocument();
         expect(screen.getByText(/6 questions/i)).toBeInTheDocument();
+        expect(screen.getByText(/30 xp/i)).toBeInTheDocument();
+        expect(screen.getByText(/15 coins/i)).toBeInTheDocument();
         expect(screen.getByRole("button",{name:/start topic quiz/i})).toBeEnabled();
-        expect(mockedGetQuizTopic).toHaveBeenCalledWith("BUDGETING",expect.objectContaining({signal:expect.anything()}));
+        expect(mockedGetQuizTopic).toHaveBeenCalledWith(
+            "BUDGETING",
+            expect.objectContaining({
+                signal:expect.anything(),
+            })
+        );
+        expect(mockedGetQuizTopics).toHaveBeenCalledWith(
+            expect.objectContaining({signal:expect.anything(),})
+        );
         expect(mockedGetDailyQuiz).not.toHaveBeenCalled();
     });
     it("normalises a lowercase topic from the URL",async()=>{
