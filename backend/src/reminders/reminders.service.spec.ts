@@ -1,6 +1,6 @@
 import { RemindersService } from "./reminders.service";
-import type { UsersService } from "src/users/users.service";
-import type { PrismaService } from "src/prisma/prisma.service";
+import type { UsersService } from "../users/users.service";
+import type { PrismaService } from "../prisma/prisma.service";
 
 describe('RemindersService', ()=>{
     let usersService: jest.Mocked<Pick<UsersService, 'findOrCreateUser'>>;

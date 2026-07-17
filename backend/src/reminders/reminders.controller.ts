@@ -1,10 +1,10 @@
 import { Get, Patch, Controller, Body, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiUnauthorizedResponse, ApiOkResponse } from '@nestjs/swagger';
-import { CurrentAuthUser } from 'src/common/decorators/current-auth-user.decorator';
-import { SupabaseJwtGuard } from 'src/auth/guards/supabase-jwt.guard';
+import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
+import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import { UpdateReminderPreferencesDto } from './dto/update-reminder-preferences.dto';
 import { RemindersService } from './reminders.service';
-import type { AuthUser } from 'src/auth/types/auth-user.type';
+import type { AuthUser } from '../auth/types/auth-user.type';
 
 @Controller('reminder-preferences')
 @ApiBearerAuth()

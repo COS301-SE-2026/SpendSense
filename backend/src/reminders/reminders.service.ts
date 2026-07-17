@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common'
-import { PrismaService } from 'src/prisma/prisma.service'
-import { UsersService } from 'src/users/users.service'
+import { PrismaService } from '../prisma/prisma.service'
+import { UsersService } from '../users/users.service'
 import { UpdateReminderPreferencesDto } from './dto/update-reminder-preferences.dto'
-import type { AuthUser } from 'src/auth/types/auth-user.type'
+import type { AuthUser } from '../auth/types/auth-user.type'
 
 @Injectable()
 export class RemindersService{
