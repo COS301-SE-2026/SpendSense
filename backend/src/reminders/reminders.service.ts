@@ -5,7 +5,7 @@ import { UpdateReminderPreferencesDto } from './dto/update-reminder-preferences.
 import type { AuthUser } from 'src/auth/types/auth-user.type'
 
 @Injectable()
-export class ReminderService{
+export class RemindersService{
     constructor(
         private readonly prisma: PrismaService,
         private readonly usersService: UsersService,
