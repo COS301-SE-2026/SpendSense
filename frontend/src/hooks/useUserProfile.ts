@@ -15,24 +15,26 @@ export interface ProfileData{
     preferences: {
         theme: string
         currency: string
-        lnguage: string
+        language: string
         reducedMotion: boolean
     }|null
 }
 
 interface MeResponse{
-    user?: {
-        email?: string
-        displayName?: string|null
-        avatarUrl?: string|null
-        createdAt?: string
-    }
-    preferences?: ProfileData['preferences']
-    creditProfile?: {scoreTier?: string}
-    gamificationProfile?: {
-        mascotLevel?: number
-        coinBalance?: number
-        currentPaymentStreak?: number
+    data?: {
+        user?: {
+            email?: string
+            displayName?: string|null
+            avatarUrl?: string|null
+            createdAt?: string
+        }
+        preferences?: ProfileData['preferences']
+        creditProfile?: {scoreTier?: string}
+        gamificationProfile?: {
+            mascotLevel?: number
+            coinBalance?: number
+            currentPaymentStreak?: number
+        }
     }
 }
 
@@ -66,7 +68,8 @@ export function useUserProfile(): UseUserProfileReturn{
         setError(null)
 
         try{
-            const me= await getMe() as MeResponse
+            const raw = await getMe() as MeResponse
+            const me= raw?.data ?? {}
 
             setUser({
                 displayName: me.user?.displayName ?? me.user?.email?.split('@')[0] ?? 'User',
