@@ -3,20 +3,42 @@ jest.mock('../auth/guards/supabase-jwt.guard', () => ({
 }));
 
 import { QuizTopic } from '@prisma/client';
+import type { AuthUser } from '../auth/types/auth-user.type';
 import { QuizController } from './quiz.controller';
 import { QuizService } from './quiz.service';
 
 describe('QuizController', () => {
   let controller: QuizController;
-  let quizService: jest.Mocked<Pick<QuizService, 'listTopics' | 'getTopic'>>;
+  let quizService: jest.Mocked<
+    Pick<QuizService, 'getDaily' | 'listTopics' | 'getTopic'>
+  >;
 
   beforeEach(() => {
     quizService = {
+      getDaily: jest.fn(),
       listTopics: jest.fn(),
       getTopic: jest.fn(),
     };
 
     controller = new QuizController(quizService as unknown as QuizService);
+  });
+
+  it('passes the authenticated user to the daily-state service', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'supabase-user-id',
+      email: 'user@example.com',
+    };
+    const dailyState = {
+      date: '2026-07-13',
+      status: 'AVAILABLE',
+      session: null,
+      rewardPreview: { xp: 50, coins: 25 },
+      knowledgeStreak: { current: 0, longest: 0 },
+    };
+    quizService.getDaily.mockResolvedValue(dailyState as never);
+
+    await expect(controller.getDaily(authUser)).resolves.toEqual(dailyState);
+    expect(quizService.getDaily).toHaveBeenCalledWith(authUser);
   });
 
   it('returns topics from the service', async () => {
