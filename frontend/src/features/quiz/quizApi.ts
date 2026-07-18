@@ -23,7 +23,7 @@ interface RequestOptions{
 
 // GET /api/v1/quiz/daily
 export async function getDailyQuiz(options?:RequestOptions,):Promise<DailyQuizState>{
-    const res=await apiFetch<Container<DailyQuizState>>(`/api/v1/quiz/daily`,{
+    const res=await apiFetch<Container<DailyQuizState>>(`/quiz/daily`,{
         method:'GET',
         signal:options?.signal,
     })
@@ -32,7 +32,7 @@ export async function getDailyQuiz(options?:RequestOptions,):Promise<DailyQuizSt
 
 // GET /api/v1/quiz/topics
 export async function getQuizTopics(options?:RequestOptions,):Promise<QuizTopicSummary[]>{
-    const res=await apiFetch<Container<QuizTopicSummary[]>>(`/api/v1/quiz/topics`,{
+    const res=await apiFetch<Container<QuizTopicSummary[]>>(`/quiz/topics`,{
         method:'GET',
         signal:options?.signal,
     })
@@ -41,7 +41,7 @@ export async function getQuizTopics(options?:RequestOptions,):Promise<QuizTopicS
 
 // GET /api/v1/quiz/topics/:topic
 export async function getQuizTopic(topic:QuizTopic, options?:RequestOptions,):Promise<QuizTopicDetail>{
-    const res=await apiFetch<Container<QuizTopicDetail>>(`/api/v1/quiz/topics/${topic}`,{
+    const res=await apiFetch<Container<QuizTopicDetail>>(`/quiz/topics/${topic}`,{
         method:'GET',
         signal:options?.signal,
     })
@@ -50,7 +50,7 @@ export async function getQuizTopic(topic:QuizTopic, options?:RequestOptions,):Pr
 
 // POST /api/v1/quiz/sessions
 export async function createQuizSession(request:CreateQuizSessionRequest,options?:RequestOptions,):Promise<QuizSession>{
-    const res=await apiFetch<Container<QuizSession>>(`/api/v1/quiz/sessions`,{
+    const res=await apiFetch<Container<QuizSession>>(`/quiz/sessions`,{
         method:'POST',
         body:JSON.stringify(request),
         signal:options?.signal,
@@ -60,7 +60,7 @@ export async function createQuizSession(request:CreateQuizSessionRequest,options
 
 // GET /api/v1/quiz/sessions/:id
 export async function getQuizSession(sessionId:string,options?:RequestOptions,):Promise<QuizSession>{
-    const res=await apiFetch<Container<QuizSession>>(`/api/v1/quiz/sessions/${sessionId}`,{
+    const res=await apiFetch<Container<QuizSession>>(`/quiz/sessions/${sessionId}`,{
         method:'GET',
         signal:options?.signal,
     })
@@ -69,7 +69,7 @@ export async function getQuizSession(sessionId:string,options?:RequestOptions,):
 
 // POST /api/v1/quiz/sessions/:id/answer
 export async function submitQuizAnswer(sessionId:string,answer:SubmitQuizAnswerRequest,options?:RequestOptions,):Promise<SubmitQuizAnswerResponse>{
-    const res=await apiFetch<Container<SubmitQuizAnswerResponse>>(`/api/v1/quiz/sessions/${sessionId}/answer`,{
+    const res=await apiFetch<Container<SubmitQuizAnswerResponse>>(`/quiz/sessions/${sessionId}/answer`,{
         method:'POST',
         body:JSON.stringify(answer),
         signal:options?.signal,
