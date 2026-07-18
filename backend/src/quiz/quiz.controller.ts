@@ -1,12 +1,16 @@
 import {
   Controller,
+  Body,
   Get,
+  Post,
   NotFoundException,
   Param,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConflictResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -17,6 +21,7 @@ import { QuizTopic } from '@prisma/client';
 import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
+import { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
 import { QuizService } from './quiz.service';
 
 @ApiTags('quiz')
@@ -92,6 +97,60 @@ export class QuizController {
   })
   async getDaily(@CurrentAuthUser() authUser: AuthUser) {
     return this.quizService.getDaily(authUser);
+  }
+
+  @Post('sessions')
+  @ApiOperation({
+    summary: 'Create or resume a quiz session',
+    description:
+      'Creates a daily or topic quiz session, or returns the authenticated user’s existing matching in-progress session. Questions are selected server-side and never include the correct option key.',
+  })
+  @ApiBody({ type: CreateQuizSessionDto })
+  @ApiOkResponse({
+    description:
+      'New or resumed quiz session wrapped by the global response envelope.',
+    schema: {
+      example: {
+        data: {
+          id: 'session_123',
+          type: 'DAILY',
+          topic: null,
+          status: 'IN_PROGRESS',
+          startedAt: '2026-07-13T08:00:00.000Z',
+          completedAt: null,
+          progress: {
+            correct: 0,
+            answeredAttempts: 0,
+            initialQuestions: 5,
+            remainingQueue: 5,
+          },
+          currentQuestion: {
+            id: 'question_123',
+            topic: 'CREDIT_SCORE',
+            prompt:
+              'Which behaviour is most likely to improve a simulated credit-health score?',
+            options: [
+              { key: 'A', text: 'Paying obligations on time' },
+              { key: 'B', text: 'Ignoring overdue payments' },
+            ],
+          },
+          rewardPreview: { xp: 50, coins: 25 },
+        },
+      },
+    },
+  })
+  @ApiConflictResponse({
+    description:
+      'The daily quiz has already been completed or the request conflicts with the session rules.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, or invalid Supabase Bearer token.',
+  })
+  async createSession(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Body() dto: CreateQuizSessionDto,
+  ) {
+    return this.quizService.createOrResumeSession(authUser, dto);
   }
 
   @Get('topics')

@@ -1,7 +1,8 @@
-import { QuizTopic } from '@prisma/client';
+import { QuizSessionStatus, QuizSessionType, QuizTopic } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { UsersService } from '../users/users.service';
+import { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
 import { QuizService } from './quiz.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
@@ -23,9 +24,14 @@ describe('QuizService', () => {
   let prisma: {
     quizQuestion: {
       count: jest.Mock<Promise<number>, [Prisma.QuizQuestionCountArgs]>;
+      findMany: jest.Mock<
+        Promise<unknown[]>,
+        [Prisma.QuizQuestionFindManyArgs]
+      >;
     };
     quizSession: {
       findFirst: jest.Mock<Promise<unknown>, [Prisma.QuizSessionFindFirstArgs]>;
+      create: jest.Mock<Promise<unknown>, [Prisma.QuizSessionCreateArgs]>;
     };
   };
   let usersService: {
@@ -38,10 +44,16 @@ describe('QuizService', () => {
         count: jest
           .fn<Promise<number>, [Prisma.QuizQuestionCountArgs]>()
           .mockResolvedValue(0),
+        findMany: jest
+          .fn<Promise<unknown[]>, [Prisma.QuizQuestionFindManyArgs]>()
+          .mockResolvedValue([]),
       },
       quizSession: {
         findFirst: jest
           .fn<Promise<unknown>, [Prisma.QuizSessionFindFirstArgs]>()
+          .mockResolvedValue(null),
+        create: jest
+          .fn<Promise<unknown>, [Prisma.QuizSessionCreateArgs]>()
           .mockResolvedValue(null),
       },
     };
@@ -217,6 +229,146 @@ describe('QuizService', () => {
       },
       reward: { xp: 50, coins: 25 },
       knowledgeStreak: { current: 3, longest: 7 },
+    });
+  });
+
+  it('creates a daily session with a mixed question pool and hides answers', async () => {
+    prisma.quizQuestion.findMany.mockResolvedValue([
+      {
+        id: 'budgeting-1',
+        topic: QuizTopic.BUDGETING,
+        prompt: 'Budget question',
+        options: [{ key: 'A', text: 'Plan spending' }],
+      },
+      {
+        id: 'credit-1',
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: 'Credit question',
+        options: [{ key: 'A', text: 'Pay on time' }],
+      },
+      {
+        id: 'budgeting-2',
+        topic: QuizTopic.BUDGETING,
+        prompt: 'Second budget question',
+        options: [{ key: 'A', text: 'Track spending' }],
+      },
+      {
+        id: 'credit-2',
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: 'Second credit question',
+        options: [{ key: 'A', text: 'Check reports' }],
+      },
+      {
+        id: 'budgeting-3',
+        topic: QuizTopic.BUDGETING,
+        prompt: 'Third budget question',
+        options: [{ key: 'A', text: 'Leave room' }],
+      },
+      {
+        id: 'credit-3',
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: 'Third credit question',
+        options: [{ key: 'A', text: 'Pay obligations' }],
+      },
+    ]);
+    prisma.quizSession.create.mockResolvedValue({
+      id: 'session-123',
+      type: QuizSessionType.DAILY,
+      topic: null,
+      status: QuizSessionStatus.IN_PROGRESS,
+      startedAt: new Date('2026-07-13T08:00:00.000Z'),
+      completedAt: null,
+      score: 0,
+      totalQuestions: 5,
+      coinsAwarded: 0,
+      xpAwarded: 0,
+      answers: [],
+    });
+
+    const result = await service.createOrResumeSession(
+      authUser,
+      { type: QuizSessionType.DAILY } satisfies CreateQuizSessionDto,
+      new Date('2026-07-13T10:00:00.000Z'),
+    );
+
+    expect(result).toMatchObject({
+      id: 'session-123',
+      type: QuizSessionType.DAILY,
+      status: QuizSessionStatus.IN_PROGRESS,
+      progress: {
+        correct: 0,
+        answeredAttempts: 0,
+        initialQuestions: 5,
+        remainingQueue: 5,
+      },
+      currentQuestion: {
+        id: 'budgeting-1',
+        topic: QuizTopic.BUDGETING,
+      },
+      rewardPreview: { xp: 50, coins: 25 },
+    });
+    expect(result.currentQuestion).not.toHaveProperty('correctOptionKey');
+    expect(prisma.quizSession.create).toHaveBeenCalled();
+  });
+
+  it('resumes an existing active topic session instead of creating another', async () => {
+    prisma.quizSession.findFirst.mockResolvedValue({
+      id: 'topic-session-123',
+      type: QuizSessionType.TOPIC,
+      topic: QuizTopic.CREDIT_SCORE,
+      status: QuizSessionStatus.IN_PROGRESS,
+      startedAt: new Date('2026-07-13T08:00:00.000Z'),
+      completedAt: null,
+      score: 0,
+      totalQuestions: 5,
+      coinsAwarded: 0,
+      xpAwarded: 0,
+      answers: [],
+    });
+    prisma.quizQuestion.findMany.mockResolvedValue([
+      {
+        id: 'credit-1',
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: 'Credit question',
+        options: [{ key: 'A', text: 'Pay on time' }],
+      },
+    ]);
+
+    const result = await service.createOrResumeSession(authUser, {
+      type: QuizSessionType.TOPIC,
+      topic: QuizTopic.CREDIT_SCORE,
+    });
+
+    expect(result.id).toBe('topic-session-123');
+    expect(prisma.quizSession.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a completed daily session for the current date', async () => {
+    prisma.quizSession.findFirst.mockResolvedValue({
+      id: 'completed-daily',
+      type: QuizSessionType.DAILY,
+      topic: null,
+      status: QuizSessionStatus.COMPLETED,
+      startedAt: new Date('2026-07-13T08:00:00.000Z'),
+      completedAt: new Date('2026-07-13T08:10:00.000Z'),
+      score: 5,
+      totalQuestions: 5,
+      coinsAwarded: 25,
+      xpAwarded: 50,
+      answers: [],
+    });
+
+    await expect(
+      service.createOrResumeSession(
+        authUser,
+        { type: QuizSessionType.DAILY },
+        new Date('2026-07-13T10:00:00.000Z'),
+      ),
+    ).rejects.toMatchObject({
+      response: {
+        statusCode: 409,
+        message: 'The daily quiz is already completed today',
+      },
     });
   });
 });

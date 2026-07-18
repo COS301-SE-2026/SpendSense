@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { QuizSessionStatus, QuizSessionType, QuizTopic } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import type { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
 import {
   QUIZ_DAILY_REWARD_PREVIEW,
   QUIZ_TOPIC_METADATA,
@@ -175,5 +180,207 @@ export class QuizService {
     end.setUTCDate(end.getUTCDate() + 1);
 
     return { date, start, end };
+  }
+
+  async createOrResumeSession(
+    authUser: AuthUser,
+    dto: CreateQuizSessionDto,
+    now = new Date(),
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    const dateRange = this.getJohannesburgDateRange(now);
+
+    if (dto.type === QuizSessionType.TOPIC && !dto.topic) {
+      throw new ConflictException('A topic is required for a topic quiz');
+    }
+
+    const existingSession = await this.findMatchingSession(
+      user.id,
+      dto,
+      dateRange,
+    );
+
+    if (existingSession?.status === QuizSessionStatus.IN_PROGRESS) {
+      const questions = await this.selectQuestionPool(dto);
+      return this.toSessionResponse(existingSession, questions);
+    }
+
+    if (
+      dto.type === QuizSessionType.DAILY &&
+      existingSession?.status === QuizSessionStatus.COMPLETED
+    ) {
+      throw new ConflictException('The daily quiz is already completed today');
+    }
+
+    const questions = await this.selectQuestionPool(dto);
+
+    if (questions.length === 0) {
+      throw new NotFoundException('No active questions are available');
+    }
+
+    const session = await this.prisma.quizSession.create({
+      data: {
+        userId: user.id,
+        type: dto.type,
+        ...(dto.topic ? { topic: dto.topic } : {}),
+        ...(dto.type === QuizSessionType.DAILY
+          ? { quizDate: dateRange.start }
+          : {}),
+        totalQuestions: questions.length,
+      },
+      select: this.sessionSelect,
+    });
+
+    return this.toSessionResponse(session, questions);
+  }
+
+  private readonly sessionSelect = {
+    id: true,
+    type: true,
+    topic: true,
+    status: true,
+    startedAt: true,
+    completedAt: true,
+    score: true,
+    totalQuestions: true,
+    coinsAwarded: true,
+    xpAwarded: true,
+    answers: {
+      select: {
+        questionId: true,
+        isCorrect: true,
+      },
+    },
+  } as const;
+
+  private async findMatchingSession(
+    userId: string,
+    dto: CreateQuizSessionDto,
+    dateRange: DailyDateRange,
+  ) {
+    return this.prisma.quizSession.findFirst({
+      where: {
+        userId,
+        type: dto.type,
+        ...(dto.type === QuizSessionType.DAILY
+          ? {
+              quizDate: {
+                gte: dateRange.start,
+                lt: dateRange.end,
+              },
+            }
+          : { topic: dto.topic }),
+      },
+      orderBy: { startedAt: 'desc' },
+      select: this.sessionSelect,
+    });
+  }
+
+  private async selectQuestionPool(dto: CreateQuizSessionDto) {
+    const questions = await this.prisma.quizQuestion.findMany({
+      where: {
+        isActive: true,
+        ...(dto.type === QuizSessionType.TOPIC ? { topic: dto.topic } : {}),
+      },
+      orderBy: [{ topic: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        topic: true,
+        prompt: true,
+        options: true,
+      },
+    });
+
+    if (dto.type === QuizSessionType.TOPIC) {
+      return questions.slice(0, 5);
+    }
+
+    const questionsByTopic = new Map<QuizTopic, typeof questions>();
+    for (const question of questions) {
+      const topicQuestions = questionsByTopic.get(question.topic) ?? [];
+      topicQuestions.push(question);
+      questionsByTopic.set(question.topic, topicQuestions);
+    }
+
+    const selectedQuestions: typeof questions = [];
+    const topicQueues = [...questionsByTopic.values()];
+    let questionIndex = 0;
+
+    while (
+      selectedQuestions.length < 5 &&
+      topicQueues.some(
+        (topicQuestions) => questionIndex < topicQuestions.length,
+      )
+    ) {
+      for (const topicQuestions of topicQueues) {
+        const question = topicQuestions[questionIndex];
+
+        if (question) {
+          selectedQuestions.push(question);
+        }
+      }
+
+      questionIndex += 1;
+    }
+
+    return selectedQuestions;
+  }
+
+  private toSessionResponse(
+    session: {
+      id: string;
+      type: QuizSessionType;
+      topic: QuizTopic | null;
+      status: QuizSessionStatus;
+      startedAt: Date;
+      completedAt: Date | null;
+      score: number;
+      totalQuestions: number;
+      coinsAwarded: number;
+      xpAwarded: number;
+      answers: { questionId: string; isCorrect: boolean }[];
+    },
+    questions?: {
+      id: string;
+      topic: QuizTopic;
+      prompt: string;
+      options: unknown;
+    }[],
+  ) {
+    const currentQuestion = questions?.find(
+      (question) =>
+        !session.answers.some(
+          (answer) => answer.questionId === question.id && answer.isCorrect,
+        ),
+    );
+
+    const correct = session.answers.filter((answer) => answer.isCorrect).length;
+
+    return {
+      id: session.id,
+      type: session.type,
+      topic: session.topic,
+      status: session.status,
+      startedAt: session.startedAt,
+      completedAt: session.completedAt,
+      progress: {
+        correct,
+        answeredAttempts: session.answers.length,
+        initialQuestions: session.totalQuestions,
+        remainingQueue: Math.max(session.totalQuestions - correct, 0),
+      },
+      currentQuestion: currentQuestion
+        ? {
+            id: currentQuestion.id,
+            topic: currentQuestion.topic,
+            prompt: currentQuestion.prompt,
+            options: currentQuestion.options,
+          }
+        : null,
+      rewardPreview:
+        session.type === QuizSessionType.DAILY
+          ? QUIZ_DAILY_REWARD_PREVIEW
+          : QUIZ_TOPIC_REWARD_PREVIEW,
+    };
   }
 }

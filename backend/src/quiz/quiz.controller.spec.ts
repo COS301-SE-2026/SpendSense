@@ -3,14 +3,19 @@ jest.mock('../auth/guards/supabase-jwt.guard', () => ({
 }));
 
 import { QuizTopic } from '@prisma/client';
+import { QuizSessionType } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
+import { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
 import { QuizController } from './quiz.controller';
 import { QuizService } from './quiz.service';
 
 describe('QuizController', () => {
   let controller: QuizController;
   let quizService: jest.Mocked<
-    Pick<QuizService, 'getDaily' | 'listTopics' | 'getTopic'>
+    Pick<
+      QuizService,
+      'getDaily' | 'listTopics' | 'getTopic' | 'createOrResumeSession'
+    >
   >;
 
   beforeEach(() => {
@@ -18,6 +23,7 @@ describe('QuizController', () => {
       getDaily: jest.fn(),
       listTopics: jest.fn(),
       getTopic: jest.fn(),
+      createOrResumeSession: jest.fn(),
     };
 
     controller = new QuizController(quizService as unknown as QuizService);
@@ -39,6 +45,26 @@ describe('QuizController', () => {
 
     await expect(controller.getDaily(authUser)).resolves.toEqual(dailyState);
     expect(quizService.getDaily).toHaveBeenCalledWith(authUser);
+  });
+
+  it('passes the authenticated user and request body to session creation', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'supabase-user-id',
+      email: 'user@example.com',
+    };
+    const dto: CreateQuizSessionDto = {
+      type: QuizSessionType.DAILY,
+    };
+    const session = { id: 'session-123', type: QuizSessionType.DAILY };
+    quizService.createOrResumeSession.mockResolvedValue(session as never);
+
+    await expect(controller.createSession(authUser, dto)).resolves.toEqual(
+      session,
+    );
+    expect(quizService.createOrResumeSession).toHaveBeenCalledWith(
+      authUser,
+      dto,
+    );
   });
 
   it('returns topics from the service', async () => {
