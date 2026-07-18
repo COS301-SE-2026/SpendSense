@@ -112,5 +112,51 @@ export class InsightsService {
             payments,
         };
     }
+
+    // FUNCTION - GET THE SETTLEDMENT RATE
+    async getSettlementRate(supabaseAuthId: string) {
+        const userId = await this.resolveUserId(supabaseAuthId);
+        const asOf = new Date();
+        const [eligiblePaymentCount, settledPaymentCount] = await this.prisma.$transaction(
+            [
+                this.prisma.paymentOccurrence.count(
+                    {
+                        where: {
+                            userId,
+                            deletedAt: null,
+                            dueDate: { lte: asOf },
+                            status: { not: PaymentOccurrenceStatus.CANCELLED },
+                            obligation: { is: { deletedAt: null } },
+                        },
+                    }
+                ),
+                this.prisma.paymentOccurrence.count(
+                    {
+                        where: {
+                            userId,
+                            deletedAt: null,
+                            dueDate: { lte: asOf },
+                            status: { in: SETTLED_PAYMENT_STATUSES },
+                            obligation: { is: { deletedAt: null } },
+                        },
+                    }
+                ),
+            ]
+        );
+        let unsettledPaymentCount = (eligiblePaymentCount - settledPaymentCount);
+        let settlementPercentage = 0;
+        if (eligiblePaymentCount !== 0) {
+            settlementPercentage = Number(((settledPaymentCount / eligiblePaymentCount) * 100).toFixed(2));
+        }
+        return {
+            asOf: asOf.toISOString(),
+            settledPaymentCount,
+            unsettledPaymentCount,
+            eligiblePaymentCount,
+            settlementPercentage,
+            hasEnoughData: eligiblePaymentCount > 0,
+        };
+    }
+
 }
 
