@@ -26,6 +26,7 @@ import WrappedPage from './domains/WrappedPage.tsx'
 import SettingsPage from './domains/SettingsPage.tsx'
 import SettingsPreferencesPage from './domains/SettingsPreferencesPage.tsx'
 import SettingsNotificationsPage from './domains/SettingsNotificationsPage.tsx'
+import SettingsAccountPage from './domains/SettingsAccountPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -62,6 +63,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/settings" element={<SettingsPage/>}/>
         <Route path="/settings/preferences" element={<SettingsPreferencesPage/>}/>
         <Route path="/settings/notifications" element={<SettingsNotificationsPage/>}/>
+         <Route path="/settings/account" element={<SettingsAccountPage/>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
