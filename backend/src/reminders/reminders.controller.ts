@@ -43,7 +43,7 @@ export class RemindersController{
     })
 
     @Get()
-    async getRemindersPreferences(@CurrentAuthUser() authUser: AuthUser){
+    async getReminderPreferences(@CurrentAuthUser() authUser: AuthUser){
         return this.remindersService.getReminderPreferences(authUser);
     }
 
