@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PaymentOccurrenceStatus } from '@prisma/client';
+import { PaymentOccurrenceStatus, PaymentRecordStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 
@@ -157,6 +157,52 @@ export class InsightsService {
             hasEnoughData: eligiblePaymentCount > 0,
         };
     }
+
+    // FUNCTION - CALCULATE THE ON TIME PAYMENT RATE
+    async getOnTimePaymentRate(supabaseAuthId: string) {
+
+        const userId = await this.resolveUserId(supabaseAuthId);
+        const asOf = new Date();
+        const [settledPaymentCount, onTimePaymentCount,] = await this.prisma.$transaction(
+            [
+                this.prisma.paymentOccurrence.count(
+                    {
+                        where: {
+                            userId,
+                            deletedAt: null,
+                            status: { in: SETTLED_PAYMENT_STATUSES },
+                            obligation: { is: { deletedAt: null } },
+                        },
+                    }
+                ),
+                this.prisma.paymentOccurrence.count(
+                    {
+                        where: {
+                            userId,
+                            deletedAt: null,
+                            status: { in: SETTLED_PAYMENT_STATUSES },
+                            payment: { is: { paymentStatus: PaymentRecordStatus.ON_TIME } },
+                            obligation: { is: { deletedAt: null } },
+                        },
+                    }
+                ),
+            ]
+        );
+        let latePaymentCount = (settledPaymentCount - onTimePaymentCount);
+        let onTimePaymentPercentage = 0 ;
+        if (settledPaymentCount !== 0) {
+            onTimePaymentPercentage = Number(((onTimePaymentCount / settledPaymentCount) * 100).toFixed(2)) ;
+        }
+        return {
+            asOf: asOf.toISOString(),
+            settledPaymentCount,
+            onTimePaymentCount,
+            latePaymentCount,
+            onTimePaymentPercentage,
+            hasEnoughData: settledPaymentCount > 0,
+        };
+    }
+
 
 }
 
