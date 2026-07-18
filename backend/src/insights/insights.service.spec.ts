@@ -8,15 +8,16 @@ describe('InsightsService', () => {
     let service: InsightsService;
 
     const prismaMock = {
-        user: {
-            findUnique: jest.fn(),
-        },
-        paymentOccurrence: {
-            findMany: jest.fn(),
-        }
+        user: { findUnique: jest.fn() },
+        paymentOccurrence: { findMany: jest.fn(), count: jest.fn() },
+        $transaction: jest.fn(),
     };
 
+    const fixedDate = new Date("2026-07-18T12:00:00.000Z");
+
     beforeEach(async () => {
+        jest.useFakeTimers();
+        jest.setSystemTime(fixedDate);
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 InsightsService,
@@ -29,6 +30,8 @@ describe('InsightsService', () => {
         service = module.get<InsightsService>(InsightsService);
         jest.clearAllMocks();
     });
+
+    afterEach(() => { jest.useRealTimers(); })
 
     //////// Resolving the userId - make sure it works.
     describe('resolveUserId', () => {
@@ -249,7 +252,58 @@ describe('InsightsService', () => {
             );
 
         });
+    });
+    
+    describe('getSettlementRate', () => {
+        it('Calculate percentage of settled payments', async () => {
+            const supabaseAuthId = 'supabase-user-123';
+            const userId = 'internal-user-456';
+            prismaMock.user.findUnique.mockResolvedValue({ id: userId });
+            const eligibleCountQuery = Promise.resolve(8);
+            const settledCountQuery = Promise.resolve(6);
+            prismaMock.paymentOccurrence.count.mockReturnValueOnce(eligibleCountQuery).mockReturnValueOnce(settledCountQuery);
+            prismaMock.$transaction.mockResolvedValue([8, 6]); // Eight DUE payments  - six of them == SETTLED
+            const result = await service.getSettlementRate(supabaseAuthId);
+            expect(result).toEqual(
+                {
+                    asOf: '2026-07-18T12:00:00.000Z',
+                    settledPaymentCount: 6,
+                    unsettledPaymentCount: 2,
+                    eligiblePaymentCount: 8,
+                    settlementPercentage: 75,
+                    hasEnoughData: true,
+                }
+            );
+            expect(prismaMock.user.findUnique).toHaveBeenCalledWith(
+                {
+                    where: { supabaseAuthId },
+                    select: { id: true },
+                }
+            );
+            expect(prismaMock.paymentOccurrence.count).toHaveBeenNthCalledWith(1,
+                {
+                    where: {
+                        userId,
+                        deletedAt: null,
+                        dueDate: { lte: fixedDate },
+                        status: { not: PaymentOccurrenceStatus.CANCELLED },
+                        obligation: { is: { deletedAt: null } },
+                    },
+                }
+            );
+            expect(prismaMock.paymentOccurrence.count).toHaveBeenNthCalledWith(2,
+                {
+                    where: {
+                        userId,
+                        deletedAt: null,
+                        dueDate: { lte: fixedDate },
+                        status: { in: [PaymentOccurrenceStatus.PAID, PaymentOccurrenceStatus.PAID_LATE] },
+                        obligation: { is: { deletedAt: null } },
+                    },
+                }
+            );
+            expect(prismaMock.$transaction).toHaveBeenCalledWith([eligibleCountQuery, settledCountQuery]);
+        });
 
     });
 });
-
