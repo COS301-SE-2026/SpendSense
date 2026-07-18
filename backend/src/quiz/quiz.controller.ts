@@ -71,7 +71,8 @@ export class QuizController {
       'Returns teaching content for an available topic without creating a quiz session.',
   })
   @ApiOkResponse({
-    description: 'Topic teaching content wrapped by the global response envelope.',
+    description:
+      'Topic teaching content wrapped by the global response envelope.',
     schema: {
       example: {
         data: {

@@ -1,4 +1,5 @@
 import { QuizTopic } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { QuizService } from './quiz.service';
 import type { PrismaService } from '../prisma/prisma.service';
 
@@ -6,14 +7,16 @@ describe('QuizService', () => {
   let service: QuizService;
   let prisma: {
     quizQuestion: {
-      count: jest.Mock;
+      count: jest.Mock<Promise<number>, [Prisma.QuizQuestionCountArgs]>;
     };
   };
 
   beforeEach(() => {
     prisma = {
       quizQuestion: {
-        count: jest.fn().mockResolvedValue(0),
+        count: jest
+          .fn<Promise<number>, [Prisma.QuizQuestionCountArgs]>()
+          .mockResolvedValue(0),
       },
     };
 
@@ -48,18 +51,16 @@ describe('QuizService', () => {
   it('returns teaching content for an available topic', async () => {
     prisma.quizQuestion.count.mockResolvedValue(5);
 
-    await expect(
-      service.getTopic(QuizTopic.CREDIT_SCORE),
-    ).resolves.toMatchObject({
+    const topic = await service.getTopic(QuizTopic.CREDIT_SCORE);
+
+    expect(topic).toMatchObject({
       key: QuizTopic.CREDIT_SCORE,
       available: true,
       questionCount: 5,
-      teachingContent: {
-        title: expect.any(String),
-        body: expect.any(String),
-        keyPoints: expect.any(Array),
-      },
     });
+    expect(typeof topic.teachingContent.title).toBe('string');
+    expect(typeof topic.teachingContent.body).toBe('string');
+    expect(Array.isArray(topic.teachingContent.keyPoints)).toBe(true);
   });
 
   it('throws 404 when a topic has no active seeded questions', async () => {
@@ -67,13 +68,21 @@ describe('QuizService', () => {
       await service.getTopic(QuizTopic.INTEREST);
       throw new Error('Expected getTopic to throw');
     } catch (error) {
-      expect(error).toMatchObject({
+      const exception = error as {
+        response: {
+          statusCode: number;
+          message: string;
+        };
+        getStatus: () => number;
+      };
+
+      expect(exception).toMatchObject({
         response: {
           statusCode: 404,
           message: 'Quiz topic is not available',
         },
       });
-      expect((error as { getStatus: () => number }).getStatus()).toBe(404);
+      expect(exception.getStatus()).toBe(404);
     }
   });
 });

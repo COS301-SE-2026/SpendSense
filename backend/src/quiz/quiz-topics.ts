@@ -13,12 +13,10 @@ export interface QuizTopicMetadata {
 export const QUIZ_TOPIC_METADATA: Record<QuizTopic, QuizTopicMetadata> = {
   [QuizTopic.BUDGETING]: {
     name: 'Budgeting',
-    description:
-      'Learn how to plan spending and manage financial pressure.',
+    description: 'Learn how to plan spending and manage financial pressure.',
     teachingContent: {
       title: 'Build a plan for your money',
-      body:
-        'A budget gives you a practical plan for allocating income across needs, wants, obligations, and savings.',
+      body: 'A budget gives you a practical plan for allocating income across needs, wants, obligations, and savings.',
       keyPoints: [
         'List income and expenses before deciding what you can afford.',
         'Prioritise essential obligations and leave room for unexpected costs.',
@@ -32,8 +30,7 @@ export const QUIZ_TOPIC_METADATA: Record<QuizTopic, QuizTopicMetadata> = {
       'Learn how everyday payment behaviour affects financial health.',
     teachingContent: {
       title: 'How payment behaviour affects your score',
-      body:
-        'Paying obligations on time gives the model positive evidence of reliable behaviour. Late or missed payments can reduce the score.',
+      body: 'Paying obligations on time gives the model positive evidence of reliable behaviour. Late or missed payments can reduce the score.',
       keyPoints: [
         'On-time payments build positive history.',
         'Late payments can reduce financial health.',
@@ -46,8 +43,7 @@ export const QUIZ_TOPIC_METADATA: Record<QuizTopic, QuizTopicMetadata> = {
     description: 'Learn how interest changes the cost of borrowing and saving.',
     teachingContent: {
       title: 'Understand the cost of interest',
-      body:
-        'Interest is the cost of borrowing money or the return earned when money is saved. The rate and time both affect the final amount.',
+      body: 'Interest is the cost of borrowing money or the return earned when money is saved. The rate and time both affect the final amount.',
       keyPoints: [
         'Borrowing interest increases the amount repaid.',
         'Saving interest can grow money over time.',
@@ -60,8 +56,7 @@ export const QUIZ_TOPIC_METADATA: Record<QuizTopic, QuizTopicMetadata> = {
     description: 'Learn how to understand and manage borrowed money.',
     teachingContent: {
       title: 'Make debt easier to manage',
-      body:
-        'Understanding balances, interest, and due dates helps you make a realistic repayment plan and avoid avoidable financial pressure.',
+      body: 'Understanding balances, interest, and due dates helps you make a realistic repayment plan and avoid avoidable financial pressure.',
       keyPoints: [
         'Keep track of every balance and due date.',
         'Prioritise payments and avoid taking on unaffordable debt.',
@@ -74,8 +69,7 @@ export const QUIZ_TOPIC_METADATA: Record<QuizTopic, QuizTopicMetadata> = {
     description: 'Learn how instalment purchases affect future budgets.',
     teachingContent: {
       title: 'Look beyond the first instalment',
-      body:
-        'Buy now, pay later products split a purchase into future payments. Those payments still need room in your budget when they become due.',
+      body: 'Buy now, pay later products split a purchase into future payments. Those payments still need room in your budget when they become due.',
       keyPoints: [
         'Future instalments are real obligations.',
         'Several small plans can add up quickly.',
@@ -88,8 +82,7 @@ export const QUIZ_TOPIC_METADATA: Record<QuizTopic, QuizTopicMetadata> = {
     description: 'Learn how recurring payments can shape monthly spending.',
     teachingContent: {
       title: 'Keep recurring costs visible',
-      body:
-        'Subscriptions can be easy to overlook because each payment may be small. Reviewing them regularly helps keep recurring spending intentional.',
+      body: 'Subscriptions can be easy to overlook because each payment may be small. Reviewing them regularly helps keep recurring spending intentional.',
       keyPoints: [
         'Track recurring payments in your monthly plan.',
         'Cancel services you no longer use.',

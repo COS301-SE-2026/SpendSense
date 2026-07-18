@@ -1,10 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { QuizTopic } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  QUIZ_TOPIC_METADATA,
-  QUIZ_TOPIC_REWARD_PREVIEW,
-} from './quiz-topics';
+import { QUIZ_TOPIC_METADATA, QUIZ_TOPIC_REWARD_PREVIEW } from './quiz-topics';
 
 @Injectable()
 export class QuizService {
@@ -30,8 +27,7 @@ export class QuizService {
         description: metadata.description,
         available: questionCount > 0,
         questionCount,
-        rewardPreview:
-          questionCount > 0 ? QUIZ_TOPIC_REWARD_PREVIEW : null,
+        rewardPreview: questionCount > 0 ? QUIZ_TOPIC_REWARD_PREVIEW : null,
       };
     });
   }

@@ -8,9 +8,7 @@ import { QuizService } from './quiz.service';
 
 describe('QuizController', () => {
   let controller: QuizController;
-  let quizService: jest.Mocked<
-    Pick<QuizService, 'listTopics' | 'getTopic'>
-  >;
+  let quizService: jest.Mocked<Pick<QuizService, 'listTopics' | 'getTopic'>>;
 
   beforeEach(() => {
     quizService = {
