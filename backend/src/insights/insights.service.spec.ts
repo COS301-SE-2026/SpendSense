@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { InsightsService } from './insights.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaymentOccurrenceStatus } from '@prisma/client';
+import { PaymentOccurrenceStatus, PaymentRecordStatus } from '@prisma/client';
 
 describe('InsightsService', () => {
     let service: InsightsService;
@@ -253,7 +253,7 @@ describe('InsightsService', () => {
 
         });
     });
-    
+
     describe('getSettlementRate', () => {
         it('Calculate percentage of settled payments', async () => {
             const supabaseAuthId = 'supabase-user-123';
@@ -303,6 +303,60 @@ describe('InsightsService', () => {
                 }
             );
             expect(prismaMock.$transaction).toHaveBeenCalledWith([eligibleCountQuery, settledCountQuery]);
+        });
+
+    });
+
+    describe('getOnTimePaymentRate', () => {
+        it('Calculate percentage of on time settled payments', async () => {
+            const supabaseAuthId = 'supabase-user-123';
+            const userId = 'internal-user-456';
+            prismaMock.user.findUnique.mockResolvedValue({ id: userId });
+            const settledCountQuery = Promise.resolve(8);
+            const onTimeCountQuery = Promise.resolve(6);
+            prismaMock.paymentOccurrence.count.mockReturnValueOnce(settledCountQuery).mockReturnValueOnce(onTimeCountQuery);
+            prismaMock.$transaction.mockResolvedValue([8, 6]);
+            const result = await service.getOnTimePaymentRate(supabaseAuthId);
+            expect(result).toEqual(
+                {
+                    asOf: '2026-07-18T12:00:00.000Z',
+                    onTimeCountQuery: 6,
+                    latePaymentCount: 2,
+                    settledCountQuery: 8,
+                    settlementPercentage: 75,
+                    hasEnoughData: true,
+                }
+            );
+            expect(prismaMock.user.findUnique).toHaveBeenCalledWith(
+                {
+                    where: { supabaseAuthId },
+                    select: { id: true },
+                }
+            );
+            expect(prismaMock.paymentOccurrence.count).toHaveBeenNthCalledWith(1,
+                {
+                    where: {
+                        userId,
+                        deletedAt: null,
+                        dueDate: { lte: fixedDate },
+                        status: { in: [PaymentOccurrenceStatus.PAID, PaymentOccurrenceStatus.PAID_LATE] },
+                        obligation: { is: { deletedAt: null } },
+                    },
+                }
+            );
+            expect(prismaMock.paymentOccurrence.count).toHaveBeenNthCalledWith(1,
+                {
+                    where: {
+                        userId,
+                        deletedAt: null,
+                        dueDate: { lte: fixedDate },
+                        status: { in: [PaymentOccurrenceStatus.PAID, PaymentOccurrenceStatus.PAID_LATE] },
+                        payment: { is: { paymentStatus: PaymentRecordStatus.ON_TIME } },
+                        obligation: { is: { deletedAt: null } },
+                    },
+                }
+            );
+            expect(prismaMock.$transaction).toHaveBeenCalledWith([settledCountQuery, onTimeCountQuery]);
         });
 
     });
