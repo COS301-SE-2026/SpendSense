@@ -20,7 +20,7 @@ function isQuizTopic(value:string | undefined):value is QuizTopic {
 	return !!value && (VALID_TOPICS as string[]).includes(value)
 }
 
-export default function QuizTopicTeachingPage() {
+export default function TopicQuizTeachingPage() {
 	const navigate=useNavigate()
 	const {topic:topicParam}=useParams<{topic:string}>()
 	const topic=isQuizTopic(topicParam)?topicParam:null
