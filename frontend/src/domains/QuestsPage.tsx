@@ -172,7 +172,7 @@ function getDailyQuestContent(daily:DailyQuizState|null):{
 	}
 	if(daily.status==="IN_PROGRESS"){
 		return{
-			description:`In progress — ${daily.session.progress.answeredAttempts} of ${daily.session.progress.initialQuestions} answered so far.`,
+			description:`In progress - ${daily.session.progress.answeredAttempts} of ${daily.session.progress.initialQuestions} answered so far.`,
 			xp:daily.rewardPreview.xp,
 			actionLabel:"Resume",
 			disabled:false,
