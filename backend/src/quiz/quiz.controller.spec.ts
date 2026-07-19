@@ -14,7 +14,11 @@ describe('QuizController', () => {
   let quizService: jest.Mocked<
     Pick<
       QuizService,
-      'getDaily' | 'listTopics' | 'getTopic' | 'createOrResumeSession'
+      | 'getDaily'
+      | 'listTopics'
+      | 'getTopic'
+      | 'createOrResumeSession'
+      | 'getSession'
     >
   >;
 
@@ -24,6 +28,7 @@ describe('QuizController', () => {
       listTopics: jest.fn(),
       getTopic: jest.fn(),
       createOrResumeSession: jest.fn(),
+      getSession: jest.fn(),
     };
 
     controller = new QuizController(quizService as unknown as QuizService);
@@ -64,6 +69,23 @@ describe('QuizController', () => {
     expect(quizService.createOrResumeSession).toHaveBeenCalledWith(
       authUser,
       dto,
+    );
+  });
+
+  it('passes the authenticated user and session ID to the session service', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'supabase-user-id',
+      email: 'user@example.com',
+    };
+    const session = { id: 'session-123' };
+    quizService.getSession.mockResolvedValue(session as never);
+
+    await expect(
+      controller.getSession(authUser, 'session-123'),
+    ).resolves.toEqual(session);
+    expect(quizService.getSession).toHaveBeenCalledWith(
+      authUser,
+      'session-123',
     );
   });
 

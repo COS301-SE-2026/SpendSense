@@ -234,6 +234,28 @@ export class QuizService {
     return this.toSessionResponse(session, questions);
   }
 
+  async getSession(authUser: AuthUser, sessionId: string) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    const session = await this.prisma.quizSession.findFirst({
+      where: {
+        id: sessionId,
+        userId: user.id,
+      },
+      select: this.sessionSelect,
+    });
+
+    if (!session) {
+      throw new NotFoundException('Quiz session not found');
+    }
+
+    const questions = await this.selectQuestionPool({
+      type: session.type,
+      ...(session.topic ? { topic: session.topic } : {}),
+    });
+
+    return this.toSessionResponse(session, questions);
+  }
+
   private readonly sessionSelect = {
     id: true,
     type: true,
@@ -381,6 +403,18 @@ export class QuizService {
         session.type === QuizSessionType.DAILY
           ? QUIZ_DAILY_REWARD_PREVIEW
           : QUIZ_TOPIC_REWARD_PREVIEW,
+      result:
+        session.status === QuizSessionStatus.COMPLETED
+          ? {
+              score: session.score,
+              totalQuestions: session.totalQuestions,
+              answeredAttempts: session.answers.length,
+              reward: {
+                xp: session.xpAwarded,
+                coins: session.coinsAwarded,
+              },
+            }
+          : null,
     };
   }
 }

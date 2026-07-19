@@ -153,6 +153,57 @@ export class QuizController {
     return this.quizService.createOrResumeSession(authUser, dto);
   }
 
+  @Get('sessions/:id')
+  @ApiOperation({
+    summary: 'Get a quiz session',
+    description:
+      'Returns an authenticated user’s quiz session for refresh and resume support. Session ownership is enforced and correct answers are never returned.',
+  })
+  @ApiOkResponse({
+    description: 'Quiz session wrapped by the global response envelope.',
+    schema: {
+      example: {
+        data: {
+          id: 'session_123',
+          type: 'DAILY',
+          topic: null,
+          status: 'IN_PROGRESS',
+          startedAt: '2026-07-13T08:00:00.000Z',
+          completedAt: null,
+          progress: {
+            correct: 2,
+            answeredAttempts: 3,
+            initialQuestions: 5,
+            remainingQueue: 4,
+          },
+          currentQuestion: {
+            id: 'question_123',
+            topic: 'CREDIT_SCORE',
+            prompt:
+              'Which behaviour is most likely to improve a simulated credit-health score?',
+            options: [
+              { key: 'A', text: 'Paying obligations on time' },
+              { key: 'B', text: 'Ignoring overdue payments' },
+            ],
+          },
+          result: null,
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'The session does not exist for the authenticated user.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, or invalid Supabase Bearer token.',
+  })
+  async getSession(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('id') sessionId: string,
+  ) {
+    return this.quizService.getSession(authUser, sessionId);
+  }
+
   @Get('topics')
   @ApiOperation({
     summary: 'List quiz topics',

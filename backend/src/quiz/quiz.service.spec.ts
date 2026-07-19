@@ -371,4 +371,90 @@ describe('QuizService', () => {
       },
     });
   });
+
+  it('returns an owned session with its current question', async () => {
+    prisma.quizSession.findFirst.mockResolvedValue({
+      id: 'session-123',
+      type: QuizSessionType.TOPIC,
+      topic: QuizTopic.CREDIT_SCORE,
+      status: QuizSessionStatus.IN_PROGRESS,
+      startedAt: new Date('2026-07-13T08:00:00.000Z'),
+      completedAt: null,
+      score: 0,
+      totalQuestions: 1,
+      coinsAwarded: 0,
+      xpAwarded: 0,
+      answers: [],
+    });
+    prisma.quizQuestion.findMany.mockResolvedValue([
+      {
+        id: 'credit-1',
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: 'Credit question',
+        options: [{ key: 'A', text: 'Pay on time' }],
+      },
+    ]);
+
+    const result = await service.getSession(authUser, 'session-123');
+
+    expect(result).toMatchObject({
+      id: 'session-123',
+      type: QuizSessionType.TOPIC,
+      topic: QuizTopic.CREDIT_SCORE,
+      currentQuestion: {
+        id: 'credit-1',
+        topic: QuizTopic.CREDIT_SCORE,
+      },
+      result: null,
+    });
+    expect(result.currentQuestion).not.toHaveProperty('correctOptionKey');
+    expect(prisma.quizSession.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'session-123', userId: 'user-123' },
+      }),
+    );
+  });
+
+  it('returns 404 when a session is not owned by the authenticated user', async () => {
+    await expect(
+      service.getSession(authUser, 'other-user-session'),
+    ).rejects.toMatchObject({
+      response: {
+        statusCode: 404,
+        message: 'Quiz session not found',
+      },
+    });
+    expect(prisma.quizQuestion.findMany).not.toHaveBeenCalled();
+  });
+
+  it('returns a result for a completed session', async () => {
+    prisma.quizSession.findFirst.mockResolvedValue({
+      id: 'completed-session',
+      type: QuizSessionType.DAILY,
+      topic: null,
+      status: QuizSessionStatus.COMPLETED,
+      startedAt: new Date('2026-07-13T08:00:00.000Z'),
+      completedAt: new Date('2026-07-13T08:10:00.000Z'),
+      score: 5,
+      totalQuestions: 5,
+      coinsAwarded: 25,
+      xpAwarded: 50,
+      answers: [
+        { questionId: 'question-1', isCorrect: true },
+        { questionId: 'question-2', isCorrect: true },
+      ],
+    });
+
+    await expect(
+      service.getSession(authUser, 'completed-session'),
+    ).resolves.toMatchObject({
+      status: QuizSessionStatus.COMPLETED,
+      result: {
+        score: 5,
+        totalQuestions: 5,
+        answeredAttempts: 2,
+        reward: { xp: 50, coins: 25 },
+      },
+    });
+  });
 });
