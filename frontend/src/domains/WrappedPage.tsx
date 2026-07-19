@@ -8,6 +8,7 @@ import {getLatestWrapped, type WrappedSummary} from "@/features/profile/profileA
 
 //monthly wrapped (similar to spotify wrapped)
 //placeholder data until endpoints exist
+//not for demo 2, possibly implement for demo 3
 
 export default function WrappedPage(){
     const[wrapped, setWrapped]=React.useState<WrappedSummary | null>(null)
