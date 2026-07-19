@@ -20,6 +20,7 @@ import {
 } from '@prisma/client';
 import { seedBadges } from './badges';
 import { seedCategories } from './categories';
+import { seedQuizzes } from './quizzes';
 
 const prisma = new PrismaClient();
 
@@ -108,6 +109,7 @@ async function main() {
 
   await seedCategories(prisma);
   await seedBadges(prisma);
+  await seedQuizzes(prisma);
 
   const user = await resolveDemoUser();
   await clearDemoUser(user.id);
