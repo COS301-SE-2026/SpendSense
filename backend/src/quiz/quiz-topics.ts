@@ -93,3 +93,5 @@ export const QUIZ_TOPIC_METADATA: Record<QuizTopic, QuizTopicMetadata> = {
 };
 
 export const QUIZ_TOPIC_REWARD_PREVIEW = { xp: 20, coins: 10 };
+
+export const QUIZ_DAILY_REWARD_PREVIEW = { xp: 50, coins: 25 };
