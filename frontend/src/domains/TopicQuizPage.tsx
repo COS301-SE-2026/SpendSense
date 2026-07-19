@@ -1,5 +1,6 @@
 import {useNavigate} from "react-router-dom"
 import {cn} from "@/lib/utils"
+import {CustomCard} from "@/components/ui/CustomCard"
 import {ArrowLeft,PiggyBank,CreditCard,TrendingUp,AlertTriangle,ShoppingBag,RefreshCw,Lock,ChevronRight,HelpCircle,} from "lucide-react"
 import {getQuizTopics} from "@/features/quiz/quizApi"
 import type {QuizTopic,QuizTopicSummary} from "@/features/quiz/quizTypes"
@@ -99,6 +100,22 @@ function TopicCard({topic,onPress}:{
     )
 }
 
+function QuestCardSkeleton(){
+    return(
+        <CustomCard variant="greenShaddow" size="sm">
+            <div className="flex items-start gap-3">
+                <div className="size-10 shrink-0 animate-pulse rounded-full bg-[#DCEFE8]"/>
+                <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-4 w-1/2 animate-pulse rounded bg-[#DCEFE8]"/>
+                    <div className="h-3 w-4/5 animate-pulse rounded bg-[#DCEFE8]"/>
+                </div>
+            </div>
+            <div className="mt-3 h-9 w-full animate-pulse rounded-full bg-[#DCEFE8]"/>
+        </CustomCard>
+    )
+}
+
+
 
 // main page
 export default function TopicQuizPage(){
@@ -136,7 +153,7 @@ export default function TopicQuizPage(){
                     {loading ? (
                         <div className="space-y-4">
                             {[1,2,3,4,5,6].map(n=>(
-                                <div key={n} className="h-[88px] w-full rounded-2xl bg-[#D9EDE7] animate-pulse"/>
+                                <QuestCardSkeleton key={n}/>
                             ))}
                         </div>
                     ):(
