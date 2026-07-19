@@ -6,6 +6,7 @@ import { QuizTopic } from '@prisma/client';
 import { QuizSessionType } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
+import { SubmitQuizAnswerDto } from './dto/submit-quiz-answer.dto';
 import { QuizController } from './quiz.controller';
 import { QuizService } from './quiz.service';
 
@@ -19,6 +20,7 @@ describe('QuizController', () => {
       | 'getTopic'
       | 'createOrResumeSession'
       | 'getSession'
+      | 'submitAnswer'
     >
   >;
 
@@ -29,6 +31,7 @@ describe('QuizController', () => {
       getTopic: jest.fn(),
       createOrResumeSession: jest.fn(),
       getSession: jest.fn(),
+      submitAnswer: jest.fn(),
     };
 
     controller = new QuizController(quizService as unknown as QuizService);
@@ -86,6 +89,28 @@ describe('QuizController', () => {
     expect(quizService.getSession).toHaveBeenCalledWith(
       authUser,
       'session-123',
+    );
+  });
+
+  it('passes the authenticated user, session ID, and answer to the answer service', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'supabase-user-id',
+      email: 'user@example.com',
+    };
+    const dto: SubmitQuizAnswerDto = {
+      questionId: '00000000-0000-4000-8000-000000000001',
+      selectedOptionKey: 'A',
+    };
+    const response = { sessionId: 'session-123', status: 'IN_PROGRESS' };
+    quizService.submitAnswer.mockResolvedValue(response as never);
+
+    await expect(
+      controller.submitAnswer(authUser, 'session-123', dto),
+    ).resolves.toEqual(response);
+    expect(quizService.submitAnswer).toHaveBeenCalledWith(
+      authUser,
+      'session-123',
+      dto,
     );
   });
 

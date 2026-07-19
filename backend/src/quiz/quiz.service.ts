@@ -1,13 +1,24 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { QuizSessionStatus, QuizSessionType, QuizTopic } from '@prisma/client';
+import {
+  MascotMood,
+  Prisma,
+  QuizSessionStatus,
+  QuizSessionType,
+  QuizTopic,
+  RewardTransactionType,
+  UserEventSourceType,
+  UserEventType,
+} from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import type { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
+import type { SubmitQuizAnswerDto } from './dto/submit-quiz-answer.dto';
 import {
   QUIZ_DAILY_REWARD_PREVIEW,
   QUIZ_TOPIC_METADATA,
@@ -256,6 +267,253 @@ export class QuizService {
     return this.toSessionResponse(session, questions);
   }
 
+  async submitAnswer(
+    authUser: AuthUser,
+    sessionId: string,
+    dto: SubmitQuizAnswerDto,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+
+    return this.prisma.$transaction(async (tx) => {
+      const session = await tx.quizSession.findFirst({
+        where: {
+          id: sessionId,
+          userId: user.id,
+        },
+        select: this.sessionSelect,
+      });
+
+      if (!session) {
+        throw new NotFoundException('Quiz session not found');
+      }
+
+      if (session.status !== QuizSessionStatus.IN_PROGRESS) {
+        throw new ConflictException('Quiz session is already completed');
+      }
+
+      const questions = await this.selectQuestionPool(
+        {
+          type: session.type,
+          ...(session.topic ? { topic: session.topic } : {}),
+        },
+        tx,
+      );
+      const currentQuestionId = this.getNextQuestionId(
+        questions,
+        session.answers,
+      );
+
+      if (!currentQuestionId) {
+        throw new ConflictException('Quiz session has no remaining questions');
+      }
+
+      if (dto.questionId !== currentQuestionId) {
+        throw new BadRequestException(
+          'Question is not the current quiz question',
+        );
+      }
+
+      const question = await tx.quizQuestion.findUnique({
+        where: { id: dto.questionId },
+        select: {
+          id: true,
+          topic: true,
+          prompt: true,
+          options: true,
+          correctOptionKey: true,
+          explanation: true,
+        },
+      });
+
+      if (!question) {
+        throw new NotFoundException('Quiz question not found');
+      }
+
+      const optionKeys = this.getOptionKeys(question.options);
+      if (!optionKeys.includes(dto.selectedOptionKey)) {
+        throw new BadRequestException('Selected option is not valid');
+      }
+
+      const isCorrect = dto.selectedOptionKey === question.correctOptionKey;
+      const attemptNumber =
+        session.answers.filter((answer) => answer.questionId === question.id)
+          .length + 1;
+      const answeredAt = new Date();
+
+      await tx.quizSessionAnswer.create({
+        data: {
+          sessionId: session.id,
+          questionId: question.id,
+          selectedOptionKey: dto.selectedOptionKey,
+          isCorrect,
+          attemptNumber,
+          answeredAt,
+        },
+      });
+
+      const answersAfter = [
+        ...session.answers,
+        { questionId: question.id, isCorrect, answeredAt },
+      ];
+      const nextQuestionId = this.getNextQuestionId(questions, answersAfter);
+      const score = session.score + (isCorrect ? 1 : 0);
+      const completed = !nextQuestionId;
+
+      if (!completed) {
+        await tx.quizSession.update({
+          where: { id: session.id },
+          data: {
+            score,
+          },
+        });
+      }
+
+      let result: {
+        score: number;
+        totalQuestions: number;
+        answeredAttempts: number;
+        reward: { xp: number; coins: number };
+        knowledgeStreak: {
+          previous: number;
+          current: number;
+          longest: number;
+          advanced: boolean;
+        };
+      } | null = null;
+
+      if (completed) {
+        result = await this.settleCompletedSession(
+          tx,
+          session,
+          user.id,
+          score,
+          answersAfter.length,
+        );
+      }
+
+      const nextQuestion = questions.find(
+        (candidate) => candidate.id === nextQuestionId,
+      );
+
+      return {
+        sessionId: session.id,
+        status: completed
+          ? QuizSessionStatus.COMPLETED
+          : QuizSessionStatus.IN_PROGRESS,
+        feedback: {
+          isCorrect,
+          explanation: question.explanation,
+          requeued: !isCorrect,
+        },
+        progress: {
+          correct: score,
+          answeredAttempts: answersAfter.length,
+          initialQuestions: session.totalQuestions,
+          remainingQueue: nextQuestionId
+            ? this.getQueueLength(questions, answersAfter)
+            : 0,
+        },
+        nextQuestion: nextQuestion
+          ? {
+              id: nextQuestion.id,
+              topic: nextQuestion.topic,
+              prompt: nextQuestion.prompt,
+              options: nextQuestion.options,
+            }
+          : null,
+        result,
+      };
+    });
+  }
+
+  private async settleCompletedSession(
+    tx: Prisma.TransactionClient,
+    session: {
+      id: string;
+      type: QuizSessionType;
+      score: number;
+      totalQuestions: number;
+    },
+    userId: string,
+    score: number,
+    answeredAttempts: number,
+  ) {
+    const reward =
+      session.type === QuizSessionType.DAILY
+        ? QUIZ_DAILY_REWARD_PREVIEW
+        : QUIZ_TOPIC_REWARD_PREVIEW;
+    const event = await tx.userEvent.create({
+      data: {
+        userId,
+        eventType: UserEventType.QUIZ_COMPLETED,
+        sourceType: UserEventSourceType.QUIZ,
+        sourceId: session.id,
+        metadata: {
+          sessionType: session.type,
+          score,
+          totalQuestions: session.totalQuestions,
+        },
+      },
+    });
+    const profile = await tx.gamificationProfile.upsert({
+      where: { userId },
+      update: {},
+      create: { userId },
+    });
+    const previousKnowledgeStreak = profile.currentKnowledgeStreak;
+    const currentKnowledgeStreak = previousKnowledgeStreak + 1;
+    const longestKnowledgeStreak = Math.max(
+      profile.longestKnowledgeStreak,
+      currentKnowledgeStreak,
+    );
+    const coinBalance = profile.coinBalance + reward.coins;
+    const xp = profile.xp + reward.xp;
+
+    await tx.gamificationProfile.update({
+      where: { id: profile.id },
+      data: {
+        coinBalance,
+        xp,
+        currentKnowledgeStreak,
+        longestKnowledgeStreak,
+        mascotMood: MascotMood.CELEBRATING,
+      },
+    });
+    await tx.quizSession.update({
+      where: { id: session.id },
+      data: {
+        status: QuizSessionStatus.COMPLETED,
+        completedAt: new Date(),
+        score,
+        coinsAwarded: reward.coins,
+        xpAwarded: reward.xp,
+      },
+    });
+    await tx.rewardTransaction.create({
+      data: {
+        userId,
+        sourceEventId: event.id,
+        type: RewardTransactionType.EARNED,
+        amount: reward.coins,
+        balanceAfter: coinBalance,
+        reason: 'Quiz completion reward',
+      },
+    });
+
+    return {
+      score,
+      totalQuestions: session.totalQuestions,
+      answeredAttempts,
+      reward,
+      knowledgeStreak: {
+        previous: previousKnowledgeStreak,
+        current: currentKnowledgeStreak,
+        longest: longestKnowledgeStreak,
+        advanced: session.type === QuizSessionType.DAILY,
+      },
+    };
+  }
+
   private readonly sessionSelect = {
     id: true,
     type: true,
@@ -271,6 +529,7 @@ export class QuizService {
       select: {
         questionId: true,
         isCorrect: true,
+        answeredAt: true,
       },
     },
   } as const;
@@ -298,8 +557,11 @@ export class QuizService {
     });
   }
 
-  private async selectQuestionPool(dto: CreateQuizSessionDto) {
-    const questions = await this.prisma.quizQuestion.findMany({
+  private async selectQuestionPool(
+    dto: CreateQuizSessionDto,
+    client: PrismaService | Prisma.TransactionClient = this.prisma,
+  ) {
+    const questions = await client.quizQuestion.findMany({
       where: {
         isActive: true,
         ...(dto.type === QuizSessionType.TOPIC ? { topic: dto.topic } : {}),
@@ -369,11 +631,11 @@ export class QuizService {
       options: unknown;
     }[],
   ) {
+    const nextQuestionId = questions
+      ? this.getNextQuestionId(questions, session.answers)
+      : undefined;
     const currentQuestion = questions?.find(
-      (question) =>
-        !session.answers.some(
-          (answer) => answer.questionId === question.id && answer.isCorrect,
-        ),
+      (question) => question.id === nextQuestionId,
     );
 
     const correct = session.answers.filter((answer) => answer.isCorrect).length;
@@ -416,5 +678,82 @@ export class QuizService {
             }
           : null,
     };
+  }
+
+  private getNextQuestionId(
+    questions: {
+      id: string;
+    }[],
+    answers: {
+      questionId: string;
+      isCorrect: boolean;
+      answeredAt?: Date;
+    }[],
+  ) {
+    const queue = questions.map((question) => question.id);
+    const orderedAnswers = [...answers].sort(
+      (first, second) =>
+        (first.answeredAt?.getTime() ?? 0) -
+        (second.answeredAt?.getTime() ?? 0),
+    );
+
+    for (const answer of orderedAnswers) {
+      const questionIndex = queue.indexOf(answer.questionId);
+      if (questionIndex === -1) {
+        continue;
+      }
+
+      queue.splice(questionIndex, 1);
+      if (!answer.isCorrect) {
+        queue.push(answer.questionId);
+      }
+    }
+
+    return queue[0];
+  }
+
+  private getQueueLength(
+    questions: { id: string }[],
+    answers: {
+      questionId: string;
+      isCorrect: boolean;
+      answeredAt?: Date;
+    }[],
+  ) {
+    const queue: string[] = questions.map((question) => question.id);
+    const orderedAnswers = [...answers].sort(
+      (first, second) =>
+        (first.answeredAt?.getTime() ?? 0) -
+        (second.answeredAt?.getTime() ?? 0),
+    );
+
+    for (const answer of orderedAnswers) {
+      const questionIndex = queue.indexOf(answer.questionId);
+      if (questionIndex === -1) {
+        continue;
+      }
+
+      queue.splice(questionIndex, 1);
+      if (!answer.isCorrect) {
+        queue.push(answer.questionId);
+      }
+    }
+
+    return queue.length;
+  }
+
+  private getOptionKeys(options: unknown): string[] {
+    if (!Array.isArray(options)) {
+      return [];
+    }
+
+    return options.flatMap((option: unknown) => {
+      if (typeof option !== 'object' || option === null) {
+        return [];
+      }
+
+      const optionRecord = option as Record<string, unknown>;
+      return typeof optionRecord.key === 'string' ? [optionRecord.key] : [];
+    });
   }
 }

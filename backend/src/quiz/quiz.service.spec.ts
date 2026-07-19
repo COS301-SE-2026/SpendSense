@@ -14,6 +14,37 @@ type MockUser = {
   };
 };
 
+type TransactionMockMethod = jest.Mock<Promise<unknown>, [unknown]>;
+
+const transactionMockMethod = (): TransactionMockMethod =>
+  jest.fn<Promise<unknown>, [unknown]>();
+
+type QuizTransactionMock = {
+  quizSession: {
+    findFirst: TransactionMockMethod;
+    update: TransactionMockMethod;
+  };
+  quizQuestion: {
+    findMany: TransactionMockMethod;
+    findUnique: TransactionMockMethod;
+  };
+  quizSessionAnswer: {
+    create: TransactionMockMethod;
+  };
+  userEvent: {
+    create: TransactionMockMethod;
+  };
+  gamificationProfile: {
+    upsert: TransactionMockMethod;
+    update: TransactionMockMethod;
+  };
+  rewardTransaction: {
+    create: TransactionMockMethod;
+  };
+};
+
+type QuizTransactionCallback = (tx: QuizTransactionMock) => Promise<unknown>;
+
 const authUser: AuthUser = {
   supabaseAuthId: 'supabase-user-id',
   email: 'user@example.com',
@@ -33,6 +64,7 @@ describe('QuizService', () => {
       findFirst: jest.Mock<Promise<unknown>, [Prisma.QuizSessionFindFirstArgs]>;
       create: jest.Mock<Promise<unknown>, [Prisma.QuizSessionCreateArgs]>;
     };
+    $transaction: jest.Mock<Promise<unknown>, [QuizTransactionCallback]>;
   };
   let usersService: {
     findOrCreateUser: jest.Mock<Promise<MockUser>, [AuthUser]>;
@@ -56,6 +88,9 @@ describe('QuizService', () => {
           .fn<Promise<unknown>, [Prisma.QuizSessionCreateArgs]>()
           .mockResolvedValue(null),
       },
+      $transaction: jest
+        .fn<Promise<unknown>, [QuizTransactionCallback]>()
+        .mockResolvedValue(null),
     };
 
     usersService = {
@@ -244,7 +279,10 @@ describe('QuizService', () => {
         id: 'credit-1',
         topic: QuizTopic.CREDIT_SCORE,
         prompt: 'Credit question',
-        options: [{ key: 'A', text: 'Pay on time' }],
+        options: [
+          { key: 'A', text: 'Pay on time' },
+          { key: 'B', text: 'Ignore due dates' },
+        ],
       },
       {
         id: 'budgeting-2',
@@ -455,6 +493,173 @@ describe('QuizService', () => {
         answeredAttempts: 2,
         reward: { xp: 50, coins: 25 },
       },
+    });
+  });
+
+  it('records an incorrect answer and requeues the question', async () => {
+    const question = {
+      id: '00000000-0000-4000-8000-000000000001',
+      topic: QuizTopic.CREDIT_SCORE,
+      prompt: 'Credit question',
+      options: [
+        { key: 'A', text: 'Pay on time' },
+        { key: 'B', text: 'Ignore due dates' },
+      ],
+      correctOptionKey: 'A',
+      explanation: 'Paying on time supports financial health.',
+    };
+    const tx: QuizTransactionMock = {
+      quizSession: {
+        findFirst: transactionMockMethod().mockResolvedValue({
+          id: 'session-123',
+          type: QuizSessionType.TOPIC,
+          topic: QuizTopic.CREDIT_SCORE,
+          status: QuizSessionStatus.IN_PROGRESS,
+          startedAt: new Date('2026-07-13T08:00:00.000Z'),
+          completedAt: null,
+          score: 0,
+          totalQuestions: 1,
+          coinsAwarded: 0,
+          xpAwarded: 0,
+          answers: [],
+        }),
+        update: transactionMockMethod(),
+      },
+      quizQuestion: {
+        findMany: transactionMockMethod().mockResolvedValue([question]),
+        findUnique: transactionMockMethod().mockResolvedValue(question),
+      },
+      quizSessionAnswer: { create: transactionMockMethod() },
+      userEvent: { create: transactionMockMethod() },
+      gamificationProfile: {
+        upsert: transactionMockMethod(),
+        update: transactionMockMethod(),
+      },
+      rewardTransaction: { create: transactionMockMethod() },
+    };
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+
+    const result = await service.submitAnswer(authUser, 'session-123', {
+      questionId: question.id,
+      selectedOptionKey: 'B',
+    });
+
+    expect(result).toMatchObject({
+      sessionId: 'session-123',
+      status: QuizSessionStatus.IN_PROGRESS,
+      feedback: {
+        isCorrect: false,
+        requeued: true,
+      },
+      progress: {
+        correct: 0,
+        answeredAttempts: 1,
+        remainingQueue: 1,
+      },
+      nextQuestion: { id: question.id },
+      result: null,
+    });
+    expect(tx.quizSessionAnswer.create).toHaveBeenCalled();
+    expect(tx.quizSession.update).toHaveBeenCalledWith({
+      where: { id: 'session-123' },
+      data: { score: 0 },
+    });
+  });
+
+  it('completes a daily session and settles rewards atomically', async () => {
+    const question = {
+      id: '00000000-0000-4000-8000-000000000001',
+      topic: QuizTopic.CREDIT_SCORE,
+      prompt: 'Credit question',
+      options: [{ key: 'A', text: 'Pay on time' }],
+      correctOptionKey: 'A',
+      explanation: 'Paying on time supports financial health.',
+    };
+    const tx: QuizTransactionMock = {
+      quizSession: {
+        findFirst: transactionMockMethod().mockResolvedValue({
+          id: 'session-123',
+          type: QuizSessionType.DAILY,
+          topic: null,
+          status: QuizSessionStatus.IN_PROGRESS,
+          startedAt: new Date('2026-07-13T08:00:00.000Z'),
+          completedAt: null,
+          score: 0,
+          totalQuestions: 1,
+          coinsAwarded: 0,
+          xpAwarded: 0,
+          answers: [],
+        }),
+        update: transactionMockMethod(),
+      },
+      quizQuestion: {
+        findMany: transactionMockMethod().mockResolvedValue([question]),
+        findUnique: transactionMockMethod().mockResolvedValue(question),
+      },
+      quizSessionAnswer: { create: transactionMockMethod() },
+      userEvent: {
+        create: transactionMockMethod().mockResolvedValue({ id: 'event-123' }),
+      },
+      gamificationProfile: {
+        upsert: transactionMockMethod().mockResolvedValue({
+          id: 'profile-123',
+          coinBalance: 10,
+          xp: 20,
+          currentKnowledgeStreak: 2,
+          longestKnowledgeStreak: 4,
+        }),
+        update: transactionMockMethod(),
+      },
+      rewardTransaction: { create: transactionMockMethod() },
+    };
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+
+    const result = await service.submitAnswer(authUser, 'session-123', {
+      questionId: question.id,
+      selectedOptionKey: 'A',
+    });
+
+    expect(result).toMatchObject({
+      sessionId: 'session-123',
+      status: QuizSessionStatus.COMPLETED,
+      feedback: {
+        isCorrect: true,
+        requeued: false,
+      },
+      progress: {
+        correct: 1,
+        answeredAttempts: 1,
+        remainingQueue: 0,
+      },
+      nextQuestion: null,
+      result: {
+        score: 1,
+        totalQuestions: 1,
+        reward: { xp: 50, coins: 25 },
+        knowledgeStreak: {
+          previous: 2,
+          current: 3,
+          longest: 4,
+          advanced: true,
+        },
+      },
+    });
+    expect(tx.userEvent.create).toHaveBeenCalled();
+    expect(tx.gamificationProfile.update).toHaveBeenCalled();
+    expect(tx.rewardTransaction.create).toHaveBeenCalled();
+    const updateCall = tx.quizSession.update.mock.calls[0]?.[0] as {
+      data: {
+        status: QuizSessionStatus;
+        score: number;
+        coinsAwarded: number;
+        xpAwarded: number;
+      };
+    };
+    expect(updateCall.data).toMatchObject({
+      status: QuizSessionStatus.COMPLETED,
+      score: 1,
+      coinsAwarded: 25,
+      xpAwarded: 50,
     });
   });
 });

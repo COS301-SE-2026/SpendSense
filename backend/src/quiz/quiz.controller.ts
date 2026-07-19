@@ -11,6 +11,7 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiConflictResponse,
+  ApiBadRequestResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -22,6 +23,7 @@ import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
+import { SubmitQuizAnswerDto } from './dto/submit-quiz-answer.dto';
 import { QuizService } from './quiz.service';
 
 @ApiTags('quiz')
@@ -202,6 +204,67 @@ export class QuizController {
     @Param('id') sessionId: string,
   ) {
     return this.quizService.getSession(authUser, sessionId);
+  }
+
+  @Post('sessions/:id/answer')
+  @ApiOperation({
+    summary: 'Submit a quiz answer',
+    description:
+      'Validates and records an answer, requeues incorrect questions, and settles the session atomically when the queue is empty.',
+  })
+  @ApiBody({ type: SubmitQuizAnswerDto })
+  @ApiOkResponse({
+    description:
+      'Answer feedback and the next quiz state wrapped by the global response envelope.',
+    schema: {
+      example: {
+        data: {
+          sessionId: 'session_123',
+          status: 'IN_PROGRESS',
+          feedback: {
+            isCorrect: true,
+            explanation:
+              'Paying on time provides positive evidence of reliable behaviour.',
+            requeued: false,
+          },
+          progress: {
+            correct: 3,
+            answeredAttempts: 4,
+            initialQuestions: 5,
+            remainingQueue: 2,
+          },
+          nextQuestion: {
+            id: 'question_456',
+            topic: 'CREDIT_SCORE',
+            prompt: 'Which action supports financial health?',
+            options: [{ key: 'A', text: 'Pay on time' }],
+          },
+          result: null,
+        },
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description:
+      'The question is not current or the selected option is invalid.',
+  })
+  @ApiConflictResponse({
+    description:
+      'The session is already completed or the answer conflicts with the current session state.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'The session or question does not exist for the authenticated user.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, or invalid Supabase Bearer token.',
+  })
+  async submitAnswer(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('id') sessionId: string,
+    @Body() dto: SubmitQuizAnswerDto,
+  ) {
+    return this.quizService.submitAnswer(authUser, sessionId, dto);
   }
 
   @Get('topics')
