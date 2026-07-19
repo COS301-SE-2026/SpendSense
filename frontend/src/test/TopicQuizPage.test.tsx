@@ -173,7 +173,7 @@ describe('TopicQuizPage',()=>{
         const card=await screen.findByRole('button',{name:'Budgeting quiz',})
         fireEvent.click(card)
         await waitFor(()=>{
-            expect(mockNavigate).toHaveBeenCalledWith('/quiz/topics/budgeting')
+            expect(mockNavigate).toHaveBeenCalledWith('/quiz/topics/BUDGETING')
         })
     })
     it('does not navigate when a locked topic is pressed',async()=>{

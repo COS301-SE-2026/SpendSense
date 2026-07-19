@@ -159,7 +159,7 @@ export default function TopicQuizPage(){
                     ):(
                         <div className="space-y-4">
                             {topics?.map(topic=>(
-                                <TopicCard key={topic.key} topic={topic} onPress={()=>navigate(`/quiz/topics/${topic.key.toLowerCase()}`)}/>
+                                <TopicCard key={topic.key} topic={topic} onPress={()=>navigate(`/quiz/topics/${topic.key}`)}/>
                             ))}
                         </div>
                     )}
