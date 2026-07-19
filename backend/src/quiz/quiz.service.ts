@@ -337,7 +337,7 @@ export class QuizService {
       for (const topicQuestions of topicQueues) {
         const question = topicQuestions[questionIndex];
 
-        if (question) {
+        if (question && selectedQuestions.length < 5) {
           selectedQuestions.push(question);
         }
       }
