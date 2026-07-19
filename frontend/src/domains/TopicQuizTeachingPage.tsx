@@ -34,8 +34,7 @@ export default function QuizTopicTeachingPage() {
 		clearError()
 		const session=await startTopicQuiz(topic)
 		if (session) {
-			// TODO:point this at wherever the active-session/question screen
-			// actually lives once that route exists.
+			// TODO:point this at wherever the question screen actually lives once that route exists.
 			navigate(`/quiz/session/${session.id}`)
 		}
 	},[topic,clearError,startTopicQuiz,navigate])
