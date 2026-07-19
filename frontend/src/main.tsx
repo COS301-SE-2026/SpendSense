@@ -21,6 +21,8 @@ import ProfilePage from './domains/ProfilePage.tsx'
 import LandingPage from './domains/LandingPage.tsx'
 import OnboardingPage from './domains/OnboardingPage.tsx'
 import NotificationsPage from './domains/NotificationsPage.tsx'
+import TopicQuizPage from './domains/TopicQuizPage.tsx'
+import TopicQuizTeachingPage from './domains/TopicQuizTeachingPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -44,9 +46,10 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/landing" element={<LandingPage/>}/>
         <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
-         <Route path="/quests" element={<QuestsPage/>}/>
+         <Route path="/quests" element={<ProtectedRoute><QuestsPage/></ProtectedRoute>}/>
          <Route path="/quiz" element={<ProtectedRoute><QuizPage/></ProtectedRoute>}/>
-         <Route path="/quiz/topics/:topic" element={<ProtectedRoute><QuizPage/></ProtectedRoute>}/>
+         <Route path="/quiz/topics/:topic" element={<ProtectedRoute><TopicQuizTeachingPage/></ProtectedRoute>}/>
+         <Route path="/quiz/topics" element={<ProtectedRoute><TopicQuizPage/></ProtectedRoute>}/>
          <Route path="/friends" element={<FriendsPage/>}/>
          <Route path="/friends/list" element={<FriendsListPage/>}/>
          <Route path="/friends/add" element={<AddFriendPage/>}/>
