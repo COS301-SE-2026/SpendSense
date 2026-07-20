@@ -58,7 +58,7 @@ export class ObligationsController {
   ) {
     const user = await this.usersService.findOrCreateUser(authUser);
 
-    return this.obligationsService.create(user.id, dto, user.notificationPreference.defaultReminderDaysBefore,);
+    return this.obligationsService.create(user.id, dto, user.notificationPreference.defaultReminderDaysBefore);
   }
 
   @Get()
