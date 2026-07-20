@@ -14,7 +14,6 @@ import {
 import {CustomCard} from "@/components/ui/CustomCard"
 import {CustomInput} from "@/components/common/CustomInput"
 import {SubPageShell} from "@/components/common/SubPageShell"
-import type { RoundToNearestHoursOptions } from "date-fns"
 
 
 const walkThrough: {
@@ -143,7 +142,7 @@ export default function HelpPage(){
 	:faqs
 
 	return(
-		<SubPageShell title= "Help and Support" subtitle="How SpendeSense works">
+		<SubPageShell title= "Help and Support" subtitle="How SpendSense works">
 			
 			
 			{/*walkthrough*/}
@@ -167,7 +166,7 @@ export default function HelpPage(){
 			<SectionLabel className="mt-3">Frequently asked questions</SectionLabel>
 
 			<div className="relative">
-				<search className="pointer-events-none absolute left-3 top-1/2 size-4-translate-y-1/2 text-[#6B6375]"/>
+				<Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#6B6375]"/>
 				<CustomInput 
 					value={query}
 					onChange={(e)=> setQuery(e.target.value)}
@@ -177,7 +176,7 @@ export default function HelpPage(){
 				/>
 			</div>
 
-			{visibleFaqs.length ===0 &&(
+			{visibleFaqs.length === 0 &&(
 				<p className="text-sm text-[#6B6375]">
 					Seems like no questions match your search. Try different words or browse the full list by clearing the search bar.
 				</p>
