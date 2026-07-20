@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   Prisma,
@@ -7,6 +7,7 @@ import {
   UserEventType,
 } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
+import type { UpdateProfileDto } from './dto/update-profile.dto';
 
 // UsersService: manages internal user records
 // bridges supabaseAuthId with the internal user table & default related records
@@ -112,6 +113,34 @@ export class UsersService {
       });
 
       return user;
+    });
+  }
+
+  async updateProfile(
+    authUser: AuthUser,
+    updates: UpdateProfileDto,
+  ): Promise<InternalUserProfile> {
+    if (Object.keys(updates).length === 0) {
+      throw new BadRequestException('At least one profile field is required');
+    }
+
+    const currentUser = await this.findOrCreateUser(authUser);
+
+    return this.prisma.user.update({
+      where: { id: currentUser.id },
+      data: {
+        ...(updates.displayName !== undefined && {
+          displayName: updates.displayName,
+        }),
+        ...(updates.avatarUrl !== undefined && { avatarUrl: updates.avatarUrl }),
+        ...(updates.monthlyBudget !== undefined && {
+          monthlyBudget: updates.monthlyBudget,
+        }),
+        ...(updates.onboardingCompleted !== undefined && {
+          onboardingCompleted: updates.onboardingCompleted,
+        }),
+      },
+      include: userProfileInclude,
     });
   }
 }

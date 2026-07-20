@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -10,6 +10,7 @@ import { UsersService } from './users.service';
 import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -34,6 +35,7 @@ export class UsersController {
             email: 'student@example.com',
             displayName: 'Kyle',
             avatarUrl: null,
+            monthlyBudget: null,
             onboardingCompleted: false,
             createdAt: '2026-05-20T10:00:00.000Z',
           },
@@ -90,6 +92,7 @@ export class UsersController {
       email,
       displayName,
       avatarUrl,
+      monthlyBudget,
       onboardingCompleted,
       createdAt,
     } = userProfile;
@@ -100,6 +103,55 @@ export class UsersController {
         email,
         displayName,
         avatarUrl,
+        monthlyBudget,
+        onboardingCompleted,
+        createdAt,
+      },
+      preferences: preference,
+      notificationPreferences: notificationPreference,
+      creditProfile,
+      gamificationProfile,
+    };
+  }
+
+  @ApiOperation({
+    summary: 'Update the authenticated user profile',
+    description:
+      'Updates user-editable profile fields. Email, identity, score, gamification, and deletion fields are read-only.',
+  })
+  @ApiOkResponse({
+    description: 'The updated authenticated user profile and related records.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, or invalid Supabase Bearer token.',
+  })
+  @Patch('me')
+  async updateMe(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Body() updates: UpdateProfileDto,
+  ) {
+    const userProfile = await this.usersService.updateProfile(authUser, updates);
+    const {
+      preference,
+      notificationPreference,
+      creditProfile,
+      gamificationProfile,
+      id,
+      email,
+      displayName,
+      avatarUrl,
+      monthlyBudget,
+      onboardingCompleted,
+      createdAt,
+    } = userProfile;
+
+    return {
+      user: {
+        id,
+        email,
+        displayName,
+        avatarUrl,
+        monthlyBudget,
         onboardingCompleted,
         createdAt,
       },
