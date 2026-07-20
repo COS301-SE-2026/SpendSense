@@ -4,7 +4,7 @@ import {TrendingUp, Calendar as CalIcon, CheckCircle2} from "lucide-react"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { SectionHeader } from "@/components/common/SectionHeader"
 import { CategoryIcon } from "@/components/common/CategoryIcon"
-import { IconButton } from "@/components/common/IconButton"
+import { ChevronLeft } from "lucide-react"
 
 
 export default function InsightsPage(){
@@ -13,10 +13,24 @@ export default function InsightsPage(){
     return(
         <div className = "min-h-screen bg-[#f4fbf7] pb-24">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
-                <header className = "flex items-center justify-between">
-                    <IconButton IconVariant="iconBack" aria-label = "Go back" onClick = {() => nav(-1)}/>
-                    <h1 className = "text-lg font-bold text-[#091828]">Insights</h1>
-                    <div className="size-10"/>
+                <header className ="flex items-center gap-3">
+                    <button 
+                        type ="button" 
+                        aria-label="Back"
+                        onClick={() => nav(-1)}
+                        className = "flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828]">
+
+                            <ChevronLeft className="size-5 text-[#6E0034]" />
+                        </button>
+
+                        <div className= "flex flex-1 items-center justify-center">
+                            <div className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828]" style={{transform: "rotate(-3deg)"}}>
+                                <span className="text-base font-bold text-[#091828]">Insights</span>
+                            </div>
+                        </div>
+
+                        <div aria-hidden="true" className="size-12 shrink-0"/>
+
                 </header>
 
                 <CustomCard className = "mt-6 rounded-3xl bg-white p-5 shadow-sm">
