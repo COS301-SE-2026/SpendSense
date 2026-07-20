@@ -55,7 +55,7 @@ const walkThrough: {
 		icon: <Trophy className="size-5"/>,
 		tone:"pink",
 		title: "5. Complete quests and earn rewards",
-		body:"Quests give you XP, coins and stickers for good financial habits: daily check-ins, quizzes, streaks and monthly challenges.",
+		body:"Quests give you XP, coins and stickers for good financial habits: daily check-ins, quizzes, streaks and challenges.",
 	},
 
 
