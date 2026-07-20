@@ -10,6 +10,7 @@ import{
 	Trophy,
 	User,
 	AlertTriangle,
+	Coins,
 } from "lucide-react"
 import{ useCallback, useEffect, useState } from "react"
 import{ CustomCard } from "@/components/ui/CustomCard"
@@ -71,12 +72,26 @@ export default function QuestsPage(){
 	return(
 		<div className="min-h-screen bg-[#F4FBF7] pb-24">
 			<div className="mx-auto w-full max-w-md px-5 pt-6">
-				<header>
-					<h1 className="text-3xl font-extrabold leading-tight text-[#091828]">Quests</h1>
-					<p className="mt-1 text-sm text-[#6b6375]">Complete quests. Earn rewards.</p>
+				<header className="flex items-center gap-3">
+					<div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828]">
+						<Trophy className="size-5 text-[#6E0034]"/>
+					</div>
+					<div className="flex flex-1 items-center justify-center">
+						<div className="rounded-full border-2 border-[#091828] bg-white px-8 py-2.5 shadow-[4px_4px_0_#091828]" style={{transform:"rotate(-3deg)"}}>
+							<h1 className="text-base font-bold text-[#091828]">Quests</h1>
+						</div>
+					</div>
+					<div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFE9B5] shadow-[4px_4px_0_#091828]">
+						<Coins className="size-5 text-[#7A5A00]"/>
+					</div>
 				</header>
+				<div className="mt-8 rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-5 shadow-[4px_4px_0_#091828]">
+					<p className="text-xs font-bold uppercase tracking-[0.14em] text-[#AC2A5D]">Your learning path</p>
+					<h2 className="mt-2 text-2xl font-extrabold leading-tight text-[#091828]">Choose your next quest.</h2>
+					<p className="mt-1 text-sm leading-relaxed text-[#6b6375]">Build your money knowledge and collect rewards as you go.</p>
+				</div>
 				{error &&(
-					<div className="mt-4 flex items-center gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFD9E1] px-4 py-3">
+					<div className="mt-6 flex items-center gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFF1F4] px-4 py-3">
 						<AlertTriangle className="size-4 shrink-0 text-[#AC2A5D]"/>
 						<p className="flex-1 text-sm font-semibold text-[#AC2A5D]">{error}</p>
 						<button
@@ -88,15 +103,22 @@ export default function QuestsPage(){
 						</button>
 					</div>
 				)}
-				{/* Today */}
-				<Section title="" className="mt-6">
+				<section className="mt-7">
+					<div className="mb-3 flex items-end justify-between">
+						<div>
+							<p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6b6375]">Start here</p>
+							<h2 className="mt-1 text-xl font-extrabold text-[#091828]">Quiz quests</h2>
+						</div>
+						<p className="text-xs font-semibold text-[#6b6375]">Earn XP as you learn</p>
+					</div>
 					{loading?(
 						<QuestCardSkeleton/>
 					):(
-						<QuestCard
+						<QuizQuestCard
 							icon={<CalendarCheck className="size-5"/>}
 							tone="pink"
 							title="Daily Quiz"
+							eyebrow="Today's challenge"
 							description={dailyContent.description}
 							xp={dailyContent.xp}
 							actionLabel={dailyContent.actionLabel}
@@ -104,44 +126,33 @@ export default function QuestsPage(){
 							onAction={()=>navigate("/quiz")}
 						/>
 					)}
-				</Section>
-				{/* This Month */}
-				<Section title="" className="mt-6">
+				</section>
+				<section className="mt-5">
 					{loading?(
 						<TopicCardSkeleton/>
 					):(
-						<button
-							type="button"
-							onClick={()=>navigate("/quiz/topics")}
-							className="w-full text-left"
-						>
-							<CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3">
-								<QuestIcon tone="lilac"><Mountain className="size-5"/></QuestIcon>
-								<div className="min-w-0 flex-1">
-									<p className="text-sm font-bold text-[#091828]">Financial Topic Quizes</p>
-									<p className="text-xs text-[#6b6375]">Complete Topic quizes to become finacially free!</p>
-									<Progress
-										value={topicsProgress}
-										className="mt-2 h-1.5"
-										aria-label={`${availableTopics} of ${totalTopics} topics unlocked`}
-									/>
-									<p className="mt-1 text-[11px] font-semibold text-[#6b6375]">
-										{availableTopics} of{totalTopics} topics unlocked
-									</p>
-								</div>
-								<ChevronRight className="size-4 shrink-0 text-[#6b6375]"/>
-							</CustomCard>
-						</button>
+						<QuizQuestCard
+							icon={<Mountain className="size-5"/>}
+							tone="lilac"
+							title="Financial Topic Quizes"
+							eyebrow="Choose your subject"
+							description="Explore focused lessons and take a quiz when you're ready."
+							progress={topicsProgress}
+							progressLabel={`${availableTopics} of ${totalTopics} topics unlocked`}
+							actionLabel="Explore topics"
+							actionAriaLabel="Financial Topic Quizes"
+							onAction={()=>navigate("/quiz/topics")}
+						/>
 					)}
-					<CustomCard variant="navyBorder" size="sm" className="mt-3 flex items-center gap-3">
-						<QuestIcon tone="yellow"><Gift className="size-5"/></QuestIcon>
-						<div className="min-w-0 flex-1">
-							<p className="text-sm font-bold text-[#091828]">Rewards</p>
-							<p className="text-xs text-[#6b6375]">Redeem your coins and claim exclusive perks.</p>
-						</div>
-						<ChevronRight className="size-4 shrink-0 text-[#6b6375]"/>
-					</CustomCard>
-				</Section>
+				</section>
+				<button type="button" className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-dashed border-[#B8CBBF] bg-white/70 px-4 py-3 text-left">
+					<QuestIcon tone="yellow"><Gift className="size-5"/></QuestIcon>
+					<span className="min-w-0 flex-1">
+						<span className="block text-sm font-bold text-[#091828]">Rewards</span>
+						<span className="block text-xs text-[#6b6375]">Redeem your coins and claim exclusive perks.</span>
+					</span>
+					<ChevronRight className="size-4 shrink-0 text-[#6b6375]"/>
+				</button>
 			</div>
 			<BottomNav active="quests"/>
 		</div>
@@ -150,7 +161,7 @@ export default function QuestsPage(){
 
 function getDailyQuestContent(daily:DailyQuizState|null):{
 	description:string
-	xp:number
+    xp:number
 	actionLabel:string
 	disabled:boolean
 }{
@@ -186,29 +197,17 @@ function getDailyQuestContent(daily:DailyQuizState|null):{
 	}
 }
 
-function Section({
-	title,
-	children,
-	className,
-}:Readonly<{
-	title:string
-	children:React.ReactNode
-	className?:string
-}>){
-	return(
-		<section className={className}>
-			<h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#6b6375]">{title}</h2>
-			<div className="flex flex-col gap-3">{children}</div>
-		</section>
-	)
-}
-
-function QuestCard({
+function QuizQuestCard({
     icon,
     tone,
     title,
+	eyebrow,
     description,
-    xp,
+	xp,
+	badgeLabel,
+	progress,
+	progressLabel,
+	actionAriaLabel,
     actionLabel,
     onAction,
     asLink,
@@ -218,39 +217,54 @@ function QuestCard({
     icon:React.ReactNode
     tone:"pink"|"mint"|"yellow"|"lilac"
     title:string
+	eyebrow:string
     description:string
-    xp:number
+	xp?:number
+	badgeLabel?:string
+	progress?:number
+	progressLabel?:string
+	actionAriaLabel?:string
     actionLabel:string
     onAction?:()=>void
     asLink?:boolean
     to?:string
     disabled?:boolean
 }>){
-    return(
-        <CustomCard variant="greenShaddow" size="sm"> 
-                    <div className="flex items-start gap-3">
-                        <QuestIcon tone={tone}>{icon}</QuestIcon>
-                        <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-bold text-[#091828]">{title}</p>
-                                <CustomBadge variant="xp" size="sm">+{xp} XP</CustomBadge>
-                            </div>
-                            <p className="mt-0.5 text-xs text-[#6b6375]">{description}</p>
-                        </div>
-                    </div>
-                    <LongButton
+	return(
+		<CustomCard variant="navyShaddow" size="md" className="border-2 border-[#091828]">
+				<div className="flex items-start gap-3">
+					<QuestIcon tone={tone}>{icon}</QuestIcon>
+					<div className="min-w-0 flex-1">
+						<div className="flex items-start justify-between gap-2">
+							<div>
+								<p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6b6375]">{eyebrow}</p>
+								<p className="mt-1 text-lg font-extrabold leading-tight text-[#091828]">{title}</p>
+							</div>
+							{(badgeLabel||(xp??0)>0)&&<CustomBadge variant="xp" size="sm">{badgeLabel??`+${xp} XP`}</CustomBadge>}
+						</div>
+						<p className="mt-2 text-sm leading-relaxed text-[#6b6375]">{description}</p>
+						{progress!==undefined&&(
+							<div className="mt-4">
+								<Progress value={progress} className="h-2" aria-label={progressLabel}/>
+								<p className="mt-1 text-[11px] font-semibold text-[#6b6375]">{progressLabel}</p>
+							</div>
+						)}
+					</div>
+				</div>
+				<LongButton
                         LongVariant="primaryDark"
                         LongSize="sm"
                         className="mt-3"
-                        showArrow={false}
-                        asChild={asLink}
+						showArrow={false}
+						aria-label={actionAriaLabel}
+						asChild={asLink}
                         disabled={disabled}
                         onClick={asLink?undefined:onAction}
                     >
-                       {asLink && to?<Link to={to}>{actionLabel}</Link>:actionLabel}
-                    </LongButton>
-                </CustomCard>
-    )
+					{asLink&&to?<Link to={to}>{actionLabel}</Link>:actionLabel}
+				</LongButton>
+			</CustomCard>
+	)
 }
 
 function QuestCardSkeleton(){
