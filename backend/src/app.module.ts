@@ -16,7 +16,6 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentOccurrencesModule } from './payment-occurrences/payment-occurrences.module';
 import { InsightsModule } from './insights/insights.module';
 
-
 @Module({
   imports: [
     PrismaModule,

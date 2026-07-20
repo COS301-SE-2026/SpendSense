@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PaymentOccurrenceStatus, PaymentRecordStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { createOnTimePaymentInsight, InsightsResponse, OnTimePaymentStats } from './insights.rules';
 
-
-const SETTLED_PAYMENT_STATUSES: PaymentOccurrenceStatus[] = [PaymentOccurrenceStatus.PAID, PaymentOccurrenceStatus.PAID_LATE];
+const SETTLED_PAYMENT_STATUSES: PaymentOccurrenceStatus[] = [
+    PaymentOccurrenceStatus.PAID,
+    PaymentOccurrenceStatus.PAID_LATE,
+];
 @Injectable()
 export class InsightsService {
-
     constructor(private readonly prisma: PrismaService) { }
 
     // convert auth id into payment occurance table userId
@@ -21,14 +23,13 @@ export class InsightsService {
         });
 
         if (!user) {
-            throw new NotFoundException("SpendSense user profile could not be found");
+            throw new NotFoundException('SpendSense user profile could not be found');
         }
         return user.id;
     }
 
     // FUNCTION - GET THE SETTLED PAYMENTS
     async getSettledPayments(supabaseAuthId: string) {
-
         const userId = await this.resolveUserId(supabaseAuthId);
         const settledPayments = await this.prisma.paymentOccurrence.findMany({
             where: {
@@ -79,7 +80,7 @@ export class InsightsService {
                 },
             },
 
-            orderBy: [{ paidAt: "desc" }, { dueDate: "desc" }],
+            orderBy: [{ paidAt: 'desc' }, { dueDate: 'desc' }],
         });
 
         const payments = settledPayments.map((occurrence) => ({
@@ -92,14 +93,13 @@ export class InsightsService {
             sequenceNumber: occurrence.sequenceNumber,
             paidAt: occurrence.paidAt,
 
-            obligation:
-            {
+            obligation: {
                 ...occurrence.obligation,
                 amount: Number(occurrence.obligation.amount),
             },
 
-            payment: occurrence.payment ?
-                {
+            payment: occurrence.payment
+                ? {
                     ...occurrence.payment,
                     amountPaid: Number(occurrence.payment.amountPaid),
                     simulatedInterest: Number(occurrence.payment.simulatedInterest),
@@ -117,36 +117,33 @@ export class InsightsService {
     async getSettlementRate(supabaseAuthId: string) {
         const userId = await this.resolveUserId(supabaseAuthId);
         const asOf = new Date();
-        const [eligiblePaymentCount, settledPaymentCount] = await this.prisma.$transaction(
-            [
-                this.prisma.paymentOccurrence.count(
-                    {
-                        where: {
-                            userId,
-                            deletedAt: null,
-                            dueDate: { lte: asOf },
-                            status: { not: PaymentOccurrenceStatus.CANCELLED },
-                            obligation: { is: { deletedAt: null } },
-                        },
-                    }
-                ),
-                this.prisma.paymentOccurrence.count(
-                    {
-                        where: {
-                            userId,
-                            deletedAt: null,
-                            dueDate: { lte: asOf },
-                            status: { in: SETTLED_PAYMENT_STATUSES },
-                            obligation: { is: { deletedAt: null } },
-                        },
-                    }
-                ),
-            ]
-        );
-        let unsettledPaymentCount = (eligiblePaymentCount - settledPaymentCount);
+        const [eligiblePaymentCount, settledPaymentCount] =
+            await this.prisma.$transaction([
+                this.prisma.paymentOccurrence.count({
+                    where: {
+                        userId,
+                        deletedAt: null,
+                        dueDate: { lte: asOf },
+                        status: { not: PaymentOccurrenceStatus.CANCELLED },
+                        obligation: { is: { deletedAt: null } },
+                    },
+                }),
+                this.prisma.paymentOccurrence.count({
+                    where: {
+                        userId,
+                        deletedAt: null,
+                        dueDate: { lte: asOf },
+                        status: { in: SETTLED_PAYMENT_STATUSES },
+                        obligation: { is: { deletedAt: null } },
+                    },
+                }),
+            ]);
+        const unsettledPaymentCount = eligiblePaymentCount - settledPaymentCount;
         let settlementPercentage = 0;
         if (eligiblePaymentCount !== 0) {
-            settlementPercentage = Number(((settledPaymentCount / eligiblePaymentCount) * 100).toFixed(2));
+            settlementPercentage = Number(
+                ((settledPaymentCount / eligiblePaymentCount) * 100).toFixed(2),
+            );
         }
         return {
             asOf: asOf.toISOString(),
@@ -159,50 +156,76 @@ export class InsightsService {
     }
 
     // FUNCTION - CALCULATE THE ON TIME PAYMENT RATE
-    async getOnTimePaymentRate(supabaseAuthId: string) {
+    async getOnTimePaymentRate(supabaseAuthId: string,): Promise<OnTimePaymentStats> {
 
         const userId = await this.resolveUserId(supabaseAuthId);
         const asOf = new Date();
-        const [settledPaymentCount, onTimePaymentCount,] = await this.prisma.$transaction(
+        const [onTimePaymentCount, latePaymentCount, missedPaymentCount] = await this.prisma.$transaction(
             [
+
                 this.prisma.paymentOccurrence.count(
                     {
                         where: {
                             userId,
                             deletedAt: null,
-                            status: { in: SETTLED_PAYMENT_STATUSES },
-                            obligation: { is: { deletedAt: null } },
-                        },
-                    }
-                ),
-                this.prisma.paymentOccurrence.count(
-                    {
-                        where: {
-                            userId,
-                            deletedAt: null,
+                            dueDate: { lte: asOf },
                             status: { in: SETTLED_PAYMENT_STATUSES },
                             payment: { is: { paymentStatus: PaymentRecordStatus.ON_TIME } },
                             obligation: { is: { deletedAt: null } },
                         },
                     }
                 ),
+
+                this.prisma.paymentOccurrence.count(
+                    {
+                        where: {
+                            userId,
+                            deletedAt: null,
+                            dueDate: { lte: asOf },
+                            status: { in: SETTLED_PAYMENT_STATUSES },
+                            payment: { is: { paymentStatus: PaymentRecordStatus.LATE } },
+                            obligation: { is: { deletedAt: null } },
+                        },
+                    }
+                ),
+
+                this.prisma.paymentOccurrence.count(
+                    {
+                        where: {
+                            userId,
+                            deletedAt: null,
+                            dueDate: { lte: asOf },
+                            status: PaymentOccurrenceStatus.MISSED,
+                            obligation: { is: { deletedAt: null } },
+                        },
+                    }
+                ),
             ]
         );
-        let latePaymentCount = (settledPaymentCount - onTimePaymentCount);
-        let onTimePaymentPercentage = 0 ;
-        if (settledPaymentCount !== 0) {
-            onTimePaymentPercentage = Number(((onTimePaymentCount / settledPaymentCount) * 100).toFixed(2)) ;
+
+        let eligiblePaymentCount = onTimePaymentCount + latePaymentCount + missedPaymentCount;
+        let onTimePaymentPercentage = 0;
+        if (eligiblePaymentCount !== 0) {
+            onTimePaymentPercentage = Number(((onTimePaymentCount / eligiblePaymentCount) * 100).toFixed(2));
         }
+
         return {
             asOf: asOf.toISOString(),
-            settledPaymentCount,
             onTimePaymentCount,
             latePaymentCount,
+            missedPaymentCount,
+            eligiblePaymentCount,
             onTimePaymentPercentage,
-            hasEnoughData: settledPaymentCount > 0,
+            hasEnoughData: eligiblePaymentCount > 0,
         };
     }
 
-
-}
-
+    async getInsights(supabaseAuthId: string): Promise<InsightsResponse> {
+        const onTimeStats = await this.getOnTimePaymentRate(supabaseAuthId);
+        const onTimeInsight = createOnTimePaymentInsight(onTimeStats);
+        return {
+            asOf: onTimeStats.asOf,
+            insights: [onTimeInsight],
+        };
+    }
+};
