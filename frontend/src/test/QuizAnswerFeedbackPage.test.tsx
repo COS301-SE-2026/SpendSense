@@ -48,22 +48,22 @@ function renderPage(state:unknown){
     return render(
         <MemoryRouter
             initialEntries={[
-                {pathname:"/quiz/sessions/session-1/feedback",state,},
+                {pathname:"/quiz/session/session-1/feedback",state,},
             ]}
         >
             <Routes>
                 <Route
-                    path="/quiz/sessions/:sessionId/feedback"
+                    path="/quiz/session/:sessionId/feedback"
                     element={<QuizAnswerFeedbackPage/>}
                 />
 
                 <Route
-                    path="/quiz/sessions/:sessionId"
+                    path="/quiz/session/:sessionId"
                     element={<div>Question screen</div>}
                 />
 
                 <Route
-                    path="/quiz/sessions/:sessionId/results"
+                    path="/quiz/session/:sessionId/results"
                     element={<div>Results screen</div>}
                 />
 
@@ -124,9 +124,7 @@ describe("QuizAnswerFeedbackPage",()=>{
             nextQuestion:null,
             result:finishedResult,
         })
-        expect(
-            screen.getByText("Quiz complete — 4 of 5 correct")
-        ).toBeInTheDocument()
+        expect(screen.getByText("Quiz complete — 4 of 5 correct")).toBeInTheDocument()
     })
     it("advances to the next question on continue when the session is still in progress",async()=>{
         const user=userEvent.setup()
@@ -148,7 +146,6 @@ describe("QuizAnswerFeedbackPage",()=>{
         await user.click(screen.getByRole("button",{name:"View Results",}))
         expect(await screen.findByText("Results screen")).toBeInTheDocument()
     })
-
     it("exits the quiz back to quests",async()=>{
         const user=userEvent.setup()
         renderPage({

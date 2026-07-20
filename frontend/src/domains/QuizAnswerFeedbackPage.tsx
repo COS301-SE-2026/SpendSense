@@ -2,7 +2,6 @@ import {useEffect} from "react"
 import {Link,useLocation,useNavigate,useParams} from "react-router-dom"
 import {AlertTriangle,ArrowRight,Check,RotateCcw,Trophy,X,} from "lucide-react"
 import type {QuizAnswerFeedback,QuizQuestion,QuizSessionResult} from "@/features/quiz/quizTypes"
-
 interface QuizFeedbackLocationState{
     feedback:QuizAnswerFeedback
     nextQuestion:QuizQuestion|null
@@ -28,7 +27,7 @@ export default function QuizAnswerFeedbackPage(){
         if(state||!sessionId){
             return
         }
-        navigate(`/quiz/sessions/${sessionId}`,{replace:true})
+        navigate(`/quiz/session/${sessionId}`,{replace:true})
     },[navigate,sessionId,state])
     if(!sessionId){
         return <QuizFeedbackError message="This quiz session is invalid."/>
@@ -41,13 +40,13 @@ export default function QuizAnswerFeedbackPage(){
     const isFinished=result!==null
     const handleContinue=()=>{
         if(isFinished){
-            navigate(`/quiz/sessions/${sessionId}/results`,{
+            navigate(`/quiz/session/${sessionId}/results`,{
                 replace:true,
                 state:{result},
             })
             return
         }
-        navigate(`/quiz/sessions/${sessionId}`,{replace:true})
+        navigate(`/quiz/session/${sessionId}`,{replace:true})
     }
     const resultColor=isCorrect?"#6FC9B0":"#AC2A5D"
     const resultBg=isCorrect?"#DCEFE8":"#FFD9E1"
@@ -111,9 +110,7 @@ export default function QuizAnswerFeedbackPage(){
                             <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-[#091828] bg-white">
                                 <Trophy className="size-5 text-[#AC2A5D]"/>
                             </div>
-                            <p className="mt-3 text-sm font-bold text-[#091828]">
-                                Quiz complete — {result.score} of {result.totalQuestions} correct
-                            </p>
+                            <p className="mt-3 text-sm font-bold text-[#091828]">Quiz complete — {result.score} of {result.totalQuestions} correct</p>
                             <p className="mt-1 text-xs font-semibold text-[#6E0034]">See your full results and rewards next.</p>
                         </div>
                     </div>
