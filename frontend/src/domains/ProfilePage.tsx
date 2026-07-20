@@ -12,17 +12,13 @@ import {
     Gift,
     ChevronRight,
     Smile,
+    Flame,
+    Coins,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useUserProfile, initialsFor } from "@/hooks/useUserProfile"
+import { BottomNav } from "@/components/common/BottomNav"
 
-
-const mockUser={
-    initials: "KH",
-    name: "Kahlan H.",
-    level: 7,
-    tier: "Budget Apprentice",
-    memberSince: "July 2026",
-}
 
 type MenuItem={
     label: string
@@ -31,16 +27,14 @@ type MenuItem={
     enabled: boolean
 }
 
-//currently some are set to false since these pages dont exist yet
-// flip to true as these pages get made
 
 const menuItems: MenuItem[]=[
-    {label: "Edit Profile", icon: <User className="size-5"/>, to: "/edit-profile", enabled: false},
-    {label: "Settings", icon: <Settings className="size-5"/>, to: "/settings", enabled: false},
-    {label: "Friends & Social", icon: <Users className="size-5"/>, to: "/friends", enabled: false},
+    {label: "Edit Profile", icon: <User className="size-5"/>, to: "/edit-profile", enabled: true},
+    {label: "Settings", icon: <Settings className="size-5"/>, to: "/settings", enabled: true},
+    {label: "Friends & Social", icon: <Users className="size-5"/>, to: "/friends", enabled: true},
     {label: "Sticker Album", icon: <Star className="size-5"/>, to: "/stickers", enabled: true},
-    {label: "Wrapped", icon: <Gift className="size-5"/>, to: "/wrapped", enabled: false},
-    {label: "Mascot Home", icon: <Smile className="size-5"/>, to: "/mascot", enabled: false},
+    {label: "Wrapped", icon: <Gift className="size-5"/>, to: "/insights", enabled: true},
+    {label: "Mascot Home", icon: <Smile className="size-5"/>, to: "/mascot", enabled: true},
     {label: "Help & Support", icon: <CircleQuestionMark className="size-5"/>, to: "/help", enabled: false},
 
 
@@ -48,6 +42,7 @@ const menuItems: MenuItem[]=[
 
 export default function ProfilePage(){
     const nav = useNavigate()
+    const {user, loading, error, refetch}=useUserProfile()
 
     return(
         <div className = "min-h-screen bg-[#f4fbf7] pb-24">
@@ -62,30 +57,86 @@ export default function ProfilePage(){
                 </header>
 
                 <div className="mt-6 flex flex-col items-center text-center">
-                    <div className="flex size-16 items-center justify-center rounded-full bg-[#0a1929] text-white text-lg font-bold">
-                        {mockUser.initials}
-                    </div>
+                    {loading && (
+                        <p className="mt-6 text-sm text-[#6B6375]">Loading profile...</p>
+                    )}
 
-                    <h2 className="mt-3 text-xl font-extrabold text-[#091828]">
-                        {mockUser.name}
-                    </h2>
+                    {error && !loading &&(
+                        <div className="mt-6">
+                            <p className="text-sm text-[#AC2A5D]">Couldn't load your profile</p>
+                            <button type="button" onClick={refetch} className="mt-2 text-xs font-bold text-[#091828] underline">
+                                Try Again
+                            </button>
+                        </div>
+                    )}
 
-                    <CustomBadge variant="tier" size="sm" className="mt-2">
-                        Level {mockUser.level} - {mockUser.tier}
-                    </CustomBadge>
+                    {user && !loading &&(
+                        <>
+                            {user.avatarUrl ?(
+                                <img
+                                    src={user.avatarUrl}
+                                    alt={`${user.displayName}'s avatar`}
+                                    className="size-16 rounded-full object-cover"
+                                />
+                            ): (
+                                <div className="flex size-16 items-center justify-center rounded-full bg-[#0A1929] text-white text-lg font-bold">
+                                    {initialsFor(user.displayName)}
+                                </div>
+                            )}
 
-                    <p className="mt-2 text-xs text-[#6b6375]">
-                        Member since {mockUser.memberSince}
-                    </p>
+                            <h2 className="mt-3 text-xl font-extrabold text-[#091828]">
+                                {user.displayName}
+                            </h2>
+
+                            <CustomBadge variant="tier" size="sm" className="mt-2">
+                                Level {user.level} - {user.tier}
+                            </CustomBadge>
+
+                            <div className="mt-3 flex items-center justify-center gap-2">
+                                <StatChip
+                                    icon={<Flame className="size-3.5"/>}
+                                    label={`${user.paymentStreak} day streak`}
+                                />
+
+                                <StatChip
+                                    icon={<Coins className="size-3.5"/>}
+                                    label={`${user.coins.toLocaleString()} coins`}
+                                />
+
+                            </div>
+
+                            <p className="mt-2 text-xs text-[#6b6375]">
+                                Member since {user.memberSince}
+                            </p>
+
+                        </>
+                    )}
+
                 </div>
-
+                
                 <CustomCard className="mt-6 rounded-3xl bg-white p-2 shadow-sm">
                     {menuItems.map((item)=>(<ProfileMenuRow key = {item.label}{...item}/>))}
                 </CustomCard>
 
             </div>
+            <BottomNav active ="profile"/>
         </div>
 
+    )
+}
+
+function StatChip({
+    icon, 
+    label
+}: Readonly<{
+    icon: React.ReactNode,
+    label: string
+}>){
+    return(
+        <span className="flex items-center gap-1 rounded-full bg-[#FFE9B5] px-2.5 py-1 text-xs font-bold text-[#7A5A00]">
+            {icon}
+            {label}
+        </span>
     )
 }
 
