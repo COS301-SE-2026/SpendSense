@@ -23,6 +23,7 @@ import OnboardingPage from './domains/OnboardingPage.tsx'
 import NotificationsPage from './domains/NotificationsPage.tsx'
 import TopicQuizPage from './domains/TopicQuizPage.tsx'
 import TopicQuizTeachingPage from './domains/TopicQuizTeachingPage.tsx'
+import QuizQuestionPage from './domains/QuizQuestionPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -49,6 +50,7 @@ createRoot(document.getElementById('root')!).render(
          <Route path="/quests" element={<ProtectedRoute><QuestsPage/></ProtectedRoute>}/>
          <Route path="/quiz" element={<ProtectedRoute><QuizPage/></ProtectedRoute>}/>
          <Route path="/quiz/topics/:topic" element={<ProtectedRoute><TopicQuizTeachingPage/></ProtectedRoute>}/>
+         <Route path="/quiz/session/:sessionId" element={<ProtectedRoute><QuizQuestionPage/></ProtectedRoute>}/>
          <Route path="/quiz/topics" element={<ProtectedRoute><TopicQuizPage/></ProtectedRoute>}/>
          <Route path="/friends" element={<FriendsPage/>}/>
          <Route path="/friends/list" element={<FriendsListPage/>}/>
