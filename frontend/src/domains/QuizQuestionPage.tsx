@@ -75,7 +75,13 @@ export default function QuizQuestionPage(){
             setHasSubmitted(false)
             return
         }
-        navigate(`/quiz/sessions/${sessionId}/feedback`)
+        navigate(`/quiz/session/${sessionId}/feedback`,{
+            state:{
+                feedback:response.feedback,
+                nextQuestion:response.nextQuestion,
+                result:response.result,
+            },
+        })
     },[
         answerQuestion,
         clearError,
@@ -121,7 +127,7 @@ export default function QuizQuestionPage(){
         return(
             <QuizQuestionError
                 message="This quiz has already been completed."
-                onRetry={()=>navigate(`/quiz/sessions/${sessionId}/results`)}
+                onRetry={()=>navigate(`/quiz/session/${sessionId}/results`)}
                 retryLabel="View Results"
             />
         )

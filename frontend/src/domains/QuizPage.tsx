@@ -106,7 +106,7 @@ export default function QuizPage(){
         clearError()
         const session=quizType==="DAILY"?await startDailyQuiz():topic?await startTopicQuiz(topic):null
         if(session){
-            navigate(`/quiz/sessions/${session.id}`)
+            navigate(`/quiz/session/${session.id}`)
         }
     }
     if(loading){
