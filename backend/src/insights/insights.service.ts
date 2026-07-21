@@ -275,9 +275,9 @@ export class InsightsService {
 
     // aDDING new functions here for simplified version - once comlete remove the specific above functions that we will not use. 
 
-    async getInsights(userId: string): Promise<InsightsResponse> {
+    async getInsights(supabaseAuthId: string): Promise<InsightsResponse> {
+        const userId = await this.resolveUserId(supabaseAuthId);
         const asOf = new Date();
-
         const [onTimeStats, trendStats, upcomingStats, categoryStats, streakStats] =
             await Promise.all([
                 this.getOnTimePaymentRate(userId, asOf),
@@ -356,8 +356,51 @@ export class InsightsService {
 
     private async getObligationTrend(supabaseAuthId: string, asOf: Date): Promise<ObligationTrendStats> {
         const userId = await this.resolveUserId(supabaseAuthId);
+        const currentStart = startOfUtcMonth(asOf);
+        const currentEnd = addUtcMonths(currentStart, 1);
+        const previousStart = addUtcMonths(currentStart, -1);
 
+        const occurrences = await this.prisma.paymentOccurrence.findMany(
+            {
+                where: {
+                    userId,
+                    deletedAt: null,
+                    currency: INSIGHT_CURRENCY,
+                    dueDate: { gte: previousStart, lt: currentEnd },
+                    status: { not: PaymentOccurrenceStatus.CANCELLED },
+                    obligation: { is: { deletedAt: null } },
+                },
+                select: {
+                    dueDate: true,
+                    amountDue: true,
+                },
+            }
+        );
+
+        let currentMonthAmount = 0;
+        let previousMonthAmount = 0;
+
+        for (const occurrence of occurrences) {
+            const amount = Number(occurrence.amountDue);
+            if (occurrence.dueDate >= currentStart) currentMonthAmount += amount;
+            else previousMonthAmount += amount;
+        }
+
+        currentMonthAmount = roundMoney(currentMonthAmount);
+        previousMonthAmount = roundMoney(previousMonthAmount);
+        const amountChange = roundMoney(currentMonthAmount - previousMonthAmount);
+        const percentageChange = previousMonthAmount === 0 ? null : roundOne((amountChange / previousMonthAmount) * 100);
+
+        return {
+            currency: INSIGHT_CURRENCY,
+            currentMonthAmount,
+            previousMonthAmount,
+            amountChange,
+            percentageChange,
+            hasEnoughData: currentMonthAmount > 0 || previousMonthAmount > 0,
+        };
     }
+
 
     private async getUpcomingPressure(supabaseAuthId: string, asOf: Date): Promise<UpcomingPressureStats> {
         const userId = await this.resolveUserId(supabaseAuthId);
@@ -373,5 +416,5 @@ export class InsightsService {
         const userId = await this.resolveUserId(supabaseAuthId);
 
     }
-    
+
 };
