@@ -31,6 +31,8 @@ import { getDashboard } from "@/features/dashboard/dashboardApi"
 import { signOut } from "@/features/auth/auth.service"
 
 import type { DashboardData } from "@/types/DashboardTypes"
+import { StreakFlame } from "@/components/common/StreakFlame"
+import { StreakTicks } from "@/components/common/StreakTicks"
 
 export default function DashboardPage() {
 	const navigate = useNavigate()
@@ -70,7 +72,7 @@ export default function DashboardPage() {
 
 	const score_ = creditProfile?.currentScore ?? 0
 	const level_ = gamificationProfile?.mascotLevel ?? 1
-	const streakDays_ = gamificationProfile?.currentPaymentStreak ?? 0
+	const knowledgeStreak=gamificationProfile?.currentKnowledgeStreak??0
 
 	const xp = {
 		current: gamificationProfile?.xp ?? 0,
@@ -127,14 +129,37 @@ export default function DashboardPage() {
 					<CreditScoreGauge score={score_} max={850} size="lg" />
 				</div>
 
-				<div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
-
-					<CustomBadge variant="streak" size="md"> {streakDays_} day streak </CustomBadge>
-					<CustomBadge variant="level" size="md"> Lvl {level_} </CustomBadge>
-					<Sticker tone="yellow" shape="squircle" size="sm" tilt="right">
-						<span className="px-2 text-[10px] font-bold tracking-wide text-[#091828]"> Early Bird </span>
-					</Sticker>
-
+				<div className="mt-3 flex flex-col items-center gap-2">
+					<CustomCard
+						className="flex w-full max-w-[280px] flex-col items-center rounded-2xl bg-[#FFF4F7] p-4"
+						data-testid="knowledge-streak"
+					>
+						<p className="text-xs font-bold uppercase tracking-wide text-[#6b6375]">Knowledge streak</p>
+						<StreakFlame
+							days={knowledgeStreak}
+							label="days"
+							size="sm"
+						/>
+						<StreakTicks
+							total={7}
+							completed={Array.from(
+								{length:Math.min(knowledgeStreak,7)},
+								(_,index)=>index,
+							)}
+							size="sm"
+							aria-label={`${knowledgeStreak} day knowledge streak`}
+						/>
+					</CustomCard>
+					<div className="flex items-center justify-center gap-2">
+						<CustomBadge variant="level" size="md">
+							Lvl {level_}
+						</CustomBadge>
+						<Sticker tone="yellow" shape="squircle" size="sm" tilt="right">
+							<span className="px-2 text-[10px] font-bold tracking-wide text-[#091828]">
+								Early Bird
+							</span>
+						</Sticker>
+					</div>
 				</div>
 
             </CustomCard>
