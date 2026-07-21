@@ -188,4 +188,46 @@ export class UsersController {
   async deactivateMe(@CurrentAuthUser() authUser: AuthUser) {
     return this.usersService.deactivateAccount(authUser);
   }
+
+  @ApiOperation({
+    summary: 'Export the authenticated user data',
+    description:
+      "Returns a read-only JSON export containing the authenticated user's own SpendSense data. Authentication secrets are excluded.",
+  })
+  @ApiOkResponse({
+    description: 'The authenticated user data export.',
+    schema: {
+      example: {
+        data: {
+          exportedAt: '2026-07-21T10:00:00.000Z',
+          user: {
+            id: '9f2d7f49-53a2-457c-8a50-8a9d22db83e4',
+            email: 'student@example.com',
+            displayName: 'Kyle',
+          },
+          preferences: {},
+          notificationPreferences: {},
+          creditProfile: {},
+          gamificationProfile: {},
+          obligations: [],
+          paymentOccurrences: [],
+          paymentRecords: [],
+          reminders: [],
+          notifications: [],
+          scoreEvents: [],
+          badges: [],
+          userEvents: [],
+          rewardTransactions: [],
+          quizSessions: [],
+        },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, invalid, or deactivated account token.',
+  })
+  @Get('me/export')
+  async exportMe(@CurrentAuthUser() authUser: AuthUser) {
+    return this.usersService.exportUserData(authUser);
+  }
 }

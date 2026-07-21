@@ -274,15 +274,65 @@ describe('UsersService', () => {
     prisma.user.update.mockResolvedValue({
       ...existingUser,
       deletedAt: new Date('2026-07-21T10:00:00.000Z'),
-    } as InternalUserProfile);
+    });
 
     const result = await service.deactivateAccount(authUser);
 
     expect(result.deactivated).toBe(true);
     expect(result.deactivatedAt).toBeInstanceOf(Date);
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: existingUser.id },
-      data: expect.objectContaining({ deletedAt: expect.any(Date) }),
-    });
+    const updateCall = prisma.user.update.mock.calls[0]?.[0] as
+      | {
+          where: { id: string };
+          data: { deletedAt: unknown };
+        }
+      | undefined;
+
+    expect(updateCall?.where).toEqual({ id: existingUser.id });
+    expect(updateCall?.data.deletedAt).toBeInstanceOf(Date);
+  });
+
+  it('exports only the authenticated user data without writing to the database', async () => {
+    const identity = {
+      id: 'usr_authenticated',
+      deletedAt: null,
+    } as InternalUserProfile;
+    const exportedUser = {
+      id: identity.id,
+      email: authUser.email,
+      displayName: 'Test User',
+      avatarUrl: null,
+      monthlyBudget: null,
+      onboardingCompleted: true,
+      preference: {},
+      notificationPreference: {},
+      creditProfile: {},
+      gamificationProfile: {},
+      obligations: [],
+      paymentOccurrences: [],
+      paymentRecords: [],
+      reminders: [],
+      notifications: [],
+      scoreEvents: [],
+      badges: [],
+      userEvents: [],
+      rewardTransactions: [],
+      quizSessions: [],
+    };
+
+    prisma.user.findUnique
+      .mockResolvedValueOnce(identity)
+      .mockResolvedValueOnce(exportedUser as InternalUserProfile);
+
+    const result = await service.exportUserData(authUser);
+
+    expect(result.exportedAt).toBeInstanceOf(Date);
+    expect(result.user.id).toBe(identity.id);
+    expect(result.user.email).toBe(authUser.email);
+    expect(result.preferences).toBeDefined();
+    expect(result.notificationPreferences).toBeDefined();
+    expect(result.obligations).toEqual([]);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.user.findUnique).toHaveBeenCalledTimes(2);
   });
 });

@@ -9,7 +9,13 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 describe('UsersController', () => {
   let controller: UsersController;
   let usersService: jest.Mocked<
-    Pick<UsersService, 'findOrCreateUser' | 'updateProfile' | 'deactivateAccount'>
+    Pick<
+      UsersService,
+      | 'findOrCreateUser'
+      | 'updateProfile'
+      | 'deactivateAccount'
+      | 'exportUserData'
+    >
   >;
 
   beforeEach(() => {
@@ -17,6 +23,7 @@ describe('UsersController', () => {
       findOrCreateUser: jest.fn(),
       updateProfile: jest.fn(),
       deactivateAccount: jest.fn(),
+      exportUserData: jest.fn(),
     };
 
     controller = new UsersController(usersService as unknown as UsersService);
@@ -181,5 +188,35 @@ describe('UsersController', () => {
 
     await expect(controller.deactivateMe(authUser)).resolves.toEqual(result);
     expect(usersService.deactivateAccount).toHaveBeenCalledWith(authUser);
+  });
+
+  it('exports data for the authenticated user', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'test-supabase-user-1',
+      email: 'test-user-1@example.com',
+    };
+    const result = {
+      exportedAt: new Date('2026-07-21T10:00:00.000Z'),
+      user: { id: 'usr_123', email: authUser.email },
+      preferences: {},
+      notificationPreferences: {},
+      creditProfile: {},
+      gamificationProfile: {},
+      obligations: [],
+      paymentOccurrences: [],
+      paymentRecords: [],
+      reminders: [],
+      notifications: [],
+      scoreEvents: [],
+      badges: [],
+      userEvents: [],
+      rewardTransactions: [],
+      quizSessions: [],
+    };
+
+    usersService.exportUserData.mockResolvedValue(result as never);
+
+    await expect(controller.exportMe(authUser)).resolves.toEqual(result);
+    expect(usersService.exportUserData).toHaveBeenCalledWith(authUser);
   });
 });
