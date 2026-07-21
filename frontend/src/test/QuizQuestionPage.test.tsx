@@ -101,31 +101,28 @@ function mockHook(
     })
 }
 
-function renderPage(initialEntry="/quiz/sessions/session-1"){
+function renderPage(){
     return render(
-        <MemoryRouter initialEntries={[initialEntry]}>
+        <MemoryRouter initialEntries={["/quiz/session/session-1"]}>
             <Routes>
                 <Route
-                    path="/quiz/sessions/:sessionId"
+                    path="/quiz/session/:sessionId"
                     element={<QuizQuestionPage/>}
                 />
-
                 <Route
-                    path="/quiz/sessions/:sessionId/feedback"
+                    path="/quiz/session/:sessionId/feedback"
                     element={<div>Feedback screen</div>}
                 />
-
                 <Route
-                    path="/quiz/sessions/:sessionId/results"
+                    path="/quiz/session/:sessionId/results"
                     element={<div>Results screen</div>}
                 />
-
                 <Route
                     path="/quests"
                     element={<div>Quests screen</div>}
                 />
             </Routes>
-        </MemoryRouter>
+        </MemoryRouter>,
     )
 }
 
