@@ -407,7 +407,6 @@ export class InsightsService {
 
         const windowStart = startOfUtcDay(asOf);
         const windowEnd = addUtcDays(windowStart, UPCOMING_WINDOW_DAYS);
-
         const currentMonthStart = startOfUtcMonth(asOf);
         const recentStart = addUtcMonths(currentMonthStart, -RECENT_MONTH_COUNT);
 
@@ -425,7 +424,7 @@ export class InsightsService {
                     select: { obligationId: true, dueDate: true, amountDue: true, },
                     orderBy: { dueDate: "asc" },
                 }),
-                
+
                 this.prisma.paymentOccurrence.findMany({
                     where: {
                         userId,
@@ -439,7 +438,6 @@ export class InsightsService {
                 }),
             ]
         );
-
 
         const upcomingAmount = roundMoney(upcomingOccurrences.reduce((total, occurrence) => total + Number(occurrence.amountDue), 0,),);
         const recentTotal = recentOccurrences.reduce((total, occurrence) => total + Number(occurrence.amountDue), 0,);
@@ -464,6 +462,51 @@ export class InsightsService {
 
     private async getCategoryBreakdown(supabaseAuthId: string, asOf: Date): Promise<CategoryBreakdownStats> {
         const userId = await this.resolveUserId(supabaseAuthId);
+        const currentStart = startOfUtcMonth(asOf);
+        const currentEnd = addUtcMonths(currentStart, 1);
+
+        const occurrences = await this.prisma.paymentOccurrence.findMany({
+            where: {
+                userId,
+                deletedAt: null,
+                currency: INSIGHT_CURRENCY,
+                dueDate: { gte: currentStart, lt: currentEnd },
+                status: { not: PaymentOccurrenceStatus.CANCELLED },
+                obligation: { is: { deletedAt: null } },
+            },
+            select: {
+                amountDue: true,
+                obligation: { select: { type: true } },
+            },
+        });
+
+        const totals = new Map<string, { amount: number; occurrenceCount: number }>();
+
+        for (const occurrence of occurrences) {
+            const type = occurrence.obligation.type;
+            const current = totals.get(type) ?? { amount: 0, occurrenceCount: 0 };
+            current.amount += Number(occurrence.amountDue);
+            current.occurrenceCount += 1;
+            totals.set(type, current);
+        }
+
+        const currentMonthTotal = roundMoney([...totals.values()].reduce((sum, item) => sum + item.amount, 0));
+        const breakdown = [...totals.entries()].map(([type, item]) => (
+            {
+                type,
+                amount: roundMoney(item.amount),
+                percentage: currentMonthTotal === 0 ? 0 : roundOne((item.amount / currentMonthTotal) * 100),
+                occurrenceCount: item.occurrenceCount,
+            }
+        )).sort((a, b) => b.amount - a.amount);
+
+        return {
+            currency: INSIGHT_CURRENCY,
+            currentMonthTotal,
+            breakdown,
+            dominantType: breakdown[0] ?? null,
+            hasEnoughData: breakdown.length > 0,
+        };
 
     }
 
