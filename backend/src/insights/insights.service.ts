@@ -405,7 +405,62 @@ export class InsightsService {
     private async getUpcomingPressure(supabaseAuthId: string, asOf: Date): Promise<UpcomingPressureStats> {
         const userId = await this.resolveUserId(supabaseAuthId);
 
+        const windowStart = startOfUtcDay(asOf);
+        const windowEnd = addUtcDays(windowStart, UPCOMING_WINDOW_DAYS);
+
+        const currentMonthStart = startOfUtcMonth(asOf);
+        const recentStart = addUtcMonths(currentMonthStart, -RECENT_MONTH_COUNT);
+
+        const [upcomingOccurrences, recentOccurrences] = await this.prisma.$transaction(
+            [
+                this.prisma.paymentOccurrence.findMany({
+                    where: {
+                        userId,
+                        deletedAt: null,
+                        currency: INSIGHT_CURRENCY,
+                        dueDate: { gte: windowStart, lt: windowEnd, },
+                        status: PaymentOccurrenceStatus.PENDING,
+                        obligation: { is: { deletedAt: null, }, },
+                    },
+                    select: { obligationId: true, dueDate: true, amountDue: true, },
+                    orderBy: { dueDate: "asc" },
+                }),
+                
+                this.prisma.paymentOccurrence.findMany({
+                    where: {
+                        userId,
+                        deletedAt: null,
+                        currency: INSIGHT_CURRENCY,
+                        dueDate: { gte: recentStart, lt: currentMonthStart },
+                        status: { not: PaymentOccurrenceStatus.CANCELLED },
+                        obligation: { is: { deletedAt: null } },
+                    },
+                    select: { amountDue: true, },
+                }),
+            ]
+        );
+
+
+        const upcomingAmount = roundMoney(upcomingOccurrences.reduce((total, occurrence) => total + Number(occurrence.amountDue), 0,),);
+        const recentTotal = recentOccurrences.reduce((total, occurrence) => total + Number(occurrence.amountDue), 0,);
+        const recentAverageMonthlyAmount = recentTotal / RECENT_MONTH_COUNT;
+        const recentAverageWeeklyAmount = roundMoney(recentAverageMonthlyAmount / WEEKS_PER_MONTH,);
+        const pressureRatio = recentAverageWeeklyAmount === 0 ? null : roundOne(upcomingAmount / recentAverageWeeklyAmount);
+        return {
+            currency: INSIGHT_CURRENCY,
+            windowDays: UPCOMING_WINDOW_DAYS,
+            paymentCount: upcomingOccurrences.length,
+            obligationCount: new Set(upcomingOccurrences.map((occurrence) => occurrence.obligationId),).size,
+            upcomingAmount,
+            recentAverageWeeklyAmount,
+            pressureRatio,
+            nextDueDate: upcomingOccurrences[0]?.dueDate.toISOString() ?? null,
+            hasEnoughData: upcomingOccurrences.length > 0,
+        };
+
     }
+
+
 
     private async getCategoryBreakdown(supabaseAuthId: string, asOf: Date): Promise<CategoryBreakdownStats> {
         const userId = await this.resolveUserId(supabaseAuthId);
