@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PaymentOccurrenceStatus, PaymentRecordStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { createOnTimePaymentInsight, InsightsResponse, OnTimePaymentStats } from './insights.rules';
+import { createOnTimePaymentInsight} from './insights.rules';
 
 const SETTLED_PAYMENT_STATUSES: PaymentOccurrenceStatus[] = [
     PaymentOccurrenceStatus.PAID,
