@@ -80,198 +80,6 @@ export class InsightsService {
         return user.id;
     }
 
-    // FUNCTION - GET THE SETTLED PAYMENTS
-    async getSettledPayments(supabaseAuthId: string) {
-        const userId = await this.resolveUserId(supabaseAuthId);
-        const settledPayments = await this.prisma.paymentOccurrence.findMany({
-            where: {
-                userId,
-                deletedAt: null,
-                status: { in: SETTLED_PAYMENT_STATUSES },
-                obligation: { is: { deletedAt: null } },
-            },
-            select: {
-                id: true,
-                obligationId: true,
-                dueDate: true,
-                amountDue: true,
-                currency: true,
-                status: true,
-                sequenceNumber: true,
-                paidAt: true,
-                obligation: {
-                    select: {
-                        id: true,
-                        name: true,
-                        description: true,
-                        type: true,
-                        status: true,
-                        priority: true,
-                        amount: true,
-                        currency: true,
-                        category: {
-                            select: {
-                                id: true,
-                                name: true,
-                                iconKey: true,
-                                colourKey: true,
-                            },
-                        },
-                    },
-                },
-                payment: {
-                    select: {
-                        id: true,
-                        amountPaid: true,
-                        paidDate: true,
-                        paymentStatus: true,
-                        daysLate: true,
-                        simulatedInterest: true,
-                        notes: true,
-                    },
-                },
-            },
-
-            orderBy: [{ paidAt: 'desc' }, { dueDate: 'desc' }],
-        });
-
-        const payments = settledPayments.map((occurrence) => ({
-            id: occurrence.id,
-            obligationId: occurrence.obligationId,
-            dueDate: occurrence.dueDate,
-            amountDue: Number(occurrence.amountDue),
-            currency: occurrence.currency,
-            status: occurrence.status,
-            sequenceNumber: occurrence.sequenceNumber,
-            paidAt: occurrence.paidAt,
-
-            obligation: {
-                ...occurrence.obligation,
-                amount: Number(occurrence.obligation.amount),
-            },
-
-            payment: occurrence.payment
-                ? {
-                    ...occurrence.payment,
-                    amountPaid: Number(occurrence.payment.amountPaid),
-                    simulatedInterest: Number(occurrence.payment.simulatedInterest),
-                }
-                : null,
-        }));
-
-        return {
-            count: payments.length,
-            payments,
-        };
-    }
-
-    // FUNCTION - GET THE SETTLEDMENT RATE
-    async getSettlementRate(supabaseAuthId: string) {
-        const userId = await this.resolveUserId(supabaseAuthId);
-        const asOf = new Date();
-        const [eligiblePaymentCount, settledPaymentCount] =
-            await this.prisma.$transaction([
-                this.prisma.paymentOccurrence.count({
-                    where: {
-                        userId,
-                        deletedAt: null,
-                        dueDate: { lte: asOf },
-                        status: { not: PaymentOccurrenceStatus.CANCELLED },
-                        obligation: { is: { deletedAt: null } },
-                    },
-                }),
-                this.prisma.paymentOccurrence.count({
-                    where: {
-                        userId,
-                        deletedAt: null,
-                        dueDate: { lte: asOf },
-                        status: { in: SETTLED_PAYMENT_STATUSES },
-                        obligation: { is: { deletedAt: null } },
-                    },
-                }),
-            ]);
-        const unsettledPaymentCount = eligiblePaymentCount - settledPaymentCount;
-        let settlementPercentage = 0;
-        if (eligiblePaymentCount !== 0) {
-            settlementPercentage = Number(
-                ((settledPaymentCount / eligiblePaymentCount) * 100).toFixed(2),
-            );
-        }
-        return {
-            asOf: asOf.toISOString(),
-            settledPaymentCount,
-            unsettledPaymentCount,
-            eligiblePaymentCount,
-            settlementPercentage,
-            hasEnoughData: eligiblePaymentCount > 0,
-        };
-    }
-
-    // FUNCTION - CALCULATE THE ON TIME PAYMENT RATE
-    async getOnTimePaymentRateOLD(supabaseAuthId: string,): Promise<OnTimePaymentStats> {
-
-        const userId = await this.resolveUserId(supabaseAuthId);
-        const asOf = new Date();
-        const [onTimePaymentCount, latePaymentCount, missedPaymentCount] = await this.prisma.$transaction(
-            [
-
-                this.prisma.paymentOccurrence.count(
-                    {
-                        where: {
-                            userId,
-                            deletedAt: null,
-                            dueDate: { lte: asOf },
-                            status: { in: SETTLED_PAYMENT_STATUSES },
-                            payment: { is: { paymentStatus: PaymentRecordStatus.ON_TIME } },
-                            obligation: { is: { deletedAt: null } },
-                        },
-                    }
-                ),
-
-                this.prisma.paymentOccurrence.count(
-                    {
-                        where: {
-                            userId,
-                            deletedAt: null,
-                            dueDate: { lte: asOf },
-                            status: { in: SETTLED_PAYMENT_STATUSES },
-                            payment: { is: { paymentStatus: PaymentRecordStatus.LATE } },
-                            obligation: { is: { deletedAt: null } },
-                        },
-                    }
-                ),
-
-                this.prisma.paymentOccurrence.count(
-                    {
-                        where: {
-                            userId,
-                            deletedAt: null,
-                            dueDate: { lte: asOf },
-                            status: PaymentOccurrenceStatus.MISSED,
-                            obligation: { is: { deletedAt: null } },
-                        },
-                    }
-                ),
-            ]
-        );
-
-        let eligiblePaymentCount = onTimePaymentCount + latePaymentCount + missedPaymentCount;
-        let onTimePaymentPercentage = 0;
-        if (eligiblePaymentCount !== 0) {
-            onTimePaymentPercentage = Number(((onTimePaymentCount / eligiblePaymentCount) * 100).toFixed(2));
-        }
-
-        return {
-            asOf: asOf.toISOString(),
-            onTimePaymentCount,
-            latePaymentCount,
-            missedPaymentCount,
-            eligiblePaymentCount,
-            onTimePaymentPercentage,
-            hasEnoughData: eligiblePaymentCount > 0,
-        };
-    }
-
 
     // aDDING new functions here for simplified version - once comlete remove the specific above functions that we will not use. 
 
@@ -512,7 +320,67 @@ export class InsightsService {
 
     private async getPaymentStreak(supabaseAuthId: string, asOf: Date): Promise<PaymentStreakStats> {
         const userId = await this.resolveUserId(supabaseAuthId);
+        const currentStart = startOfUtcMonth(asOf);
+        const currentEnd = addUtcMonths(currentStart, 1);
 
+        const occurrences = await this.prisma.paymentOccurrence.findMany(
+            {
+                where: {
+                    userId,
+                    deletedAt: null,
+                    dueDate: { lte: asOf },
+                    status: { in: STREAK_STATUSES, },
+                    obligation: { is: { deletedAt: null } },
+                },
+                select: {
+                    dueDate: true,
+                    status: true,
+                    payment: { select: { paymentStatus: true } },
+                },
+                orderBy: { dueDate: "asc" },
+            }
+        );
+
+        let currentOnTimeStreak = 0;
+        let longestOnTimeStreak = 0;
+        let currentMonthOnTimeCount = 0;
+        let currentMonthLateCount = 0;
+        let currentMonthMissedCount = 0;
+        let currentMonthOverdueCount = 0;
+
+        for (const occurrence of occurrences) {
+            const isOnTime = occurrence.payment?.paymentStatus === PaymentRecordStatus.ON_TIME;
+            const isLate = occurrence.payment?.paymentStatus === PaymentRecordStatus.LATE;
+            const isMissed = occurrence.status === PaymentOccurrenceStatus.MISSED;
+            const isOverdue = occurrence.status === PaymentOccurrenceStatus.OVERDUE;
+
+            if (isOnTime) {
+                currentOnTimeStreak += 1;
+                longestOnTimeStreak = Math.max(longestOnTimeStreak, currentOnTimeStreak,);
+            } else {
+                currentOnTimeStreak = 0;
+            }
+
+            const isCurrentMonth = occurrence.dueDate >= currentStart && occurrence.dueDate < currentEnd;
+
+            if (isCurrentMonth) {
+                if (isOnTime) currentMonthOnTimeCount += 1;
+                else if (isLate) currentMonthLateCount += 1;
+                else if (isMissed) currentMonthMissedCount += 1;
+                else if (isOverdue) currentMonthOverdueCount += 1;
+            }
+        }
+
+        return {
+            currentOnTimeStreak,
+            longestOnTimeStreak,
+            resolvedOutcomeCount: occurrences.length,
+            currentMonthOnTimeCount,
+            currentMonthLateCount,
+            currentMonthMissedCount,
+            currentMonthOverdueCount,
+            hasEnoughData: occurrences.length > 0,
+        };
     }
 
 };
