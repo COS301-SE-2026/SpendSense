@@ -25,6 +25,7 @@ import TopicQuizPage from './domains/TopicQuizPage.tsx'
 import TopicQuizTeachingPage from './domains/TopicQuizTeachingPage.tsx'
 import QuizQuestionPage from './domains/QuizQuestionPage.tsx'
 import QuizAnswerFeedbackPage from './domains/QuizAnswerFeedbackPage.tsx'
+import QuizResultsPage from './domains/QuizResultsPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -54,6 +55,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/quiz/session/:sessionId" element={<ProtectedRoute><QuizQuestionPage/></ProtectedRoute>}/>
         <Route path="/quiz/topics" element={<ProtectedRoute><TopicQuizPage/></ProtectedRoute>}/>
         <Route path="/quiz/session/:sessionId/feedback" element={<ProtectedRoute><QuizAnswerFeedbackPage/></ProtectedRoute>}/>
+        <Route path="/quiz/session/:sessionId/results" element={<ProtectedRoute><QuizResultsPage/></ProtectedRoute>}/>
         <Route path="/friends" element={<FriendsPage/>}/>
         <Route path="/friends/list" element={<FriendsListPage/>}/>
         <Route path="/friends/add" element={<AddFriendPage/>}/>
