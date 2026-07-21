@@ -25,7 +25,7 @@ const OCCURRENCE_HORIZON_MONTHS = 6;
 export class ObligationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(userId: string, dto: CreateObligationDto) {
+  async create(userId: string, dto: CreateObligationDto, defaultReminderDaysBefore: number) {
     // validate that category actually exists
     const category = await this.prisma.category.findUnique({
       where: { id: dto.categoryId },
@@ -111,7 +111,7 @@ export class ObligationsService {
       );
 
       const remindersEnabled = dto.reminders?.enabled !== false;
-      const daysBefore = dto.reminders?.daysBefore ?? [3];
+      const daysBefore = dto.reminders?.daysBefore ?? [defaultReminderDaysBefore];
       const channels = dto.reminders?.channels ?? [ReminderChannel.IN_APP];
 
       const createdReminders: Array<{
