@@ -1,12 +1,63 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PaymentOccurrenceStatus, PaymentRecordStatus } from '@prisma/client';
+import { Currency, PaymentOccurrenceStatus, PaymentRecordStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { createOnTimePaymentInsight} from './insights.rules';
+import { createCategoryBreakdownInsight, createObligationTrendInsight, createOnTimePaymentInsight, createPaymentStreakInsight, createUpcomingPressureInsight, } from "./insights.rules";
+import { CategoryBreakdownStats, InsightsResponse, ObligationTrendStats, OnTimePaymentStats, PaymentPeriodStats, PaymentStreakStats, UpcomingPressureStats, } from "./insights.types";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const UPCOMING_WINDOW_DAYS = 7;
+const RECENT_MONTH_COUNT = 3;
+const WEEKS_PER_MONTH = 4.345;
+
+const INSIGHT_CURRENCY = Currency.ZAR; // for demo 2 we will be using ZAR
 
 const SETTLED_PAYMENT_STATUSES: PaymentOccurrenceStatus[] = [
     PaymentOccurrenceStatus.PAID,
     PaymentOccurrenceStatus.PAID_LATE,
 ];
+
+const STREAK_STATUSES: PaymentOccurrenceStatus[] = [
+    PaymentOccurrenceStatus.PAID,
+    PaymentOccurrenceStatus.PAID_LATE,
+    PaymentOccurrenceStatus.MISSED,
+    PaymentOccurrenceStatus.OVERDUE,
+];
+
+// helper fucntions 
+function startOfUtcDay(date: Date): Date {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function startOfUtcMonth(date: Date): Date {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+}
+
+function addUtcDays(date: Date, days: number): Date {
+    return new Date(date.getTime() + days * DAY_MS);
+}
+
+function addUtcMonths(date: Date, months: number): Date {
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
+}
+
+function roundMoney(value: number): number {
+    return Math.round(value * 100) / 100;
+}
+
+function roundOne(value: number): number {
+    return Number(value.toFixed(1));
+}
+
+function emptyPaymentPeriod(): PaymentPeriodStats {
+    return {
+        onTimePaymentCount: 0,
+        latePaymentCount: 0,
+        missedPaymentCount: 0,
+        eligiblePaymentCount: 0,
+        onTimePaymentPercentage: 0,
+    };
+}
+
 @Injectable()
 export class InsightsService {
     constructor(private readonly prisma: PrismaService) { }
