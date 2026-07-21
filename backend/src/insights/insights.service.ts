@@ -12,11 +12,6 @@ const WEEKS_PER_MONTH = 4.345;
 const INSIGHT_CURRENCY = Currency.ZAR; // for demo 2 we will be using ZAR
 const PAYMENT_HISTORY_MONTH_COUNT = 12;
 
-const SETTLED_PAYMENT_STATUSES: PaymentOccurrenceStatus[] = [
-    PaymentOccurrenceStatus.PAID,
-    PaymentOccurrenceStatus.PAID_LATE,
-];
-
 const STREAK_STATUSES: PaymentOccurrenceStatus[] = [
     PaymentOccurrenceStatus.PAID,
     PaymentOccurrenceStatus.PAID_LATE,
