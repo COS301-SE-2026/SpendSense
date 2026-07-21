@@ -110,7 +110,7 @@ export default function QuizAnswerFeedbackPage(){
                             <div className="mx-auto flex size-12 items-center justify-center rounded-full border-2 border-[#091828] bg-white">
                                 <Trophy className="size-5 text-[#AC2A5D]"/>
                             </div>
-                            <p className="mt-3 text-sm font-bold text-[#091828]">Quiz complete — {result.score} of {result.totalQuestions} correct</p>
+                            <p className="mt-3 text-sm font-bold text-[#091828]">Quiz complete, {result.score} of {result.totalQuestions} correct</p>
                             <p className="mt-1 text-xs font-semibold text-[#6E0034]">See your full results and rewards next.</p>
                         </div>
                     </div>

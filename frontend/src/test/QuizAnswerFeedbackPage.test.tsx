@@ -124,7 +124,7 @@ describe("QuizAnswerFeedbackPage",()=>{
             nextQuestion:null,
             result:finishedResult,
         })
-        expect(screen.getByText("Quiz complete — 4 of 5 correct")).toBeInTheDocument()
+        expect(screen.getByText("Quiz complete, 4 of 5 correct")).toBeInTheDocument()
     })
     it("advances to the next question on continue when the session is still in progress",async()=>{
         const user=userEvent.setup()
