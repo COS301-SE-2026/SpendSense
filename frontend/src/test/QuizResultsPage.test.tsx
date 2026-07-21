@@ -146,7 +146,7 @@ describe("QuizResultsPage",()=>{
     })
     it("shows the correct-answer count and total questions",()=>{
         renderPage()
-        expect(screen.getByText("4/5")).toBeInTheDocument()
+        expect(screen.getByText((_,element)=>element?.textContent==="4/5")).toBeInTheDocument()
         expect(screen.getByText("Correct answers")).toBeInTheDocument()
     })
     it("shows an attempts note when the session had requeues",()=>{
