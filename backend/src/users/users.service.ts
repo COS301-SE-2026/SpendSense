@@ -132,7 +132,9 @@ export class UsersService {
         ...(updates.displayName !== undefined && {
           displayName: updates.displayName,
         }),
-        ...(updates.avatarUrl !== undefined && { avatarUrl: updates.avatarUrl }),
+        ...(updates.avatarUrl !== undefined && {
+          avatarUrl: updates.avatarUrl,
+        }),
         ...(updates.monthlyBudget !== undefined && {
           monthlyBudget: updates.monthlyBudget,
         }),

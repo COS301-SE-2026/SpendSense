@@ -130,7 +130,10 @@ export class UsersController {
     @CurrentAuthUser() authUser: AuthUser,
     @Body() updates: UpdateProfileDto,
   ) {
-    const userProfile = await this.usersService.updateProfile(authUser, updates);
+    const userProfile = await this.usersService.updateProfile(
+      authUser,
+      updates,
+    );
     const {
       preference,
       notificationPreference,
