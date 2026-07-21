@@ -54,13 +54,15 @@ function useQuestsOverview(){
 			}
 		}
 	}, [])
-	useEffect(() =>{
+	useEffect(()=>{
 		const controller=new AbortController()
-		load(controller.signal)
-		return() =>{
+		void Promise.resolve().then(()=>{
+			load(controller.signal)
+		})
+		return()=>{
 			controller.abort()
 		}
-	}, [load])
+	},[load])
 	return{ daily, topics, loading, error, reload:()=>load() }
 }
 
