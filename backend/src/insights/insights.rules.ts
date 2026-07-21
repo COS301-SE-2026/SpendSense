@@ -49,7 +49,7 @@ export function createOnTimePaymentInsight(stats: OnTimePaymentStats,): InsightC
         value: `${rate}%`,
         explanation: `${stats.currentPeriod.onTimePaymentCount} of ` + `${stats.currentPeriod.eligiblePaymentCount} eligible payments were on time. ` + trendText,
         severity,
-        // link: "/payments",
+        // // link: "/payments",
     };
 }
 
@@ -61,7 +61,7 @@ export function createObligationTrendInsight(stats: ObligationTrendStats,): Insi
             value: "Not enough data",
             explanation: "There are no scheduled obligation amounts for this month or last month.",
             severity: "info",
-            // link: "/obligations",
+            // // link: "/obligations",
         };
     }
 
@@ -169,7 +169,7 @@ export function createPaymentStreakInsight(stats: PaymentStreakStats,): InsightC
             value: `${stats.currentOnTimeStreak} on-time in a row`,
             explanation: `${stats.currentMonthMissedCount} missed and ` + `${stats.currentMonthOverdueCount} overdue payment(s) this month.`,
             severity: "critical",
-            // link: "/payments",
+            // // link: "/payments",
         };
     }
 
@@ -180,7 +180,7 @@ export function createPaymentStreakInsight(stats: PaymentStreakStats,): InsightC
             value: `${stats.currentOnTimeStreak} on-time in a row`,
             explanation: `${stats.currentMonthLateCount} payment(s) were late this month. ` + `Your longest on-time streak is ${stats.longestOnTimeStreak}.`,
             severity: "warning",
-            // link: "/payments",
+            // // link: "/payments",
         };
     }
 
@@ -190,6 +190,6 @@ export function createPaymentStreakInsight(stats: PaymentStreakStats,): InsightC
         value: `${stats.currentOnTimeStreak} on-time in a row`,
         explanation:`${stats.currentMonthOnTimeCount} on-time payment(s) this month. ` +`Your longest streak is ${stats.longestOnTimeStreak}.`,
         severity: stats.currentOnTimeStreak >= 3 ? "positive" : "info",
-        // link: "/payments",
+        // // link: "/payments",
     };
 }

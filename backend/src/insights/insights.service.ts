@@ -82,30 +82,6 @@ export class InsightsService {
     async getInsights(userId: string): Promise<InsightsResponse> {
         // const userId = await this.resolveUserId(supabaseAuthId);
 
-        const user = await this.prisma.user.findUnique({
-            where: {
-                id: userId,
-            },
-            select: {
-                id: true,
-                email: true,
-                supabaseAuthId: true,
-            },
-        });
-
-        const occurrenceCount =
-            await this.prisma.paymentOccurrence.count({
-                where: {
-                    userId,
-                },
-            });
-
-        console.log('INSIGHTS DATABASE CHECK:', {
-            requestedUserId: userId,
-            user,
-            occurrenceCount,
-        });
-
         const asOf = new Date();
         const [onTimeStats, trendStats, upcomingStats, categoryStats, streakStats] =
             await Promise.all([
