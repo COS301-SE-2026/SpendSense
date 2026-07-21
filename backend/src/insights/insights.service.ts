@@ -10,6 +10,7 @@ const RECENT_MONTH_COUNT = 3;
 const WEEKS_PER_MONTH = 4.345;
 
 const INSIGHT_CURRENCY = Currency.ZAR; // for demo 2 we will be using ZAR
+const PAYMENT_HISTORY_MONTH_COUNT = 12;
 
 const SETTLED_PAYMENT_STATUSES: PaymentOccurrenceStatus[] = [
     PaymentOccurrenceStatus.PAID,
@@ -83,8 +84,33 @@ export class InsightsService {
 
     // aDDING new functions here for simplified version - once comlete remove the specific above functions that we will not use. 
 
-    async getInsights(supabaseAuthId: string): Promise<InsightsResponse> {
-        const userId = await this.resolveUserId(supabaseAuthId);
+    async getInsights(userId: string): Promise<InsightsResponse> {
+        // const userId = await this.resolveUserId(supabaseAuthId);
+
+        const user = await this.prisma.user.findUnique({
+            where: {
+                id: userId,
+            },
+            select: {
+                id: true,
+                email: true,
+                supabaseAuthId: true,
+            },
+        });
+
+        const occurrenceCount =
+            await this.prisma.paymentOccurrence.count({
+                where: {
+                    userId,
+                },
+            });
+
+        console.log('INSIGHTS DATABASE CHECK:', {
+            requestedUserId: userId,
+            user,
+            occurrenceCount,
+        });
+
         const asOf = new Date();
         const [onTimeStats, trendStats, upcomingStats, categoryStats, streakStats] =
             await Promise.all([
@@ -107,11 +133,13 @@ export class InsightsService {
         };
     }
 
-    private async getOnTimePaymentRate(supabaseAuthId: string, asOf: Date,): Promise<OnTimePaymentStats> {
-        const userId = await this.resolveUserId(supabaseAuthId);
-        const currentStart = startOfUtcMonth(asOf);
-        const currentEnd = addUtcMonths(currentStart, 1);
-        const previousStart = addUtcMonths(currentStart, -1);
+    private async getOnTimePaymentRate(userId: string, asOf: Date,): Promise<OnTimePaymentStats> {
+        // const userId = await this.resolveUserId(supabaseAuthId);
+        const currentMonthStart = startOfUtcMonth(asOf);
+        const currentStart = addUtcMonths(currentMonthStart, -(PAYMENT_HISTORY_MONTH_COUNT - 1),);
+
+        const currentEnd = addUtcMonths(currentMonthStart, 1);
+        const previousStart = addUtcMonths(currentStart, -PAYMENT_HISTORY_MONTH_COUNT);
 
         const occurrences = await this.prisma.paymentOccurrence.findMany(
             {
@@ -162,8 +190,8 @@ export class InsightsService {
     }
 
 
-    private async getObligationTrend(supabaseAuthId: string, asOf: Date): Promise<ObligationTrendStats> {
-        const userId = await this.resolveUserId(supabaseAuthId);
+    private async getObligationTrend(userId: string, asOf: Date): Promise<ObligationTrendStats> {
+        // const userId = await this.resolveUserId(supabaseAuthId);
         const currentStart = startOfUtcMonth(asOf);
         const currentEnd = addUtcMonths(currentStart, 1);
         const previousStart = addUtcMonths(currentStart, -1);
@@ -210,8 +238,8 @@ export class InsightsService {
     }
 
 
-    private async getUpcomingPressure(supabaseAuthId: string, asOf: Date): Promise<UpcomingPressureStats> {
-        const userId = await this.resolveUserId(supabaseAuthId);
+    private async getUpcomingPressure(userId: string, asOf: Date): Promise<UpcomingPressureStats> {
+        // const userId = await this.resolveUserId(supabaseAuthId);
 
         const windowStart = startOfUtcDay(asOf);
         const windowEnd = addUtcDays(windowStart, UPCOMING_WINDOW_DAYS);
@@ -268,8 +296,8 @@ export class InsightsService {
 
 
 
-    private async getCategoryBreakdown(supabaseAuthId: string, asOf: Date): Promise<CategoryBreakdownStats> {
-        const userId = await this.resolveUserId(supabaseAuthId);
+    private async getCategoryBreakdown(userId: string, asOf: Date): Promise<CategoryBreakdownStats> {
+        // const userId = await this.resolveUserId(supabaseAuthId);
         const currentStart = startOfUtcMonth(asOf);
         const currentEnd = addUtcMonths(currentStart, 1);
 
@@ -318,8 +346,8 @@ export class InsightsService {
 
     }
 
-    private async getPaymentStreak(supabaseAuthId: string, asOf: Date): Promise<PaymentStreakStats> {
-        const userId = await this.resolveUserId(supabaseAuthId);
+    private async getPaymentStreak(userId: string, asOf: Date): Promise<PaymentStreakStats> {
+        //const userId = await this.resolveUserId(supabaseAuthId);
         const currentStart = startOfUtcMonth(asOf);
         const currentEnd = addUtcMonths(currentStart, 1);
 
