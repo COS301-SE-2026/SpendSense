@@ -60,6 +60,7 @@ function emptyPaymentPeriod(): PaymentPeriodStats {
 
 @Injectable()
 export class InsightsService {
+
     constructor(private readonly prisma: PrismaService) { }
 
     // convert auth id into payment occurance table userId
@@ -207,7 +208,7 @@ export class InsightsService {
     }
 
     // FUNCTION - CALCULATE THE ON TIME PAYMENT RATE
-    async getOnTimePaymentRate(supabaseAuthId: string,): Promise<OnTimePaymentStats> {
+    async getOnTimePaymentRateOLD(supabaseAuthId: string,): Promise<OnTimePaymentStats> {
 
         const userId = await this.resolveUserId(supabaseAuthId);
         const asOf = new Date();
@@ -271,12 +272,106 @@ export class InsightsService {
         };
     }
 
-    async getInsights(supabaseAuthId: string): Promise<InsightsResponse> {
-        const onTimeStats = await this.getOnTimePaymentRate(supabaseAuthId);
-        const onTimeInsight = createOnTimePaymentInsight(onTimeStats);
+
+    // aDDING new functions here for simplified version - once comlete remove the specific above functions that we will not use. 
+
+    async getInsights(userId: string): Promise<InsightsResponse> {
+        const asOf = new Date();
+
+        const [onTimeStats, trendStats, upcomingStats, categoryStats, streakStats] =
+            await Promise.all([
+                this.getOnTimePaymentRate(userId, asOf),
+                this.getObligationTrend(userId, asOf),
+                this.getUpcomingPressure(userId, asOf),
+                this.getCategoryBreakdown(userId, asOf),
+                this.getPaymentStreak(userId, asOf),
+            ]);
+
         return {
-            asOf: onTimeStats.asOf,
-            insights: [onTimeInsight],
+            asOf: asOf.toISOString(),
+            insights: [
+                createOnTimePaymentInsight(onTimeStats),
+                createObligationTrendInsight(trendStats),
+                createUpcomingPressureInsight(upcomingStats),
+                createCategoryBreakdownInsight(categoryStats),
+                createPaymentStreakInsight(streakStats),
+            ],
         };
     }
+
+    private async getOnTimePaymentRate(supabaseAuthId: string, asOf: Date,): Promise<OnTimePaymentStats> {
+        const userId = await this.resolveUserId(supabaseAuthId);
+        const currentStart = startOfUtcMonth(asOf);
+        const currentEnd = addUtcMonths(currentStart, 1);
+        const previousStart = addUtcMonths(currentStart, -1);
+
+        const occurrences = await this.prisma.paymentOccurrence.findMany(
+            {
+                where: {
+                    userId,
+                    deletedAt: null,
+                    dueDate: { gte: previousStart, lt: currentEnd, },
+                    status: { in: [PaymentOccurrenceStatus.PAID, PaymentOccurrenceStatus.PAID_LATE, PaymentOccurrenceStatus.MISSED] },
+                    obligation: { is: { deletedAt: null } },
+                },
+                select: {
+                    dueDate: true,
+                    status: true,
+                    payment: { select: { paymentStatus: true } },
+                },
+            }
+        );
+
+        const currentPeriod = emptyPaymentPeriod();
+        const previousPeriod = emptyPaymentPeriod();
+
+        for (const occurrence of occurrences) {
+            const period = occurrence.dueDate >= currentStart ? currentPeriod : previousPeriod;
+
+            if (occurrence.payment?.paymentStatus === PaymentRecordStatus.ON_TIME) {
+                period.onTimePaymentCount += 1;
+            } else if (
+                occurrence.payment?.paymentStatus === PaymentRecordStatus.LATE
+            ) {
+                period.latePaymentCount += 1;
+            } else if (occurrence.status === PaymentOccurrenceStatus.MISSED) {
+                period.missedPaymentCount += 1;
+            }
+        }
+
+        for (const period of [currentPeriod, previousPeriod]) {
+            period.eligiblePaymentCount = period.onTimePaymentCount + period.latePaymentCount + period.missedPaymentCount;
+            period.onTimePaymentPercentage = period.eligiblePaymentCount === 0 ? 0 : roundOne((period.onTimePaymentCount / period.eligiblePaymentCount) * 100);
+        }
+        const percentagePointChange = previousPeriod.eligiblePaymentCount === 0 ? null : roundOne(currentPeriod.onTimePaymentPercentage - previousPeriod.onTimePaymentPercentage);
+
+        return {
+            currentPeriod,
+            previousPeriod,
+            percentagePointChange,
+            hasEnoughData: currentPeriod.eligiblePaymentCount > 0,
+        };
+    }
+
+
+    private async getObligationTrend(supabaseAuthId: string, asOf: Date): Promise<ObligationTrendStats> {
+        const userId = await this.resolveUserId(supabaseAuthId);
+
+    }
+
+    private async getUpcomingPressure(supabaseAuthId: string, asOf: Date): Promise<UpcomingPressureStats> {
+        const userId = await this.resolveUserId(supabaseAuthId);
+
+    }
+
+    private async getCategoryBreakdown(supabaseAuthId: string, asOf: Date): Promise<CategoryBreakdownStats> {
+        const userId = await this.resolveUserId(supabaseAuthId);
+
+    }
+
+    private async getPaymentStreak(supabaseAuthId: string, asOf: Date): Promise<PaymentStreakStats> {
+        const userId = await this.resolveUserId(supabaseAuthId);
+
+    }
+    
 };
