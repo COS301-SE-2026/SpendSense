@@ -248,4 +248,41 @@ describe('UsersService', () => {
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
+
+  it('rejects a deactivated account during profile resolution', async () => {
+    const deactivatedUser = {
+      id: 'usr_deactivated',
+      supabaseAuthId: authUser.supabaseAuthId,
+      deletedAt: new Date('2026-07-21T10:00:00.000Z'),
+    } as InternalUserProfile;
+
+    prisma.user.findUnique.mockResolvedValue(deactivatedUser);
+
+    await expect(service.findOrCreateUser(authUser)).rejects.toThrow(
+      'User account is deactivated',
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('soft-deactivates only the authenticated user account', async () => {
+    const existingUser = {
+      id: 'usr_authenticated',
+      supabaseAuthId: authUser.supabaseAuthId,
+      deletedAt: null,
+    } as InternalUserProfile;
+    prisma.user.findUnique.mockResolvedValue(existingUser);
+    prisma.user.update.mockResolvedValue({
+      ...existingUser,
+      deletedAt: new Date('2026-07-21T10:00:00.000Z'),
+    } as InternalUserProfile);
+
+    const result = await service.deactivateAccount(authUser);
+
+    expect(result.deactivated).toBe(true);
+    expect(result.deactivatedAt).toBeInstanceOf(Date);
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: existingUser.id },
+      data: expect.objectContaining({ deletedAt: expect.any(Date) }),
+    });
+  });
 });

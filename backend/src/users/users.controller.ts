@@ -164,4 +164,28 @@ export class UsersController {
       gamificationProfile,
     };
   }
+
+  @ApiOperation({
+    summary: 'Deactivate the authenticated user account',
+    description:
+      'Soft-deactivates the authenticated user account by setting deletedAt. Related financial, score, and gamification history is preserved.',
+  })
+  @ApiOkResponse({
+    description: 'The authenticated user account was deactivated.',
+    schema: {
+      example: {
+        data: {
+          deactivated: true,
+          deactivatedAt: '2026-07-21T10:00:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, invalid, or deactivated account token.',
+  })
+  @Patch('me/deactivate')
+  async deactivateMe(@CurrentAuthUser() authUser: AuthUser) {
+    return this.usersService.deactivateAccount(authUser);
+  }
 }

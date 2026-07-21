@@ -9,13 +9,14 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 describe('UsersController', () => {
   let controller: UsersController;
   let usersService: jest.Mocked<
-    Pick<UsersService, 'findOrCreateUser' | 'updateProfile'>
+    Pick<UsersService, 'findOrCreateUser' | 'updateProfile' | 'deactivateAccount'>
   >;
 
   beforeEach(() => {
     usersService = {
       findOrCreateUser: jest.fn(),
       updateProfile: jest.fn(),
+      deactivateAccount: jest.fn(),
     };
 
     controller = new UsersController(usersService as unknown as UsersService);
@@ -166,5 +167,19 @@ describe('UsersController', () => {
     });
 
     expect(usersService.updateProfile).toHaveBeenCalledWith(authUser, updates);
+  });
+
+  it('deactivates the authenticated user account', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'test-supabase-user-1',
+      email: 'test-user-1@example.com',
+    };
+    const deactivatedAt = new Date('2026-07-21T10:00:00.000Z');
+    const result = { deactivated: true, deactivatedAt };
+
+    usersService.deactivateAccount.mockResolvedValue(result);
+
+    await expect(controller.deactivateMe(authUser)).resolves.toEqual(result);
+    expect(usersService.deactivateAccount).toHaveBeenCalledWith(authUser);
   });
 });

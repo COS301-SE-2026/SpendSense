@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   Prisma,
@@ -78,6 +82,9 @@ export class UsersService {
     });
 
     if (existing) {
+      if (existing.deletedAt) {
+        throw new UnauthorizedException('User account is deactivated');
+      }
       return existing;
     }
 
@@ -144,5 +151,20 @@ export class UsersService {
       },
       include: userProfileInclude,
     });
+  }
+
+  async deactivateAccount(authUser: AuthUser) {
+    const currentUser = await this.findOrCreateUser(authUser);
+    const deactivatedAt = new Date();
+
+    await this.prisma.user.update({
+      where: { id: currentUser.id },
+      data: { deletedAt: deactivatedAt },
+    });
+
+    return {
+      deactivated: true,
+      deactivatedAt,
+    };
   }
 }
