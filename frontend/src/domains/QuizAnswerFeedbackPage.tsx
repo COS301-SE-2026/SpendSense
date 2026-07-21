@@ -40,10 +40,7 @@ export default function QuizAnswerFeedbackPage(){
     const isFinished=result!==null
     const handleContinue=()=>{
         if(isFinished){
-            navigate(`/quiz/session/${sessionId}/results`,{
-                replace:true,
-                state:{result},
-            })
+            navigate(`/quiz/session/${sessionId}/results`,{replace:true})
             return
         }
         navigate(`/quiz/session/${sessionId}`,{replace:true})
