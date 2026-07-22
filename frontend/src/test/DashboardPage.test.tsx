@@ -20,7 +20,12 @@ vi.mock('../features/dashboard/dashboardApi', () => ({
     data: {
       userSummary: { displayName: 'Rachel' },
       creditProfile: { currentScore: 742 },
-      gamificationProfile: { xp: 850, mascotLevel: 4, currentPaymentStreak: 7 },
+      gamificationProfile: {
+        xp: 850,
+        mascotLevel: 4,
+        currentPaymentStreak: 7,
+        currentKnowledgeStreak: 4,
+      },
       upcomingPayments: [{
         id: 'payment-1',
         amountDue: 54,
@@ -64,9 +69,23 @@ describe('DashboardPage', () => {
     expect(screen.getByText('CREDIT SCORE')).toBeInTheDocument()
   })
 
-  it('renders the streak and level badges', async () => {
+  it('renders the knowledge streak and level badge', async () => {
     await renderLoadedDashboard()
-    expect(screen.getByText('7 day streak')).toBeInTheDocument()
+
+    expect(screen.getByText(/knowledge streak/i)).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('img', {
+        name: '4-days',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('group', {
+        name: '4 day knowledge streak',
+      }),
+    ).toBeInTheDocument()
+
     expect(screen.getByText('Lvl 4')).toBeInTheDocument()
   })
 

@@ -310,7 +310,7 @@ describe("QuizPage - starting a daily session",()=>{
         expect(clearError).toHaveBeenCalledTimes(1);
         expect(startDailyQuiz).toHaveBeenCalledTimes(1);
         await waitFor(()=>{
-            expect(mockNav).toHaveBeenCalledWith("/quiz/sessions/session-xyz");
+            expect(mockNav).toHaveBeenCalledWith("/quiz/session/session-xyz");
         });
     });
     it("does not navigate if starting the daily session fails",async()=>{
@@ -342,7 +342,7 @@ describe("QuizPage - starting a daily session",()=>{
         await user.click(await screen.findByRole("button",{name:/resume daily quiz/i}));
         expect(startDailyQuiz).toHaveBeenCalledTimes(1);
         await waitFor(()=>{
-            expect(mockNav).toHaveBeenCalledWith(`/quiz/sessions/${IN_PROGRESS.session.id}`);
+            expect(mockNav).toHaveBeenCalledWith(`/quiz/session/${IN_PROGRESS.session.id}`);
         });
     });
     it("shows Resuming while the daily session is loading",async()=>{
@@ -403,7 +403,7 @@ describe("QuizPage - starting a topic session",()=>{
         expect(startTopicQuiz).toHaveBeenCalledTimes(1);
         expect(startTopicQuiz).toHaveBeenCalledWith("BUDGETING");
         await waitFor(()=>{
-            expect(mockNav).toHaveBeenCalledWith("/quiz/sessions/topic-session-123");
+            expect(mockNav).toHaveBeenCalledWith("/quiz/session/topic-session-123");
         });
     });
     it("disables the button and shows Starting while the topic session is loading",async()=>{

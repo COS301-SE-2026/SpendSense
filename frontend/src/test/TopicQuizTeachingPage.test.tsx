@@ -5,6 +5,21 @@ import userEvent from "@testing-library/user-event"
 import "@testing-library/jest-dom/vitest"
 import { MemoryRouter } from "react-router-dom"
 
+type CustomCardMockProps=React.PropsWithChildren<
+	React.HTMLAttributes<HTMLDivElement>&{
+		variant?:string
+		size?:string
+	}
+>
+
+type LongButtonMockProps=React.PropsWithChildren<
+	React.ButtonHTMLAttributes<HTMLButtonElement>&{
+		asChild?:boolean
+		LongVariant?:string
+		LongSize?:string
+		showArrow?:boolean
+	}
+>
 //mocked
 const mockNavigate=vi.fn()
 let mockTopicParam:string | undefined="BUDGETING"
@@ -29,7 +44,7 @@ vi.mock("@/hooks/useQuizSession", ()=>({
 }))
 
 vi.mock("@/components/ui/CustomCard", ()=>({
-	CustomCard:({ children, className, variant, size, ...rest }:any)=>(
+	CustomCard:({ children, className, variant, size, ...rest }:CustomCardMockProps)=>(
 		<div
 			data-testid="custom-card"
 			data-variant={variant}
@@ -43,21 +58,25 @@ vi.mock("@/components/ui/CustomCard", ()=>({
 }))
 
 vi.mock("@/components/common/LongButton", ()=>({
-	LongButton:({
-		children,
-		asChild,
-		onClick,
-		disabled,
-		className,
-		LongVariant:_longVariant,
-		LongSize:_longSize,
-		showArrow:_showArrow,
-		...rest
-	}:any)=>{
-		if (asChild) {
+	LongButton:(props:LongButtonMockProps)=>{
+		const{
+			children,
+			asChild,
+			onClick,
+			disabled,
+			className,
+			LongVariant,
+			LongSize,
+			showArrow,
+			...rest
+		}=props
+		void LongVariant
+		void LongSize
+		void showArrow
+		if(asChild){
 			return <>{children}</>
 		}
-		return (
+		return(
 			<button
 				onClick={onClick}
 				disabled={disabled}

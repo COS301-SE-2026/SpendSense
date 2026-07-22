@@ -4,7 +4,29 @@ import{render,screen,within,waitFor} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@testing-library/jest-dom/vitest"
 import{MemoryRouter} from "react-router-dom"
+import type{DailyQuizState,QuizTopicSummary,} from "../features/quiz/quizTypes"
 
+type CustomCardMockProps=React.PropsWithChildren<
+	React.HTMLAttributes<HTMLDivElement>&{
+		variant?:string
+		size?:string
+	}
+>
+type ProgressMockProps=React.HTMLAttributes<HTMLDivElement>&{
+	value?:number
+}
+type LongButtonMockProps=React.PropsWithChildren<
+	React.ButtonHTMLAttributes<HTMLButtonElement>&{
+		asChild?:boolean
+		LongVariant?:string
+		LongSize?:string
+		showArrow?:boolean
+	}
+>
+type CustomBadgeMockProps=React.PropsWithChildren<{
+	variant?:string
+	size?:string
+}>
 //mocks}
 const mockNavigate=vi.fn()
 vi.mock("react-router-dom",async ()=>{
@@ -23,7 +45,7 @@ vi.mock("@/features/quiz/quizApi",()=>({
 }))
 
 vi.mock("@/components/ui/CustomCard",()=>({
-	CustomCard:({children,className,variant,size,...rest}:any)=>(
+	CustomCard:({children,className,variant,size,...rest}:CustomCardMockProps)=>(
 		<div
 			data-testid="custom-card"
 			data-variant={variant}
@@ -37,7 +59,7 @@ vi.mock("@/components/ui/CustomCard",()=>({
 }))
 
 vi.mock("@/components/ui/progress",()=>({
-	Progress:({value,className,...rest}:any)=>(
+	Progress:({value,className,...rest}:ProgressMockProps)=>(
 		<div
 			role="progressbar"
 			aria-valuenow={value}
@@ -48,12 +70,29 @@ vi.mock("@/components/ui/progress",()=>({
 }))
 
 vi.mock("@/components/common/LongButton",()=>({
-	LongButton:({children,asChild,onClick,disabled,...rest}:any)=>{
-		if (asChild){
+	LongButton:(props:LongButtonMockProps)=>{
+		const{
+			children,
+			asChild,
+			onClick,
+			disabled,
+			LongVariant,
+			LongSize,
+			showArrow,
+			...rest
+		}=props
+		void LongVariant
+		void LongSize
+		void showArrow
+		if(asChild){
 			return <>{children}</>
 		}
-		return (
-			<button onClick={onClick} disabled={disabled}{...rest}>
+		return(
+			<button
+				onClick={onClick}
+				disabled={disabled}
+				{...rest}
+			>
 				{children}
 			</button>
 		)
@@ -61,8 +100,12 @@ vi.mock("@/components/common/LongButton",()=>({
 }))
 
 vi.mock("@/components/common/CustomBadges",()=>({
-	CustomBadge:({children,variant,size}:any)=>(
-		<span data-testid="custom-badge" data-variant={variant} data-size={size}>
+	CustomBadge:({children,variant,size}:CustomBadgeMockProps)=>(
+		<span
+			data-testid="custom-badge"
+			data-variant={variant}
+			data-size={size}
+		>
 			{children}
 		</span>
 	),
@@ -74,33 +117,104 @@ vi.mock("@/components/common/AddTransactionButton",()=>({
 	),
 }))
 
+vi.mock("@/hooks/useGamificationProfile",()=>({
+	useGamificationProfile:()=>({
+		profile:{
+			knowledgeStreak:4,
+		},
+		loading:false,
+		error:null,
+		refetch:vi.fn(),
+	}),
+}))
+
 import QuestsPage from "../domains/QuestsPage"
 import{getDailyQuiz,getQuizTopics} from "../features/quiz/quizApi"
 
 const mockedGetDailyQuiz=vi.mocked(getDailyQuiz)
 const mockedGetQuizTopics=vi.mocked(getQuizTopics)
 
-const notStartedDaily={
-	status:"NOT_STARTED",
-	rewardPreview:{xp:10},
+const notStartedDaily:DailyQuizState={
+	date:"2026-07-21",
+	status:"AVAILABLE",
+	session:null,
+	rewardPreview:{
+		xp:10,
+		coins:5,
+	},
+	knowledgeStreak:{
+		current:4,
+		longest:7,
+	},
 }
 
-const inProgressDaily={
+const inProgressDaily:DailyQuizState={
+	date:"2026-07-21",
 	status:"IN_PROGRESS",
-	rewardPreview:{xp:15},
-	session:{progress:{answeredAttempts:2,initialQuestions:5}},
+	rewardPreview:{
+		xp:15,
+		coins:5,
+	},
+	session:{
+		id:"session-1",
+		type:"DAILY",
+		status:"IN_PROGRESS",
+		progress:{
+			correct:1,
+			answeredAttempts:2,
+			initialQuestions:5,
+			remainingQueue:4,
+		},
+	},
 }
 
-const completedDaily={
+const completedDaily:DailyQuizState={
+	date:"2026-07-21",
 	status:"COMPLETED",
-	reward:{xp:20},
+	session:{
+		id:"session-1",
+		type:"DAILY",
+		status:"COMPLETED",
+		score:5,
+		totalQuestions:5,
+		completedAt:"2026-07-21T10:00:00.000Z",
+	},
+	reward:{
+		xp:20,
+		coins:5,
+	},
 }
 
-const topicsFixture=[
-	{id:"t1",available:true},
-	{id:"t2",available:true},
-	{id:"t3",available:false},
-	{id:"t4",available:false},
+const topicsFixture:QuizTopicSummary[]=[
+	{
+		key:"BUDGETING",
+		name:"Budgeting",
+		description:"Learn budgeting",
+		available:true,
+		questionCount:5,
+		rewardPreview:{xp:10,coins:5},
+	},{
+		key:"CREDIT_SCORE",
+		name:"Credit Score",
+		description:"Learn credit scores",
+		available:true,
+		questionCount:5,
+		rewardPreview:{xp:10,coins:5},
+	},{
+		key:"INTEREST",
+		name:"Interest",
+		description:"Learn interest",
+		available:false,
+		questionCount:0,
+		rewardPreview:null,
+	},{
+		key:"DEBT",
+		name:"Debt",
+		description:"Learn debt",
+		available:false,
+		questionCount:0,
+		rewardPreview:null,
+	},
 ]
 
 function renderPage(){
@@ -131,8 +245,8 @@ describe("QuestsPage",()=>{
 		expect(screen.queryByText("Financial Topic Quizes")).not.toBeInTheDocument()
 	})
 	it("renders the default 'Check in' state when the daily quiz hasn't been started",async ()=>{
-		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily as any)
-		mockedGetQuizTopics.mockResolvedValue(topicsFixture as any)
+		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
 		expect(await screen.findByText("Complete your Daily quiz to build your streak!")).toBeInTheDocument()
 		expect(screen.getByText("+10 XP")).toBeInTheDocument()
@@ -142,8 +256,8 @@ describe("QuestsPage",()=>{
 		expect(mockNavigate).toHaveBeenCalledWith("/quiz")
 	})
 	it("renders the 'Resume' state with progress copy when a quiz is in progress",async ()=>{
-		mockedGetDailyQuiz.mockResolvedValue(inProgressDaily as any)
-		mockedGetQuizTopics.mockResolvedValue(topicsFixture as any)
+		mockedGetDailyQuiz.mockResolvedValue(inProgressDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
 		expect(await screen.findByText("In progress - 2 of 5 answered so far.")).toBeInTheDocument()
 		expect(screen.getByText("+15 XP")).toBeInTheDocument()
@@ -153,8 +267,8 @@ describe("QuestsPage",()=>{
 		expect(mockNavigate).toHaveBeenCalledWith("/quiz")
 	})
 	it("renders a disabled 'Completed' state once today's quiz is done",async ()=>{
-		mockedGetDailyQuiz.mockResolvedValue(completedDaily as any)
-		mockedGetQuizTopics.mockResolvedValue(topicsFixture as any)
+		mockedGetDailyQuiz.mockResolvedValue(completedDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
 		expect(await screen.findByText("You've completed today's quiz. Come back tomorrow!")).toBeInTheDocument()
 		expect(screen.getByText("+20 XP")).toBeInTheDocument()
@@ -163,8 +277,8 @@ describe("QuestsPage",()=>{
 	})
 
 	it("computes and displays topic unlock progress,and navigates to the topics list on click",async ()=>{
-		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily as any)
-		mockedGetQuizTopics.mockResolvedValue(topicsFixture as any)
+		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
 		expect(await screen.findByText("Financial Topic Quizes")).toBeInTheDocument()
 		const progressBar=screen.getByRole("progressbar")
@@ -175,8 +289,8 @@ describe("QuestsPage",()=>{
 		expect(mockNavigate).toHaveBeenCalledWith("/quiz/topics")
 	})
 	it("handles an empty topics list without dividing by zero",async ()=>{
-		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily as any)
-		mockedGetQuizTopics.mockResolvedValue([] as any)
+		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
+		mockedGetQuizTopics.mockResolvedValue([])
 		renderPage()
 		await screen.findByText("Financial Topic Quizes")
 		const progressBar=screen.getByRole("progressbar")
@@ -186,11 +300,11 @@ describe("QuestsPage",()=>{
 	})
 	it("shows an error banner when loading fails,and retries on demand",async ()=>{
 		mockedGetDailyQuiz.mockRejectedValueOnce(new Error("Network error"))
-		mockedGetQuizTopics.mockResolvedValue(topicsFixture as any)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
 		expect(await screen.findByText("Network error")).toBeInTheDocument()
 		expect(mockedGetDailyQuiz).toHaveBeenCalledTimes(1)
-		mockedGetDailyQuiz.mockResolvedValueOnce(notStartedDaily as any)
+		mockedGetDailyQuiz.mockResolvedValueOnce(notStartedDaily)
 		await userEvent.click(screen.getByRole("button",{name:"Retry"}))
 		await waitFor(()=>expect(mockedGetDailyQuiz).toHaveBeenCalledTimes(2))
 		await waitFor(()=>expect(screen.queryByText("Network error")).not.toBeInTheDocument())
@@ -198,7 +312,7 @@ describe("QuestsPage",()=>{
 	})
 	it("falls back to a generic error message when a non-Error value is thrown",async ()=>{
 		mockedGetDailyQuiz.mockRejectedValueOnce("boom")
-		mockedGetQuizTopics.mockResolvedValue(topicsFixture as any)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
 		expect(await screen.findByText("Failed to load quests.")).toBeInTheDocument()
 	})
@@ -206,22 +320,22 @@ describe("QuestsPage",()=>{
 		const abortError=new Error("aborted")
 		abortError.name="AbortError"
 		mockedGetDailyQuiz.mockRejectedValueOnce(abortError)
-		mockedGetQuizTopics.mockResolvedValue(topicsFixture as any)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
 		await screen.findByText("Financial Topic Quizes")
 		expect(screen.queryByText(/AbortError/)).not.toBeInTheDocument()
 		expect(screen.queryByRole("button",{name:"Retry"})).not.toBeInTheDocument()
 	})
 	it("renders the Rewards row as a static entry point",async ()=>{
-		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily as any)
-		mockedGetQuizTopics.mockResolvedValue(topicsFixture as any)
+		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
 		expect(await screen.findByText("Rewards")).toBeInTheDocument()
 		expect(screen.getByText("Redeem your coins and claim exclusive perks.")).toBeInTheDocument()
 	})
 	it("renders bottom navigation with Quests marked active and correct links",async ()=>{
-		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily as any)
-		mockedGetQuizTopics.mockResolvedValue(topicsFixture as any)
+		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
 		await screen.findByText("Financial Topic Quizes")
 		const nav=screen.getByRole("navigation",{name:"Primary"})
