@@ -244,7 +244,7 @@ function QuizQuestCard({
 	progressLabel?:string
 	actionAriaLabel?:string
     actionLabel:string
-	knowledgeStreak:number|null
+	knowledgeStreak?:number
     onAction?:()=>void
     asLink?:boolean
     to?:string
@@ -335,7 +335,6 @@ function QuizQuestCard({
 		</LongButton>
 	</CustomCard>
 )
-	)
 }
 
 function QuestCardSkeleton(){
