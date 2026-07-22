@@ -40,7 +40,9 @@ describe('ObligationsService', () => {
   beforeEach(() => {
     prisma = {
       category: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'category-1' }),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'category-1',
+        }),
       },
 
       $transaction: jest
