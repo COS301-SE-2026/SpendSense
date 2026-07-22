@@ -2,6 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentOccurrenceStatus } from '@prisma/client';
 import { UpcomingOccurrencesDto } from './dto/upcoming-occurrences.dto';
+import {
+  Prisma,
+  NotificationType,
+  PaymentOccurrence,
+  UserEventSourceType,
+} from '@prisma/client';
 
 @Injectable()
 export class PaymentOccurrencesService {
@@ -175,6 +181,102 @@ export class PaymentOccurrencesService {
           ? PaymentOccurrenceStatus.PAID
           : PaymentOccurrenceStatus.PAID_LATE,
         paidAt,
+      },
+    });
+  }
+
+  async transitionOverdueOccurrences(): Promise<{ transitionedCount: number }> {
+    const now = new Date();
+
+    const overduePending = await this.prisma.paymentOccurrence.findMany({
+      where: {
+        dueDate: { lt: now },
+        status: PaymentOccurrenceStatus.PENDING,
+        deletedAt: null,
+      },
+    });
+
+    let transitionedCount = 0;
+
+    for (const occurrence of overduePending) {
+      await this.prisma.$transaction(async (transaction) => {
+        await transaction.paymentOccurrence.update({
+          where: { id: occurrence.id },
+          data: {
+            overdueAt: now,
+            status: PaymentOccurrenceStatus.OVERDUE,
+          },
+        });
+
+        await this.createOccurrenceStatusNotification(
+          transaction,
+          occurrence,
+          'Payment overdue',
+          'Your payment is overdue.',
+        );
+      });
+
+      transitionedCount++;
+    }
+
+    return { transitionedCount };
+  }
+
+  async transitionMissedOccurrence(): Promise<{ transitionedCount: number }> {
+    const now = new Date();
+    const thresholdMissed = new Date(now);
+
+    thresholdMissed.setDate(thresholdMissed.getDate() - 30);
+
+    const overdueToMissedOccurrence =
+      await this.prisma.paymentOccurrence.findMany({
+        where: {
+          overdueAt: { lte: thresholdMissed },
+          status: PaymentOccurrenceStatus.OVERDUE,
+          deletedAt: null,
+        },
+      });
+
+    let transitionedCount = 0;
+
+    for (const occurrence of overdueToMissedOccurrence) {
+      await this.prisma.$transaction(async (transaction) => {
+        await transaction.paymentOccurrence.update({
+          where: { id: occurrence.id },
+          data: {
+            missedAt: now,
+            status: PaymentOccurrenceStatus.MISSED,
+          },
+        });
+
+        await this.createOccurrenceStatusNotification(
+          transaction,
+          occurrence,
+          'Payment missed',
+          'Your payment was not made, and has been missed.',
+        );
+      });
+
+      transitionedCount++;
+    }
+
+    return { transitionedCount };
+  }
+
+  private async createOccurrenceStatusNotification(
+    transaction: Prisma.TransactionClient,
+    occurrence: PaymentOccurrence,
+    title: string,
+    message: string,
+  ) {
+    return transaction.notification.create({
+      data: {
+        userId: occurrence.userId,
+        title,
+        message,
+        type: NotificationType.PAYMENT_STATUS,
+        sourceId: occurrence.id,
+        sourceType: UserEventSourceType.PAYMENT_OCCURRENCE,
       },
     });
   }
