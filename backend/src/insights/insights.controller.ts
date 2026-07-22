@@ -1,36 +1,39 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { InsightsService } from './insights.service';
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
-import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
+import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import { UsersService } from '../users/users.service';
+import { InsightsService } from './insights.service';
 
-@ApiTags('Insights')
+@ApiTags('insights')
 @ApiBearerAuth()
+@UseGuards(SupabaseJwtGuard)
 @Controller('insights')
 export class InsightsController {
-    constructor(
-        private readonly insightsService: InsightsService,
-        private readonly usersService: UsersService,
-    ){}
+  constructor(
+    private readonly insightsService: InsightsService,
+    private readonly usersService: UsersService,
+  ) {}
 
-    @Get()
-    @ApiOperation({
-        summary: "Get stats-based insights",
-        description:'Returns deterministic financial insights calculated from the authenticated user’s obligations and payment history.',
-    })
-    @ApiOkResponse({
-        description: 'Stats-based insights returned successfully.',
-        schema: {
-            example: {
-                generatedAt: '2026-07-15T08:00:00.000Z',
-                cards: [],
-            },
-        },
-    })
-    async getInsights(@CurrentAuthUser() authUser: AuthUser) {
-        const user = await this.usersService.findOrCreateUser(authUser);
-        return this.insightsService.getInsights(user.id);
-    }
+  @Get()
+  @ApiOperation({
+    summary: 'Get rule-based insights for the authenticated user',
+  })
+  @ApiResponse({ status: 200, description: 'Insights returned successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorised' })
+  async getInsights(@CurrentAuthUser() authUser: AuthUser) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    console.log('INSIGHTS AUTH CHECK:', {
+      supabaseAuthId: authUser.supabaseAuthId,
+      email: authUser.email,
+      internalUserId: user.id,
+    });
+    return this.insightsService.getInsights(user.id);
+  }
 }
