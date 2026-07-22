@@ -1,7 +1,6 @@
 import {useNavigate} from "react-router-dom"
 import {cn} from "@/lib/utils"
-import {CustomCard} from "@/components/ui/CustomCard"
-import {ArrowLeft,PiggyBank,CreditCard,TrendingUp,AlertTriangle,ShoppingBag,RefreshCw,Lock,ChevronRight,HelpCircle,} from "lucide-react"
+import {ChevronLeft,PiggyBank,CreditCard,TrendingUp,AlertTriangle,ShoppingBag,RefreshCw,Lock,HelpCircle,BookOpen,ChevronRight,} from "lucide-react"
 import {getQuizTopics} from "@/features/quiz/quizApi"
 import type {QuizTopic,QuizTopicSummary} from "@/features/quiz/quizTypes"
 import {useCallback,useEffect,useState} from "react"
@@ -31,14 +30,10 @@ function useQuizTopics(){
             const res=await getQuizTopics({signal})
             setTopics(res)
         }catch(err){
-            if(isAbortError(err)){
-                return
-            }
+            if(isAbortError(err)) return
             setError(err instanceof Error?err.message:"Failed to load quiz topics.")
         }finally{
-            if(!signal?.aborted){
-                setLoading(false)
-            }
+            if(!signal?.aborted) setLoading(false)
         }
     },[])
     useEffect(()=>{
@@ -53,123 +48,113 @@ function useQuizTopics(){
     return {topics,loading,error,reload:()=>load()}
 }
 
-// topic card
-function TopicCard({topic,onPress}:{
-    topic:QuizTopicSummary
-    onPress:()=>void
-}){
-    const config=TOPIC_ICON[topic.key] ?? {icon:HelpCircle,bg:"bg-[#DCEFE8]",iconColor:"text-[#6b6375]"}
+function TopicCard({topic,onPress}:{topic:QuizTopicSummary;onPress:()=>void}){
+    const config=TOPIC_ICON[topic.key]??{icon:HelpCircle,bg:"bg-[#E3EAE6]",iconColor:"text-[#6b6375]"}
     const Icon=config.icon
     return(
         <button
             type="button"
             onClick={topic.available?onPress:undefined}
             disabled={!topic.available}
-            className={cn(
-                "w-full flex items-center gap-4 rounded-2xl bg-white px-4 py-4 text-left shadow-sm transition-transform active:scale-[0.98]",
-                !topic.available && "opacity-50 active:scale-100"
-            )}
             aria-label={topic.available?`${topic.name} quiz`:`${topic.name} locked`}
+            className={cn(
+                "group flex w-full items-center gap-3 rounded-2xl border-2 border-[#091828] bg-white p-3 text-left shadow-[4px_4px_0_#091828] transition-transform active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0_#091828]",
+                topic.available?"hover:-translate-y-0.5":"cursor-not-allowed opacity-50"
+            )}
         >
-            {topic.available ? (
-                <div className={cn("size-14 shrink-0 rounded-full flex items-center justify-center",config.bg)}>
-                    <span className={config.iconColor}>
-                        <Icon size={26}/>
-                    </span>
+            {topic.available?(
+                <div className={cn("flex size-11 shrink-0 items-center justify-center rounded-full",config.bg)}>
+                    <Icon className={config.iconColor} size={26}/>
                 </div>
             ):(
-                <div className="size-14 shrink-0 rounded-full border-2 border-dashed border-[#B8CBBF] flex items-center justify-center">
-                    <Lock size={20} className="text-[#B8CBBF]"/>
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-[#B8CBBF] bg-[#F4FBF7]">
+                    <Lock size={20} className="text-[#91A99C]"/>
                 </div>
             )}
-            <div className="flex-1 min-w-0">
-                <p className="text-base font-bold text-[#091828]">{topic.name}</p>
-                <p className="text-sm text-[#6b6375] line-clamp-2">{topic.description}</p>
-                <p className="text-xs font-semibold text-[#6b6375] mt-1">
-                    {topic.available?`${topic.questionCount} questions`:"Coming soon"}
-                    {topic.available && topic.rewardPreview && (
+            <div className="min-w-0 flex-1 self-stretch py-0.5">
+                <p className="text-base font-extrabold leading-tight tracking-tight text-[#091828]">{topic.name}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#6b6375]">{topic.description}</p>
+                <div className="mt-3 flex min-h-4 flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold text-[#6b6375]">
+                    {topic.available?(
                         <>
-                            {" - +"}{topic.rewardPreview.xp} XP
-                            {" - +"}{topic.rewardPreview.coins} coins
+                            <span className="inline-flex items-center gap-1 text-[#091828]"><BookOpen size={13} className="text-[#AC2A5D]"/> {topic.questionCount} questions</span>
+                            {topic.rewardPreview&&(
+                                <span className="text-[#AC2A5D]">
+                                    +{topic.rewardPreview.xp} XP <span className="text-[#A36B00]">· +{topic.rewardPreview.coins} coins</span>
+                                </span>
+                            )}
                         </>
-                    )}
-                </p>
+                    ):<span className="font-semibold text-[#91A99C]">Coming soon</span>}
+                </div>
             </div>
-            {topic.available && (
-                <ChevronRight size={20} className="shrink-0 text-[#B8CBBF]"/>
-            )}
+            {topic.available&&<ChevronRight className="size-5 shrink-0 text-[#AC2A5D]"/>}
         </button>
     )
 }
 
-function QuestCardSkeleton(){
+function TopicCardSkeleton(){
     return(
-        <CustomCard variant="greenShaddow" size="sm">
-            <div className="flex items-start gap-3">
-                <div className="size-10 shrink-0 animate-pulse rounded-full bg-[#DCEFE8]"/>
+        <div className="rounded-2xl border-2 border-[#DCEFE8] bg-white p-3 shadow-[4px_4px_0_#DCEFE8]">
+            <div className="flex items-center gap-4">
+                <div className="size-14 shrink-0 animate-pulse rounded-full bg-[#DCEFE8]"/>
                 <div className="min-w-0 flex-1 space-y-2">
                     <div className="h-4 w-1/2 animate-pulse rounded bg-[#DCEFE8]"/>
                     <div className="h-3 w-4/5 animate-pulse rounded bg-[#DCEFE8]"/>
+                    <div className="h-3 w-2/5 animate-pulse rounded bg-[#DCEFE8]"/>
                 </div>
             </div>
-            <div className="mt-3 h-9 w-full animate-pulse rounded-full bg-[#DCEFE8]"/>
-        </CustomCard>
+        </div>
     )
 }
 
-
-
-// main page
 export default function TopicQuizPage(){
     const navigate=useNavigate()
-    const {topics,loading,error,reload,}=useQuizTopics()
+    const {topics,loading,error,reload}=useQuizTopics()
     return(
-        <div className="min-h-screen bg-[#F0F7F4] flex flex-col items-center">
-            <div className="w-full max-w-sm flex flex-col min-h-screen">
-                {/* header topics */}
-                <header className="bg-[#F0F7F4] px-4 pt-5 pb-3 flex items-center justify-between">
+        <div className="min-h-screen bg-[#F4FBF7] pb-24">
+            <div className="mx-auto w-full max-w-md px-5 pt-6">
+                <header className="flex items-center gap-3">
                     <button
                         type="button"
                         onClick={()=>navigate("/quests")}
-                        className="size-9 flex items-center justify-center rounded-full bg-white/80 text-[#091828] shadow-sm"
-                        aria-label="Go back">
-
-                        <ArrowLeft size={20}/>
+                        aria-label="Go back"
+                        className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828]"
+                    >
+                        <ChevronLeft className="size-5 text-[#6E0034]"/>
                     </button>
-                    <h1 className="text-base font-bold text-[#091828]">Quiz Topics</h1>
-                    <div className="size-9"/>
-                </header>
-                <main className="flex-1 px-4 pb-24 space-y-6 overflow-y-auto">
-                    {error && (
-                        <div className="flex items-center gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFD9E1] px-4 py-3">
-                            <AlertTriangle className="size-4 shrink-0 text-[#AC2A5D]"/>
-                            <p className="text-sm font-semibold text-[#AC2A5D]">{error}</p>
+                    <div className="flex flex-1 items-center justify-center">
+                        <div className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828]" style={{transform:"rotate(-3deg)"}}>
+                            <h1 className="text-base font-bold text-[#091828]">Quiz Topics</h1>
                         </div>
-                    )}
-                    {/* header */}
-                    <div className="pt-2 pb-2 text-center space-y-1">
-                        <p className="text-2xl font-bold text-[#091828]">Pick a Topic</p>
-                        <p className="text-sm text-[#6b6375]">Test your money smarts on a subject of your choice.</p>
                     </div>
-                    {/* topics list */}
-                    {loading ? (
-                        <div className="space-y-4">
-                            {[1,2,3,4,5,6].map(n=>(
-                                <QuestCardSkeleton key={n}/>
-                            ))}
-                        </div>
-                    ):(
-                        <div className="space-y-4">
-                            {topics?.map(topic=>(
-                                <TopicCard key={topic.key} topic={topic} onPress={()=>navigate(`/quiz/topics/${topic.key}`)}/>
-                            ))}
+                    <div className="size-12 shrink-0" aria-hidden="true"/>
+                </header>
+
+                <main className="mt-8 space-y-6">
+                    <section className="rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-5 shadow-[4px_4px_0_#091828]">
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#AC2A5D]">Financial learning</p>
+                        <h2 className="mt-2 text-2xl font-extrabold leading-tight text-[#091828]">Pick a Topic</h2>
+                        <p className="mt-1 text-sm leading-relaxed text-[#6b6375]">Test your money smarts on a subject of your choice.</p>
+                    </section>
+
+                    {error&&(
+                        <div className="flex items-center gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFF1F4] px-4 py-3">
+                            <AlertTriangle className="size-4 shrink-0 text-[#AC2A5D]"/>
+                            <p className="flex-1 text-sm font-semibold text-[#AC2A5D]">{error}</p>
                         </div>
                     )}
-                    {!loading && !error && topics?.length===0 && (
+
+                    {loading?(
+                        <div className="space-y-4 px-2">{[1,2,3,4,5,6].map(n=><TopicCardSkeleton key={n}/>)}</div>
+                    ):(
+                        <div className="space-y-4 px-2">{topics?.map(topic=><TopicCard key={topic.key} topic={topic} onPress={()=>navigate(`/quiz/topics/${topic.key}`)}/>)}</div>
+                    )}
+
+                    {!loading&&!error&&topics?.length===0&&(
                         <p className="text-center text-sm text-[#6b6375]">No quiz topics available right now.</p>
                     )}
-                    {!loading && error && (
-                        <button type="button" onClick={reload} className="w-full rounded-2xl border-2 border-[#AC2A5D] px-4 py-3 text-sm font-semibold text-[#AC2A5D]">
+                    {!loading&&error&&(
+                        <button type="button" onClick={reload} className="w-full rounded-2xl border-2 border-[#AC2A5D] bg-white px-4 py-3 text-sm font-bold text-[#AC2A5D] shadow-[3px_3px_0_#AC2A5D] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
                             Retry
                         </button>
                     )}
