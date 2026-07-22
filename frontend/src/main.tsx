@@ -28,6 +28,7 @@ import SettingsPreferencesPage from './domains/SettingsPreferencesPage.tsx'
 import SettingsNotificationsPage from './domains/SettingsNotificationsPage.tsx'
 import SettingsAccountPage from './domains/SettingsAccountPage.tsx'
 import EditProfilePage from './domains/EditProfilePage.tsx'
+import HelpPage from './domains/HelpPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -66,6 +67,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/settings/notifications" element={<SettingsNotificationsPage/>}/>
          <Route path="/settings/account" element={<SettingsAccountPage/>}/>
          <Route path="/edit-profile" element={<EditProfilePage/>}/>
+        <Route path="/help" element={<HelpPage/>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,

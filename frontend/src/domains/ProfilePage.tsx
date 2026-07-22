@@ -2,7 +2,7 @@ import * as React from "react"
 import {useNavigate, Link} from "react-router-dom"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { CustomBadge } from "@/components/common/CustomBadges"
-import { IconButton } from "@/components/common/IconButton"
+//import { IconButton } from "@/components/common/IconButton"
 import {
     Settings,
     User,
@@ -11,6 +11,7 @@ import {
     CircleQuestionMark,
     Gift,
     ChevronRight,
+    ChevronLeft,
     Smile,
     Flame,
     Coins,
@@ -35,7 +36,7 @@ const menuItems: MenuItem[]=[
     {label: "Sticker Album", icon: <Star className="size-5"/>, to: "/stickers", enabled: true},
     {label: "Wrapped", icon: <Gift className="size-5"/>, to: "/insights", enabled: true},
     {label: "Mascot Home", icon: <Smile className="size-5"/>, to: "/mascot", enabled: true},
-    {label: "Help & Support", icon: <CircleQuestionMark className="size-5"/>, to: "/help", enabled: false},
+    {label: "Help & Support", icon: <CircleQuestionMark className="size-5"/>, to: "/help", enabled: true},
 
 
 ]
@@ -48,11 +49,22 @@ export default function ProfilePage(){
         <div className = "min-h-screen bg-[#f4fbf7] pb-24">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
                 <header className = "flex items-center justify-between">
-                    <IconButton IconVariant="iconBack" aria-label = "Go back" onClick = {() => nav(-1)}/>
-                    <h1 className = "text-lg font-bold text-[#091828]">Profile</h1>
+                     <button type="button" aria-label="Go back" onClick={() => nav(-1)} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828]">
+                        <ChevronLeft className="size-5 text-[#6E0034]" />
+                    </button>
+ 
+                    <div className="flex flex-1 items-center justify-center">
+                        <div
+                            className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828]"
+                            style={{transform: "rotate(-3deg)"}}>
+                                
+                            <span className="text-base font-bold text-[#091828]">Profile</span>
+                        </div>
+                    </div>
 
-                    <button type="button" aria-label="Settings" onClick={()=>nav("/settings")} className="flex size-10 items-center justify-center rounded-full bg-[#e3eae6] text-[#091828] transition hover:bg-[#c7d8cf] active:translate-y-px">
-                        <Settings className="size-5"/>
+
+                    <button type="button" aria-label="Settings" onClick={()=>nav("/settings")} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#E3EAE6] shadow-[4px_4px_0_#091828]">
+                        <Settings className="size-5 text-[#091828]"/>
                     </button>
                 </header>
 
