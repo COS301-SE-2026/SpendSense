@@ -6,9 +6,9 @@ import { RemindersService } from './reminders.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-    imports: [UsersModule, AuthModule, PrismaModule],
-    controllers: [RemindersController],
-    providers: [RemindersService],
-    exports: [RemindersService],
+  imports: [UsersModule, AuthModule, PrismaModule],
+  controllers: [RemindersController],
+  providers: [RemindersService],
+  exports: [RemindersService],
 })
 export class RemindersModule {}
