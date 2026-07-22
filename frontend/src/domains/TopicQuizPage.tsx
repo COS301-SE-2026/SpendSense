@@ -43,8 +43,10 @@ function useQuizTopics(){
     },[])
     useEffect(()=>{
         const controller=new AbortController()
-        load(controller.signal)
-        return ()=>{
+        void Promise.resolve().then(()=>{
+            load(controller.signal)
+        })
+        return()=>{
             controller.abort()
         }
     },[load])

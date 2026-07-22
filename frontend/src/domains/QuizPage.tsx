@@ -81,8 +81,10 @@ function useQuizEntryData(
     },[quizType,topic])
     useEffect(()=>{
         const controller=new AbortController()
-        load(controller.signal)
-        return ()=>{
+        void Promise.resolve().then(()=>{
+            load(controller.signal)
+        })
+        return()=>{
             controller.abort()
         }
     },[load])
@@ -106,7 +108,7 @@ export default function QuizPage(){
         clearError()
         const session=quizType==="DAILY"?await startDailyQuiz():topic?await startTopicQuiz(topic):null
         if(session){
-            navigate(`/quiz/sessions/${session.id}`)
+            navigate(`/quiz/session/${session.id}`)
         }
     }
     if(loading){

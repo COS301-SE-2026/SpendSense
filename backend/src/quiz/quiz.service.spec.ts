@@ -492,6 +492,12 @@ describe('QuizService', () => {
         totalQuestions: 5,
         answeredAttempts: 2,
         reward: { xp: 50, coins: 25 },
+        knowledgeStreak: {
+          previous: 2,
+          current: 3,
+          longest: 7,
+          advanced: true,
+        },
       },
     });
   });

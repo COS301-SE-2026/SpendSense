@@ -264,7 +264,10 @@ export class QuizService {
       ...(session.topic ? { topic: session.topic } : {}),
     });
 
-    return this.toSessionResponse(session, questions);
+    return this.toSessionResponse(session, questions, {
+      current: user.gamificationProfile?.currentKnowledgeStreak ?? 0,
+      longest: user.gamificationProfile?.longestKnowledgeStreak ?? 0,
+    });
   }
 
   async submitAnswer(
@@ -630,6 +633,10 @@ export class QuizService {
       prompt: string;
       options: unknown;
     }[],
+    knowledgeStreak?: {
+      current: number;
+      longest: number;
+    },
   ) {
     const nextQuestionId = questions
       ? this.getNextQuestionId(questions, session.answers)
@@ -675,6 +682,16 @@ export class QuizService {
                 xp: session.xpAwarded,
                 coins: session.coinsAwarded,
               },
+              ...(knowledgeStreak
+                ? {
+                    knowledgeStreak: {
+                      previous: Math.max(knowledgeStreak.current - 1, 0),
+                      current: knowledgeStreak.current,
+                      longest: knowledgeStreak.longest,
+                      advanced: session.type === QuizSessionType.DAILY,
+                    },
+                  }
+                : {}),
             }
           : null,
     };
