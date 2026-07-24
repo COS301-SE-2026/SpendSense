@@ -189,7 +189,6 @@ model User {
   supabaseAuthId         String                  @unique
   email                  String                  @unique
   displayName            String?
-  monthlyBudget          Decimal?
   avatarUrl              String?
   monthlyBudget          Decimal?                @db.Decimal(12, 2)
   onboardingCompleted    Boolean                 @default(false)

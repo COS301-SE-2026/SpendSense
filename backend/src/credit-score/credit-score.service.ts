@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PAYMENT_HISTORY_SCORES, CREDIT_SCORE_MODEL_VERSION, CREDIT_SCORE_RANGE, CREDIT_SCORE_COMPONENT_WEIGHTS, PRIORITY_WEIGHTS, RISK_CAPS } from './credit-score.constants'
+import { PAYMENT_HISTORY_SCORES, BUDGET_PRESSURE, CREDIT_SCORE_MODEL_VERSION, CREDIT_SCORE_RANGE, CREDIT_SCORE_COMPONENT_WEIGHTS, PRIORITY_WEIGHTS, RISK_CAPS } from './credit-score.constants'
 import { PaymentOccurrenceStatus } from "@prisma/client";
 
 @Injectable()
@@ -9,7 +9,7 @@ export class CreditScoreService {
     constructor(private readonly prisma: PrismaService) { }
     async getCreditScore(userId: string) {
 
-        let score = CREDIT_SCORE_COMPONENT_WEIGHTS.PAYMENT_HISTORY * await this.calculatePaymentHistory(userId);
+        let score = CREDIT_SCORE_COMPONENT_WEIGHTS.BUDGET_PRESSURE * await this.calculateBudgetPressureScore(userId);
 
         return {
             creditScore: score,
@@ -26,7 +26,7 @@ export class CreditScoreService {
             select: {
                 id: true,
                 user: {
-                    select:{
+                    select: {
                         id: true,
                         displayName: true,
                     }
@@ -114,14 +114,75 @@ export class CreditScoreService {
         return PAYMENT_HISTORY_SCORES.LATE_MORE_THAN_30_DAYS;
     }
 
-    private async calculateBudgetPressure(userId: string): Promise<number> {
+    private async calculateBudgetPressureScore(userId: string,): Promise<number> {
         const user = await this.prisma.user.findUnique({
-            where : {
+            where: {
                 id: userId,
             },
             select: {
-                monthlyBudget
-            }
-        })
+                monthlyBudget: true,
+            },
+        });
+
+        const monthlyBudget = Number(user?.monthlyBudget);
+        const now = new Date();
+        const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+        const startOfNextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+
+        const result = await this.prisma.paymentOccurrence.aggregate({
+            where: {
+                userId,
+                dueDate: {
+                    gte: startOfMonth,
+                    lt: startOfNextMonth,
+                },
+                status: {
+                    not: PaymentOccurrenceStatus.CANCELLED,
+                },
+                obligation: {
+                    deletedAt: null,
+                },
+            },
+            _sum: {
+                amountDue: true,
+            },
+        });
+
+        const monthlyCommittedObligations = Number(result._sum.amountDue ?? 0,);
+        const budgetPressureRatio = monthlyCommittedObligations / monthlyBudget;
+        const budgetPressureRatioScore = this.getBudgetPressureScore(budgetPressureRatio);
+
+        console.log('calculateBudgetPressureScore', {
+            Budget: monthlyBudget,
+            AmountDue: result._sum.amountDue,
+            monthlyCommittedObligations_: monthlyCommittedObligations,
+            budgetPressureRatio_: budgetPressureRatio,
+            budgetPressureRatioScore_: budgetPressureRatioScore
+
+        });
+
+        return budgetPressureRatioScore;
+    }
+
+    private getBudgetPressureScore(budgetPressureRatio: number,): number {
+        if (budgetPressureRatio <= 0.5) {
+            return BUDGET_PRESSURE.LT_50 ;
+        }
+
+        if (budgetPressureRatio <= 0.7 && budgetPressureRatio > 0.5) {
+            return BUDGET_PRESSURE.BTWN_50_70 ;
+        }
+
+        if (budgetPressureRatio <= 0.9 && budgetPressureRatio > 0.7) {
+            return BUDGET_PRESSURE.BTWN_70_90 ;
+        }
+
+        if (budgetPressureRatio <= 1 && budgetPressureRatio > 0.9) {
+            return BUDGET_PRESSURE.BTWN_90_100 ;
+        }
+
+        return BUDGET_PRESSURE.GT_100 ;
     }
 }
+
+

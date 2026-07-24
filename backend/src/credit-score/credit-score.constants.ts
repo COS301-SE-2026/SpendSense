@@ -45,3 +45,11 @@ export const RISK_CAPS = {
     OVER_BUDGET: 670,
     NONE: 850,
 } as const;
+
+export const BUDGET_PRESSURE = {
+    LT_50: 1.00,
+    BTWN_50_70: 0.75,
+    BTWN_70_90: 0.5,
+    BTWN_90_100:0.25,
+    GT_100: 0.00
+} as const;
