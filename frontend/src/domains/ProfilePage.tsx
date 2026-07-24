@@ -2,13 +2,13 @@ import * as React from "react"
 import {useNavigate, Link} from "react-router-dom"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { CustomBadge } from "@/components/common/CustomBadges"
-//import { IconButton } from "@/components/common/IconButton"
+
 import {
     Settings,
     User,
     Users,
     Star,
-    CircleQuestionMark,
+    HelpCircle,
     Gift,
     ChevronRight,
     ChevronLeft,
@@ -36,7 +36,7 @@ const menuItems: MenuItem[]=[
     {label: "Sticker Album", icon: <Star className="size-5"/>, to: "/stickers", enabled: true},
     {label: "Wrapped", icon: <Gift className="size-5"/>, to: "/insights", enabled: true},
     {label: "Mascot Home", icon: <Smile className="size-5"/>, to: "/mascot", enabled: true},
-    {label: "Help & Support", icon: <CircleQuestionMark className="size-5"/>, to: "/help", enabled: true},
+    {label: "Help & Support", icon: <HelpCircle className="size-5"/>, to: "/help", enabled: true},
 
 
 ]
