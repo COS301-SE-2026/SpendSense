@@ -21,8 +21,8 @@ export default function EditProfilePage(){
 
     const trimmed =displayName.trim()
     const nameError=
-        trimmed.length<NAME_MIN ? "Display name can't be empty"
-        : trimmed.length >NAME_MAX ? `Display name must be ${NAME_MAX} characters or fewer` : null
+        trimmed.length<NAME_MIN ? "Display name can't be empty."
+        : trimmed.length >NAME_MAX ? `Display name must be ${NAME_MAX} characters or fewer.` : null
 
     const handleSave= async()=> {
         if(nameError) return
@@ -59,7 +59,7 @@ export default function EditProfilePage(){
                             </div>
                         )}
 
-                        {/*TODO: avatar upload or URL field, still deciding*/}
+                        {/*TODO: avatar upload or URL field*/}
                         <p className="mt-2 text-xs text-[#6B6375]">Avatar is generated from your name</p>
                     </CustomCard>
 
@@ -112,7 +112,7 @@ export default function EditProfilePage(){
                     </LongButton>
 
                     {feedback && (
-                        <p className={`text-center text-xs ${feedback.kind}=== "success" ? "text-[#3DBFA0]" : "text-[#AC2A5D]"}`}>
+                        <p className={`text-center text-xs ${feedback.kind === "success" ? "text-[#3DBFA0]" : "text-[#AC2A5D]"}`}>
                             {feedback.message}
                         </p>
                     )}
