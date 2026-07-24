@@ -9,23 +9,27 @@ export class SchedulerService {
   constructor(
     private readonly remindersService: RemindersService,
     private readonly paymentOccurrencesService: PaymentOccurrencesService,
-) {}
+  ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
   async runScheduledJob() {
     const rslt = await this.runAll();
-    this.logger.log(`Processed ${rslt.processedCount} due reminder(s), ${rslt.overdueTransitionedCount} occurrence(s) marked overdue, ${rslt.missedTransitionedCount} occurrence(s) marked missed`);
+    this.logger.log(
+      `Processed ${rslt.processedCount} due reminder(s), ${rslt.overdueTransitionedCount} occurrence(s) marked overdue, ${rslt.missedTransitionedCount} occurrence(s) marked missed`,
+    );
   }
 
-  async runAll(){
-    const overdue = await this.paymentOccurrencesService.transitionOverdueOccurrences();
-    const missed = await this.paymentOccurrencesService.transitionMissedOccurrence();
+  async runAll() {
+    const overdue =
+      await this.paymentOccurrencesService.transitionOverdueOccurrences();
+    const missed =
+      await this.paymentOccurrencesService.transitionMissedOccurrence();
     const reminders = await this.remindersService.processDueReminders();
 
-    return{
-        overdueTransitionedCount: overdue.transitionedCount,
-        missedTransitionedCount: missed.transitionedCount,
-        processedCount: reminders.processedCount,
+    return {
+      overdueTransitionedCount: overdue.transitionedCount,
+      missedTransitionedCount: missed.transitionedCount,
+      processedCount: reminders.processedCount,
     };
   }
 }
