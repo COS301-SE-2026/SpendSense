@@ -53,3 +53,10 @@ export const BUDGET_PRESSURE = {
     BTWN_90_100:0.25,
     GT_100: 0.00
 } as const;
+
+export const SAVINGS_BUFFER = {
+    GT_20: 1.00,
+    BTWN_10_20: 0.70,
+    BTWN_0_10: 0.30,
+    OVER_BUDGET:0.00,
+} as const;

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PAYMENT_HISTORY_SCORES, BUDGET_PRESSURE, CREDIT_SCORE_MODEL_VERSION, CREDIT_SCORE_RANGE, CREDIT_SCORE_COMPONENT_WEIGHTS, PRIORITY_WEIGHTS, RISK_CAPS } from './credit-score.constants'
+import { PAYMENT_HISTORY_SCORES, BUDGET_PRESSURE, SAVINGS_BUFFER, CREDIT_SCORE_MODEL_VERSION, CREDIT_SCORE_RANGE, CREDIT_SCORE_COMPONENT_WEIGHTS, PRIORITY_WEIGHTS, RISK_CAPS } from './credit-score.constants'
 import { PaymentOccurrenceStatus } from "@prisma/client";
 
 @Injectable()
@@ -9,7 +9,10 @@ export class CreditScoreService {
     constructor(private readonly prisma: PrismaService) { }
     async getCreditScore(userId: string) {
 
-        let score = CREDIT_SCORE_COMPONENT_WEIGHTS.BUDGET_PRESSURE * await this.calculateBudgetPressureScore(userId);
+        let score = 
+        CREDIT_SCORE_COMPONENT_WEIGHTS.PAYMENT_HISTORY * await this.calculatePaymentHistory(userId) +
+        CREDIT_SCORE_COMPONENT_WEIGHTS.BUDGET_PRESSURE * await this.calculateBudgetPressureScore(userId) +
+        CREDIT_SCORE_COMPONENT_WEIGHTS.SAVINGS_BUFFER * await this.calculateSavingsBuffer(userId) ;
 
         return {
             creditScore: score,
@@ -151,6 +154,8 @@ export class CreditScoreService {
         const monthlyCommittedObligations = Number(result._sum.amountDue ?? 0,);
         const budgetPressureRatio = monthlyCommittedObligations / monthlyBudget;
         const budgetPressureRatioScore = this.getBudgetPressureScore(budgetPressureRatio);
+        const savingsBufferRatio = this.getSavingsBufferScore(monthlyCommittedObligations, monthlyBudget);
+
 
         console.log('calculateBudgetPressureScore', {
             Budget: monthlyBudget,
@@ -159,6 +164,7 @@ export class CreditScoreService {
             budgetPressureRatio_: budgetPressureRatio,
             budgetPressureRatioScore_: budgetPressureRatioScore
 
+
         });
 
         return budgetPressureRatioScore;
@@ -166,23 +172,100 @@ export class CreditScoreService {
 
     private getBudgetPressureScore(budgetPressureRatio: number,): number {
         if (budgetPressureRatio <= 0.5) {
-            return BUDGET_PRESSURE.LT_50 ;
+            return BUDGET_PRESSURE.LT_50;
         }
 
         if (budgetPressureRatio <= 0.7 && budgetPressureRatio > 0.5) {
-            return BUDGET_PRESSURE.BTWN_50_70 ;
+            return BUDGET_PRESSURE.BTWN_50_70;
         }
 
         if (budgetPressureRatio <= 0.9 && budgetPressureRatio > 0.7) {
-            return BUDGET_PRESSURE.BTWN_70_90 ;
+            return BUDGET_PRESSURE.BTWN_70_90;
         }
 
         if (budgetPressureRatio <= 1 && budgetPressureRatio > 0.9) {
-            return BUDGET_PRESSURE.BTWN_90_100 ;
+            return BUDGET_PRESSURE.BTWN_90_100;
         }
 
-        return BUDGET_PRESSURE.GT_100 ;
+        return BUDGET_PRESSURE.GT_100;
     }
+
+    private async calculateSavingsBuffer(userId: string,): Promise<number> {
+        const user = await this.prisma.user.findUnique({
+            where: {
+                id: userId,
+            },
+            select: {
+                monthlyBudget: true,
+            },
+        });
+
+        const monthlyBudget = Number(user?.monthlyBudget);
+        const now = new Date();
+        const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+        const startOfNextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+
+        const result = await this.prisma.paymentOccurrence.aggregate({
+            where: {
+                userId,
+                dueDate: {
+                    gte: startOfMonth,
+                    lt: startOfNextMonth,
+                },
+                status: {
+                    not: PaymentOccurrenceStatus.CANCELLED,
+                },
+                obligation: {
+                    deletedAt: null,
+                },
+            },
+            _sum: {
+                amountDue: true,
+            },
+        });
+
+        const monthlyCommittedObligations = Number(result._sum.amountDue ?? 0,);
+        const savingsBufferRatio = this.getSavingsBufferScore(monthlyCommittedObligations, monthlyBudget);
+
+
+        console.log('calculateBudgetPressureScore', {
+            Budget: monthlyBudget,
+            AmountDue: result._sum.amountDue,
+            monthlyCommittedObligations_: monthlyCommittedObligations,
+            savingsBufferRatio_: savingsBufferRatio,
+        });
+
+        return savingsBufferRatio;
+    }
+
+
+    private getSavingsBufferScore(commitedObligationAmount: number, MonthlyBudget: number): number {
+
+        const savingsBufferRatio = (MonthlyBudget - commitedObligationAmount) / MonthlyBudget;
+        if (savingsBufferRatio >= 0.2) {
+            return SAVINGS_BUFFER.GT_20;
+        }
+
+        if (savingsBufferRatio <= 0.20 && savingsBufferRatio > 0.10) {
+            return SAVINGS_BUFFER.BTWN_10_20
+        }
+
+        if (savingsBufferRatio <= 0.10 && savingsBufferRatio > 0.0) {
+            return SAVINGS_BUFFER.BTWN_0_10;
+        }
+
+        return SAVINGS_BUFFER.OVER_BUDGET;
+    }
+
+
+
+
+
+
+
+
+
+
 }
 
 
