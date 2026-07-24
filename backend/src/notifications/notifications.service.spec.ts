@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import {NotFoundException} from '@nestjs/common';
 import {beforeEach,describe,expect,it,jest,} from '@jest/globals';
-import {NotificationType,UserEventSourceType} from '@prisma/client/edge';
+import {NotificationType,Prisma,UserEventSourceType} from '@prisma/client/edge';
 import {PrismaService} from '../prisma/prisma.service';
 import {NotificationsService} from './notifications.service';
 import { GetNotificationsQueryDto } from './dto/get-notifications-query.dto';
@@ -366,6 +366,45 @@ describe('NotificationsService',()=>{
                     sourceId:'occurrence-1',
                 },
             });
+        });
+        it('uses a supplied transaction client',async()=>{
+            const createdNotification={
+                id:'notification-1',
+                userId:'user-1',
+                type:NotificationType.SCORE_CHANGE,
+                title:'Credit score updated',
+                message:'Your simulated credit score increased.',
+                sourceType:null,
+                sourceId:'score-event-1',
+            };
+            const transactionCreate=jest.fn<(args?:unknown)=>Promise<unknown>>();
+            transactionCreate.mockResolvedValue(createdNotification);
+            const transactionClient={
+                notification:{
+                    create:transactionCreate,
+                },
+            };
+            const result=await service.create({
+                    userId:'user-1',
+                    type:NotificationType.SCORE_CHANGE,
+                    title:'Credit score updated',
+                    message:'Your simulated credit score increased.',
+                    sourceId:'score-event-1',
+                },
+                transactionClient as unknown as Prisma.TransactionClient,
+            );
+            expect(transactionClient.notification.create).toHaveBeenCalledWith({
+                data:{
+                    userId:'user-1',
+                    type:NotificationType.SCORE_CHANGE,
+                    title:'Credit score updated',
+                    message:'Your simulated credit score increased.',
+                    sourceType:null,
+                    sourceId:'score-event-1',
+                },
+            });
+            expect(prisma.notification.create).not.toHaveBeenCalled();
+            expect(result).toEqual(createdNotification);
         });
     });
 });

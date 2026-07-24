@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma,NotificationType } from '@prisma/client/edge';
+import { Prisma} from '@prisma/client/edge';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNotificationInput } from './dto/create-notification.dto';
 import { GetNotificationsQueryDto } from './dto/get-notifications-query.dto';
@@ -79,8 +79,11 @@ export class NotificationsService {
             },
         });
     }
-    async create(input:CreateNotificationInput){
-        return this.prisma.notification.create({
+    async create(
+        input:CreateNotificationInput,
+        client:Prisma.TransactionClient|PrismaService=this.prisma,
+    ){
+        return client.notification.create({
             data:{
                 userId:input.userId,
                 type:input.type,
