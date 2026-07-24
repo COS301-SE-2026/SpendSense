@@ -1,10 +1,9 @@
 import * as React from "react"
 import {useNavigate, Link} from "react-router-dom"
-import {TrendingUp, Calendar as CalIcon, CheckCircle2, PieChart, Flame, AlertCircle, Info} from "lucide-react"
+import {TrendingUp, Calendar as CalIcon, CheckCircle2, PieChart, Flame, AlertCircle, Info, ChevronLeft} from "lucide-react"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { SectionHeader } from "@/components/common/SectionHeader"
 import { CategoryIcon } from "@/components/common/CategoryIcon"
-import { ChevronLeft } from "lucide-react"
 import {useInsights} from "@/hooks/useInsights"
 import type {InsightCard, InsightKey, InsightSeverity} from "@/features/insights/insightsApi"
 
@@ -98,8 +97,8 @@ export default function InsightsPage(){
                                     </p>
                                 </CustomCard>
                             ): (
-                                insights.map((card)=> (
-                                    <InsightCardView key={card.key} card={card}/>
+                                insights.map((card, index)=> (
+                                    <InsightCardView key={`${card.key}-${index}`} card={card}/>
                                 ))
                             )}
                         </div>
@@ -135,40 +134,3 @@ function InsightCardView({
     )
     return card.link ? <Link to={card.link}>{inner}</Link> :inner
 }
-
-
-
-// function CategoryRow({cat, percent}: {cat: string, percent: number}){
-//     return(
-//         <div className="space-y-1">
-//             <div className="flex items-center justify-between text-xs font-semibold text-[#091828]">
-//                 <span>{cat}</span>
-//                 <span className="text-[#6b6375]">{percent}%</span>
-//             </div>
-
-//             <div className="h-2 w-full rounded-full bg-[#d9ede7] overflow-hidden">
-//                 <div className="h-full rounded-full bg-[#3dbfa0]" style={{width: `${percent}%`}}/>
-//             </div>
-//         </div>
-//     )
-// }
-
-// function InsightCard({tone, icon, title, message,}: Readonly<{
-//     tone: "mint"|"lilac"|"pink"|"yellow"
-//     icon: React.ReactNode
-//     title: string
-//     message: string}>)
-// {
-//     return(
-//         <CustomCard variant="navyBorder" size="sm" className="flex items-start gap-3">
-//             <CategoryIcon tone={tone}>{icon}</CategoryIcon>
-
-//             <div className="min-w-0 flex-1">
-//                 <p className="text-sm font-bold text-[#091828]">{title}</p>
-//                 <p className="text-sm text-[#6b6375] mt-0.5">{message}</p>
-//             </div>
-//             {/* TODO: add in a "dismiss" button once we have actual insights here */}
-//         </CustomCard>
-//     )
-
-// }
