@@ -21,6 +21,7 @@ import{ AddTransactionButton } from "@/components/common/AddTransactionButton"
 import{ StreakFlame } from "@/components/common/StreakFlame"
 import{ StreakTicks } from "@/components/common/StreakTicks"
 import { useGamificationProfile } from "@/hooks/useGamificationProfile"
+import { useQuizSession } from "@/hooks/useQuizSession"
 import{ cn } from "@/lib/utils"
 import{ getDailyQuiz, getQuizTopics } from "@/features/quiz/quizApi"
 import type{ DailyQuizState, QuizTopicSummary } from "@/features/quiz/quizTypes"
@@ -69,7 +70,15 @@ function useQuestsOverview(){
 
 export default function QuestsPage(){
 	const navigate=useNavigate()
+	const [isDailyQuizConfirmOpen,setIsDailyQuizConfirmOpen]=useState(false)
+	const [dailyQuizConfirmMode,setDailyQuizConfirmMode]=useState<"START"|"RESUME">("START")
 	const{ daily, topics, loading, error, reload }=useQuestsOverview()
+	const{
+		startDailyQuiz,
+		isLoading:startingDailyQuiz,
+		error:dailyQuizStartError,
+		clearError:clearDailyQuizStartError,
+	}=useQuizSession()
 	const{
 		profile:gamificationProfile,
 		loading:gamificationLoading,
@@ -83,6 +92,29 @@ export default function QuestsPage(){
 	const availableTopics=topics?.filter((t)=>t.available).length??0
 	const totalTopics=topics?.length??0
 	const topicsProgress=totalTopics>0?(availableTopics/totalTopics)*100:0
+	const handleDailyQuizAction=()=>{
+		if(daily?.status==="IN_PROGRESS"){
+			clearDailyQuizStartError()
+			setDailyQuizConfirmMode("RESUME")
+			setIsDailyQuizConfirmOpen(true)
+			return
+		}
+		clearDailyQuizStartError()
+		setDailyQuizConfirmMode("START")
+		setIsDailyQuizConfirmOpen(true)
+	}
+	const handleConfirmDailyQuiz=async()=>{
+		if(dailyQuizConfirmMode==="RESUME"&&daily?.status==="IN_PROGRESS"){
+			setIsDailyQuizConfirmOpen(false)
+			navigate(`/quiz/session/${daily.session.id}`)
+			return
+		}
+		const session=await startDailyQuiz()
+		if(session){
+			setIsDailyQuizConfirmOpen(false)
+			navigate(`/quiz/session/${session.id}`)
+		}
+	}
 	return(
 		<div className="min-h-screen bg-[#F4FBF7] pb-24">
 			<div className="mx-auto w-full max-w-md px-5 pt-6">
@@ -141,7 +173,7 @@ export default function QuestsPage(){
 							knowledgeStreak={knowledgeStreak}
 							actionLabel={dailyContent.actionLabel}
 							disabled={dailyContent.disabled}
-							onAction={()=>navigate("/quiz")}
+							onAction={handleDailyQuizAction}
 						/>
 					)}
 				</section>
@@ -172,7 +204,84 @@ export default function QuestsPage(){
 					<ChevronRight className="size-4 shrink-0 text-[#6b6375]"/>
 				</button>
 			</div>
+			<DailyQuizConfirmDialog
+				open={isDailyQuizConfirmOpen}
+				onCancel={()=>{
+					if(!startingDailyQuiz){
+						setIsDailyQuizConfirmOpen(false)
+					}
+				}}
+				onConfirm={()=>void handleConfirmDailyQuiz()}
+				isStarting={startingDailyQuiz}
+				error={dailyQuizStartError}
+				mode={dailyQuizConfirmMode}
+				progress={daily?.status==="IN_PROGRESS"?daily.session.progress:undefined}
+			/>
 			<BottomNav active="quests"/>
+		</div>
+	)
+}
+
+function DailyQuizConfirmDialog({
+	open,
+	onCancel,
+	onConfirm,
+	isStarting,
+	error,
+	mode,
+	progress,
+}:Readonly<{
+	open:boolean
+	onCancel:()=>void
+	onConfirm:()=>void
+	isStarting:boolean
+	error:string|null
+	mode:"START"|"RESUME"
+	progress?:{
+		answeredAttempts:number
+		initialQuestions:number
+	}
+}>){
+	if(!open){
+		return null
+	}
+	return(
+		<div
+			className="fixed inset-0 z-40 flex items-end bg-[#091828]/55 px-5 pb-6 pt-16 sm:items-center sm:justify-center sm:p-6"
+			onMouseDown={(event)=>{
+				if(event.target===event.currentTarget&&!isStarting){
+					onCancel()
+				}
+			}}
+		>
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="daily-quiz-confirm-title"
+				className="w-full max-w-sm rounded-3xl border-2 border-[#091828] bg-[#FFF9FB] p-5 shadow-[6px_6px_0_#091828]"
+			>
+				<div className="flex size-11 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFD8E6] text-[#AC2A5D]">
+					<CalendarCheck className="size-5"/>
+				</div>
+				<p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-[#AC2A5D]">Daily quiz</p>
+				<h2 id="daily-quiz-confirm-title" className="mt-1 text-xl font-extrabold text-[#091828]">
+					{mode==="RESUME"?"Continue where you left off?":"Ready to begin?"}
+				</h2>
+				<p className="mt-2 text-sm leading-relaxed text-[#6b6375]">
+					{mode==="RESUME"&&progress
+						?`You have answered ${progress.answeredAttempts} of ${progress.initialQuestions} questions so far.`
+						:"Your five-question quiz starts now. Once you begin, you can resume it later today."}
+				</p>
+				{error&&<p className="mt-3 rounded-xl border border-[#AC2A5D] bg-[#FFF1F4] px-3 py-2 text-sm font-semibold text-[#AC2A5D]">{error}</p>}
+				<div className="mt-5 grid grid-cols-2 gap-3">
+					<LongButton LongVariant="outline" LongSize="sm" showArrow={false} onClick={onCancel} disabled={isStarting}>
+						Not yet
+					</LongButton>
+					<LongButton LongVariant="primaryDark" LongSize="sm" showArrow={false} onClick={onConfirm} disabled={isStarting}>
+						{isStarting?"Starting...":mode==="RESUME"?"Continue quiz":"Start quiz"}
+					</LongButton>
+				</div>
+			</div>
 		</div>
 	)
 }
