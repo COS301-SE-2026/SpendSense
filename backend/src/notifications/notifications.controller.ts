@@ -1,7 +1,7 @@
-import {Controller,Get,Param,Patch,Query,UseGuards,} from '@nestjs/common';
+import {Controller,Get,Param,Patch,Query,UseGuards} from '@nestjs/common';
 import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import type { AuthUser } from '../auth/types/auth-user.type';
-import { CurrentAuthUser } from 'src/common/decorators/current-auth-user.decorator';
+import {CurrentAuthUser} from '../common/decorators/current-auth-user.decorator';
 import { GetNotificationsQueryDto } from './dto/get-notifications-query.dto';
 import { NotificationsService } from './notifications.service';
 
