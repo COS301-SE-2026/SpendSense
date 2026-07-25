@@ -419,6 +419,10 @@ export class QuizService {
         nextQuestion: nextQuestion
           ? {
               id: nextQuestion.id,
+              number:
+                questions.findIndex(
+                  (candidate) => candidate.id === nextQuestion.id,
+                ) + 1,
               topic: nextQuestion.topic,
               prompt: nextQuestion.prompt,
               options: nextQuestion.options,
@@ -663,6 +667,9 @@ export class QuizService {
       currentQuestion: currentQuestion
         ? {
             id: currentQuestion.id,
+            number: (questions?.findIndex(
+              (question) => question.id === currentQuestion.id,
+            ) ?? -1) + 1,
             topic: currentQuestion.topic,
             prompt: currentQuestion.prompt,
             options: currentQuestion.options,

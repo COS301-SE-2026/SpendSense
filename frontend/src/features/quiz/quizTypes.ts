@@ -25,6 +25,7 @@ export interface QuizOption{
 
 export interface QuizQuestion{
     id:string
+    number:number
     topic:QuizTopic
     prompt:string
     options:QuizOption[]

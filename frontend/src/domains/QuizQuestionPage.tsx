@@ -1,10 +1,11 @@
-import {useCallback,useEffect,useMemo,useState} from "react"
+import {useCallback,useEffect,useMemo,useRef,useState} from "react"
 import {useNavigate,useParams} from "react-router-dom"
 import {
     AlertTriangle,
     ArrowLeft,
     Check,
     RefreshCw,
+    X,
 } from "lucide-react"
 import {LongButton} from "@/components/common/LongButton"
 import {CustomCard} from "@/components/ui/CustomCard"
@@ -16,6 +17,10 @@ export default function QuizQuestionPage(){
     const {sessionId}=useParams<{sessionId:string}>()
     const [selectedOptionKey,setSelectedOptionKey]=useState<string|null>(null)
     const [hasSubmitted,setHasSubmitted]=useState(false)
+    const [answerToast,setAnswerToast]=useState<{isCorrect:boolean;explanation:string;requeued:boolean}|null>(null)
+    const [isShaking,setIsShaking]=useState(false)
+    const advanceTimeoutRef=useRef<number|null>(null)
+    const shakeTimeoutRef=useRef<number|null>(null)
     const {
         session,
         currentQuestion,
@@ -24,8 +29,19 @@ export default function QuizQuestionPage(){
         error,
         resumeSession,
         answerQuestion,
+        continueToNextQuestion,
         clearError,
     }=useQuizSession()
+    useEffect(()=>{
+        return()=>{
+            if(advanceTimeoutRef.current!==null){
+                window.clearTimeout(advanceTimeoutRef.current)
+            }
+            if(shakeTimeoutRef.current!==null){
+                window.clearTimeout(shakeTimeoutRef.current)
+            }
+        }
+    },[])
     useEffect(()=>{
         if(!sessionId){
             return
@@ -34,21 +50,24 @@ export default function QuizQuestionPage(){
     },[sessionId,resumeSession])
 
     const questionNumber=useMemo(()=>{
+        if(currentQuestion){
+            return currentQuestion.number
+        }
         if(!session){
             return 1
         }
         return Math.min(
-            session.progress.correct+1,
+            session.progress.answeredAttempts+1,
             session.progress.initialQuestions
         )
-    },[session])
+    },[currentQuestion,session])
     const progressPercentage=useMemo(()=>{
         if(!session||session.progress.initialQuestions===0){
             return 0
         }
         return Math.min(
             100,
-            (session.progress.correct/session.progress.initialQuestions)*100
+            (session.progress.answeredAttempts/session.progress.initialQuestions)*100
         )
     },[session])
     const handleBack=useCallback(()=>{
@@ -75,16 +94,38 @@ export default function QuizQuestionPage(){
             setHasSubmitted(false)
             return
         }
-        navigate(`/quiz/session/${sessionId}/feedback`,{
-            state:{
-                feedback:response.feedback,
-                nextQuestion:response.nextQuestion,
-                result:response.result,
-            },
+        const {feedback,result,nextQuestion}=response
+        setAnswerToast({
+            isCorrect:feedback.isCorrect,
+            explanation:feedback.explanation,
+            requeued:feedback.requeued,
         })
+        if(!feedback.isCorrect){
+            setIsShaking(true)
+            if(shakeTimeoutRef.current!==null){
+                window.clearTimeout(shakeTimeoutRef.current)
+            }
+            shakeTimeoutRef.current=window.setTimeout(()=>{
+                setIsShaking(false)
+            },500)
+        }
+        if(advanceTimeoutRef.current!==null){
+            window.clearTimeout(advanceTimeoutRef.current)
+        }
+        advanceTimeoutRef.current=window.setTimeout(()=>{
+            setAnswerToast(null)
+            if(result){
+                navigate(`/quiz/session/${sessionId}/results`)
+                return
+            }
+            setSelectedOptionKey(null)
+            setHasSubmitted(false)
+            continueToNextQuestion(nextQuestion)
+        },feedback.isCorrect?1100:1500)
     },[
         answerQuestion,
         clearError,
+        continueToNextQuestion,
         currentQuestion,
         hasSubmitted,
         isSubmitting,
@@ -123,7 +164,7 @@ export default function QuizQuestionPage(){
             />
         )
     }
-    if(session.status==="COMPLETED"||session.result){
+    if((session.status==="COMPLETED"||session.result)&&!answerToast){
         return(
             <QuizQuestionError
                 message="This quiz has already been completed."
@@ -144,6 +185,35 @@ export default function QuizQuestionPage(){
     const interactionDisabled=isSubmitting||hasSubmitted
     return(
         <div className="min-h-screen bg-[#F4FBF7] pb-10">
+            {answerToast&&(
+                <div
+                    className="fixed inset-x-0 top-4 z-50 flex justify-center px-5"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <div
+                        className="flex w-full max-w-md items-start gap-3 rounded-2xl border-2 border-[#091828] px-4 py-3 shadow-[4px_4px_0_#091828] animate-ss-toast-in"
+                        style={{backgroundColor:answerToast.isCorrect?"#DCEFE8":"#FFD9E1"}}
+                    >
+                        <span
+                            className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-white"
+                        >
+                            {answerToast.isCorrect?(
+                                <Check className="size-4 text-[#0E7A5F]" strokeWidth={3}/>
+                            ):(
+                                <X className="size-4 text-[#AC2A5D]" strokeWidth={3}/>
+                            )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-extrabold text-[#091828]">{answerToast.isCorrect?"Correct!":"Not quite"}</p>
+                            <p className="mt-0.5 text-xs font-semibold leading-relaxed text-[#091828]/70">{answerToast.explanation}</p>
+                            {!answerToast.isCorrect&&answerToast.requeued&&(
+                                <p className="mt-1 text-xs font-bold text-[#8A6D00]">This question will come back later.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
             <main className="mx-auto w-full max-w-md px-5 pt-6">
                 <header>
                     <button
@@ -171,8 +241,8 @@ export default function QuizQuestionPage(){
                         role="progressbar"
                         aria-valuemin={0}
                         aria-valuemax={session.progress.initialQuestions}
-                        aria-valuenow={session.progress.correct}
-                        aria-label={`${session.progress.correct} of ${session.progress.initialQuestions} questions completed`}
+                        aria-valuenow={session.progress.answeredAttempts}
+                        aria-label={`${session.progress.answeredAttempts} of ${session.progress.initialQuestions} questions completed`}
                     >
                         <div
                             className="h-full rounded-full bg-[#6FC9B0] transition-[width] duration-300"
@@ -190,12 +260,15 @@ export default function QuizQuestionPage(){
                 </CustomCard>
                 <fieldset
                     disabled={interactionDisabled}
-                    className="mt-5 space-y-3"
+                    className={cn("mt-5 space-y-3",isShaking&&"animate-ss-shake")}
                     aria-label="Answer options"
                 >
                     <legend className="sr-only">Select one answer</legend>
                     {currentQuestion.options.map((option)=>{
                         const isSelected=selectedOptionKey===option.key
+                        const showResult=isSelected&&answerToast!==null
+                        const isSelectedCorrect=showResult&&answerToast.isCorrect
+                        const isSelectedWrong=showResult&&!answerToast.isCorrect
                         return(
                             <button
                                 key={option.key}
@@ -206,17 +279,25 @@ export default function QuizQuestionPage(){
                                 className={cn(
                                     "flex w-full items-center gap-3 rounded-2xl border-2 bg-white px-4 py-4 text-left shadow-sm transition",
                                     "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FFD9E1]",
-                                    isSelected?"border-[#AC2A5D] bg-[#FFF4F7]":"border-transparent hover:border-[#D6EEE8]",
+                                    isSelectedCorrect&&"border-[#0E7A5F] bg-[#DCEFE8]",
+                                    isSelectedWrong&&"border-[#AC2A5D] bg-[#FFD9E1]",
+                                    isSelected&&!showResult&&"border-[#AC2A5D] bg-[#FFF4F7]",
+                                    !isSelected&&"border-transparent hover:border-[#D6EEE8]",
                                     interactionDisabled?"cursor-not-allowed":"active:scale-[0.99]"
                                 )}
                             >
                                 <span
                                     className={cn(
                                         "flex size-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-extrabold",
-                                        isSelected?"border-[#AC2A5D] bg-[#AC2A5D] text-white":"border-[#B8CBBF] bg-[#F4FBF7] text-[#091828]"
+                                        isSelectedCorrect&&"border-[#0E7A5F] bg-[#0E7A5F] text-white",
+                                        isSelectedWrong&&"border-[#AC2A5D] bg-[#AC2A5D] text-white",
+                                        isSelected&&!showResult&&"border-[#AC2A5D] bg-[#AC2A5D] text-white",
+                                        !isSelected&&"border-[#B8CBBF] bg-[#F4FBF7] text-[#091828]"
                                     )}
                                 >
-                                    {isSelected?(
+                                    {isSelectedWrong?(
+                                        <X className="size-5"/>
+                                    ):isSelected?(
                                         <Check className="size-5"/>
                                     ):(
                                         option.key

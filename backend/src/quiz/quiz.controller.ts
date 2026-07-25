@@ -128,6 +128,7 @@ export class QuizController {
           },
           currentQuestion: {
             id: 'question_123',
+            number: 1,
             topic: 'CREDIT_SCORE',
             prompt:
               'Which behaviour is most likely to improve a simulated credit-health score?',
@@ -180,6 +181,7 @@ export class QuizController {
           },
           currentQuestion: {
             id: 'question_123',
+            number: 2,
             topic: 'CREDIT_SCORE',
             prompt:
               'Which behaviour is most likely to improve a simulated credit-health score?',
@@ -235,6 +237,7 @@ export class QuizController {
           },
           nextQuestion: {
             id: 'question_456',
+            number: 5,
             topic: 'CREDIT_SCORE',
             prompt: 'Which action supports financial health?',
             options: [{ key: 'A', text: 'Pay on time' }],

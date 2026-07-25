@@ -16,6 +16,7 @@ expectTypeOf<QuizSessionStatus>().toEqualTypeOf<'IN_PROGRESS'|'COMPLETED'|'ABAND
 //testing question type
 const question:QuizQuestion={
     id:'question_123',
+    number:1,
     topic:'CREDIT_SCORE',
     prompt:'Which behaviour is most likely to improve a simulated credit-health score?',
     options:[
