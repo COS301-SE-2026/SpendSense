@@ -18,12 +18,12 @@ beforeEach(()=>{
 })
 
 describe('getDailyQuiz',()=>{
-    it('GETs /api/v1/quiz/daily and unwraps data',async()=>{
+    it('GETs /quiz/daily and unwraps data',async()=>{
         const payload={date:'2026-07-14',status:'AVAILABLE',session:null}
         mockedApiFetch.mockResolvedValue({data:payload})
         const result=await getDailyQuiz()
         expect(mockedApiFetch).toHaveBeenCalledWith(
-            '/api/v1/quiz/daily',
+            '/quiz/daily',
             expect.objectContaining({method:'GET'}),
         )
         expect(result).toEqual(payload)
@@ -33,7 +33,7 @@ describe('getDailyQuiz',()=>{
         const controller=new AbortController()
         await getDailyQuiz({signal:controller.signal})
         expect(mockedApiFetch).toHaveBeenCalledWith(
-            '/api/v1/quiz/daily',
+            '/quiz/daily',
             expect.objectContaining({signal:controller.signal}),
         )
     })
@@ -44,7 +44,7 @@ describe('getDailyQuiz',()=>{
 })
 
 describe('getQuizTopics',()=>{
-    it('GETs /api/v1/quiz/topics and unwraps data',async()=>{
+    it('GETs /quiz/topics and unwraps data',async()=>{
         const payload=[{
                 key:'CREDIT_SCORE',
                 name:'Credit Score',
@@ -57,7 +57,7 @@ describe('getQuizTopics',()=>{
         mockedApiFetch.mockResolvedValue({data:payload})
         const result=await getQuizTopics()
         expect(mockedApiFetch).toHaveBeenCalledWith(
-            '/api/v1/quiz/topics',
+            '/quiz/topics',
             expect.objectContaining({method:'GET'}),
         )
         expect(result).toEqual(payload)
@@ -65,7 +65,7 @@ describe('getQuizTopics',()=>{
 })
 
 describe('getQuizTopic',()=>{
-    it('GETs /api/v1/quiz/topics/:topic with the topic interpolated in the path',async()=>{
+    it('GETs /quiz/topics/:topic with the topic interpolated in the path',async()=>{
         const payload={
             key:'CREDIT_SCORE',
             name:'Credit Score',
@@ -77,7 +77,7 @@ describe('getQuizTopic',()=>{
         mockedApiFetch.mockResolvedValue({data:payload})
         const result=await getQuizTopic('CREDIT_SCORE')
         expect(mockedApiFetch).toHaveBeenCalledWith(
-            '/api/v1/quiz/topics/CREDIT_SCORE',
+            '/quiz/topics/CREDIT_SCORE',
             expect.objectContaining({method:'GET'}),
         )
         expect(result).toEqual(payload)
@@ -86,7 +86,7 @@ describe('getQuizTopic',()=>{
         mockedApiFetch.mockResolvedValue({data:{}})
         await getQuizTopic('BUDGETING')
         expect(mockedApiFetch).toHaveBeenCalledWith(
-            '/api/v1/quiz/topics/BUDGETING',
+            '/quiz/topics/BUDGETING',
             expect.anything(),
         )
     })
@@ -98,7 +98,7 @@ describe('createQuizSession',()=>{
         mockedApiFetch.mockResolvedValue({data:payload})
         const result=await createQuizSession({type:'DAILY'})
         expect(mockedApiFetch).toHaveBeenCalledWith(
-            '/api/v1/quiz/sessions',
+            '/quiz/sessions',
             expect.objectContaining({
                 method:'POST',
                 body:JSON.stringify({type:'DAILY'}),
@@ -110,7 +110,7 @@ describe('createQuizSession',()=>{
         mockedApiFetch.mockResolvedValue({data:{id:'s2',type:'TOPIC'}})
         await createQuizSession({type:'TOPIC',topic:'CREDIT_SCORE'})
         expect(mockedApiFetch).toHaveBeenCalledWith(
-            '/api/v1/quiz/sessions',
+            '/quiz/sessions',
             expect.objectContaining({
                 method:'POST',
                 body:JSON.stringify({type:'TOPIC',topic:'CREDIT_SCORE'}),
@@ -120,12 +120,12 @@ describe('createQuizSession',()=>{
 })
 
 describe('getQuizSession',()=>{
-    it('GETs /api/v1/quiz/sessions/:id with the id interpolated',async()=>{
+    it('GETs /quiz/sessions/:id with the id interpolated',async()=>{
         const payload={id:'session_123',status:'IN_PROGRESS'}
         mockedApiFetch.mockResolvedValue({data:payload})
         const result=await getQuizSession('session_123')
         expect(mockedApiFetch).toHaveBeenCalledWith(
-            '/api/v1/quiz/sessions/session_123',
+            '/quiz/sessions/session_123',
             expect.objectContaining({method:'GET'}),
         )
         expect(result).toEqual(payload)
@@ -133,7 +133,7 @@ describe('getQuizSession',()=>{
 })
 
 describe('submitQuizAnswer',()=>{
-    it('POSTs to /api/v1/quiz/sessions/:id/answer ->not a literal template string',async()=>{
+    it('POSTs to /quiz/sessions/:id/answer ->not a literal template string',async()=>{
         const payload={sessionId:'session_123',status:'IN_PROGRESS'}
         mockedApiFetch.mockResolvedValue({data:payload})
         const result=await submitQuizAnswer('session_123',{
@@ -141,7 +141,7 @@ describe('submitQuizAnswer',()=>{
             selectedOptionKey:'A',
         })
         const [calledUrl]=mockedApiFetch.mock.calls[0]
-        expect(calledUrl).toBe('/api/v1/quiz/sessions/session_123/answer')
+        expect(calledUrl).toBe('/quiz/sessions/session_123/answer')
         expect(calledUrl).not.toContain('${')
         expect(result).toEqual(payload)
     })
@@ -152,7 +152,7 @@ describe('submitQuizAnswer',()=>{
             selectedOptionKey:'B',
         })
         expect(mockedApiFetch).toHaveBeenCalledWith(
-            '/api/v1/quiz/sessions/session_123/answer',
+            '/quiz/sessions/session_123/answer',
             expect.objectContaining({
                 method:'POST',
                 body:JSON.stringify({questionId:'question_1',selectedOptionKey:'B'}),
