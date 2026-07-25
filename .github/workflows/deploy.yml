@@ -1,8 +1,5 @@
 name: Deploy
 
-# Only main triggers this — main only ever receives merges from release,
-# and release-checks.yml already gated that merge. No tests run here; this
-# workflow trusts release's CI and focuses purely on shipping.
 on:
   push:
     branches: [main]

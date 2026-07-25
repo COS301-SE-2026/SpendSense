@@ -199,8 +199,9 @@ export function useQuizSession(){
             }
         }
     }, [session])
-    const continueToNextQuestion=useCallback(()=>{
-        if(!nextQuestion){
+    const continueToNextQuestion=useCallback((question?:QuizQuestion|null)=>{
+        const upcoming=question??nextQuestion
+        if(!upcoming){
             return
         }
         setSession(currentSession=>
@@ -210,7 +211,7 @@ export function useQuizSession(){
             }
             return {
                 ...currentSession,
-                currentQuestion:nextQuestion
+                currentQuestion:upcoming
             }
         })
         setFeedback(null)
