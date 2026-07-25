@@ -37,8 +37,37 @@ export function useInsights(): UseInsightsReturn{
     },[])
 
     useEffect(()=> {
-        void fetchInsights()
-    }, [fetchInsights])
+        let cancelled = false
+
+        async function loadInitialInsights(){
+            try{
+                const raw = await getInsights() as Envelope<InsightsResponse>
+                const payload = raw?.data
+
+                if (!cancelled){
+                    setAsOf(payload?.asOf ?? null)
+                    setInsights(payload?.insights ?? [])
+                    setError(null)
+                }
+            }catch(err){
+                if (!cancelled){
+                    setError(err instanceof Error ? err.message : 'Failed to load insights')
+                    setAsOf(null)
+                    setInsights([])
+                }
+            }finally {
+                if (!cancelled){
+                    setLoading(false)
+                }
+            }
+        }
+
+        void loadInitialInsights()
+
+        return ()=> {
+            cancelled = true
+        }
+    }, [])
 
     return {asOf, insights, loading, error, refetch: fetchInsights}
 }

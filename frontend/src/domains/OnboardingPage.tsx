@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
-import { Calendar, Repeat2, PiggyBank, ChevronDown, CreditCard, BanknoteArrowDown } from "lucide-react"
+import { Calendar, Repeat2, PiggyBank, ChevronDown, CreditCard, Banknote } from "lucide-react"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { LongButton } from "@/components/common/LongButton"
 import { cn } from "@/lib/utils"
@@ -11,7 +11,7 @@ const GOAL_OPTIONS=[
     {id: "payments", label: "Pay on time", icon: <Calendar className="size-5"/>},
     {id: "savings", label: "Save more money", icon: <PiggyBank className="size-5"/>},
     {id: "habits", label: "Build lasting habits", icon: <Repeat2 className="size-5"/>},
-    {id: "spending", label: "Cut back on spending", icon: <BanknoteArrowDown className="size-5"/>},
+    {id: "spending", label: "Cut back on spending", icon: <Banknote className="size-5"/>},
     {id: "credit", label: "Learn about credit", icon: <CreditCard className="size-5"/>},
 ]
 
