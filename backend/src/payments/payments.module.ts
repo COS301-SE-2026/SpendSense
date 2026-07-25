@@ -4,6 +4,7 @@ import { PaymentsService } from './payments.service';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
+import { GamificationModule } from 'src/gamification/gamification.module';
 // PaymentsModule: payment logging and occurrence management
 // TODO: implemetn PaymentsController and PaymentsService
 
@@ -12,7 +13,7 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
 // GET /api/v1/payment-occurrences/upcoming
 
 @Module({
-  imports: [AuthModule, UsersModule,NotificationsModule],
+  imports: [AuthModule, UsersModule,NotificationsModule,GamificationModule],
   controllers: [PaymentsController],
   providers: [PaymentsService],
   exports: [PaymentsService],
