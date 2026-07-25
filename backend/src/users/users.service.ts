@@ -9,9 +9,12 @@ import {
   ScoreTier,
   UserEventSourceType,
   UserEventType,
+  Theme,
+  Currency,
 } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
+import type { UpdatePreferencesDto } from './dto/update-preferences.dto';
 
 // UsersService: manages internal user records
 // bridges supabaseAuthId with the internal user table & default related records
@@ -349,6 +352,15 @@ export type InternalUserProfile = Prisma.UserGetPayload<{
   include: typeof userProfileInclude;
 }>;
 
+export type UserPreferenceResult = Prisma.UserPreferenceGetPayload<{
+  select: {
+    theme: true;
+    language: true;
+    currency: true;
+    reducedMotion: true;
+  };
+}>;
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -435,6 +447,44 @@ export class UsersService {
         }),
       },
       include: userProfileInclude,
+    });
+  }
+
+  async updatePreferences(
+    authUser: AuthUser,
+    updates: UpdatePreferencesDto,
+  ): Promise<UserPreferenceResult> {
+    if (Object.keys(updates).length === 0) {
+      throw new BadRequestException(
+        'At least one field for preferences is required',
+      );
+    }
+
+    const currentUser = await this.findOrCreateUser(authUser);
+
+    return this.prisma.userPreference.upsert({
+      where: { userId: currentUser.id },
+      update: {
+        ...(updates.theme !== undefined && { theme: updates.theme }),
+        ...(updates.language !== undefined && { language: updates.language }),
+        ...(updates.currency !== undefined && { currency: updates.currency }),
+        ...(updates.reducedMotion !== undefined && {
+          reducedMotion: updates.reducedMotion,
+        }),
+      },
+      create: {
+        userId: currentUser.id,
+        theme: updates.theme ?? Theme.SYSTEM,
+        language: updates.language ?? 'en',
+        currency: updates.currency ?? Currency.ZAR,
+        reducedMotion: updates.reducedMotion ?? false,
+      },
+      select: {
+        theme: true,
+        language: true,
+        currency: true,
+        reducedMotion: true,
+      },
     });
   }
 
