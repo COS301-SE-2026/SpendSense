@@ -8,11 +8,22 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 
 describe('UsersController', () => {
   let controller: UsersController;
-  let usersService: jest.Mocked<Pick<UsersService, 'findOrCreateUser'>>;
+  let usersService: jest.Mocked<
+    Pick<
+      UsersService,
+      | 'findOrCreateUser'
+      | 'updateProfile'
+      | 'deactivateAccount'
+      | 'exportUserData'
+    >
+  >;
 
   beforeEach(() => {
     usersService = {
       findOrCreateUser: jest.fn(),
+      updateProfile: jest.fn(),
+      deactivateAccount: jest.fn(),
+      exportUserData: jest.fn(),
     };
 
     controller = new UsersController(usersService as unknown as UsersService);
@@ -30,6 +41,7 @@ describe('UsersController', () => {
       email: 'test-user-1@example.com',
       displayName: 'Kyle',
       avatarUrl: null,
+      monthlyBudget: null,
       onboardingCompleted: false,
       createdAt,
       preference: {
@@ -74,6 +86,7 @@ describe('UsersController', () => {
         email: 'test-user-1@example.com',
         displayName: 'Kyle',
         avatarUrl: null,
+        monthlyBudget: null,
         onboardingCompleted: false,
         createdAt,
       },
@@ -114,5 +127,96 @@ describe('UsersController', () => {
     });
 
     expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
+  });
+
+  it('updates the authenticated user profile and returns the full profile shape', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'test-supabase-user-1',
+      email: 'test-user-1@example.com',
+    };
+    const createdAt = new Date('2026-05-19T10:00:00.000Z');
+    const updates = {
+      displayName: 'Updated Kyle',
+      avatarUrl: null,
+      monthlyBudget: 2500.5,
+      onboardingCompleted: true,
+    };
+    const updatedProfile = {
+      id: 'usr_123',
+      email: 'test-user-1@example.com',
+      displayName: 'Updated Kyle',
+      avatarUrl: null,
+      monthlyBudget: 2500.5,
+      onboardingCompleted: true,
+      createdAt,
+      preference: null,
+      notificationPreference: null,
+      creditProfile: null,
+      gamificationProfile: null,
+    } as never;
+
+    usersService.updateProfile.mockResolvedValue(updatedProfile);
+
+    await expect(controller.updateMe(authUser, updates)).resolves.toEqual({
+      user: {
+        id: 'usr_123',
+        email: 'test-user-1@example.com',
+        displayName: 'Updated Kyle',
+        avatarUrl: null,
+        monthlyBudget: 2500.5,
+        onboardingCompleted: true,
+        createdAt,
+      },
+      preferences: null,
+      notificationPreferences: null,
+      creditProfile: null,
+      gamificationProfile: null,
+    });
+
+    expect(usersService.updateProfile).toHaveBeenCalledWith(authUser, updates);
+  });
+
+  it('deactivates the authenticated user account', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'test-supabase-user-1',
+      email: 'test-user-1@example.com',
+    };
+    const deactivatedAt = new Date('2026-07-21T10:00:00.000Z');
+    const result = { deactivated: true, deactivatedAt };
+
+    usersService.deactivateAccount.mockResolvedValue(result);
+
+    await expect(controller.deactivateMe(authUser)).resolves.toEqual(result);
+    expect(usersService.deactivateAccount).toHaveBeenCalledWith(authUser);
+  });
+
+  it('exports data for the authenticated user', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'test-supabase-user-1',
+      email: 'test-user-1@example.com',
+    };
+    const result = {
+      exportedAt: new Date('2026-07-21T10:00:00.000Z'),
+      user: { id: 'usr_123', email: authUser.email },
+      preferences: {},
+      notificationPreferences: {},
+      creditProfile: {},
+      gamificationProfile: {},
+      obligations: [],
+      paymentOccurrences: [],
+      paymentRecords: [],
+      reminders: [],
+      notifications: [],
+      scoreEvents: [],
+      badges: [],
+      userEvents: [],
+      rewardTransactions: [],
+      quizSessions: [],
+    };
+
+    usersService.exportUserData.mockResolvedValue(result as never);
+
+    await expect(controller.exportMe(authUser)).resolves.toEqual(result);
+    expect(usersService.exportUserData).toHaveBeenCalledWith(authUser);
   });
 });
