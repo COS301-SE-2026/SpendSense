@@ -11,6 +11,7 @@ import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -229,5 +230,40 @@ export class UsersController {
   @Get('me/export')
   async exportMe(@CurrentAuthUser() authUser: AuthUser) {
     return this.usersService.exportUserData(authUser);
+  }
+
+  @ApiOperation({
+    summary: 'Updates authenticated users preferences',
+    description: 'Updates the general application preferences for an authenticated user, and creates the preference row if it is missing.',
+  })
+  @ApiOkResponse({
+    description: 'The persisted preference values.',
+    schema: {
+        example: {
+            data: {
+                preferences: {
+                    theme: 'LIGHT',
+                    language: 'en',
+                    currency: 'ZAR',
+                    reducedMotion: false,
+                },
+            },
+        },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, or invalid Supabase Bearer token.',
+  })
+  @Patch('me/preferences')
+  async updateMyPreferences(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Body() updates: UpdatePreferencesDto,
+  ) {
+    const preferences = await this.usersService.updatePreferences(
+        authUser,
+        updates,
+    );
+
+    return { preferences };
   }
 }
