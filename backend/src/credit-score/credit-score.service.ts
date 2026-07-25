@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PAYMENT_HISTORY_SCORES, BUDGET_PRESSURE, SAVINGS_BUFFER, CREDIT_SCORE_MODEL_VERSION, CREDIT_SCORE_RANGE, CREDIT_SCORE_COMPONENT_WEIGHTS, PRIORITY_WEIGHTS, RISK_CAPS } from './credit-score.constants'
-import { PaymentOccurrenceStatus } from "@prisma/client";
+import { PAYMENT_HISTORY_SCORES, RiskCapResult, RISK_CAP_REASONS, HISTORY_LENGTH_CONFIG, BUDGET_PRESSURE, SAVINGS_BUFFER, CREDIT_SCORE_RANGE, CREDIT_SCORE_COMPONENT_WEIGHTS, PRIORITY_WEIGHTS, RISK_CAPS } from './credit-score.constants'
+import { ObligationType, PaymentOccurrenceStatus } from "@prisma/client";
 
 @Injectable()
 export class CreditScoreService {
@@ -9,13 +9,33 @@ export class CreditScoreService {
     constructor(private readonly prisma: PrismaService) { }
     async getCreditScore(userId: string) {
 
-        let score = 
-        CREDIT_SCORE_COMPONENT_WEIGHTS.PAYMENT_HISTORY * await this.calculatePaymentHistory(userId) +
-        CREDIT_SCORE_COMPONENT_WEIGHTS.BUDGET_PRESSURE * await this.calculateBudgetPressureScore(userId) +
-        CREDIT_SCORE_COMPONENT_WEIGHTS.SAVINGS_BUFFER * await this.calculateSavingsBuffer(userId) ;
+
+        let paymentH = CREDIT_SCORE_COMPONENT_WEIGHTS.PAYMENT_HISTORY * await this.calculatePaymentHistory(userId);
+        let budgetPressure = CREDIT_SCORE_COMPONENT_WEIGHTS.BUDGET_PRESSURE * await this.calculateBudgetPressureScore(userId);
+        let savingsBuffer = CREDIT_SCORE_COMPONENT_WEIGHTS.SAVINGS_BUFFER * await this.calculateSavingsBuffer(userId);
+        let historyLength = CREDIT_SCORE_COMPONENT_WEIGHTS.HISTORY_LENGTH * await this.calculateHistoryLengthScore(userId);
+        let obligationDiveristy = CREDIT_SCORE_COMPONENT_WEIGHTS.OBLIGATION_DIVERSITY * await this.calculateObligationDiversityScore(userId, paymentH);
+
+        let sumValues = paymentH + budgetPressure + savingsBuffer + historyLength + obligationDiveristy;
+        let calculateScore = CREDIT_SCORE_RANGE.MIN + (sumValues * CREDIT_SCORE_RANGE.RANGE);
+
+        let applicableRisks = await this.determineApplicableRiskCaps(userId);
+        let finalScore = Math.min(calculateScore, applicableRisks.cap);
+
+        let finalScoreTier = this.determineScoreTier(finalScore);
+
+        let reason = `` ;
+        if (applicableRisks.applied) {
+            reason = `We have to cap your score at ${applicableRisks.cap}, because ${applicableRisks.reason}`            
+        } else {
+            reason = ``            
+        }
 
         return {
-            creditScore: score,
+            applicableRisks,
+            reasonForRiskCaps: reason,
+            creditScore: finalScore,
+            creditScoreTier: finalScoreTier,
         }
 
     }
@@ -228,7 +248,7 @@ export class CreditScoreService {
         const savingsBufferRatio = this.getSavingsBufferScore(monthlyCommittedObligations, monthlyBudget);
 
 
-        console.log('calculateBudgetPressureScore', {
+        console.log('calculateSavingsBiffer', {
             Budget: monthlyBudget,
             AmountDue: result._sum.amountDue,
             monthlyCommittedObligations_: monthlyCommittedObligations,
@@ -241,7 +261,12 @@ export class CreditScoreService {
 
     private getSavingsBufferScore(commitedObligationAmount: number, MonthlyBudget: number): number {
 
-        const savingsBufferRatio = (MonthlyBudget - commitedObligationAmount) / MonthlyBudget;
+        const numerator = (MonthlyBudget - commitedObligationAmount);
+        const savingsBufferRatio = numerator / MonthlyBudget;
+
+        console.log('calculateSavingsBiffer', {
+            savingsBufferRatio_: savingsBufferRatio,
+        });
         if (savingsBufferRatio >= 0.2) {
             return SAVINGS_BUFFER.GT_20;
         }
@@ -260,11 +285,335 @@ export class CreditScoreService {
 
 
 
+    private async calculateHistoryLengthScore(userId: string,): Promise<number> {
+        const occurrences = await this.prisma.paymentOccurrence.findMany({
+            where: {
+                userId,
+                status: {
+                    in: [
+                        PaymentOccurrenceStatus.PAID,
+                        PaymentOccurrenceStatus.PAID_LATE,
+                        PaymentOccurrenceStatus.MISSED,
+                        PaymentOccurrenceStatus.OVERDUE,
+                    ],
+                },
+            },
+            select: {
+                dueDate: true,
+            },
+        });
+
+        const distinctMonths = new Set<string>();
+
+        for (const occurrence of occurrences) {
+            const year = occurrence.dueDate.getUTCFullYear();
+            const month = occurrence.dueDate.getUTCMonth() + 1;
+
+            distinctMonths.add(`${year}-${month}`);
+        }
+
+        const monthsWithPaymentHistory = distinctMonths.size;
+        console.log('calculateSavingsBiffer', {
+            distinctMonths_: distinctMonths,
+            monthsWithPaymentHistory_: monthsWithPaymentHistory,
+
+        });
 
 
+        return Math.min(monthsWithPaymentHistory / HISTORY_LENGTH_CONFIG.MONTHS_FOR_MAX_SCORE, 1,);
+    }
 
+    private async calculateObligationDiversityScore(userId: string, paymentHistoryScore: number,): Promise<number> {
+        const calculationDate = new Date();
+        const ninetyDaysAgo = new Date(calculationDate);
+        ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90,);
 
+        const occurrences = await this.prisma.paymentOccurrence.findMany({
+            where: {
+                obligation: {
+                    userId,
+                },
+                dueDate: {
+                    gte: ninetyDaysAgo,
+                    lte: calculationDate,
+                },
+                status: {
+                    in: [
+                        PaymentOccurrenceStatus.PAID,
+                        PaymentOccurrenceStatus.PAID_LATE,
+                        PaymentOccurrenceStatus.MISSED,
+                        PaymentOccurrenceStatus.OVERDUE,
+                    ],
+                },
+            },
+            select: {
+                status: true,
+                obligation: {
+                    select: {
+                        type: true,
+                    },
+                },
+            },
+        });
 
+        const paidObligationTypes = new Set<ObligationType>();
+        const failedObligationTypes = new Set<ObligationType>();
+
+        for (const occurrence of occurrences) {
+            const obligationType = occurrence.obligation.type;
+
+            if (occurrence.status === PaymentOccurrenceStatus.PAID || occurrence.status === PaymentOccurrenceStatus.PAID_LATE) {
+                paidObligationTypes.add(obligationType);
+            }
+            if (occurrence.status === PaymentOccurrenceStatus.MISSED || occurrence.status === PaymentOccurrenceStatus.OVERDUE) {
+                failedObligationTypes.add(obligationType);
+            }
+        }
+
+        let successfullyManagedTypes = 0;
+
+        for (const obligationType of paidObligationTypes) {
+            if (!failedObligationTypes.has(obligationType)) {
+                successfullyManagedTypes++;
+            }
+        }
+
+        let diversityScore = Math.min(successfullyManagedTypes / 3, 1);
+
+        if (paymentHistoryScore < 0.5) {
+            diversityScore = Math.min(diversityScore, 0.4);
+        }
+
+        return diversityScore;
+    }
+
+    private async determineApplicableRiskCaps(userId: string,): Promise<RiskCapResult> {
+
+        const today = new Date();
+        const ninetyDaysAgo = new Date(today);
+        ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90);
+        const startOfMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+        const startOfNextMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1));
+
+        const [hasNoPaymentHistory, hasRecentOverduePayment, hasRecentLatePayment, hasRecentMissedPayment, hasRecentMissedCriticalObligation, isCurrentlyOverBudget,] = await Promise.all([
+            this.hasNoPaymentHistory(userId),
+            this.hasOverduePaymentWithinPeriod(userId, ninetyDaysAgo, today,),
+            this.hasLatePaymentWithinPeriod(userId, ninetyDaysAgo, today,),
+            this.hasMissedPaymentWithinPeriod(userId, ninetyDaysAgo, today,),
+            this.hasMissedCriticalObligationWithinPeriod(userId, ninetyDaysAgo, today,),
+            this.isOverBudgetForMonth(userId, startOfMonth, startOfNextMonth,),
+        ]);
+
+        const applicableRiskCaps: RiskCapResult[] = [];
+
+        if (hasNoPaymentHistory) {
+            applicableRiskCaps.push({
+                applied: true,
+                cap: RISK_CAPS.NO_PAYMENT_HISTORY,
+                reason: RISK_CAP_REASONS.NO_PAYMENT_HISTORY,
+            });
+        }
+
+        if (hasRecentOverduePayment) {
+            applicableRiskCaps.push({
+                applied: true,
+                cap: RISK_CAPS.CURRENT_OVERDUE_PAYMENT,
+                reason: RISK_CAP_REASONS.CURRENT_OVERDUE_PAYMENT,
+            });
+        }
+
+        if (hasRecentLatePayment) {
+            applicableRiskCaps.push({
+                applied: true,
+                cap: RISK_CAPS.RECENT_LATE_15_TO_30,
+                reason: RISK_CAP_REASONS.RECENT_LATE_15_TO_30,
+            });
+        }
+
+        if (hasRecentMissedPayment) {
+            applicableRiskCaps.push({
+                applied: true,
+                cap: RISK_CAPS.RECENT_MISSED_PAYMENT,
+                reason: RISK_CAP_REASONS.RECENT_MISSED_PAYMENT,
+            });
+        }
+
+        if (hasRecentMissedCriticalObligation) {
+            applicableRiskCaps.push({
+                applied: true,
+                cap: RISK_CAPS.RECENT_MISSED_CRITICAL_OBLIGATION,
+                reason: RISK_CAP_REASONS.RECENT_MISSED_CRITICAL_OBLIGATION,
+            });
+        }
+
+        if (isCurrentlyOverBudget) {
+            applicableRiskCaps.push({
+                applied: true,
+                cap: RISK_CAPS.OVER_BUDGET,
+                reason: RISK_CAP_REASONS.OVER_BUDGET,
+            });
+        }
+
+        if (applicableRiskCaps.length === 0) {
+            return {
+                applied: false,
+                cap: RISK_CAPS.NONE,
+                reason: RISK_CAP_REASONS.NONE,
+            };
+        }
+
+        const strictestRiskCap = applicableRiskCaps.reduce(
+            (lowestCap, currentCap) => {
+                if (currentCap.cap < lowestCap.cap) {
+                    return currentCap;
+                }
+                return lowestCap;
+            },
+        );
+
+        return {
+            applied: true,
+            cap: strictestRiskCap.cap,
+            reason: strictestRiskCap.reason,
+        };
+    }
+
+    private async hasNoPaymentHistory(userId: string): Promise<boolean> {
+        const paymentHistoryCount = await this.prisma.paymentOccurrence.count({
+            where: {
+                obligation: {
+                    userId,
+                },
+                status: {
+                    in: [
+                        PaymentOccurrenceStatus.PAID,
+                        PaymentOccurrenceStatus.PAID_LATE,
+                        PaymentOccurrenceStatus.MISSED,
+                    ],
+                },
+            },
+        });
+        return paymentHistoryCount === 0;
+    }
+    private async hasOverduePaymentWithinPeriod(userId: string, periodStart: Date, periodEnd: Date): Promise<boolean> {
+        const overduePaymentCount = await this.prisma.paymentOccurrence.count({
+            where: {
+                obligation: {
+                    userId,
+                },
+                status: PaymentOccurrenceStatus.OVERDUE,
+                dueDate: {
+                    gte: periodStart,
+                    lte: periodEnd,
+                },
+            },
+        });
+        return overduePaymentCount > 0;
+    }
+    private async hasLatePaymentWithinPeriod(userId: string, periodStart: Date, periodEnd: Date): Promise<boolean> {
+        const latePaymentCount = await this.prisma.paymentOccurrence.count({
+            where: {
+                obligation: {
+                    userId,
+                },
+                status: PaymentOccurrenceStatus.PAID_LATE,
+                dueDate: {
+                    gte: periodStart,
+                    lte: periodEnd,
+                },
+                payment: {
+                    daysLate: {
+                        gte: 15,
+                        lte: 30,
+                    },
+                },
+            },
+        });
+        return latePaymentCount > 0;
+    }
+    private async hasMissedPaymentWithinPeriod(userId: string, periodStart: Date, periodEnd: Date): Promise<boolean> {
+        const missedPaymentCount = await this.prisma.paymentOccurrence.count({
+            where: {
+                obligation: {
+                    userId,
+                },
+                status: PaymentOccurrenceStatus.MISSED,
+                dueDate: {
+                    gte: periodStart,
+                    lte: periodEnd,
+                },
+            },
+        });
+        return missedPaymentCount > 0;
+    }
+    private async hasMissedCriticalObligationWithinPeriod(userId: string, periodStart: Date, periodEnd: Date): Promise<boolean> {
+        const missedCriticalCount = await this.prisma.paymentOccurrence.count({
+            where: {
+                obligation: {
+                    userId,
+                    priority: 'CRITICAL',
+                },
+                status: PaymentOccurrenceStatus.MISSED,
+                dueDate: {
+                    gte: periodStart,
+                    lte: periodEnd,
+                },
+            },
+        });
+        return missedCriticalCount > 0;
+    }
+    private async isOverBudgetForMonth(userId: string, startOfMonth: Date, startOfNextMonth: Date): Promise<boolean> {
+        const user = await this.prisma.user.findUnique({
+            where: {
+                id: userId,
+            },
+            select: {
+                monthlyBudget: true,
+            },
+        });
+        const monthlyBudget = Number(user?.monthlyBudget ?? 0,);
+        if (monthlyBudget <= 0) {
+            return false;
+        }
+        const monthlyCommitments = await this.prisma.paymentOccurrence.aggregate({
+            where: {
+                obligation: {
+                    userId,
+                },
+                dueDate: {
+                    gte: startOfMonth,
+                    lt: startOfNextMonth,
+                },
+                status: {
+                    not: PaymentOccurrenceStatus.CANCELLED,
+                },
+            },
+            _sum: {
+                amountDue: true,
+            },
+        });
+        const committedAmount = Number(monthlyCommitments._sum.amountDue ?? 0,);
+        return committedAmount > monthlyBudget;
+    }
+
+    private determineScoreTier(finalCreditScore: number) {
+        if (finalCreditScore >= 300 && finalCreditScore <= 579) {
+            return "BUILDING";
+        }
+        if (finalCreditScore >= 580 && finalCreditScore <= 649) {
+            return "FAIR";
+        }
+        if (finalCreditScore >= 650 && finalCreditScore <= 719) {
+            return "GOOD";
+        }
+        if (finalCreditScore >= 720 && finalCreditScore <= 779) {
+            return "EXCELLENT";
+        }
+        if (finalCreditScore >= 780 && finalCreditScore <= 850) {
+            return "ELITE";
+        }
+
+    }
 
 }
 
