@@ -9,7 +9,7 @@ import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import { UsersService } from '../users/users.service';
-import {CreditScoreService} from './credit-score.service'
+import { CreditScoreService } from './credit-score.service';
 
 @ApiTags('credit-score')
 @ApiBearerAuth()

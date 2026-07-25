@@ -7,6 +7,6 @@ import { UsersModule } from '../users/users.module';
 @Module({
   imports: [PrismaModule, UsersModule],
   controllers: [CreditScoreController],
-  providers: [CreditScoreService]
+  providers: [CreditScoreService],
 })
 export class CreditScoreModule {}

@@ -31,12 +31,15 @@ import { getDashboard } from "@/features/dashboard/dashboardApi"
 import { signOut } from "@/features/auth/auth.service"
 
 import type { DashboardData } from "@/types/DashboardTypes"
+import type { CreditScore } from "@/types/credit-scoreTypes"
+import { getCrditScore } from "@/features/credit-score/credit-scoreApi"
 
 export default function DashboardPage() {
 	const navigate = useNavigate()
 
 
 	const [dashboard, setDashboard] = React.useState<DashboardData | null>(null)
+	const [creditScore, setCreditScore] = React.useState<CreditScore>(null)
 
 
 	// loading and detting the dashboard 
@@ -46,6 +49,9 @@ export default function DashboardPage() {
 				const response = await getDashboard()
 				console.log("getDashboard response: ", response)
 				setDashboard(response.data)
+				const creditScoreResponse = await getCrditScore()
+				console.log("getCrditScore response: ", creditScoreResponse)
+				setCreditScore(creditScoreResponse.data)
 
 			} catch (error) {
 				console.error("getDashboard response: ", error)
@@ -68,7 +74,7 @@ export default function DashboardPage() {
 
 	const name = userSummary?.displayName
 
-	const score_ = creditProfile?.currentScore ?? 0 // cuyrrent credit score 
+	const score_ = creditScore?.creditScore ?? 0 // cuyrrent credit score 
 	const level_ = gamificationProfile?.mascotLevel ?? 1
 	const streakDays_ = gamificationProfile?.currentPaymentStreak ?? 0
 
@@ -139,7 +145,7 @@ export default function DashboardPage() {
 
             </CustomCard>
 
-			<CreditStatsSection creditProfile={creditProfile} />
+			<CreditStatsSection creditProfile={creditProfile} creditScore={creditScore}/>
 
 
 				<section aria-label="Experience progress" className="mt-5" >
@@ -177,7 +183,7 @@ export default function DashboardPage() {
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[#091828]">Supermarket Store</p>
                 </div>
-                <p className="text-base font-extrabold text-[#ac2a5d]">−R 12.50</p>
+                <p className="text-base font-extrabold text-[#ac2a5d]"> R 12.50</p>
                 </div>
             </div>
     
