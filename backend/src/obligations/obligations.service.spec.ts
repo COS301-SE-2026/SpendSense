@@ -1,6 +1,7 @@
 import { ObligationsService } from "./obligations.service";
 import { Currency, ObligationStatus, ObligationType, ObligationPriority, ScheduleFrequency, ReminderStatus } from '@prisma/client';
 import type { PrismaService } from "../prisma/prisma.service";
+import {BadgeEngineService} from "../gamification/badge-engine.service";
 
 describe('ObligationsService', ()=>{
     let prisma: {
@@ -9,7 +10,7 @@ describe('ObligationsService', ()=>{
     };
 
     let service: ObligationsService;
-
+    let badgeEngineService:{evaluateObligationBadges:jest.Mock};
     let transaction: {
         paymentOccurrence: { create: jest.Mock };
         paymentSchedule: { create: jest.Mock };
@@ -60,6 +61,7 @@ describe('ObligationsService', ()=>{
 
             userEvent: {
                 create: jest.fn().mockResolvedValue({
+                    id:'obligation-event-1',
                     sourceId: 'obligation-1',
                     sourceType: 'FINANCIAL_OBLIGATION',
                     eventType: 'OBLIGATION_CREATED',
@@ -78,8 +80,10 @@ describe('ObligationsService', ()=>{
                 create: jest.fn().mockImplementation((args)=> Promise.resolve({ id: `rem-${Math.random()}`, ...args.data }),)
             },
         };
-
-        service = new ObligationsService(prisma as unknown as PrismaService);
+        badgeEngineService={
+            evaluateObligationBadges:jest.fn().mockResolvedValue([]),
+        };
+        service=new ObligationsService(prisma as unknown as PrismaService,badgeEngineService as unknown as BadgeEngineService);
         
     });
 
@@ -117,5 +121,18 @@ describe('ObligationsService', ()=>{
                 }),
             }),
         );
+    });
+    it('evaluates obligation badges after creating an obligation',async()=>{
+        await service.create(userId,baseDto as any,7);
+        expect(badgeEngineService.evaluateObligationBadges).toHaveBeenCalledTimes(1);
+        expect(badgeEngineService.evaluateObligationBadges).toHaveBeenCalledWith({
+            userId,
+            sourceEventId:'obligation-event-1',
+        },transaction);
+    });
+    it('does not evaluate obligation badges when obligation creation fails',async()=>{
+        transaction.financialObligation.create.mockRejectedValue(new Error('Obligation creation failed'));
+        await expect(service.create(userId,baseDto as any,7)).rejects.toThrow('Obligation creation failed');
+        expect(badgeEngineService.evaluateObligationBadges).not.toHaveBeenCalled();
     });
 });

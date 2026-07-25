@@ -18,12 +18,13 @@ import {
 import { CreateObligationDto } from './dto/create-obligation.dto';
 import { ListObligationsDto } from './dto/list-obligations.dto';
 import { UpdateObligationDto } from './dto/update-obligation.dto';
+import {BadgeEngineService} from '../gamification/badge-engine.service';
 
 const OCCURRENCE_HORIZON_MONTHS = 6;
 
 @Injectable()
 export class ObligationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService,private readonly badgeEngineService:BadgeEngineService) {}
 
   async create(userId: string, dto: CreateObligationDto, defaultReminderDaysBefore: number) {
     // validate that category actually exists
@@ -153,6 +154,10 @@ export class ObligationsService {
           sourceId: obligation.id,
         },
       });
+      await this.badgeEngineService.evaluateObligationBadges({
+        userId,
+        sourceEventId:event.id,
+      },tx);
 
       return {
         obligation,
