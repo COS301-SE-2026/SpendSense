@@ -15,6 +15,7 @@ const mockedUseQuizSession=vi.mocked(useQuizSession)
 
 const question:QuizQuestion={
     id:"question-1",
+    number:2,
     topic:"CREDIT_SCORE",
     prompt:"Which action is most likely to improve your credit score?",
     options:[
@@ -62,6 +63,7 @@ const answerResponse:SubmitQuizAnswerResponse={
     },
     nextQuestion:{
         id:"question-2",
+        number:3,
         topic:"BUDGETING",
         prompt:"What is a budget?",
         options:[
@@ -196,7 +198,9 @@ describe("QuizQuestionPage",()=>{
             selectedOptionKey:"A",
         })
     })
-    it("navigates to the feedback screen after a successful submission",async()=>{
+    it("shows an inline toast and advances to the next question after a correct submission",async()=>{
+        const continueToNextQuestion=vi.fn()
+        mockHook({continueToNextQuestion})
         const user=userEvent.setup()
         renderPage()
         await user.click(
@@ -205,7 +209,31 @@ describe("QuizQuestionPage",()=>{
         await user.click(
             screen.getByRole("button",{name:"Submit Answer",})
         )
-        expect(await screen.findByText("Feedback screen")).toBeInTheDocument()
+        expect(await screen.findByText("Correct!")).toBeInTheDocument()
+        expect(screen.queryByText("Feedback screen")).not.toBeInTheDocument()
+        await waitFor(()=>{
+            expect(continueToNextQuestion).toHaveBeenCalledTimes(1)
+        },{timeout:2000})
+    })
+    it("navigates straight to the results screen when the submission finishes the quiz",async()=>{
+        answerQuestion.mockResolvedValue({
+            ...answerResponse,
+            result:{
+                score:5,
+                totalQuestions:5,
+                xpAwarded:50,
+                coinsAwarded:10,
+            },
+        })
+        const user=userEvent.setup()
+        renderPage()
+        await user.click(
+            screen.getByRole("button",{name:/paying obligations on time/i,})
+        )
+        await user.click(
+            screen.getByRole("button",{name:"Submit Answer",})
+        )
+        expect(await screen.findByText("Results screen",{},{timeout:2000})).toBeInTheDocument()
     })
     it("does not navigate when answer submission fails",async()=>{
         const user=userEvent.setup()
@@ -234,7 +262,7 @@ describe("QuizQuestionPage",()=>{
         fireEvent.click(submitButton)
         expect(answerQuestion).toHaveBeenCalledTimes(1)
         resolveSubmission?.(answerResponse)
-        expect(await screen.findByText("Feedback screen")).toBeInTheDocument()
+        expect(await screen.findByText("Correct!")).toBeInTheDocument()
     })
     it("disables answer options while an answer is submitting",()=>{
         mockHook({isSubmitting:true,})

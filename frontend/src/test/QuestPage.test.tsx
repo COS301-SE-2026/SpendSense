@@ -29,6 +29,10 @@ type CustomBadgeMockProps=React.PropsWithChildren<{
 }>
 //mocks}
 const mockNavigate=vi.fn()
+const {mockStartDailyQuiz,mockClearDailyQuizError}=vi.hoisted(()=>({
+	mockStartDailyQuiz:vi.fn(),
+	mockClearDailyQuizError:vi.fn(),
+}))
 vi.mock("react-router-dom",async ()=>{
 	const actual=await vi.importActual<typeof import("react-router-dom")>(
 		"react-router-dom"
@@ -125,6 +129,15 @@ vi.mock("@/hooks/useGamificationProfile",()=>({
 		loading:false,
 		error:null,
 		refetch:vi.fn(),
+	}),
+}))
+
+vi.mock("@/hooks/useQuizSession",()=>({
+	useQuizSession:()=>({
+		startDailyQuiz:mockStartDailyQuiz,
+		isLoading:false,
+		error:null,
+		clearError:mockClearDailyQuizError,
 	}),
 }))
 
@@ -231,6 +244,7 @@ function pendingPromise<T>(){
 
 beforeEach(()=>{
 	vi.clearAllMocks()
+	mockStartDailyQuiz.mockResolvedValue({id:"daily-session-1"})
 })
 
 //tests
@@ -253,7 +267,10 @@ describe("QuestsPage",()=>{
 		const button=screen.getByRole("button",{name:"Check in"})
 		expect(button).toBeEnabled()
 		await userEvent.click(button)
-		expect(mockNavigate).toHaveBeenCalledWith("/quiz")
+		expect(screen.getByRole("dialog",{name:"Ready to begin?"})).toBeInTheDocument()
+		expect(mockNavigate).not.toHaveBeenCalled()
+		await userEvent.click(screen.getByRole("button",{name:"Start quiz"}))
+		await waitFor(()=>expect(mockNavigate).toHaveBeenCalledWith("/quiz/session/daily-session-1"))
 	})
 	it("renders the 'Resume' state with progress copy when a quiz is in progress",async ()=>{
 		mockedGetDailyQuiz.mockResolvedValue(inProgressDaily)
@@ -264,7 +281,10 @@ describe("QuestsPage",()=>{
 		const button=screen.getByRole("button",{name:"Resume"})
 		expect(button).toBeEnabled()
 		await userEvent.click(button)
-		expect(mockNavigate).toHaveBeenCalledWith("/quiz")
+		expect(screen.getByRole("dialog",{name:"Continue where you left off?"})).toBeInTheDocument()
+		expect(screen.getByText("You have answered 2 of 5 questions so far.")).toBeInTheDocument()
+		await userEvent.click(screen.getByRole("button",{name:"Continue quiz"}))
+		expect(mockNavigate).toHaveBeenCalledWith("/quiz/session/session-1")
 	})
 	it("renders a disabled 'Completed' state once today's quiz is done",async ()=>{
 		mockedGetDailyQuiz.mockResolvedValue(completedDaily)

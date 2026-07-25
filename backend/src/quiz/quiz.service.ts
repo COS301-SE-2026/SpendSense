@@ -419,6 +419,10 @@ export class QuizService {
         nextQuestion: nextQuestion
           ? {
               id: nextQuestion.id,
+              number:
+                questions.findIndex(
+                  (candidate) => candidate.id === nextQuestion.id,
+                ) + 1,
               topic: nextQuestion.topic,
               prompt: nextQuestion.prompt,
               options: nextQuestion.options,
@@ -463,8 +467,11 @@ export class QuizService {
       update: {},
       create: { userId },
     });
+    const advancesStreak = session.type === QuizSessionType.DAILY;
     const previousKnowledgeStreak = profile.currentKnowledgeStreak;
-    const currentKnowledgeStreak = previousKnowledgeStreak + 1;
+    const currentKnowledgeStreak = advancesStreak
+      ? previousKnowledgeStreak + 1
+      : previousKnowledgeStreak;
     const longestKnowledgeStreak = Math.max(
       profile.longestKnowledgeStreak,
       currentKnowledgeStreak,
@@ -477,8 +484,9 @@ export class QuizService {
       data: {
         coinBalance,
         xp,
-        currentKnowledgeStreak,
-        longestKnowledgeStreak,
+        ...(advancesStreak
+          ? { currentKnowledgeStreak, longestKnowledgeStreak }
+          : {}),
         mascotMood: MascotMood.CELEBRATING,
       },
     });
@@ -512,7 +520,7 @@ export class QuizService {
         previous: previousKnowledgeStreak,
         current: currentKnowledgeStreak,
         longest: longestKnowledgeStreak,
-        advanced: session.type === QuizSessionType.DAILY,
+        advanced: advancesStreak,
       },
     };
   }
@@ -663,6 +671,9 @@ export class QuizService {
       currentQuestion: currentQuestion
         ? {
             id: currentQuestion.id,
+            number: (questions?.findIndex(
+              (question) => question.id === currentQuestion.id,
+            ) ?? -1) + 1,
             topic: currentQuestion.topic,
             prompt: currentQuestion.prompt,
             options: currentQuestion.options,

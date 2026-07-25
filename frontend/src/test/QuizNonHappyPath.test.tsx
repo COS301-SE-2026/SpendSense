@@ -44,6 +44,7 @@ const activeSession:QuizSession={
     },
     currentQuestion:{
         id:"question-2",
+        number:2,
         topic:"BUDGETING",
         prompt:"What is a budget?",
         options:[

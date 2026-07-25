@@ -32,6 +32,7 @@ function makeSession(overrides:Partial<QuizSession>={}):QuizSession{
         progress:{correct:0,answeredAttempts:0,initialQuestions:5,remainingQueue:5},
         currentQuestion:{
             id:'question_1',
+            number:1,
             topic:'CREDIT_SCORE',
             prompt:'Prompt?',
             options:[{key:'A',text:'Yes'},{key:'B',text:'No'}],
@@ -51,6 +52,7 @@ function makeAnswerResponse(
         progress:{correct:1,answeredAttempts:1,initialQuestions:5,remainingQueue:4},
         nextQuestion:{
             id:'question_2',
+            number:2,
             topic:'CREDIT_SCORE',
             prompt:'Next?',
             options:[{key:'A',text:'Yes'},{key:'B',text:'No'}],

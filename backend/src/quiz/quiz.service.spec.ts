@@ -668,4 +668,78 @@ describe('QuizService', () => {
       xpAwarded: 50,
     });
   });
+
+  it('completes a topic session without advancing the knowledge streak', async () => {
+    const question = {
+      id: '00000000-0000-4000-8000-000000000001',
+      topic: QuizTopic.CREDIT_SCORE,
+      prompt: 'Credit question',
+      options: [{ key: 'A', text: 'Pay on time' }],
+      correctOptionKey: 'A',
+      explanation: 'Paying on time supports financial health.',
+    };
+    const tx: QuizTransactionMock = {
+      quizSession: {
+        findFirst: transactionMockMethod().mockResolvedValue({
+          id: 'session-456',
+          type: QuizSessionType.TOPIC,
+          topic: QuizTopic.CREDIT_SCORE,
+          status: QuizSessionStatus.IN_PROGRESS,
+          startedAt: new Date('2026-07-13T08:00:00.000Z'),
+          completedAt: null,
+          score: 0,
+          totalQuestions: 1,
+          coinsAwarded: 0,
+          xpAwarded: 0,
+          answers: [],
+        }),
+        update: transactionMockMethod(),
+      },
+      quizQuestion: {
+        findMany: transactionMockMethod().mockResolvedValue([question]),
+        findUnique: transactionMockMethod().mockResolvedValue(question),
+      },
+      quizSessionAnswer: { create: transactionMockMethod() },
+      userEvent: {
+        create: transactionMockMethod().mockResolvedValue({ id: 'event-456' }),
+      },
+      gamificationProfile: {
+        upsert: transactionMockMethod().mockResolvedValue({
+          id: 'profile-123',
+          coinBalance: 10,
+          xp: 20,
+          currentKnowledgeStreak: 2,
+          longestKnowledgeStreak: 4,
+        }),
+        update: transactionMockMethod(),
+      },
+      rewardTransaction: { create: transactionMockMethod() },
+    };
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+
+    const result = await service.submitAnswer(authUser, 'session-456', {
+      questionId: question.id,
+      selectedOptionKey: 'A',
+    });
+
+    expect(result).toMatchObject({
+      sessionId: 'session-456',
+      status: QuizSessionStatus.COMPLETED,
+      result: {
+        score: 1,
+        totalQuestions: 1,
+        knowledgeStreak: {
+          previous: 2,
+          current: 2,
+          longest: 4,
+          advanced: false,
+        },
+      },
+    });
+    const profileUpdateCall = tx.gamificationProfile.update.mock.calls[0]?.[0] as {
+      data: Record<string, unknown>;
+    };
+    expect(profileUpdateCall.data).not.toHaveProperty('currentKnowledgeStreak');
+    expect(profileUpdateCall.data).not.toHaveProperty('longestKnowledgeStreak');
+  });
 });
