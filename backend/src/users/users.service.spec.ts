@@ -1,5 +1,9 @@
 import { ScoreTier, UserEventSourceType, UserEventType } from '@prisma/client';
-import { InternalUserProfile, UsersService } from './users.service';
+import {
+  InternalUserProfile,
+  UsersService,
+  UserPreferenceResult,
+} from './users.service';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import type { PrismaService } from '../prisma/prisma.service';
 
@@ -25,6 +29,9 @@ type UsersPrismaMock = {
     Promise<InternalUserProfile>,
     [UsersTransactionCallback]
   >;
+  userPreference: {
+    upsert: jest.Mock<Promise<UserPreferenceResult>, [unknown]>;
+  };
 };
 
 describe('UsersService', () => {
@@ -46,6 +53,9 @@ describe('UsersService', () => {
         Promise<InternalUserProfile>,
         [UsersTransactionCallback]
       >(),
+      userPreference: {
+        upsert: jest.fn<Promise<UserPreferenceResult>, [unknown]>(),
+      },
     };
 
     service = new UsersService(prisma as unknown as PrismaService);
@@ -334,5 +344,71 @@ describe('UsersService', () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.user.findUnique).toHaveBeenCalledTimes(2);
+  });
+
+  it('will reject empty preferences update', async () => {
+    await expect(service.updatePreferences(authUser, {})).rejects.toThrow(
+      'At least one field for preferences is required',
+    );
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.userPreference.upsert).not.toHaveBeenCalled();
+  });
+
+  it('will upsert preferences for an authenticated user', async () => {
+    const existingUser = {
+      id: 'auth-user-1',
+      supabaseAuthId: authUser.supabaseAuthId,
+    } as InternalUserProfile;
+    const updates = { theme: 'LIGHT', reducedMotion: true };
+    const updatedPrefs = {
+      theme: 'LIGHT',
+      language: 'en',
+      currency: 'ZAR',
+      reducedMotion: true,
+    } as UserPreferenceResult;
+
+    prisma.user.findUnique.mockResolvedValue(existingUser);
+    prisma.userPreference.upsert.mockResolvedValue(updatedPrefs);
+
+    await expect(service.updatePreferences(authUser, updates)).resolves.toBe(
+      updatedPrefs,
+    );
+
+    expect(prisma.userPreference.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: existingUser.id },
+        update: updates,
+      }),
+    );
+  });
+
+  it('will fall back to schemas defaults when making a missing preference row', async () => {
+    const existingUser = {
+      id: 'auth-user-1',
+      supabaseAuthId: authUser.supabaseAuthId,
+    } as InternalUserProfile;
+    const updatedPrefs = {
+      theme: 'SYSTEM',
+      language: 'en',
+      currency: 'ZAR',
+      reducedMotion: false,
+    } as UserPreferenceResult;
+
+    prisma.user.findUnique.mockResolvedValue(existingUser);
+    prisma.userPreference.upsert.mockResolvedValue(updatedPrefs);
+
+    await service.updatePreferences(authUser, { reducedMotion: false });
+
+    expect(prisma.userPreference.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          userId: existingUser.id,
+          theme: 'SYSTEM',
+          language: 'en',
+          currency: 'ZAR',
+          reducedMotion: false,
+        }) as unknown,
+      }),
+    );
   });
 });
