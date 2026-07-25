@@ -15,6 +15,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentOccurrencesModule } from './payment-occurrences/payment-occurrences.module';
 import { QuizModule } from './quiz/quiz.module';
+import { InsightsModule } from './insights/insights.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { QuizModule } from './quiz/quiz.module';
     NotificationsModule,
     PaymentOccurrencesModule,
     QuizModule,
+    InsightsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
