@@ -183,7 +183,7 @@ export default function DashboardPage() {
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[#091828]">Supermarket Store</p>
                 </div>
-                <p className="text-base font-extrabold text-[#ac2a5d]"> R 12.50</p>
+                <p className="text-base font-extrabold text-[#ac2a5d]">−R 12.50</p>
                 </div>
             </div>
     

@@ -33,6 +33,20 @@ vi.mock('../features/dashboard/dashboardApi', () => ({
   }),
 }))
 
+vi.mock('../features/credit-score/credit-scoreApi', () => ({
+  getCrditScore: () => Promise.resolve({
+    data: {
+      applicableRisk: { applied: false, cap: 850, reason: 'NONE' },
+      reasonForRiskCaps: '',
+      creditScore: 742,
+      creditScoreTier: 'GOOD',
+      savingsBuffer: 0.2,
+      onTimePaymentCount: 8,
+      onLatePaymentCount: 1,
+    },
+  }),
+}))
+
 vi.mock('../features/auth/auth.service', () => ({
   signOut: vi.fn(),
 }))
