@@ -220,5 +220,21 @@ describe('RemindersService', () => {
         },
       });
     });
+
+    it('will not reprocess a reminder that was marked as SENT previously', async () => {
+      const reminder = buildReminder();
+
+      prisma.reminder.findMany.mockResolvedValueOnce([reminder]);
+      const firstRslt = await service.processDueReminders();
+
+      expect(firstRslt).toEqual({ processedCount: 1 });
+      expect(transaction.notification.create).toHaveBeenCalledTimes(1);
+
+      prisma.reminder.findMany.mockResolvedValueOnce([]);
+      const secondRslt = await service.processDueReminders();
+
+      expect(secondRslt).toEqual({ processedCount: 0 });
+      expect(transaction.notification.create).toHaveBeenCalledTimes(1);
+    });
   });
 });

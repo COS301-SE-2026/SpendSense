@@ -132,6 +132,24 @@ describe('PaymentOccurrencesService', () => {
       expect(transaction.paymentOccurrence.update).not.toHaveBeenCalled();
       expect(transaction.notification.create).not.toHaveBeenCalled();
     });
+
+    it('will not transition an occurrence again that was marked OVERDUE previously', async () => {
+      const occurrence = buildOccurrence();
+
+      mockPrismaService.paymentOccurrence.findMany.mockResolvedValueOnce([
+        occurrence,
+      ]);
+      const firstRslt = await service.transitionOverdueOccurrences();
+
+      expect(firstRslt).toEqual({ transitionedCount: 1 });
+      expect(transaction.notification.create).toHaveBeenCalledTimes(1);
+
+      mockPrismaService.paymentOccurrence.findMany.mockResolvedValueOnce([]);
+      const secondRslt = await service.transitionOverdueOccurrences();
+
+      expect(secondRslt).toEqual({ transitionedCount: 0 });
+      expect(transaction.notification.create).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('transitionMissedOccurrence', () => {
@@ -193,6 +211,27 @@ describe('PaymentOccurrencesService', () => {
       expect(rslt).toEqual({ transitionedCount: 0 });
       expect(transaction.paymentOccurrence.update).not.toHaveBeenCalled();
       expect(transaction.notification.create).not.toHaveBeenCalled();
+    });
+
+    it('will not transition an occurrence again that was marked MISSED previously', async () => {
+      const occurrence = buildOccurrence({
+        status: PaymentOccurrenceStatus.OVERDUE,
+        overdueAt: new Date('2026-05-01T00:00:00.000Z'),
+      });
+
+      mockPrismaService.paymentOccurrence.findMany.mockResolvedValueOnce([
+        occurrence,
+      ]);
+      const firstRslt = await service.transitionMissedOccurrence();
+
+      expect(firstRslt).toEqual({ transitionedCount: 1 });
+      expect(transaction.notification.create).toHaveBeenCalledTimes(1);
+
+      mockPrismaService.paymentOccurrence.findMany.mockResolvedValueOnce([]);
+      const secondRslt = await service.transitionMissedOccurrence();
+
+      expect(secondRslt).toEqual({ transitionedCount: 0 });
+      expect(transaction.notification.create).toHaveBeenCalledTimes(1);
     });
   });
 });
