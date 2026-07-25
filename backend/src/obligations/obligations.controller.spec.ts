@@ -25,9 +25,11 @@ const mockAuthUser: AuthUser = {
   email: 'test@spendsense.local',
 };
 
-const mockInternalUser = { id: 'user-internal-id', ...mockAuthUser, notificationPreference: { defaultReminderDaysBefore: 3 } } as Awaited<
-  ReturnType<UsersService['findOrCreateUser']>
->;
+const mockInternalUser = {
+  id: 'user-internal-id',
+  ...mockAuthUser,
+  notificationPreference: { defaultReminderDaysBefore: 3 },
+} as Awaited<ReturnType<UsersService['findOrCreateUser']>>;
 
 const mockObligationResult = {
   obligation: {
