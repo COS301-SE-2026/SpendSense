@@ -21,6 +21,14 @@ import ProfilePage from './domains/ProfilePage.tsx'
 import LandingPage from './domains/LandingPage.tsx'
 import OnboardingPage from './domains/OnboardingPage.tsx'
 import NotificationsPage from './domains/NotificationsPage.tsx'
+import MascotPage from './domains/MascotPage.tsx'
+import WrappedPage from './domains/WrappedPage.tsx'
+import SettingsPage from './domains/SettingsPage.tsx'
+import SettingsPreferencesPage from './domains/SettingsPreferencesPage.tsx'
+import SettingsNotificationsPage from './domains/SettingsNotificationsPage.tsx'
+import SettingsAccountPage from './domains/SettingsAccountPage.tsx'
+import EditProfilePage from './domains/EditProfilePage.tsx'
+import HelpPage from './domains/HelpPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -52,6 +60,14 @@ createRoot(document.getElementById('root')!).render(
          <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
          <Route path="/friends/activity" element={<FriendActivityPage/>}/>
          <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
+        <Route path="/mascot" element={<MascotPage/>}/>
+        <Route path="/wrapped" element={<WrappedPage/>}/>
+        <Route path="/settings" element={<SettingsPage/>}/>
+        <Route path="/settings/preferences" element={<SettingsPreferencesPage/>}/>
+        <Route path="/settings/notifications" element={<SettingsNotificationsPage/>}/>
+         <Route path="/settings/account" element={<SettingsAccountPage/>}/>
+         <Route path="/edit-profile" element={<EditProfilePage/>}/>
+        <Route path="/help" element={<HelpPage/>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,
