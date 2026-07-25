@@ -39,7 +39,7 @@ export default function DashboardPage() {
 
 
 	const [dashboard, setDashboard] = React.useState<DashboardData | null>(null)
-	const [creditScore, setCreditScore] = React.useState<CreditScore>(null)
+	const [creditScore, setCreditScore] = React.useState<CreditScore | null>(null)
 
 
 	// loading and detting the dashboard 
