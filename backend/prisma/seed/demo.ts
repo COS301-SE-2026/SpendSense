@@ -42,6 +42,141 @@ function dt(dateTime: string) {
   return new Date(dateTime);
 }
 
+type HistoricalPaymentDefinition = {
+  name: string;
+  description: string;
+  categoryId: string;
+  type: ObligationType;
+  amount: number;
+  dayOfMonth: number;
+  priority: ObligationPriority;
+};
+
+/**
+ * Adds settled payments for every month from June 2023 to March 2026. The
+ * existing April and May 2026 walkthrough data completes the 36-month window
+ * while preserving the dashboard's current/pending-payment scenario.
+ */
+async function seedHistoricalPaymentHistory(
+  userId: string,
+  definitions: HistoricalPaymentDefinition[],
+) {
+  const startDate = d('2023-06-01');
+  const endDate = d('2026-03-31');
+  const months = Array.from({ length: 34 }, (_, index) => {
+    const date = new Date(Date.UTC(2023, 5 + index, 1));
+    return date;
+  });
+
+  const obligations = await prisma.$transaction(
+    definitions.map((definition) =>
+      prisma.financialObligation.create({
+        data: {
+          userId,
+          categoryId: definition.categoryId,
+          name: definition.name,
+          description: definition.description,
+          type: definition.type,
+          status: ObligationStatus.COMPLETED,
+          amount: definition.amount,
+          currency: Currency.ZAR,
+          priority: definition.priority,
+          startDate,
+          endDate,
+        },
+      }),
+    ),
+  );
+
+  const schedules = await prisma.$transaction(
+    obligations.map((obligation, index) =>
+      prisma.paymentSchedule.create({
+        data: {
+          obligationId: obligation.id,
+          frequency: ScheduleFrequency.MONTHLY,
+          interval: 1,
+          dayOfMonth: definitions[index].dayOfMonth,
+          startDate,
+          endDate,
+          occurrencesGeneratedUntil: endDate,
+          isActive: false,
+        },
+      }),
+    ),
+  );
+
+  const entries = months.flatMap((month, monthIndex) =>
+    definitions.map((definition, definitionIndex) => {
+      const dueDate = new Date(
+        Date.UTC(
+          month.getUTCFullYear(),
+          month.getUTCMonth(),
+          definition.dayOfMonth,
+        ),
+      );
+      const isLate = (monthIndex * 3 + definitionIndex) % 9 === 0;
+      const daysLate = isLate ? 1 + ((monthIndex + definitionIndex) % 3) : 0;
+      const paidAt = new Date(dueDate);
+      paidAt.setUTCDate(paidAt.getUTCDate() + daysLate);
+      paidAt.setUTCHours(9 + definitionIndex, 15, 0, 0);
+
+      return {
+        definition,
+        definitionIndex,
+        monthIndex,
+        dueDate,
+        paidAt,
+        isLate,
+        daysLate,
+      };
+    }),
+  );
+
+  const occurrences = await prisma.$transaction(
+    entries.map((entry) =>
+      prisma.paymentOccurrence.create({
+        data: {
+          userId,
+          obligationId: obligations[entry.definitionIndex].id,
+          scheduleId: schedules[entry.definitionIndex].id,
+          dueDate: entry.dueDate,
+          amountDue: entry.definition.amount,
+          currency: Currency.ZAR,
+          status: entry.isLate
+            ? PaymentOccurrenceStatus.PAID_LATE
+            : PaymentOccurrenceStatus.PAID,
+          sequenceNumber: entry.monthIndex + 1,
+          paidAt: entry.paidAt,
+        },
+      }),
+    ),
+  );
+
+  await prisma.$transaction(
+    occurrences.map((occurrence, index) => {
+      const entry = entries[index];
+      return prisma.paymentRecord.create({
+        data: {
+          userId,
+          occurrenceId: occurrence.id,
+          obligationId: occurrence.obligationId,
+          amountPaid: entry.definition.amount,
+          currency: Currency.ZAR,
+          paidDate: entry.paidAt,
+          paymentStatus: entry.isLate
+            ? PaymentRecordStatus.LATE
+            : PaymentRecordStatus.ON_TIME,
+          daysLate: entry.daysLate,
+          simulatedInterest: entry.isLate ? entry.daysLate * 2 : 0,
+          notes: entry.isLate
+            ? 'Historic demo payment settled after its due date.'
+            : 'Historic demo payment settled on time.',
+        },
+      });
+    }),
+  );
+}
+
 async function clearDemoUser(userId: string) {
   await prisma.$transaction([
     prisma.userBadge.deleteMany({ where: { userId } }),
@@ -120,6 +255,7 @@ async function main() {
     prisma.category.findFirstOrThrow({ where: { name: 'BNPL' } }),
     prisma.category.findFirstOrThrow({ where: { name: 'Utility' } }),
     prisma.category.findFirstOrThrow({ where: { name: 'IOU' } }),
+    prisma.category.findFirstOrThrow({ where: { name: 'Transport' } }),
   ]);
   const [
     rentCategory,
@@ -127,7 +263,47 @@ async function main() {
     bnplCategory,
     utilityCategory,
     iouCategory,
+    transportCategory,
   ] = categories;
+
+  await seedHistoricalPaymentHistory(user.id, [
+    {
+      name: 'Historic Student Rent',
+      description: 'Completed accommodation payments retained for insights.',
+      categoryId: rentCategory.id,
+      type: ObligationType.RENT,
+      amount: 4800,
+      dayOfMonth: 1,
+      priority: ObligationPriority.CRITICAL,
+    },
+    {
+      name: 'Historic Utilities',
+      description: 'Completed electricity and water payments retained for insights.',
+      categoryId: utilityCategory.id,
+      type: ObligationType.UTILITY,
+      amount: 575,
+      dayOfMonth: 20,
+      priority: ObligationPriority.HIGH,
+    },
+    {
+      name: 'Historic Data Plan',
+      description: 'Completed mobile data subscription retained for insights.',
+      categoryId: subscriptionCategory.id,
+      type: ObligationType.SUBSCRIPTION,
+      amount: 179,
+      dayOfMonth: 25,
+      priority: ObligationPriority.MEDIUM,
+    },
+    {
+      name: 'Historic Transport Pass',
+      description: 'Completed campus transport payments retained for insights.',
+      categoryId: transportCategory.id,
+      type: ObligationType.CUSTOM,
+      amount: 640,
+      dayOfMonth: 15,
+      priority: ObligationPriority.MEDIUM,
+    },
+  ]);
 
   const [preference, notificationPreference, creditProfile] =
     await prisma.$transaction([
