@@ -4,7 +4,6 @@ import {MemoryRouter} from 'react-router-dom'
 import {describe, it, expect} from 'vitest'
 import '@testing-library/jest-dom'
 import HelpPage from '../domains/HelpPage'
-import { Expand } from 'lucide-react'
 
 function renderPage(){
     return render(

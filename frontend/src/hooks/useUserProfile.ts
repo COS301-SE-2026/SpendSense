@@ -92,6 +92,7 @@ export function useUserProfile(): UseUserProfileReturn{
         }
     }, [])
     useEffect(()=>{
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         void fetchUser()
     }, [fetchUser])
 
