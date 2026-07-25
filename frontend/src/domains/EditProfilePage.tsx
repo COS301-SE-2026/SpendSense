@@ -16,6 +16,7 @@ export default function EditProfilePage(){
     const[feedback, setFeedback] =React.useState<{kind: "success"|"error", message: string} |null>(null)
 
     React.useEffect(()=> {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         if(user) setDisplayName(user.displayName)
     }, [user])
 

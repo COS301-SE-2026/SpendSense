@@ -21,6 +21,7 @@ export default function SettingsPreferencesPage(){
 
     React.useEffect(()=> {
         if(user?.preferences){
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setPrefs({
                 theme: user.preferences.theme as UserPreferences["theme"],
                 currency: user.preferences.currency,

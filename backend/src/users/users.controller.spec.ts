@@ -15,6 +15,7 @@ describe('UsersController', () => {
       | 'updateProfile'
       | 'deactivateAccount'
       | 'exportUserData'
+      | 'updatePreferences'
     >
   >;
 
@@ -24,6 +25,7 @@ describe('UsersController', () => {
       updateProfile: jest.fn(),
       deactivateAccount: jest.fn(),
       exportUserData: jest.fn(),
+      updatePreferences: jest.fn(),
     };
 
     controller = new UsersController(usersService as unknown as UsersService);
@@ -218,5 +220,30 @@ describe('UsersController', () => {
 
     await expect(controller.exportMe(authUser)).resolves.toEqual(result);
     expect(usersService.exportUserData).toHaveBeenCalledWith(authUser);
+  });
+
+  it('will update preferences and return the preferences response shape', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'test-supabase-user-1',
+      email: 'test-user-1@example.com',
+    };
+    const updates = { theme: 'LIGHT', reducedMotion: true };
+    const updatedPrefs = {
+      theme: 'LIGHT',
+      language: 'en',
+      currency: 'ZAR',
+      reducedMotion: true,
+    };
+
+    usersService.updatePreferences.mockResolvedValue(updatedPrefs);
+
+    await expect(
+      controller.updateMyPreferences(authUser, updates),
+    ).resolves.toEqual({ preferences: updatedPrefs });
+
+    expect(usersService.updatePreferences).toHaveBeenCalledWith(
+      authUser,
+      updates,
+    );
   });
 });
