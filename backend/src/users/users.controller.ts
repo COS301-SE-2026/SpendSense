@@ -234,21 +234,22 @@ export class UsersController {
 
   @ApiOperation({
     summary: 'Updates authenticated users preferences',
-    description: 'Updates the general application preferences for an authenticated user, and creates the preference row if it is missing.',
+    description:
+      'Updates the general application preferences for an authenticated user, and creates the preference row if it is missing.',
   })
   @ApiOkResponse({
     description: 'The persisted preference values.',
     schema: {
-        example: {
-            data: {
-                preferences: {
-                    theme: 'LIGHT',
-                    language: 'en',
-                    currency: 'ZAR',
-                    reducedMotion: false,
-                },
-            },
+      example: {
+        data: {
+          preferences: {
+            theme: 'LIGHT',
+            language: 'en',
+            currency: 'ZAR',
+            reducedMotion: false,
+          },
         },
+      },
     },
   })
   @ApiUnauthorizedResponse({
@@ -260,8 +261,8 @@ export class UsersController {
     @Body() updates: UpdatePreferencesDto,
   ) {
     const preferences = await this.usersService.updatePreferences(
-        authUser,
-        updates,
+      authUser,
+      updates,
     );
 
     return { preferences };
