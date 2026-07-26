@@ -6,7 +6,7 @@ import { UsersModule } from '../users/users.module';
 import { GamificationModule } from '../gamification/gamification.module';
 
 @Module({
-  imports: [AuthModule, UsersModule,GamificationModule],
+  imports: [AuthModule, UsersModule, GamificationModule],
   controllers: [ObligationsController],
   providers: [ObligationsService],
   exports: [ObligationsService],

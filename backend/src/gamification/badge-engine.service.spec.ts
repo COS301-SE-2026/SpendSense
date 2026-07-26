@@ -1,248 +1,289 @@
-import {BadgeCategory,BadgeCriteriaType,NotificationType,Prisma,UserEventSourceType,UserEventType} from '@prisma/client';
-import {NotificationsService} from '../notifications/notifications.service';
-import {BadgeEngineService} from './badge-engine.service';
+import {
+  BadgeCategory,
+  BadgeCriteriaType,
+  NotificationType,
+  Prisma,
+  UserEventSourceType,
+  UserEventType,
+} from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
+import { BadgeEngineService } from './badge-engine.service';
 
-describe('BadgeEngineService',()=>{
-    let service:BadgeEngineService;
-    let notificationsService:{
-        create:jest.Mock;
+describe('BadgeEngineService', () => {
+  let service: BadgeEngineService;
+  let notificationsService: {
+    create: jest.Mock;
+  };
+  let transaction: {
+    badgeDefinition: {
+      findMany: jest.Mock;
     };
-    let transaction:{
-        badgeDefinition:{
-            findMany:jest.Mock;
-        };
-        financialObligation:{
-            count:jest.Mock;
-        };
-        userBadge:{
-            findUnique:jest.Mock;
-            create:jest.Mock;
-            update:jest.Mock;
-        };
-        userEvent:{
-            create:jest.Mock;
-        };
+    financialObligation: {
+      count: jest.Mock;
     };
-    const firstOnTimeBadge={
-        id:'badge-definition-1',
-        code:'FIRST_ON_TIME_PAYMENT',
-        name:'On-Time Starter',
-        criteriaType:BadgeCriteriaType.FIRST_ON_TIME_PAYMENT,
-        criteriaValue:1,
+    userBadge: {
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
     };
-    const firstObligationBadge={
-        id:'badge-definition-2',
-        code:'FIRST_OBLIGATION_CREATED',
-        name:'First Obligation',
-        criteriaType:BadgeCriteriaType.FIRST_OBLIGATION,
-        criteriaValue:1,
+    userEvent: {
+      create: jest.Mock;
     };
-    beforeEach(()=>{
-        notificationsService={
-            create:jest.fn().mockResolvedValue({id:'notification-1'}),
-        };
-        transaction={
-            badgeDefinition:{
-                findMany:jest.fn().mockResolvedValue([]),
-            },
-            financialObligation:{
-                count:jest.fn().mockResolvedValue(0),
-            },
-            userBadge:{
-                findUnique:jest.fn().mockResolvedValue(null),
-                create:jest.fn().mockResolvedValue({id:'user-badge-1'}),
-                update:jest.fn().mockResolvedValue({id:'user-badge-1'}),
-            },
-            userEvent:{
-                create:jest.fn().mockResolvedValue({id:'badge-event-1'}),
-            },
-        };
-        service=new BadgeEngineService(notificationsService as unknown as NotificationsService);
+  };
+  const firstOnTimeBadge = {
+    id: 'badge-definition-1',
+    code: 'FIRST_ON_TIME_PAYMENT',
+    name: 'On-Time Starter',
+    criteriaType: BadgeCriteriaType.FIRST_ON_TIME_PAYMENT,
+    criteriaValue: 1,
+  };
+  const firstObligationBadge = {
+    id: 'badge-definition-2',
+    code: 'FIRST_OBLIGATION_CREATED',
+    name: 'First Obligation',
+    criteriaType: BadgeCriteriaType.FIRST_OBLIGATION,
+    criteriaValue: 1,
+  };
+  beforeEach(() => {
+    notificationsService = {
+      create: jest.fn().mockResolvedValue({ id: 'notification-1' }),
+    };
+    transaction = {
+      badgeDefinition: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      financialObligation: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+      userBadge: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'user-badge-1' }),
+        update: jest.fn().mockResolvedValue({ id: 'user-badge-1' }),
+      },
+      userEvent: {
+        create: jest.fn().mockResolvedValue({ id: 'badge-event-1' }),
+      },
+    };
+    service = new BadgeEngineService(
+      notificationsService as unknown as NotificationsService,
+    );
+  });
+  it('creates a badge and notification when a payment badge is earned', async () => {
+    transaction.badgeDefinition.findMany.mockResolvedValue([firstOnTimeBadge]);
+    const result = await service.evaluatePaymentBadges(
+      {
+        userId: 'user-1',
+        sourceEventId: 'payment-event-1',
+        onTimePaymentCount: 1,
+        currentPaymentStreak: 1,
+        currentScore: 608,
+      },
+      transaction as unknown as Prisma.TransactionClient,
+    );
+    expect(transaction.badgeDefinition.findMany).toHaveBeenCalledWith({
+      where: {
+        isActive: true,
+        NOT: { category: BadgeCategory.DEMO },
+        criteriaType: {
+          in: [
+            BadgeCriteriaType.FIRST_ON_TIME_PAYMENT,
+            BadgeCriteriaType.PAYMENT_STREAK_COUNT,
+            BadgeCriteriaType.SCORE_REACHED,
+          ],
+        },
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        criteriaType: true,
+        criteriaValue: true,
+      },
     });
-    it('creates a badge and notification when a payment badge is earned',async()=>{
-        transaction.badgeDefinition.findMany.mockResolvedValue([firstOnTimeBadge]);
-        const result=await service.evaluatePaymentBadges({
-            userId:'user-1',
-            sourceEventId:'payment-event-1',
-            onTimePaymentCount:1,
-            currentPaymentStreak:1,
-            currentScore:608,
-        },transaction as unknown as Prisma.TransactionClient);
-        expect(transaction.badgeDefinition.findMany).toHaveBeenCalledWith({
-            where:{
-                isActive:true,
-                NOT:{category:BadgeCategory.DEMO},
-                criteriaType:{
-                    in:[
-                        BadgeCriteriaType.FIRST_ON_TIME_PAYMENT,
-                        BadgeCriteriaType.PAYMENT_STREAK_COUNT,
-                        BadgeCriteriaType.SCORE_REACHED,
-                    ],
-                },
-            },
-            select:{
-                id:true,
-                code:true,
-                name:true,
-                criteriaType:true,
-                criteriaValue:true,
-            },
-        });
-        expect(transaction.userBadge.create).toHaveBeenCalledWith({
-            data:{
-                userId:'user-1',
-                badgeDefinitionId:firstOnTimeBadge.id,
-                progress:firstOnTimeBadge.criteriaValue,
-                earnedAt:expect.any(Date),
-            },
-        });
-        expect(transaction.userEvent.create).toHaveBeenCalledWith({
-            data:{
-                userId:'user-1',
-                eventType:UserEventType.BADGE_EARNED,
-                sourceType:UserEventSourceType.BADGE,
-                sourceId:'user-badge-1',
-                metadata:{
-                    badgeDefinitionId:firstOnTimeBadge.id,
-                    badgeCode:firstOnTimeBadge.code,
-                    triggerSourceEventId:'payment-event-1',
-                },
-            },
-        });
-        expect(notificationsService.create).toHaveBeenCalledWith({
-            userId:'user-1',
-            type:NotificationType.BADGE_EARNED,
-            title:'Badge earned',
-            message:'You earned On-Time Starter.',
-            sourceType:UserEventSourceType.BADGE,
-            sourceId:'user-badge-1',
-        },transaction);
-        expect(result).toEqual(['On-Time Starter']);
+    expect(transaction.userBadge.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'user-1',
+        badgeDefinitionId: firstOnTimeBadge.id,
+        progress: firstOnTimeBadge.criteriaValue,
+        earnedAt: expect.any(Date) as Date,
+      },
     });
-    it('does not create another notification when the badge is already earned',async()=>{
-        transaction.badgeDefinition.findMany.mockResolvedValue([firstOnTimeBadge]);
-        transaction.userBadge.findUnique.mockResolvedValue({
-            id:'user-badge-1',
-            earnedAt:new Date(),
-        });
-        const result=await service.evaluatePaymentBadges({
-            userId:'user-1',
-            sourceEventId:'payment-event-1',
-            onTimePaymentCount:1,
-            currentPaymentStreak:1,
-            currentScore:608,
-        },transaction as unknown as Prisma.TransactionClient);
-        expect(transaction.userBadge.create).not.toHaveBeenCalled();
-        expect(transaction.userBadge.update).not.toHaveBeenCalled();
-        expect(transaction.userEvent.create).not.toHaveBeenCalled();
-        expect(notificationsService.create).not.toHaveBeenCalled();
-        expect(result).toEqual([]);
+    expect(transaction.userEvent.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'user-1',
+        eventType: UserEventType.BADGE_EARNED,
+        sourceType: UserEventSourceType.BADGE,
+        sourceId: 'user-badge-1',
+        metadata: {
+          badgeDefinitionId: firstOnTimeBadge.id,
+          badgeCode: firstOnTimeBadge.code,
+          triggerSourceEventId: 'payment-event-1',
+        },
+      },
     });
-    it('updates an existing badge progress record when it becomes earned',async()=>{
-        transaction.badgeDefinition.findMany.mockResolvedValue([firstOnTimeBadge]);
-        transaction.userBadge.findUnique.mockResolvedValue({
-            id:'user-badge-1',
-            earnedAt:null,
-        });
-        const result=await service.evaluatePaymentBadges({
-            userId:'user-1',
-            sourceEventId:'payment-event-1',
-            onTimePaymentCount:1,
-            currentPaymentStreak:1,
-            currentScore:608,
-        },transaction as unknown as Prisma.TransactionClient);
-        expect(transaction.userBadge.update).toHaveBeenCalledWith({
-            where:{
-                id:'user-badge-1',
-            },
-            data:{
-                progress:firstOnTimeBadge.criteriaValue,
-                earnedAt:expect.any(Date),
-            },
-        });
-        expect(transaction.userBadge.create).not.toHaveBeenCalled();
-        expect(notificationsService.create).toHaveBeenCalledTimes(1);
-        expect(result).toEqual(['On-Time Starter']);
+    expect(notificationsService.create).toHaveBeenCalledWith(
+      {
+        userId: 'user-1',
+        type: NotificationType.BADGE_EARNED,
+        title: 'Badge earned',
+        message: 'You earned On-Time Starter.',
+        sourceType: UserEventSourceType.BADGE,
+        sourceId: 'user-badge-1',
+      },
+      transaction,
+    );
+    expect(result).toEqual(['On-Time Starter']);
+  });
+  it('does not create another notification when the badge is already earned', async () => {
+    transaction.badgeDefinition.findMany.mockResolvedValue([firstOnTimeBadge]);
+    transaction.userBadge.findUnique.mockResolvedValue({
+      id: 'user-badge-1',
+      earnedAt: new Date(),
     });
-    it('does not award a badge when the user does not meet the criteria',async()=>{
-        transaction.badgeDefinition.findMany.mockResolvedValue([{
-            id:'badge-definition-3',
-            code:'THREE_PAYMENT_STREAK',
-            name:'Three Payment Streak',
-            criteriaType:BadgeCriteriaType.PAYMENT_STREAK_COUNT,
-            criteriaValue:3,
-        }]);
-        const result=await service.evaluatePaymentBadges({
-            userId:'user-1',
-            sourceEventId:'payment-event-1',
-            onTimePaymentCount:1,
-            currentPaymentStreak:2,
-            currentScore:608,
-        },transaction as unknown as Prisma.TransactionClient);
-        expect(transaction.userBadge.findUnique).not.toHaveBeenCalled();
-        expect(transaction.userBadge.create).not.toHaveBeenCalled();
-        expect(transaction.userEvent.create).not.toHaveBeenCalled();
-        expect(notificationsService.create).not.toHaveBeenCalled();
-        expect(result).toEqual([]);
+    const result = await service.evaluatePaymentBadges(
+      {
+        userId: 'user-1',
+        sourceEventId: 'payment-event-1',
+        onTimePaymentCount: 1,
+        currentPaymentStreak: 1,
+        currentScore: 608,
+      },
+      transaction as unknown as Prisma.TransactionClient,
+    );
+    expect(transaction.userBadge.create).not.toHaveBeenCalled();
+    expect(transaction.userBadge.update).not.toHaveBeenCalled();
+    expect(transaction.userEvent.create).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
+  });
+  it('updates an existing badge progress record when it becomes earned', async () => {
+    transaction.badgeDefinition.findMany.mockResolvedValue([firstOnTimeBadge]);
+    transaction.userBadge.findUnique.mockResolvedValue({
+      id: 'user-badge-1',
+      earnedAt: null,
     });
-    it('does not create a notification when badge persistence fails',async()=>{
-        transaction.badgeDefinition.findMany.mockResolvedValue([firstOnTimeBadge]);
-        transaction.userBadge.create.mockRejectedValue(new Error('Badge creation failed'));
-        await expect(service.evaluatePaymentBadges({
-            userId:'user-1',
-            sourceEventId:'payment-event-1',
-            onTimePaymentCount:1,
-            currentPaymentStreak:1,
-            currentScore:608,
-        },transaction as unknown as Prisma.TransactionClient)).rejects.toThrow('Badge creation failed',);
-        expect(transaction.userEvent.create).not.toHaveBeenCalled();
-        expect(notificationsService.create).not.toHaveBeenCalled();
+    const result = await service.evaluatePaymentBadges(
+      {
+        userId: 'user-1',
+        sourceEventId: 'payment-event-1',
+        onTimePaymentCount: 1,
+        currentPaymentStreak: 1,
+        currentScore: 608,
+      },
+      transaction as unknown as Prisma.TransactionClient,
+    );
+    expect(transaction.userBadge.update).toHaveBeenCalledWith({
+      where: {
+        id: 'user-badge-1',
+      },
+      data: {
+        progress: firstOnTimeBadge.criteriaValue,
+        earnedAt: expect.any(Date) as Date,
+      },
     });
-    it('creates the first obligation badge and notification',async()=>{
-        transaction.financialObligation.count.mockResolvedValue(1);
-        transaction.badgeDefinition.findMany.mockResolvedValue([firstObligationBadge]);
-        const result=await service.evaluateObligationBadges({
-            userId:'user-1',
-            sourceEventId:'obligation-event-1',
-        },transaction as unknown as Prisma.TransactionClient);
-        expect(transaction.financialObligation.count).toHaveBeenCalledWith({
-            where:{
-                userId:'user-1',
-                deletedAt:null,
-            },
-        });
-        expect(transaction.badgeDefinition.findMany).toHaveBeenCalledWith({
-            where:{
-                isActive:true,
-                NOT:{
-                    category:BadgeCategory.DEMO,
-                },
-                criteriaType:BadgeCriteriaType.FIRST_OBLIGATION,
-            },
-            select:{
-                id:true,
-                code:true,
-                name:true,
-                criteriaType:true,
-                criteriaValue:true,
-            },
-        });
-        expect(transaction.userBadge.create).toHaveBeenCalledWith({
-            data:{
-                userId:'user-1',
-                badgeDefinitionId:firstObligationBadge.id,
-                progress:firstObligationBadge.criteriaValue,
-                earnedAt:expect.any(Date),
-            },
-        });
-        expect(notificationsService.create).toHaveBeenCalledWith({
-            userId:'user-1',
-            type:NotificationType.BADGE_EARNED,
-            title:'Badge earned',
-            message:'You earned First Obligation.',
-            sourceType:UserEventSourceType.BADGE,
-            sourceId:'user-badge-1',
-        },transaction);
-        expect(result).toEqual(['First Obligation']);
+    expect(transaction.userBadge.create).not.toHaveBeenCalled();
+    expect(notificationsService.create).toHaveBeenCalledTimes(1);
+    expect(result).toEqual(['On-Time Starter']);
+  });
+  it('does not award a badge when the user does not meet the criteria', async () => {
+    transaction.badgeDefinition.findMany.mockResolvedValue([
+      {
+        id: 'badge-definition-3',
+        code: 'THREE_PAYMENT_STREAK',
+        name: 'Three Payment Streak',
+        criteriaType: BadgeCriteriaType.PAYMENT_STREAK_COUNT,
+        criteriaValue: 3,
+      },
+    ]);
+    const result = await service.evaluatePaymentBadges(
+      {
+        userId: 'user-1',
+        sourceEventId: 'payment-event-1',
+        onTimePaymentCount: 1,
+        currentPaymentStreak: 2,
+        currentScore: 608,
+      },
+      transaction as unknown as Prisma.TransactionClient,
+    );
+    expect(transaction.userBadge.findUnique).not.toHaveBeenCalled();
+    expect(transaction.userBadge.create).not.toHaveBeenCalled();
+    expect(transaction.userEvent.create).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
+  });
+  it('does not create a notification when badge persistence fails', async () => {
+    transaction.badgeDefinition.findMany.mockResolvedValue([firstOnTimeBadge]);
+    transaction.userBadge.create.mockRejectedValue(
+      new Error('Badge creation failed'),
+    );
+    await expect(
+      service.evaluatePaymentBadges(
+        {
+          userId: 'user-1',
+          sourceEventId: 'payment-event-1',
+          onTimePaymentCount: 1,
+          currentPaymentStreak: 1,
+          currentScore: 608,
+        },
+        transaction as unknown as Prisma.TransactionClient,
+      ),
+    ).rejects.toThrow('Badge creation failed');
+    expect(transaction.userEvent.create).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
+  });
+  it('creates the first obligation badge and notification', async () => {
+    transaction.financialObligation.count.mockResolvedValue(1);
+    transaction.badgeDefinition.findMany.mockResolvedValue([
+      firstObligationBadge,
+    ]);
+    const result = await service.evaluateObligationBadges(
+      {
+        userId: 'user-1',
+        sourceEventId: 'obligation-event-1',
+      },
+      transaction as unknown as Prisma.TransactionClient,
+    );
+    expect(transaction.financialObligation.count).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        deletedAt: null,
+      },
     });
+    expect(transaction.badgeDefinition.findMany).toHaveBeenCalledWith({
+      where: {
+        isActive: true,
+        NOT: {
+          category: BadgeCategory.DEMO,
+        },
+        criteriaType: BadgeCriteriaType.FIRST_OBLIGATION,
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        criteriaType: true,
+        criteriaValue: true,
+      },
+    });
+    expect(transaction.userBadge.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'user-1',
+        badgeDefinitionId: firstObligationBadge.id,
+        progress: firstObligationBadge.criteriaValue,
+        earnedAt: expect.any(Date) as Date,
+      },
+    });
+    expect(notificationsService.create).toHaveBeenCalledWith(
+      {
+        userId: 'user-1',
+        type: NotificationType.BADGE_EARNED,
+        title: 'Badge earned',
+        message: 'You earned First Obligation.',
+        sourceType: UserEventSourceType.BADGE,
+        sourceId: 'user-badge-1',
+      },
+      transaction,
+    );
+    expect(result).toEqual(['First Obligation']);
+  });
 });

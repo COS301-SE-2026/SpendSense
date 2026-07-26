@@ -13,9 +13,9 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
 // GET /api/v1/gamification/badges
 
 @Module({
-  imports: [AuthModule, UsersModule,NotificationsModule],
+  imports: [AuthModule, UsersModule, NotificationsModule],
   controllers: [GamificationController],
-  providers: [GamificationService,BadgeEngineService],
-  exports: [GamificationService,BadgeEngineService],
+  providers: [GamificationService, BadgeEngineService],
+  exports: [GamificationService, BadgeEngineService],
 })
 export class GamificationModule {}

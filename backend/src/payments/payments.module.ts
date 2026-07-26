@@ -13,7 +13,7 @@ import { GamificationModule } from 'src/gamification/gamification.module';
 // GET /api/v1/payment-occurrences/upcoming
 
 @Module({
-  imports: [AuthModule, UsersModule,NotificationsModule,GamificationModule],
+  imports: [AuthModule, UsersModule, NotificationsModule, GamificationModule],
   controllers: [PaymentsController],
   providers: [PaymentsService],
   exports: [PaymentsService],
