@@ -158,7 +158,7 @@ describe('starting a session',()=>{
         })
         expect(result.current.error).toBeNull()
     })
-    it('a second startDailyQuiz call supersedes the first — the first resolving late is ignored',async()=>{
+    it('a second startDailyQuiz call supersedes the first: the first resolving late is ignored',async()=>{
         const first=deferred<QuizSession>()
         const secondSession=makeSession({id:'session_B'})
         mockedCreate.mockReturnValueOnce(first.promise).mockResolvedValueOnce(secondSession)
@@ -169,7 +169,6 @@ describe('starting a session',()=>{
         await act(async()=>{
             await result.current.startDailyQuiz() //second call resolves immediately
         })
-        //Now resolve the stale first call — it must not clobber session B.
         await act(async()=>{
             first.resolve(makeSession({id:'session_STALE'}))
         })
@@ -295,7 +294,7 @@ describe('answering a question',()=>{
         expect(result.current.result).toEqual(finalResult)
         expect(result.current.nextQuestion).toBeNull()
     })
-    it('guards against duplicate submission — a second call while one is in flight is a no-op',async()=>{
+    it('guards against duplicate submission: a second call while one is in flight is a no-op',async()=>{
         mockedCreate.mockResolvedValue(makeSession())
         const {result}=renderHook(()=>useQuizSession())
         await act(async()=>{

@@ -21,6 +21,8 @@ import ProfilePage from './domains/ProfilePage.tsx'
 import LandingPage from './domains/LandingPage.tsx'
 import OnboardingPage from './domains/OnboardingPage.tsx'
 import NotificationsPage from './domains/NotificationsPage.tsx'
+import { NotificationsProvider } from './features/notifications/NotificationsContext.tsx'
+import { NotificationListener } from './features/notifications/NotificationListener.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -28,31 +30,34 @@ import PaymentForm from './domains/PaymentForm.tsx'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}/>
-        <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/dev" element={<App />} />
-        <Route path="/calendar" element={<CalendarPage />}/>
-        <Route path="/login" element={<LoginPage />}/>
-        <Route path="/register" element={<RegisterPage/>}/>
-        <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm/></ProtectedRoute>}/>
-        <Route path="/stickers" element={<StickerAlbumPage />}/>
-        <Route path="/stickers/:badgeKey" element={<StickerDetailPage />}/>
-        <Route path="/paymentForm" element={<PaymentForm/>}/>
-        <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
-        <Route path="/profile" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
-        <Route path="/landing" element={<LandingPage/>}/>
-        <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
-        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
-         <Route path="/quests" element={<QuestsPage/>}/>
-         <Route path="/quiz" element={<QuizPage/>}/>
-         <Route path="/friends" element={<FriendsPage/>}/>
-         <Route path="/friends/list" element={<FriendsListPage/>}/>
-         <Route path="/friends/add" element={<AddFriendPage/>}/>
-         <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
-         <Route path="/friends/activity" element={<FriendActivityPage/>}/>
-         <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
-      </Routes>
+      <NotificationsProvider>
+        <NotificationListener/>
+        <Routes>
+          <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}/>
+          <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/dev" element={<App />} />
+          <Route path="/calendar" element={<CalendarPage />}/>
+          <Route path="/login" element={<LoginPage />}/>
+          <Route path="/register" element={<RegisterPage/>}/>
+          <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm/></ProtectedRoute>}/>
+          <Route path="/stickers" element={<StickerAlbumPage />}/>
+          <Route path="/stickers/:badgeKey" element={<StickerDetailPage />}/>
+          <Route path="/paymentForm" element={<PaymentForm/>}/>
+          <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
+          <Route path="/landing" element={<LandingPage/>}/>
+          <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
+          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
+          <Route path="/quests" element={<QuestsPage/>}/>
+          <Route path="/quiz" element={<QuizPage/>}/>
+          <Route path="/friends" element={<FriendsPage/>}/>
+          <Route path="/friends/list" element={<FriendsListPage/>}/>
+          <Route path="/friends/add" element={<AddFriendPage/>}/>
+          <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
+          <Route path="/friends/activity" element={<FriendActivityPage/>}/>
+          <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
+        </Routes>
+      </NotificationsProvider>
     </BrowserRouter>
   </StrictMode>,
 )

@@ -19,9 +19,9 @@ import { Sticker } from "@/components/ui/sticker"
 
 import { CreditScoreGauge } from "@/components/common/CreditScoreGauge"
 import { CustomBadge } from "@/components/common/CustomBadges"
-import { IconButton } from "@/components/common/IconButton"
 import { LongButton } from "@/components/common/LongButton"
 import { XpPill } from "@/components/common/XpPill"
+import { NotificationBell } from "@/components/notifications/NotificationBell"
 
 import { cn } from "@/lib/utils"
 
@@ -29,12 +29,13 @@ import { UpcomingPaymentsCard } from "@/components/dashboard/UpcomingPaymentsCar
 import { CreditStatsSection } from "@/components/dashboard/CreditStats"
 import { getDashboard } from "@/features/dashboard/dashboardApi"
 import { signOut } from "@/features/auth/auth.service"
+import { useNotifications } from "@/features/notifications/useNotifications"
 
 import type { DashboardData } from "@/types/DashboardTypes"
 
 export default function DashboardPage() {
 	const navigate = useNavigate()
-
+	const {clearUnreadCount}=useNotifications()
 
 	const [dashboard, setDashboard] = React.useState<DashboardData | null>(null)
 
@@ -81,6 +82,7 @@ export default function DashboardPage() {
 	async function handleSignOut() {
 		try {
 			await signOut()
+			clearUnreadCount()
 			navigate("/login")
 		} catch (error) {
 			console.error("Failed to sign out:", error)
@@ -99,17 +101,7 @@ export default function DashboardPage() {
 					</div>
 
 					<div className="flex items-center gap-2">
-						<div className="relative">
-							<IconButton
-								IconVariant="iconNotif"
-								aria-label="Notifications"
-                                onClick={() => navigate("/notifications")}
-							/>
-							<span
-								aria-hidden="true"
-								className="pointer-events-none absolute right-1 top-1 size-2.5 rounded-full bg-[#FF6B9D] ring-2 ring-[#F4FBF7]"
-							/>
-						</div>
+						<NotificationBell/>
 						<button
 							type="button"
 							aria-label="Sign out"

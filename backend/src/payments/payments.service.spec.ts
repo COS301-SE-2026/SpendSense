@@ -4,6 +4,7 @@ import { PaymentsService } from './payments.service';
 import {
   Currency,
   MascotMood,
+  NotificationType,
   PaymentOccurrenceStatus,
   PaymentRecordStatus,
   Prisma,
@@ -14,6 +15,8 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LogPaymentDto } from './dto/log-payment.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import {BadgeEngineService} from '../gamification/badge-engine.service';
 
 // to run the tests in this file by itself: npm test -- payments.service.spec.ts
 type PrismaMockMethod = jest.Mock<Promise<unknown>, [unknown]>;
@@ -50,7 +53,11 @@ type PaymentsPrismaMock = {
 describe('PaymentsService', () => {
   let service: PaymentsService;
   let mockPrismaService: PaymentsPrismaMock;
-
+  let mockNotificationsService:{create:jest.Mock<Promise<unknown>,[unknown,unknown?]>};
+  mockNotificationsService={create:jest.fn<Promise<unknown>,[unknown,unknown?]>()};
+  mockNotificationsService.create.mockResolvedValue({id:'notification-1'});
+  let mockBadgeEngineService:{evaluatePaymentBadges:jest.Mock<Promise<string[]>,[unknown,unknown]>};
+  mockBadgeEngineService={evaluatePaymentBadges:jest.fn<Promise<string[]>,[unknown,unknown]>()};
   const currentUserId = 'user-id';
 
   // this is what is a PaymentOccurance that is expected of the user
@@ -130,6 +137,7 @@ describe('PaymentsService', () => {
     };
 
     jest.clearAllMocks();
+    mockBadgeEngineService.evaluatePaymentBadges.mockResolvedValue([]);
     mockPrismaService.$transaction.mockImplementation((callback) =>
       callback(mockPrismaService),
     );
@@ -195,6 +203,12 @@ describe('PaymentsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },{
+          provide:NotificationsService,
+          useValue:mockNotificationsService,
+        },{
+            provide:BadgeEngineService,
+            useValue:mockBadgeEngineService,
         },
       ],
     }).compile();
@@ -521,4 +535,180 @@ describe('PaymentsService', () => {
   });
 
   //////////////////////////////////////////////////////////////////////////////
+
+  it('creates a score increase notification after an on-time payment',async ()=>{
+    const dto={...baseDto};
+    const mockPaymentRecord={...basePaymentRecord};
+    const mockUpdatedOccurrence={
+      ...baseOccurrence,
+      status: PaymentOccurrenceStatus.PAID,
+      paidAt: new Date(dto.paidDate),
+    };
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence);
+    mockPrismaService.paymentRecord.create.mockResolvedValue(mockPaymentRecord);
+    mockPrismaService.paymentOccurrence.update.mockResolvedValue(mockUpdatedOccurrence);
+    await service.logPayment(dto,currentUserId);
+    expect(mockNotificationsService.create).toHaveBeenCalledTimes(1);
+    expect(mockNotificationsService.create).toHaveBeenCalledWith({
+        userId:currentUserId,
+        type:NotificationType.SCORE_CHANGE,
+        title:'Credit score updated',
+        message:'Your simulated credit score increased from 600 to 608.',
+        sourceType:UserEventSourceType.PAYMENT_RECORD,
+        sourceId:mockPaymentRecord.id,
+      },
+      mockPrismaService,
+    );
+  });
+  it('creates a score decrease notification after a late payment',async ()=>{
+    const dto={
+      ...baseDto,
+      paidDate:'2026-05-23',
+    };
+    const mockPaymentRecord={
+      ...basePaymentRecord,
+      paymentStatus:PaymentRecordStatus.LATE,
+      daysLate:3,
+      simulatedInterest:new Prisma.Decimal(6),
+    };
+    const mockUpdatedOccurrence={
+      ...baseOccurrence,
+      status:PaymentOccurrenceStatus.PAID_LATE,
+      paidAt:new Date(dto.paidDate),
+    };
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence);
+    mockPrismaService.paymentRecord.create.mockResolvedValue(mockPaymentRecord);
+    mockPrismaService.paymentOccurrence.update.mockResolvedValue(mockUpdatedOccurrence);
+    await service.logPayment(dto,currentUserId);
+    expect(mockNotificationsService.create).toHaveBeenCalledTimes(1);
+    expect(mockNotificationsService.create).toHaveBeenCalledWith({
+        userId:currentUserId,
+        type:NotificationType.SCORE_CHANGE,
+        title:'Credit score updated',
+        message:'Your simulated credit score decreased from 600 to 592.',
+        sourceType:UserEventSourceType.PAYMENT_RECORD,
+        sourceId:mockPaymentRecord.id,
+      },
+      mockPrismaService,
+    );
+  });
+  it('does not create a notification when the score does not change',async ()=>{
+    const dto={ ...baseDto };
+    const mockPaymentRecord={ ...basePaymentRecord };
+    const mockUpdatedOccurrence={
+      ...baseOccurrence,
+      status:PaymentOccurrenceStatus.PAID,
+      paidAt:new Date(dto.paidDate),
+    };
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence);
+    mockPrismaService.paymentRecord.create.mockResolvedValue(mockPaymentRecord);
+    mockPrismaService.paymentOccurrence.update.mockResolvedValue(mockUpdatedOccurrence);
+    mockPrismaService.creditProfile.upsert.mockResolvedValue({
+      id:'credit-profile-1',
+      userId:currentUserId,
+      currentScore:850,
+      previousScore:842,
+      scoreTier:ScoreTier.ELITE,
+      onTimePaymentCount:1,
+      latePaymentCount:0,
+      missedPaymentCount:0,
+      currentUtilisationScore:null,
+      lastCalculatedAt:null,
+      createdAt:new Date(),
+      updatedAt:new Date(),
+      deletedAt:null,
+    });
+    await service.logPayment(dto,currentUserId);
+    expect(mockNotificationsService.create).not.toHaveBeenCalled();
+  });
+  it('does not create a notification when the score update fails',async ()=>{
+    const dto={...baseDto};
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence);
+    mockPrismaService.paymentRecord.create.mockResolvedValue(basePaymentRecord);
+    mockPrismaService.paymentOccurrence.update.mockResolvedValue({
+      ...baseOccurrence,
+      status:PaymentOccurrenceStatus.PAID,
+      paidAt:new Date(dto.paidDate),
+    });
+    mockPrismaService.creditProfile.update.mockRejectedValue(new Error('Score update failed'));
+    await expect(service.logPayment(dto, currentUserId)).rejects.toThrow('Score update failed');
+    expect(mockNotificationsService.create).not.toHaveBeenCalled();
+  });
+  it('does not create another notification when a paid payment is retried',async ()=>{
+    const dto={...baseDto};
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue({
+      ...baseOccurrence,
+      status:PaymentOccurrenceStatus.PAID,
+    });
+    await expect(service.logPayment(dto, currentUserId)).rejects.toThrow(BadRequestException);
+    expect(mockNotificationsService.create).not.toHaveBeenCalled();
+  });
+  it('evaluates payment badges using the updated payment values',async()=>{
+    const dto={...baseDto};
+    const mockPaymentRecord={...basePaymentRecord};
+    const mockUpdatedOccurrence={
+        ...baseOccurrence,
+        status:PaymentOccurrenceStatus.PAID,
+        paidAt:new Date(dto.paidDate),
+    };
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence);
+    mockPrismaService.paymentRecord.create.mockResolvedValue(mockPaymentRecord);
+    mockPrismaService.paymentOccurrence.update.mockResolvedValue(mockUpdatedOccurrence);
+    await service.logPayment(dto,currentUserId);
+    expect(mockBadgeEngineService.evaluatePaymentBadges).toHaveBeenCalledTimes(1);
+    expect(mockBadgeEngineService.evaluatePaymentBadges).toHaveBeenCalledWith({
+        userId:currentUserId,
+        sourceEventId:'payment-event-1',
+        onTimePaymentCount:1,
+        currentPaymentStreak:1,
+        currentScore:608,
+    },mockPrismaService);
+  });
+  it('returns earned payment badges in the payment response',async()=>{
+    const dto={...baseDto};
+    const mockPaymentRecord={...basePaymentRecord};
+    const mockUpdatedOccurrence={
+        ...baseOccurrence,
+        status:PaymentOccurrenceStatus.PAID,
+        paidAt:new Date(dto.paidDate),
+    };
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence);
+    mockPrismaService.paymentRecord.create.mockResolvedValue(mockPaymentRecord);
+    mockPrismaService.paymentOccurrence.update.mockResolvedValue(mockUpdatedOccurrence);
+    mockBadgeEngineService.evaluatePaymentBadges.mockResolvedValue([
+        'On-Time Starter',
+    ]);
+    const result=await service.logPayment(dto,currentUserId);
+    expect(result.rewards.badgesEarned).toEqual([
+        'On-Time Starter',
+    ]);
+  });
+  it('does not evaluate payment badges when the payment is retried',async()=>{
+    const dto={...baseDto};
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue({
+        ...baseOccurrence,
+        status:PaymentOccurrenceStatus.PAID,
+    });
+    await expect(service.logPayment(dto,currentUserId)).rejects.toThrow(
+        BadRequestException,
+    );
+    expect(mockBadgeEngineService.evaluatePaymentBadges).not.toHaveBeenCalled();
+  });
+  it('does not evaluate payment badges when payment processing fails',async()=>{
+    const dto={...baseDto};
+    mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(baseOccurrence);
+    mockPrismaService.paymentRecord.create.mockResolvedValue(basePaymentRecord);
+    mockPrismaService.paymentOccurrence.update.mockResolvedValue({
+        ...baseOccurrence,
+        status:PaymentOccurrenceStatus.PAID,
+        paidAt:new Date(dto.paidDate),
+    });
+    mockPrismaService.creditProfile.update.mockRejectedValue(
+        new Error('Score update failed'),
+    );
+    await expect(service.logPayment(dto,currentUserId)).rejects.toThrow(
+        'Score update failed',
+    );
+    expect(mockBadgeEngineService.evaluatePaymentBadges).not.toHaveBeenCalled();
+  });
 });
