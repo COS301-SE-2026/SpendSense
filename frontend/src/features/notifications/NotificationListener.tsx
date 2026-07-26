@@ -7,6 +7,17 @@ import type {Notification} from "@/types/NotificationTypes"
 const POLL_INTERVAL_MS=30000
 const POLL_PAGE_SIZE=20
 
+// const TEST_NOTIFICATION:Notification={
+//     id:"test-notification",
+//     type:"REMINDER",
+//     title:"Test payment reminder",
+//     message:"Your Netflix payment is due tomorrow.",
+//     sourceType:"REMINDER",
+//     sourceId:"test-reminder",
+//     readAt:null,
+//     createdAt:new Date().toISOString(),
+// }
+
 export function NotificationListener(){
     const {refreshUnreadCount}=useNotifications()
     const [visibleNotification,setVisibleNotification]=React.useState<Notification|null>(null)
@@ -93,4 +104,25 @@ export function NotificationListener(){
             onDismiss={dismissNotification}
         />
     )
+    //testing for popup
+    // if(!visibleNotification){
+    //     if(!import.meta.env.DEV){
+    //         return null
+    //     }
+    //     return(
+    //         <button
+    //             type="button"
+    //             onClick={()=>setVisibleNotification(TEST_NOTIFICATION)}
+    //             className="fixed bottom-5 right-5 z-50 rounded-full bg-[#ac2a5d] px-4 py-2 text-sm font-bold text-white shadow-lg"
+    //         >
+    //             Test notification
+    //         </button>
+    //     )
+    // }
+    // return(
+    //     <NotificationToast
+    //         notification={visibleNotification}
+    //         onDismiss={dismissNotification}
+    //     />
+    // )
 }
