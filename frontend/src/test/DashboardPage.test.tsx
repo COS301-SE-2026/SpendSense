@@ -1,10 +1,12 @@
 import React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach,describe, it, expect, vi } from 'vitest'
 import DashboardPage from '../domains/DashboardPage'
 import'@testing-library/jest-dom'
 import { signOut } from '../features/auth/auth.service'
+import {NotificationsProvider} from '../features/notifications/NotificationsContext'
+import {getNotifications} from '../features/notifications/notificationsApi'
 
 vi.mock('@hugeicons/react', () => ({
   HugeiconsIcon: () => null,
@@ -56,10 +58,17 @@ vi.mock('../features/auth/auth.service', () => ({
   signOut: vi.fn(),
 }))
 
+vi.mock('../features/notifications/notificationsApi',()=>({
+    getNotifications:vi.fn(),
+    markAsRead:vi.fn(),
+}))
+
 function renderDashboard() {
   return render(
     <MemoryRouter>
-      <DashboardPage />
+      <NotificationsProvider>
+        <DashboardPage />
+      </NotificationsProvider>
     </MemoryRouter>
   )
 }
@@ -70,6 +79,20 @@ async function renderLoadedDashboard() {
 }
 
 describe('DashboardPage', () => {
+  beforeEach(()=>{
+    vi.clearAllMocks()
+    vi.mocked(getNotifications).mockResolvedValue({
+      data:{
+        notifications:[],
+        pagination:{
+          page:1,
+          perPage:1,
+          total:3,
+          totalPages:3,
+        },
+      },
+    })
+  })
   it('renders the user greeting', async () => {
     await renderLoadedDashboard()
     const heading = screen.getByRole('heading', { level: 1 })
@@ -176,13 +199,15 @@ describe('DashboardPage', () => {
     vi.mocked(signOut).mockResolvedValue(undefined)
 
     render(
-      <MemoryRouter initialEntries={['/']}>
+    <MemoryRouter initialEntries={['/']}>
+      <NotificationsProvider>
         <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/login" element={<div>Login page</div>} />
+          <Route path="/" element={<DashboardPage/>}/>
+          <Route path="/login" element={<div>Login page</div>}/>
         </Routes>
-      </MemoryRouter>,
-    )
+      </NotificationsProvider>
+    </MemoryRouter>,
+)
 
     fireEvent.click(screen.getByRole('button', { name: /sign out/i }))
 

@@ -736,7 +736,8 @@ describe('QuizService', () => {
         },
       },
     });
-    const profileUpdateCall = tx.gamificationProfile.update.mock.calls[0]?.[0] as {
+    const profileUpdateCall = tx.gamificationProfile.update.mock
+      .calls[0]?.[0] as {
       data: Record<string, unknown>;
     };
     expect(profileUpdateCall.data).not.toHaveProperty('currentKnowledgeStreak');

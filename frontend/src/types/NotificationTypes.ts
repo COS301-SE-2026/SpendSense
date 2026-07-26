@@ -7,5 +7,31 @@ export interface Notification{
     readAt: string|null
     createdAt: string
     message: string
-    
+    sourceType:string|null
+    sourceId:string|null
+}
+export interface NotificationFilters{
+    unreadOnly?:boolean
+    type?:NotifType
+    page?:number
+    perPage?:number
+}
+export interface NotificationPagination{
+    page:number
+    perPage:number
+    total:number
+    totalPages:number
+}
+
+export interface NotificationsResult{
+    notifications:Notification[]
+    pagination:NotificationPagination
+}
+
+export interface NotificationsResponse{
+    data:NotificationsResult
+}
+
+export interface NotificationResponse{
+    data:Notification
 }
