@@ -10,8 +10,10 @@ import {getNotifications,markAsRead} from '../features/notifications/notificatio
 import type {Notification,NotificationFilters,NotificationPagination,NotificationResponse,NotificationsResponse} from '../types/NotificationTypes'
 
 vi.mock('../features/notifications/notificationsApi',()=>({
+    deleteManyNotifications:vi.fn(),
     getNotifications:vi.fn(),
     markAsRead:vi.fn(),
+    markManyAsRead:vi.fn(),
 }))
 
 const unreadScoreNotification:Notification={
@@ -301,23 +303,11 @@ describe('NotificationsPage',()=>{
         renderPage()
         await screen.findByText('Score improved')
 
-        await user.click(
-            screen.getByRole('button',{
-                name:'All types',
-            }),
-        )
+        const typeFilter=screen.getByRole('combobox',{
+            name:'Notification type',
+        })
 
-        expect(
-            screen.getByRole('dialog',{
-                name:'Filter by notification type',
-            }),
-        ).toBeInTheDocument()
-
-        await user.click(
-            screen.getByRole('option',{
-                name:'Score changes',
-            }),
-        )
+        await user.selectOptions(typeFilter,'SCORE_CHANGE')
 
         await waitFor(()=>{
             expect(getNotifications).toHaveBeenCalledWith(
@@ -331,16 +321,7 @@ describe('NotificationsPage',()=>{
             )
         })
 
-        expect(
-            screen.getByRole('button',{
-                name:'Score changes',
-            }),
-        ).toBeInTheDocument()
-        expect(
-            screen.queryByRole('dialog',{
-                name:'Filter by notification type',
-            }),
-        ).not.toBeInTheDocument()
+        expect(typeFilter).toHaveValue('SCORE_CHANGE')
     })
     it('moves between notification pages',async()=>{
         const user=userEvent.setup()
@@ -448,15 +429,11 @@ describe('NotificationsPage',()=>{
             }),
         )
         expect(await screen.findByText('Page 2 of 2')).toBeInTheDocument()
-        await user.click(
-            screen.getByRole('button',{
-                name:'All types',
+        await user.selectOptions(
+            screen.getByRole('combobox',{
+                name:'Notification type',
             }),
-        )
-        await user.click(
-            screen.getByRole('option',{
-                name:'Rewards',
-            }),
+            'REWARD',
         )
         expect(await screen.findByText('Reward earned')).toBeInTheDocument()
         await waitFor(()=>{

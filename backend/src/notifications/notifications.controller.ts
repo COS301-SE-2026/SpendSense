@@ -1,11 +1,12 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Query,
   UseGuards,
-  Delete,
 } from '@nestjs/common';
 import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import type { AuthUser } from '../auth/types/auth-user.type';
@@ -13,7 +14,6 @@ import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorato
 import { UsersService } from '../users/users.service';
 import { GetNotificationsQueryDto } from './dto/get-notifications-query.dto';
 import { NotificationsService } from './notifications.service';
-import { Body } from '@nestjs/common';
 import { BulkNotificationIdsDto } from './dto/bulk-notifications.dto';
 
 @Controller('notifications')

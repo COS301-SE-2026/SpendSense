@@ -13,40 +13,57 @@ describe('NotificationTypeFilter',()=>{
                 onChange={vi.fn()}
             />,
         )
-        const trigger=screen.getByRole('button',{
-            name:'All types',
+        const select=screen.getByRole('combobox',{
+            name:'Notification type',
         })
-        expect(trigger).toBeInTheDocument()
-        expect(trigger).toHaveAttribute('aria-expanded','false')
+        expect(select).toBeInTheDocument()
+        expect(select).toHaveValue('')
+        expect(
+            screen.getByRole('option',{
+                name:'All types',
+            }),
+        ).toBeInTheDocument()
     })
-    it('opens the type-selection dialog',async()=>{
-        const user=userEvent.setup()
+    it('renders every notification type option',()=>{
         render(
             <NotificationTypeFilter
                 value=""
                 onChange={vi.fn()}
             />,
         )
-        await user.click(
-            screen.getByRole('button',{
-                name:'All types',
-            }),
-        )
+        expect(screen.getAllByRole('option')).toHaveLength(7)
         expect(
-            screen.getByRole('dialog',{
-                name:'Filter by notification type',
+            screen.getByRole('option',{
+                name:'Reminders',
             }),
         ).toBeInTheDocument()
         expect(
             screen.getByRole('option',{
-                name:'All types',
+                name:'Payment status',
             }),
-        ).toHaveAttribute('aria-selected','true')
+        ).toBeInTheDocument()
         expect(
-            screen.getAllByRole('option'),
-        ).toHaveLength(7)
+            screen.getByRole('option',{
+                name:'Score changes',
+            }),
+        ).toBeInTheDocument()
+        expect(
+            screen.getByRole('option',{
+                name:'Badges',
+            }),
+        ).toBeInTheDocument()
+        expect(
+            screen.getByRole('option',{
+                name:'Rewards',
+            }),
+        ).toBeInTheDocument()
+        expect(
+            screen.getByRole('option',{
+                name:'System',
+            }),
+        ).toBeInTheDocument()
     })
-    it('calls onChange and closes when a type is selected',async()=>{
+    it('calls onChange when a type is selected',async()=>{
         const user=userEvent.setup()
         const onChange=vi.fn()
         render(
@@ -55,26 +72,16 @@ describe('NotificationTypeFilter',()=>{
                 onChange={onChange}
             />,
         )
-        await user.click(
-            screen.getByRole('button',{
-                name:'All types',
+        await user.selectOptions(
+            screen.getByRole('combobox',{
+                name:'Notification type',
             }),
-        )
-        await user.click(
-            screen.getByRole('option',{
-                name:'Badges',
-            }),
+            'BADGE_EARNED',
         )
         expect(onChange).toHaveBeenCalledTimes(1)
         expect(onChange).toHaveBeenCalledWith('BADGE_EARNED')
-        expect(
-            screen.queryByRole('dialog',{
-                name:'Filter by notification type',
-            }),
-        ).not.toBeInTheDocument()
     })
-    it('shows the selected type and marks it as active',async()=>{
-        const user=userEvent.setup()
+    it('shows the currently selected type',()=>{
         render(
             <NotificationTypeFilter
                 value="REMINDER"
@@ -82,20 +89,15 @@ describe('NotificationTypeFilter',()=>{
             />,
         )
         expect(
-            screen.getByRole('button',{
-                name:'Reminders',
+            screen.getByRole('combobox',{
+                name:'Notification type',
             }),
-        ).toBeInTheDocument()
-        await user.click(
-            screen.getByRole('button',{
-                name:'Reminders',
-            }),
-        )
+        ).toHaveValue('REMINDER')
         expect(
             screen.getByRole('option',{
                 name:'Reminders',
             }),
-        ).toHaveAttribute('aria-selected','true')
+        ).toBeChecked()
     })
     it('allows the user to clear the selected type',async()=>{
         const user=userEvent.setup()
@@ -106,42 +108,12 @@ describe('NotificationTypeFilter',()=>{
                 onChange={onChange}
             />,
         )
-        await user.click(
-            screen.getByRole('button',{
-                name:'Rewards',
+        await user.selectOptions(
+            screen.getByRole('combobox',{
+                name:'Notification type',
             }),
-        )
-        await user.click(
-            screen.getByRole('option',{
-                name:'All types',
-            }),
+            '',
         )
         expect(onChange).toHaveBeenCalledWith('')
-    })
-    it('closes without changing the value when Cancel is selected',async()=>{
-        const user=userEvent.setup()
-        const onChange=vi.fn()
-        render(
-            <NotificationTypeFilter
-                value="SYSTEM"
-                onChange={onChange}
-            />,
-        )
-        await user.click(
-            screen.getByRole('button',{
-                name:'System',
-            }),
-        )
-        await user.click(
-            screen.getByRole('button',{
-                name:'Cancel',
-            }),
-        )
-        expect(onChange).not.toHaveBeenCalled()
-        expect(
-            screen.queryByRole('dialog',{
-                name:'Filter by notification type',
-            }),
-        ).not.toBeInTheDocument()
     })
 })
