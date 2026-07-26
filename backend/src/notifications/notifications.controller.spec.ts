@@ -10,6 +10,7 @@ import { NotificationsService } from './notifications.service';
 
 describe('NotificationsController', () => {
   let controller: NotificationsController;
+
   const notificationsService = {
     findAllForUser:
       jest.fn<
@@ -17,18 +18,31 @@ describe('NotificationsController', () => {
       >(),
     markAsRead:
       jest.fn<(userId: string, notificationId: string) => Promise<unknown>>(),
+    softDelete:
+      jest.fn<(userId: string, notificationId: string) => Promise<unknown>>(),
+    markManyAsRead:
+      jest.fn<(userId: string, ids: string[]) => Promise<unknown>>(),
+    softDeleteMany:
+      jest.fn<(userId: string, ids: string[]) => Promise<unknown>>(),
   };
+
   const usersService = {
     findOrCreateUser:
       jest.fn<(authUser: AuthUser) => Promise<{ id: string }>>(),
   };
+
   const authUser: AuthUser = {
     supabaseAuthId: 'supabase-user-1',
     email: 'student@example.com',
   };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    usersService.findOrCreateUser.mockResolvedValue({ id: 'database-user-1' });
+
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'database-user-1',
+    });
+
     controller = new NotificationsController(
       notificationsService as unknown as NotificationsService,
       usersService as unknown as UsersService,
@@ -43,6 +57,7 @@ describe('NotificationsController', () => {
         page: 1,
         perPage: 20,
       };
+
       const expectedResult = {
         notifications: [],
         pagination: {
@@ -52,8 +67,11 @@ describe('NotificationsController', () => {
           totalPages: 0,
         },
       };
+
       notificationsService.findAllForUser.mockResolvedValue(expectedResult);
+
       const result = await controller.findAll(authUser, query);
+
       expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
       expect(notificationsService.findAllForUser).toHaveBeenCalledWith(
         'database-user-1',
@@ -64,15 +82,19 @@ describe('NotificationsController', () => {
 
     it('does not call the service when user resolution fails', async () => {
       const query = new GetNotificationsQueryDto();
+
       usersService.findOrCreateUser.mockRejectedValue(
         new Error('User not found'),
       );
+
       await expect(controller.findAll(authUser, query)).rejects.toThrow(
         'User not found',
       );
+
       expect(notificationsService.findAllForUser).not.toHaveBeenCalled();
     });
   });
+
   describe('markAsRead', () => {
     it('marks a notification as read using the internal user ID', async () => {
       const updatedNotification = {
@@ -80,8 +102,14 @@ describe('NotificationsController', () => {
         userId: 'database-user-1',
         readAt: new Date(),
       };
+
       notificationsService.markAsRead.mockResolvedValue(updatedNotification);
-      const result = await controller.markAsRead(authUser, 'notification-1');
+
+      const result = await controller.markAsRead(
+        authUser,
+        'notification-1',
+      );
+
       expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
       expect(notificationsService.markAsRead).toHaveBeenCalledWith(
         'database-user-1',
@@ -89,26 +117,109 @@ describe('NotificationsController', () => {
       );
       expect(result).toEqual(updatedNotification);
     });
+
     it('passes a NotFoundException from the service', async () => {
       notificationsService.markAsRead.mockRejectedValue(
         new NotFoundException('Notification not found'),
       );
+
       await expect(
         controller.markAsRead(authUser, 'missing-notification'),
-      ).rejects.toThrow(new NotFoundException('Notification not found'));
+      ).rejects.toThrow(
+        new NotFoundException('Notification not found'),
+      );
+
       expect(notificationsService.markAsRead).toHaveBeenCalledWith(
         'database-user-1',
         'missing-notification',
       );
     });
-    it('does not call the service when user resolution fails', async () => {
+  });
+
+  describe('remove', () => {
+    it('soft deletes one notification using the internal user ID', async () => {
+      const resultValue = {
+        id: 'notification-1',
+        deletedAt: new Date(),
+      };
+
+      notificationsService.softDelete.mockResolvedValue(resultValue);
+
+      const result = await controller.remove(
+        authUser,
+        'notification-1',
+      );
+
+      expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
+      expect(notificationsService.softDelete).toHaveBeenCalledWith(
+        'database-user-1',
+        'notification-1',
+      );
+      expect(result).toEqual(resultValue);
+    });
+
+    it('does not call softDelete when user resolution fails', async () => {
       usersService.findOrCreateUser.mockRejectedValue(
         new Error('User not found'),
       );
+
       await expect(
-        controller.markAsRead(authUser, 'notification-1'),
+        controller.remove(authUser, 'notification-1'),
       ).rejects.toThrow('User not found');
-      expect(notificationsService.markAsRead).not.toHaveBeenCalled();
+
+      expect(notificationsService.softDelete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('markManyAsRead', () => {
+    it('marks the supplied notification IDs as read', async () => {
+      const body = {
+        ids: [
+          '11111111-1111-4111-8111-111111111111',
+          '22222222-2222-4222-8222-222222222222',
+        ],
+      };
+
+      notificationsService.markManyAsRead.mockResolvedValue({
+        updated: 2,
+      });
+
+      const result = await controller.markManyAsRead(authUser, body);
+
+      expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
+      expect(notificationsService.markManyAsRead).toHaveBeenCalledWith(
+        'database-user-1',
+        body.ids,
+      );
+      expect(result).toEqual({
+        updated: 2,
+      });
+    });
+  });
+
+  describe('removeMany', () => {
+    it('soft deletes the supplied notification IDs', async () => {
+      const body = {
+        ids: [
+          '11111111-1111-4111-8111-111111111111',
+          '22222222-2222-4222-8222-222222222222',
+        ],
+      };
+
+      notificationsService.softDeleteMany.mockResolvedValue({
+        deleted: 2,
+      });
+
+      const result = await controller.removeMany(authUser, body);
+
+      expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
+      expect(notificationsService.softDeleteMany).toHaveBeenCalledWith(
+        'database-user-1',
+        body.ids,
+      );
+      expect(result).toEqual({
+        deleted: 2,
+      });
     });
   });
 });
