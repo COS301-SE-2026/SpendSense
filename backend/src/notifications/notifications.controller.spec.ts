@@ -105,10 +105,7 @@ describe('NotificationsController', () => {
 
       notificationsService.markAsRead.mockResolvedValue(updatedNotification);
 
-      const result = await controller.markAsRead(
-        authUser,
-        'notification-1',
-      );
+      const result = await controller.markAsRead(authUser, 'notification-1');
 
       expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
       expect(notificationsService.markAsRead).toHaveBeenCalledWith(
@@ -125,9 +122,7 @@ describe('NotificationsController', () => {
 
       await expect(
         controller.markAsRead(authUser, 'missing-notification'),
-      ).rejects.toThrow(
-        new NotFoundException('Notification not found'),
-      );
+      ).rejects.toThrow(new NotFoundException('Notification not found'));
 
       expect(notificationsService.markAsRead).toHaveBeenCalledWith(
         'database-user-1',
@@ -145,10 +140,7 @@ describe('NotificationsController', () => {
 
       notificationsService.softDelete.mockResolvedValue(resultValue);
 
-      const result = await controller.remove(
-        authUser,
-        'notification-1',
-      );
+      const result = await controller.remove(authUser, 'notification-1');
 
       expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
       expect(notificationsService.softDelete).toHaveBeenCalledWith(

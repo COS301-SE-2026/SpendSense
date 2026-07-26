@@ -91,52 +91,52 @@ export class NotificationsService {
       },
     });
   }
-  async softDelete(userId:string,notificationId:string){
-    const notification=await this.prisma.notification.findFirst({
-      where:{
-        id:notificationId,
+  async softDelete(userId: string, notificationId: string) {
+    const notification = await this.prisma.notification.findFirst({
+      where: {
+        id: notificationId,
         userId,
-        deletedAt:null,
+        deletedAt: null,
       },
     });
-    if(!notification){
+    if (!notification) {
       throw new NotFoundException('Notification not found');
     }
     await this.prisma.notification.update({
-      where:{
-        id:notification.id,
+      where: {
+        id: notification.id,
       },
-      data:{
-        deletedAt:new Date(),
+      data: {
+        deletedAt: new Date(),
       },
     });
-    return {id:notification.id,deletedAt:new Date()};
+    return { id: notification.id, deletedAt: new Date() };
   }
-  async markManyAsRead(userId:string,ids:string[]){
-    const result=await this.prisma.notification.updateMany({
-      where:{
-        id:{in:ids},
+  async markManyAsRead(userId: string, ids: string[]) {
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        id: { in: ids },
         userId,
-        deletedAt:null,
-        readAt:null,
+        deletedAt: null,
+        readAt: null,
       },
-      data:{
-        readAt:new Date(),
+      data: {
+        readAt: new Date(),
       },
     });
-    return {updated:result.count};
+    return { updated: result.count };
   }
-  async softDeleteMany(userId:string,ids:string[]){
-    const result=await this.prisma.notification.updateMany({
-      where:{
-        id:{in: ids},
+  async softDeleteMany(userId: string, ids: string[]) {
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        id: { in: ids },
         userId,
-        deletedAt:null,
+        deletedAt: null,
       },
-      data:{
-        deletedAt:new Date(),
+      data: {
+        deletedAt: new Date(),
       },
     });
-    return {deleted:result.count};
+    return { deleted: result.count };
   }
 }

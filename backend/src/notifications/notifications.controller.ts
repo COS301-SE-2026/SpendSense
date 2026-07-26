@@ -5,7 +5,7 @@ import {
   Patch,
   Query,
   UseGuards,
-  Delete
+  Delete,
 } from '@nestjs/common';
 import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import type { AuthUser } from '../auth/types/auth-user.type';
@@ -14,7 +14,7 @@ import { UsersService } from '../users/users.service';
 import { GetNotificationsQueryDto } from './dto/get-notifications-query.dto';
 import { NotificationsService } from './notifications.service';
 import { Body } from '@nestjs/common';
-import { BulkNotificationIdsDto } from './dto/bulk-notifications.dto'
+import { BulkNotificationIdsDto } from './dto/bulk-notifications.dto';
 
 @Controller('notifications')
 @UseGuards(SupabaseJwtGuard)
@@ -41,27 +41,27 @@ export class NotificationsController {
   }
   @Delete(':id')
   async remove(
-    @CurrentAuthUser() authUser:AuthUser,
-    @Param('id') notificationId:string,
-  ){
-    const user=await this.usersService.findOrCreateUser(authUser);
-    return this.notificationsService.softDelete(user.id,notificationId);
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('id') notificationId: string,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.notificationsService.softDelete(user.id, notificationId);
   }
   @Patch('read')
   async markManyAsRead(
-    @CurrentAuthUser() authUser:AuthUser,
-    @Body() body:BulkNotificationIdsDto,
-  ){
-    const user=await this.usersService.findOrCreateUser(authUser);
-    return this.notificationsService.markManyAsRead(user.id,body.ids);
+    @CurrentAuthUser() authUser: AuthUser,
+    @Body() body: BulkNotificationIdsDto,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.notificationsService.markManyAsRead(user.id, body.ids);
   }
 
   @Delete()
   async removeMany(
-    @CurrentAuthUser() authUser:AuthUser,
-    @Body() body:BulkNotificationIdsDto,
-  ){
-    const user=await this.usersService.findOrCreateUser(authUser);
-    return this.notificationsService.softDeleteMany(user.id,body.ids);
+    @CurrentAuthUser() authUser: AuthUser,
+    @Body() body: BulkNotificationIdsDto,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.notificationsService.softDeleteMany(user.id, body.ids);
   }
 }

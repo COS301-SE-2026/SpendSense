@@ -26,9 +26,7 @@ describe('BulkNotificationIdsDto', () => {
 
     const errors = await validate(dto);
 
-    expect(
-      errors.some((error) => error.property === 'ids'),
-    ).toBe(true);
+    expect(errors.some((error) => error.property === 'ids')).toBe(true);
   });
 
   it('rejects a value that is not an array', async () => {
@@ -38,37 +36,26 @@ describe('BulkNotificationIdsDto', () => {
 
     const errors = await validate(dto);
 
-    expect(
-      errors.some((error) => error.property === 'ids'),
-    ).toBe(true);
+    expect(errors.some((error) => error.property === 'ids')).toBe(true);
   });
 
   it('rejects an array containing a non-UUID value', async () => {
     const dto = plainToInstance(BulkNotificationIdsDto, {
-      ids: [
-        '11111111-1111-4111-8111-111111111111',
-        'not-a-uuid',
-      ],
+      ids: ['11111111-1111-4111-8111-111111111111', 'not-a-uuid'],
     });
 
     const errors = await validate(dto);
 
-    expect(
-      errors.some((error) => error.property === 'ids'),
-    ).toBe(true);
+    expect(errors.some((error) => error.property === 'ids')).toBe(true);
   });
 
   it('rejects a UUID that is not version 4', async () => {
     const dto = plainToInstance(BulkNotificationIdsDto, {
-      ids: [
-        '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
-      ],
+      ids: ['6ba7b810-9dad-11d1-80b4-00c04fd430c8'],
     });
 
     const errors = await validate(dto);
 
-    expect(
-      errors.some((error) => error.property === 'ids'),
-    ).toBe(true);
+    expect(errors.some((error) => error.property === 'ids')).toBe(true);
   });
 });

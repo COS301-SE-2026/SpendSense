@@ -19,8 +19,7 @@ describe('NotificationsService', () => {
       count: jest.fn<(args?: unknown) => Promise<number>>(),
       findFirst: jest.fn<(args?: unknown) => Promise<unknown>>(),
       update: jest.fn<(args?: unknown) => Promise<unknown>>(),
-      updateMany:
-        jest.fn<(args?: unknown) => Promise<{ count: number }>>(),
+      updateMany: jest.fn<(args?: unknown) => Promise<{ count: number }>>(),
       create: jest.fn<(args?: unknown) => Promise<unknown>>(),
     },
     $transaction:
@@ -36,9 +35,7 @@ describe('NotificationsService', () => {
       },
     );
 
-    service = new NotificationsService(
-      prisma as unknown as PrismaService,
-    );
+    service = new NotificationsService(prisma as unknown as PrismaService);
   });
 
   describe('findAllForUser', () => {
@@ -200,10 +197,7 @@ describe('NotificationsService', () => {
 
       prisma.notification.findFirst.mockResolvedValue(existingNotification);
 
-      const result = await service.markAsRead(
-        'user-1',
-        'notification-1',
-      );
+      const result = await service.markAsRead('user-1', 'notification-1');
 
       expect(result).toEqual(existingNotification);
       expect(prisma.notification.update).not.toHaveBeenCalled();
@@ -224,10 +218,7 @@ describe('NotificationsService', () => {
       prisma.notification.findFirst.mockResolvedValue(unreadNotification);
       prisma.notification.update.mockResolvedValue(updatedNotification);
 
-      const result = await service.markAsRead(
-        'user-1',
-        'notification-1',
-      );
+      const result = await service.markAsRead('user-1', 'notification-1');
 
       expect(prisma.notification.update).toHaveBeenCalledWith({
         where: {
@@ -246,9 +237,7 @@ describe('NotificationsService', () => {
 
       await expect(
         service.markAsRead('user-1', 'missing-notification'),
-      ).rejects.toThrow(
-        new NotFoundException('Notification not found'),
-      );
+      ).rejects.toThrow(new NotFoundException('Notification not found'));
 
       expect(prisma.notification.update).not.toHaveBeenCalled();
     });
@@ -328,8 +317,7 @@ describe('NotificationsService', () => {
         sourceId: 'score-event-1',
       };
 
-      const transactionCreate =
-        jest.fn<(args?: unknown) => Promise<unknown>>();
+      const transactionCreate = jest.fn<(args?: unknown) => Promise<unknown>>();
 
       transactionCreate.mockResolvedValue(createdNotification);
 
@@ -380,10 +368,7 @@ describe('NotificationsService', () => {
         deletedAt: new Date(),
       });
 
-      const result = await service.softDelete(
-        'user-1',
-        'notification-1',
-      );
+      const result = await service.softDelete('user-1', 'notification-1');
 
       expect(prisma.notification.findFirst).toHaveBeenCalledWith({
         where: {
@@ -413,9 +398,7 @@ describe('NotificationsService', () => {
 
       await expect(
         service.softDelete('user-1', 'missing-notification'),
-      ).rejects.toThrow(
-        new NotFoundException('Notification not found'),
-      );
+      ).rejects.toThrow(new NotFoundException('Notification not found'));
 
       expect(prisma.notification.update).not.toHaveBeenCalled();
     });
@@ -458,10 +441,9 @@ describe('NotificationsService', () => {
         count: 0,
       });
 
-      const result = await service.markManyAsRead(
-        'user-1',
-        ['11111111-1111-4111-8111-111111111111'],
-      );
+      const result = await service.markManyAsRead('user-1', [
+        '11111111-1111-4111-8111-111111111111',
+      ]);
 
       expect(result).toEqual({
         updated: 0,
@@ -505,10 +487,9 @@ describe('NotificationsService', () => {
         count: 0,
       });
 
-      const result = await service.softDeleteMany(
-        'user-1',
-        ['11111111-1111-4111-8111-111111111111'],
-      );
+      const result = await service.softDeleteMany('user-1', [
+        '11111111-1111-4111-8111-111111111111',
+      ]);
 
       expect(result).toEqual({
         deleted: 0,
