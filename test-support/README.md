@@ -7,7 +7,7 @@ This folder is the shared foundation for API and browser end to end tests. It ow
 1. Start the isolated environment with `npm run e2e:up`.
 2. Before the first browser run, install Chromium with `npm --prefix frontend exec playwright install chromium`.
 3. Run the API suite with `npm run test:e2e:api`.
-4. Run the browser suite with `npm run test:e2e:ui` once browser authentication has been configured.
+4. Run the browser suite with `npm run test:e2e:ui`. The command resets the E2E database and creates the controlled browser session automatically.
 5. Remove the environment and its E2E database volume with `npm run e2e:down`.
 
 The environment uses only the `spendsense_e2e` database. Do not point an E2E command at local development, hosted Supabase, or production data.
@@ -46,9 +46,15 @@ Factories and scenarios create data only. They must not click browser controls, 
 
 ## Authentication status
 
-API E2E tests use E2E-only HS256 tokens signed with `SUPABASE_JWT_SECRET`. The helper in `auth/e2e-auth.ts` creates those tokens.
+API E2E tests use E2E-only HS256 tokens signed with `SUPABASE_JWT_SECRET`. The helper in `auth/e2e-auth.ts` creates those tokens. Browser E2E uses the same E2E-only signing secret, but the token is created by `scripts/run-e2e-ui.cjs` outside the browser.
 
-Browser authentication needs a dedicated E2E session. The Playwright configuration and fixture folders are scaffolded, but `auth.setup.ts` must be completed when the team chooses either local Supabase or a controlled test-only browser session. Do not use a shared hosted or production account.
+`auth.setup.ts` initialises the matching internal SpendSense user through the real API, stores the token in Playwright storage state, and every Chromium test reuses that state. The frontend recognises the stored token only when `VITE_E2E_MODE=true`. It throws if that mode is included in a production build.
+
+Do not use a hosted Supabase account, Supabase credentials, or a production secret for E2E tests.
+
+## Reset lifecycle
+
+`createApiE2eFixture()` resets and reseeds the E2E database when a new API fixture is created. Browser E2E runs `npm run e2e:reset` before Playwright starts. Both paths refuse non-E2E database names.
 
 ## Completion checklist
 

@@ -15,6 +15,7 @@ build/
 coverage/
 playwright-report/
 test-results/
+frontend/playwright/.auth/
 
 # logs
 *.log

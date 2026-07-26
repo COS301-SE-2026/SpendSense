@@ -7,7 +7,18 @@ import { AppModule } from '../../src/app.module';
 import { HttpExceptionFilter } from '../../src/common/filters/http-exception.filter';
 import { ResponseInterceptor } from '../../src/common/interceptors/response.interceptor';
 import { createE2eAccessToken } from '../../../test-support/auth/e2e-auth';
+import { resetE2eDatabase } from '../../../test-support/database/reset';
 import { createUser } from '../../../test-support/factories/user';
+import { seedBadges } from '../../prisma/seed/badges';
+import { seedCategories } from '../../prisma/seed/categories';
+import { seedQuizzes } from '../../prisma/seed/quizzes';
+
+async function resetAndSeed(prisma: PrismaClient): Promise<void> {
+  await resetE2eDatabase(prisma);
+  await seedCategories(prisma);
+  await seedBadges(prisma);
+  await seedQuizzes(prisma);
+}
 
 export async function createApiE2eFixture() {
   const moduleFixture = await Test.createTestingModule({
@@ -29,11 +40,13 @@ export async function createApiE2eFixture() {
 
   const prisma = new PrismaClient();
   await prisma.$connect();
+  await resetAndSeed(prisma);
 
   return {
     app,
     prisma,
     request: request(app.getHttpServer()),
+    reset: () => resetAndSeed(prisma),
     async user() {
       const user = (await createUser(prisma)) as {
         supabaseAuthId: string;

@@ -33,6 +33,7 @@ services:
     environment:
       DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
       SUPABASE_JWT_SECRET: spendsense-e2e-only-secret
+      E2E_MODE: "true"
       ALLOWED_ORIGINS: http://frontend-e2e:5173,http://localhost:5174
       PORT: 3000
       AI_SERVICE_URL: http://ai-e2e:8000
@@ -53,6 +54,7 @@ services:
       dockerfile: Dockerfile.dev
     environment:
       VITE_API_URL: http://localhost:3001/api/v1
+      VITE_E2E_MODE: "true"
       VITE_SUPABASE_URL: http://e2e.invalid
       VITE_SUPABASE_ANON_KEY: e2e-browser-auth-is-not-configured
     ports:
@@ -70,6 +72,19 @@ services:
       DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
       SUPABASE_JWT_SECRET: spendsense-e2e-only-secret
       E2E_DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
+    volumes:
+      - ./test-support:/test-support:ro
+    depends_on:
+      migrate-e2e:
+        condition: service_completed_successfully
+
+  reset-e2e:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    command: npx tsx /test-support/database/reset-and-seed.ts
+    environment:
+      DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
     volumes:
       - ./test-support:/test-support:ro
     depends_on:
