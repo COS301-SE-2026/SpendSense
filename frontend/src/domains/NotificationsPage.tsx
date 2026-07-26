@@ -20,12 +20,12 @@ import {cn} from "@/lib/utils"
 import type {
     Notification,
     NotificationPagination,
-    NotificationType,
+    NotifType,
 } from "@/types/NotificationTypes"
 
 const PER_PAGE=10
 
-const TYPE_OPTIONS:{value:NotificationType;label:string}[]=[
+const TYPE_OPTIONS:{value:NotifType;label:string}[]=[
     {value:"REMINDER",label:"Reminders"},
     {value:"PAYMENT_STATUS",label:"Payment status"},
     {value:"SCORE_CHANGE",label:"Score changes"},
@@ -52,7 +52,7 @@ export default function NotificationsPage(){
         totalPages:0,
     })
     const [unreadOnly,setUnreadOnly]=React.useState(false)
-    const [selectedType,setSelectedType]=React.useState<NotificationType|"">("")
+    const [selectedType,setSelectedType]=React.useState<NotifType|"">("")
     const [page,setPage]=React.useState(1)
     const [loading,setLoading]=React.useState(true)
     const [err,setErr]=React.useState<string|null>(null)
@@ -113,7 +113,7 @@ export default function NotificationsPage(){
 
     function handleTypeFilter(event:React.ChangeEvent<HTMLSelectElement>){
         setPage(1)
-        setSelectedType(event.target.value as NotificationType|"")
+        setSelectedType(event.target.value as NotifType|"")
     }
 
     async function handleRowClick(notification:Notification){
@@ -355,7 +355,7 @@ export default function NotificationsPage(){
     )
 }
 
-const ICON_TYPE:Record<NotificationType,React.ReactNode>={
+const ICON_TYPE:Record<NotifType,React.ReactNode>={
     REWARD:<Gift className="size-4"/>,
     PAYMENT_STATUS:<Banknote className="size-4"/>,
     SYSTEM:<Info className="size-4"/>,
@@ -364,7 +364,7 @@ const ICON_TYPE:Record<NotificationType,React.ReactNode>={
     BADGE_EARNED:<Award className="size-4"/>,
 }
 
-const TONE_TYPE:Record<NotificationType,string>={
+const TONE_TYPE:Record<NotifType,string>={
     REWARD:"bg-[#ffe9b5] text-[#7a5a00]",
     PAYMENT_STATUS:"bg-[#e8e4f4] text-[#5b4d8b]",
     SYSTEM:"bg-[#0a1929] text-white",
