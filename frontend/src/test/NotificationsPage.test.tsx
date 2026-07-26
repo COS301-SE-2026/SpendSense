@@ -581,4 +581,21 @@ describe('NotificationsPage',()=>{
         renderPage()
         expect(await screen.findByText('Login page')).toBeInTheDocument()
     })
+    it("hides pagination when there is only one page",async()=>{
+        renderPage()
+        await screen.findByText("Score improved")
+        expect(
+            screen.queryByText("Page 1 of 1"),
+        ).not.toBeInTheDocument()
+        expect(
+            screen.queryByRole("button",{
+                name:"Previous",
+            }),
+        ).not.toBeInTheDocument()
+        expect(
+            screen.queryByRole("button",{
+                name:"Next",
+            }),
+        ).not.toBeInTheDocument()
+    })
 })

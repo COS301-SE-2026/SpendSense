@@ -193,13 +193,20 @@ export default function NotificationsPage(){
                 </header>
 
                 <div className="mt-6">
-                    <p className="text-sm font-semibold text-[#6b6375]">
-                        {unreadLoading&&!unreadLoaded
-                            ?"Loading unread notifications..."
-                            :unreadLoaded
-                                ?`${unreadCount} unread ${unreadCount===1?"notification":"notifications"}`
-                                :"Unread count unavailable"}
-                    </p>
+                    {unreadLoading&&!unreadLoaded?(
+                        <p className="text-sm font-semibold text-[#6b6375]">Loading unread notifications...</p>
+                    ):unreadLoaded&&unreadCount===0?(
+                        <div>
+                            <p className="font-bold text-[#091828]">You're all caught up</p>
+                            <p className="mt-0.5 text-sm text-[#6b6375]">All your notifications have been read.</p>
+                        </div>
+                    ):unreadLoaded?(
+                        <p className="text-sm font-semibold text-[#6b6375]">
+                            {unreadCount} unread {unreadCount===1?"notification":"notifications"}
+                        </p>
+                    ):(
+                        <p className="text-sm font-semibold text-[#6b6375]">Unread count unavailable</p>
+                    )}
                 </div>
 
                 <section
@@ -321,33 +328,29 @@ export default function NotificationsPage(){
                             ))}
                         </CustomCard>
 
-                        <div className="mt-5 flex items-center justify-between">
-                            <button
-                                type="button"
-                                disabled={page<=1||loading}
-                                onClick={()=>setPage((current)=>current-1)}
-                                className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                                Previous
-                            </button>
-
-                            <p className="text-sm font-semibold text-[#6b6375]">
-                                Page {page} of {totalPages}
-                            </p>
-
-                            <button
-                                type="button"
-                                disabled={
-                                    pagination.totalPages===0
-                                    ||page>=pagination.totalPages
-                                    ||loading
-                                }
-                                onClick={()=>setPage((current)=>current+1)}
-                                className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                                Next
-                            </button>
-                        </div>
+                        {pagination.totalPages>1&&(
+                            <div className="mt-5 flex items-center justify-between">
+                                <button
+                                    type="button"
+                                    disabled={page<=1||loading}
+                                    onClick={()=>setPage((current)=>current-1)}
+                                    className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    Previous
+                                </button>
+                                <p className="text-sm font-semibold text-[#6b6375]">
+                                    Page {page} of {totalPages}
+                                </p>
+                                <button
+                                    type="button"
+                                    disabled={page>=pagination.totalPages||loading}
+                                    onClick={()=>setPage((current)=>current+1)}
+                                    className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
@@ -434,7 +437,13 @@ function NotificationRow({
 }
 
 function formatTime(date:string){
-    const differenceMs=Date.now()-new Date(date).getTime()
+    const notificationDate=new Date(date)
+
+    if(Number.isNaN(notificationDate.getTime())){
+        return ""
+    }
+
+    const differenceMs=Date.now()-notificationDate.getTime()
     const mins=Math.max(0,Math.floor(differenceMs/60000))
 
     if(mins<1){
@@ -453,7 +462,17 @@ function formatTime(date:string){
 
     const days=Math.floor(hours/24)
 
-    return `${days}d ago`
+    if(days<7){
+        return `${days}d ago`
+    }
+
+    const currentYear=new Date().getFullYear()
+    const includeYear=notificationDate.getFullYear()!==currentYear
+    return new Intl.DateTimeFormat("en-ZA",{
+        day:"numeric",
+        month:"short",
+        year:includeYear?"numeric":undefined,
+    }).format(notificationDate)
 }
 
 function isAuthenticationError(error:unknown){
