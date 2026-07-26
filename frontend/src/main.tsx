@@ -22,6 +22,7 @@ import LandingPage from './domains/LandingPage.tsx'
 import OnboardingPage from './domains/OnboardingPage.tsx'
 import NotificationsPage from './domains/NotificationsPage.tsx'
 import { NotificationsProvider } from './features/notifications/NotificationsContext.tsx'
+import { NotificationListener } from './features/notifications/NotificationListener.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -30,6 +31,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <NotificationsProvider>
+        <NotificationListener/>
         <Routes>
           <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}/>
           <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
