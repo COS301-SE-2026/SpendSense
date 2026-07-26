@@ -130,17 +130,17 @@ export class CreditScoreService {
         historyScore * PRIORITY_WEIGHTS[occurrence.obligation.priority];
       priorityWeightTotal += PRIORITY_WEIGHTS[occurrence.obligation.priority];
 
-      console.log('Payment history calculation:', {
-        userId: occurrence.user.id,
-        name: occurrence.user.displayName,
-        occurrenceId: occurrence.id,
-        status: occurrence.status,
-        daysLate,
-        priority: occurrence.obligation.priority,
-        historyScore,
-        weightedHistoryScore,
-        priorityWeightTotal,
-      });
+      // console.log('Payment history calculation:', {
+      //   userId: occurrence.user.id,
+      //   name: occurrence.user.displayName,
+      //   occurrenceId: occurrence.id,
+      //   status: occurrence.status,
+      //   daysLate,
+      //   priority: occurrence.obligation.priority,
+      //   historyScore,
+      //   weightedHistoryScore,
+      //   priorityWeightTotal,
+      // });
     }
 
     if (priorityWeightTotal === 0) {

@@ -5,7 +5,6 @@ import {
 	Calendar as CalendarIcon,
 	Trophy,
 	User,
-	ShoppingBag,
 	LogOut,
     TrendingUp,
     ChevronRight,
@@ -71,9 +70,9 @@ export default function DashboardPage() {
 
 
 	const userSummary = dashboard?.userSummary
-	const creditProfile = dashboard?.creditProfile
 	const gamificationProfile = dashboard?.gamificationProfile
 	const upcomingPayments = dashboard?.upcomingPayments ?? []
+	console.log('Upcoming payments:', upcomingPayments );
 
 	const name = userSummary?.displayName
 
@@ -162,7 +161,7 @@ export default function DashboardPage() {
 
             </CustomCard>
 
-			<CreditStatsSection creditProfile={creditProfile} creditScore={creditScore}/>
+			<CreditStatsSection creditScore={creditScore}/>
 
 
 				<section aria-label="Experience progress" className="mt-5" >
@@ -189,31 +188,7 @@ export default function DashboardPage() {
 
 				<UpcomingPaymentsCard upcomingPayments={upcomingPayments} />
 
-            <CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
-            <SectionHeader title="Recent Activity" meta="Last logged 2h ago" />
-    
-            <div className="mt-4 rounded-2xl bg-[#F4FBF7] p-4">
-                <div className="flex items-center gap-3">
-                <CategoryIcon tone="lilac">
-                    <ShoppingBag className="size-5" />
-                </CategoryIcon>
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-[#091828]">Supermarket Store</p>
-                </div>
-                <p className="text-base font-extrabold text-[#ac2a5d]">−R 12.50</p>
-                </div>
-            </div>
-    
-            <LongButton
-                LongVariant="primaryDark"
-                LongSize="md"
-                className="mt-4"
-                showArrow={false}
-                asChild
-            >
-                <Link to="/transactions">See all transactions</Link>
-            </LongButton>
-            </CustomCard>
+
 
 
             <Link to = "/insights" className="mt-6 block">
