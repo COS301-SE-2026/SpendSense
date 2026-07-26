@@ -1,9 +1,5 @@
 name: Release Checks
 
-# Gates dev -> release merges with the same checks as pr-checks.yml, plus
-# coverage where the tooling exists today. This is the last real test gate
-# before code becomes deploy-eligible — deploy.yml itself runs no tests at
-# all and trusts this workflow already passed.
 on:
   pull_request:
     branches: [release]
@@ -132,4 +128,4 @@ jobs:
     needs: [backend, frontend, ai]
     steps:
       - name: All checks passed
-        run: echo "backend, frontend, and ai all passed — this branch is deploy-eligible."
+        run: echo "backend, frontend, and ai all passed - this branch is deploy-eligible."

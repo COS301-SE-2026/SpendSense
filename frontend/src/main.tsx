@@ -21,6 +21,19 @@ import ProfilePage from './domains/ProfilePage.tsx'
 import LandingPage from './domains/LandingPage.tsx'
 import OnboardingPage from './domains/OnboardingPage.tsx'
 import NotificationsPage from './domains/NotificationsPage.tsx'
+import TopicQuizPage from './domains/TopicQuizPage.tsx'
+import TopicQuizTeachingPage from './domains/TopicQuizTeachingPage.tsx'
+import QuizQuestionPage from './domains/QuizQuestionPage.tsx'
+import QuizAnswerFeedbackPage from './domains/QuizAnswerFeedbackPage.tsx'
+import QuizResultsPage from './domains/QuizResultsPage.tsx'
+import MascotPage from './domains/MascotPage.tsx'
+import WrappedPage from './domains/WrappedPage.tsx'
+import SettingsPage from './domains/SettingsPage.tsx'
+import SettingsPreferencesPage from './domains/SettingsPreferencesPage.tsx'
+import SettingsNotificationsPage from './domains/SettingsNotificationsPage.tsx'
+import SettingsAccountPage from './domains/SettingsAccountPage.tsx'
+import EditProfilePage from './domains/EditProfilePage.tsx'
+import HelpPage from './domains/HelpPage.tsx'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -44,6 +57,19 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/landing" element={<LandingPage/>}/>
         <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
+        <Route path="/quests" element={<ProtectedRoute><QuestsPage/></ProtectedRoute>}/>
+        <Route path="/quiz" element={<ProtectedRoute><QuizPage/></ProtectedRoute>}/>
+        <Route path="/quiz/topics/:topic" element={<ProtectedRoute><TopicQuizTeachingPage/></ProtectedRoute>}/>
+        <Route path="/quiz/session/:sessionId" element={<ProtectedRoute><QuizQuestionPage/></ProtectedRoute>}/>
+        <Route path="/quiz/topics" element={<ProtectedRoute><TopicQuizPage/></ProtectedRoute>}/>
+        <Route path="/quiz/session/:sessionId/feedback" element={<ProtectedRoute><QuizAnswerFeedbackPage/></ProtectedRoute>}/>
+        <Route path="/quiz/session/:sessionId/results" element={<ProtectedRoute><QuizResultsPage/></ProtectedRoute>}/>
+        <Route path="/friends" element={<FriendsPage/>}/>
+        <Route path="/friends/list" element={<FriendsListPage/>}/>
+        <Route path="/friends/add" element={<AddFriendPage/>}/>
+        <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
+        <Route path="/friends/activity" element={<FriendActivityPage/>}/>
+        <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
          <Route path="/quests" element={<QuestsPage/>}/>
          <Route path="/quiz" element={<QuizPage/>}/>
          <Route path="/friends" element={<FriendsPage/>}/>
@@ -52,6 +78,14 @@ createRoot(document.getElementById('root')!).render(
          <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
          <Route path="/friends/activity" element={<FriendActivityPage/>}/>
          <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
+        <Route path="/mascot" element={<MascotPage/>}/>
+        <Route path="/wrapped" element={<WrappedPage/>}/>
+        <Route path="/settings" element={<SettingsPage/>}/>
+        <Route path="/settings/preferences" element={<SettingsPreferencesPage/>}/>
+        <Route path="/settings/notifications" element={<SettingsNotificationsPage/>}/>
+         <Route path="/settings/account" element={<SettingsAccountPage/>}/>
+         <Route path="/edit-profile" element={<EditProfilePage/>}/>
+        <Route path="/help" element={<HelpPage/>}/>
       </Routes>
     </BrowserRouter>
   </StrictMode>,

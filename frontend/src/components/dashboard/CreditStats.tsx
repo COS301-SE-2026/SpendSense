@@ -1,4 +1,5 @@
 import { CustomCard } from "@/components/ui/CustomCard"
+import type { CreditScore } from "@/types/credit-scoreTypes"
 
 type CreditProfile = {
     scoreTier?: string
@@ -10,18 +11,19 @@ type CreditProfile = {
 
 type CreditStatsSectionProps = {
     creditProfile?: CreditProfile | null
+    creditScore?: CreditScore | null
 }
 
 
 
 export function CreditStatsSection({
-    creditProfile,
+    creditScore,
 }: CreditStatsSectionProps) {
 
-    const scoreTier = creditProfile?.scoreTier ?? "UNKNOWN"
-    const onTimePaymentCount = creditProfile?.onTimePaymentCount ?? 0
-    const latePaymentCount = creditProfile?.latePaymentCount ?? 0
-    const utilisationRaw = Number(creditProfile?.currentUtilisationScore ?? 0)
+    const scoreTier = creditScore?.creditScoreTier?? "UNKNOWN"
+    const onTimePaymentCount = creditScore?.onTimePaymentCount ?? 0
+    const latePaymentCount = creditScore?.onLatePaymentCount ?? 0
+    const utilisationRaw = creditScore?.savingsBuffer ?? 0
     const utilisationPercentage = `${(utilisationRaw * 100)}%`
 
     return (
@@ -39,7 +41,7 @@ export function CreditStatsSection({
 
                 <div className="mt-5 grid grid-cols-3 gap-3">
                     <CredtiStatsBox label="On-time Payments" value={onTimePaymentCount} />
-                    <CredtiStatsBox label="Utilisation" value={utilisationPercentage} />
+                    <CredtiStatsBox label="Savings Buffer" value={utilisationPercentage} />
                     <CredtiStatsBox label="Late Payments" value={latePaymentCount} />
                 </div>
             </div>

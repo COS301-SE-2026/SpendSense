@@ -24,7 +24,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=prod-deps /app/node_modules ./node_modules
-# `npm ci` never runs `prisma generate` — the generated query engine only exists
+# `npm ci` never runs `prisma generate` - the generated query engine only exists
 # after that command runs, so it has to be copied in on top of the prod node_modules.
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/dist ./dist

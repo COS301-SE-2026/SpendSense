@@ -14,7 +14,9 @@ import { RemindersModule } from './reminders/reminders.module';
 import { CategoriesModule } from './categories/categories.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentOccurrencesModule } from './payment-occurrences/payment-occurrences.module';
+import { QuizModule } from './quiz/quiz.module';
 import { InsightsModule } from './insights/insights.module';
+import { CreditScoreModule } from './credit-score/credit-score.module';
 
 @Module({
   imports: [
@@ -31,7 +33,9 @@ import { InsightsModule } from './insights/insights.module';
     CategoriesModule,
     NotificationsModule,
     PaymentOccurrencesModule,
+    QuizModule,
     InsightsModule,
+    CreditScoreModule,
   ],
   controllers: [AppController],
   providers: [AppService],
