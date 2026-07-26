@@ -1,7 +1,7 @@
 import * as React from "react"
 import {NotificationToast} from "@/components/notifications/NotificationToast"
 import {getNotifications} from "./notificationsApi"
-import {useNotifications} from "./NotificationsContext"
+import { useNotifications } from "./useNotifications"
 import type {Notification} from "@/types/NotificationTypes"
 
 const POLL_INTERVAL_MS=30000

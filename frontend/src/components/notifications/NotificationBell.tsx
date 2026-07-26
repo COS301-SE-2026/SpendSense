@@ -1,7 +1,7 @@
 import * as React from 'react'
 import {useNavigate} from 'react-router-dom'
 import {IconButton} from '../common/IconButton'
-import {useNotifications} from '../../features/notifications/NotificationsContext'
+import { useNotifications } from '@/features/notifications/useNotifications'
 
 export function NotificationBell(){
     const navigate=useNavigate()

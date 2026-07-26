@@ -13,7 +13,7 @@ vi.mock("../features/notifications/notificationsApi",()=>({
     getNotifications:mocks.getNotifications,
 }))
 
-vi.mock("../features/notifications/NotificationsContext",()=>({
+vi.mock("../features/notifications/useNotifications",()=>({
     useNotifications:()=>({
         refreshUnreadCount:mocks.refreshUnreadCount,
     }),

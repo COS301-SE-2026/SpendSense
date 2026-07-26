@@ -15,7 +15,7 @@ import {
     getNotifications,
     markAsRead,
 } from "@/features/notifications/notificationsApi"
-import {useNotifications} from "@/features/notifications/NotificationsContext"
+import { useNotifications } from "@/features/notifications/useNotifications"
 import {cn} from "@/lib/utils"
 import type {
     Notification,
@@ -59,38 +59,14 @@ export default function NotificationsPage(){
     const [markError,setMarkError]=React.useState<string|null>(null)
     const [markingId,setMarkingId]=React.useState<string|null>(null)
 
-    const loadNotifications=React.useCallback(async(signal?:AbortSignal)=>{
-        setLoading(true)
-        setErr(null)
-
-        try{
-            const response=await getNotifications({
-                unreadOnly:unreadOnly||undefined,
-                type:selectedType||undefined,
-                page,
-                perPage:PER_PAGE,
-            },signal)
-
-            setNotifications(response.data.notifications)
-            setPagination(response.data.pagination)
-        }catch(error){
-            if(signal?.aborted){
-                return
-            }
-
-            if(isAuthenticationError(error)){
-                nav("/login",{replace:true})
-                return
-            }
-
-            console.error("getNotifications error: ",error)
-            setErr("Could not load your notifications.")
-        }finally{
-            if(!signal?.aborted){
-                setLoading(false)
-            }
-        }
-    },[nav,page,selectedType,unreadOnly])
+    const requestNotifications=React.useCallback((signal?:AbortSignal)=>{
+        return getNotifications({
+            unreadOnly:unreadOnly||undefined,
+            type:selectedType||undefined,
+            page,
+            perPage:PER_PAGE,
+        },signal)
+    },[page,selectedType,unreadOnly])
 
     React.useEffect(()=>{
         void refreshUnreadCount()
@@ -98,20 +74,70 @@ export default function NotificationsPage(){
 
     React.useEffect(()=>{
         const controller=new AbortController()
-
-        void loadNotifications(controller.signal)
-
+        requestNotifications(controller.signal)
+            .then((response)=>{
+                if(controller.signal.aborted){
+                    return
+                }
+                setNotifications(response.data.notifications)
+                setPagination(response.data.pagination)
+                setErr(null)
+            })
+            .catch((error:unknown)=>{
+                if(controller.signal.aborted){
+                    return
+                }
+                if(isAuthenticationError(error)){
+                    nav("/login",{replace:true})
+                    return
+                }
+                console.error("getNotifications error: ",error)
+                setErr("Could not load your notifications.")
+            })
+            .finally(()=>{
+                if(!controller.signal.aborted){
+                    setLoading(false)
+                }
+            })
         return()=>{
             controller.abort()
         }
-    },[loadNotifications])
+    },[nav,requestNotifications])
+    function beginReload(){
+        setLoading(true)
+        setErr(null)
+    }
+    async function retryNotifications(){
+        beginReload()
+        try{
+            const response=await requestNotifications()
+            setNotifications(response.data.notifications)
+            setPagination(response.data.pagination)
+            setErr(null)
+        }catch(error){
+            if(isAuthenticationError(error)){
+                nav("/login",{replace:true})
+                return
+            }
+            console.error("getNotifications error: ",error)
+            setErr("Could not load your notifications.")
+        }finally{
+            setLoading(false)
+        }
+    }
+    function changePage(nextPage:number){
+        beginReload()
+        setPage(nextPage)
+    }
 
     function handleUnreadFilter(){
+        beginReload()
         setPage(1)
         setUnreadOnly((current)=>!current)
     }
 
     function handleTypeFilter(event:React.ChangeEvent<HTMLSelectElement>){
+        beginReload()
         setPage(1)
         setSelectedType(event.target.value as NotifType|"")
     }
@@ -263,7 +289,7 @@ export default function NotificationsPage(){
 
                             <button
                                 type="button"
-                                onClick={()=>void loadNotifications()}
+                                onClick={()=>void retryNotifications()}
                                 className="mt-1 text-sm font-bold text-[#091828] underline"
                             >
                                 Try again
@@ -333,7 +359,7 @@ export default function NotificationsPage(){
                                 <button
                                     type="button"
                                     disabled={page<=1||loading}
-                                    onClick={()=>setPage((current)=>current-1)}
+                                    onClick={()=>changePage(page-1)}
                                     className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     Previous
@@ -344,7 +370,7 @@ export default function NotificationsPage(){
                                 <button
                                     type="button"
                                     disabled={page>=pagination.totalPages||loading}
-                                    onClick={()=>setPage((current)=>current+1)}
+                                    onClick={()=>changePage(page+1)}
                                     className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     Next

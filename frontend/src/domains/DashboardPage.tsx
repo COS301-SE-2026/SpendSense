@@ -29,7 +29,7 @@ import { UpcomingPaymentsCard } from "@/components/dashboard/UpcomingPaymentsCar
 import { CreditStatsSection } from "@/components/dashboard/CreditStats"
 import { getDashboard } from "@/features/dashboard/dashboardApi"
 import { signOut } from "@/features/auth/auth.service"
-import {useNotifications} from '@/features/notifications/NotificationsContext'
+import { useNotifications } from "@/features/notifications/useNotifications"
 
 import type { DashboardData } from "@/types/DashboardTypes"
 

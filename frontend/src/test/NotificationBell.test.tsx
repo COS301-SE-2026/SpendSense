@@ -5,7 +5,8 @@ import {MemoryRouter,Route,Routes} from 'react-router-dom'
 import {beforeEach,describe,expect,it,vi} from 'vitest'
 import '@testing-library/jest-dom'
 import {NotificationBell} from '../components/notifications/NotificationBell'
-import {NotificationsProvider,useNotifications} from '../features/notifications/NotificationsContext'
+import {NotificationsProvider} from "../features/notifications/NotificationsContext"
+import {useNotifications} from "../features/notifications/useNotifications"
 import {getNotifications} from '../features/notifications/notificationsApi'
 
 vi.mock('../features/notifications/notificationsApi',()=>({
