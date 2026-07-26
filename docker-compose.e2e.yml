@@ -1,0 +1,80 @@
+name: spendsense-e2e
+
+services:
+  postgres-e2e:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: spendsense_e2e
+      POSTGRES_PASSWORD: spendsense_e2e
+      POSTGRES_DB: spendsense_e2e
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spendsense_e2e -d spendsense_e2e"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_e2e_data:/var/lib/postgresql/data
+
+  migrate-e2e:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    command: sh -c "npx prisma migrate deploy && npm run prisma:seed"
+    environment:
+      DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+
+  backend-e2e:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    environment:
+      DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
+      SUPABASE_JWT_SECRET: spendsense-e2e-only-secret
+      ALLOWED_ORIGINS: http://frontend-e2e:5173,http://localhost:5174
+      PORT: 3000
+      AI_SERVICE_URL: http://ai-e2e:8000
+    ports:
+      - "3001:3000"
+    depends_on:
+      migrate-e2e:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/v1/health').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  frontend-e2e:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      VITE_API_URL: http://localhost:3001/api/v1
+      VITE_SUPABASE_URL: http://e2e.invalid
+      VITE_SUPABASE_ANON_KEY: e2e-browser-auth-is-not-configured
+    ports:
+      - "5174:5173"
+    depends_on:
+      backend-e2e:
+        condition: service_healthy
+
+  api-tests:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    command: npm run test:e2e -- --runInBand
+    environment:
+      DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
+      SUPABASE_JWT_SECRET: spendsense-e2e-only-secret
+      E2E_DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
+    volumes:
+      - ./test-support:/test-support:ro
+    depends_on:
+      migrate-e2e:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_e2e_data:

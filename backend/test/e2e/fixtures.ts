@@ -1,0 +1,54 @@
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { PrismaClient } from '@prisma/client';
+import request from 'supertest';
+import type { App } from 'supertest/types';
+import { AppModule } from '../../src/app.module';
+import { HttpExceptionFilter } from '../../src/common/filters/http-exception.filter';
+import { ResponseInterceptor } from '../../src/common/interceptors/response.interceptor';
+import { createE2eAccessToken } from '../../../test-support/auth/e2e-auth';
+import { createUser } from '../../../test-support/factories/user';
+
+export async function createApiE2eFixture() {
+  const moduleFixture = await Test.createTestingModule({
+    imports: [AppModule],
+  }).compile();
+
+  const app = moduleFixture.createNestApplication<INestApplication<App>>();
+  app.setGlobalPrefix('api/v1');
+  app.useGlobalInterceptors(new ResponseInterceptor());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  app.useGlobalFilters(new HttpExceptionFilter());
+  await app.init();
+
+  const prisma = new PrismaClient();
+  await prisma.$connect();
+
+  return {
+    app,
+    prisma,
+    request: request(app.getHttpServer()),
+    async user() {
+      const user = (await createUser(prisma)) as {
+        supabaseAuthId: string;
+        email: string;
+      };
+      const token = await createE2eAccessToken(user);
+      return {
+        user,
+        token,
+        api: request(app.getHttpServer()).set('Authorization', `Bearer ${token}`),
+      };
+    },
+    async close() {
+      await prisma.$disconnect();
+      await app.close();
+    },
+  };
+}
