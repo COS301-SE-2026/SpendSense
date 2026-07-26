@@ -10,8 +10,10 @@ import {getNotifications,markAsRead} from '../features/notifications/notificatio
 import type {Notification,NotificationFilters,NotificationPagination,NotificationResponse,NotificationsResponse} from '../types/NotificationTypes'
 
 vi.mock('../features/notifications/notificationsApi',()=>({
+    deleteManyNotifications:vi.fn(),
     getNotifications:vi.fn(),
     markAsRead:vi.fn(),
+    markManyAsRead:vi.fn(),
 }))
 
 const unreadScoreNotification:Notification={
@@ -300,12 +302,13 @@ describe('NotificationsPage',()=>{
         const user=userEvent.setup()
         renderPage()
         await screen.findByText('Score improved')
-        await user.selectOptions(
-            screen.getByRole('combobox',{
-                name:'Notification type',
-            }),
-            'SCORE_CHANGE',
-        )
+
+        const typeFilter=screen.getByRole('combobox',{
+            name:'Notification type',
+        })
+
+        await user.selectOptions(typeFilter,'SCORE_CHANGE')
+
         await waitFor(()=>{
             expect(getNotifications).toHaveBeenCalledWith(
                 {
@@ -317,6 +320,8 @@ describe('NotificationsPage',()=>{
                 expect.any(AbortSignal),
             )
         })
+
+        expect(typeFilter).toHaveValue('SCORE_CHANGE')
     })
     it('moves between notification pages',async()=>{
         const user=userEvent.setup()
@@ -427,7 +432,8 @@ describe('NotificationsPage',()=>{
         await user.selectOptions(
             screen.getByRole('combobox',{
                 name:'Notification type',
-            }),'REWARD',
+            }),
+            'REWARD',
         )
         expect(await screen.findByText('Reward earned')).toBeInTheDocument()
         await waitFor(()=>{

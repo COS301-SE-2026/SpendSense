@@ -8,8 +8,11 @@ import { UsersModule } from '../users/users.module';
 // TODO: implement NotificationsController and NotificationsService
 
 // planned endpoints:
-// GET /api/v1/notifications
-// PATCH /api/v1/notifications/:id
+// GET    /api/v1/notifications
+// PATCH  /api/v1/notifications/:id/read
+// PATCH  /api/v1/notifications/read       (bulk)
+// DELETE /api/v1/notifications/:id
+// DELETE /api/v1/notifications            (bulk)
 
 @Module({
   imports: [AuthModule, UsersModule],
