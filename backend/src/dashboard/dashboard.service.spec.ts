@@ -27,20 +27,7 @@ describe('DashboardService', () => {
     createdAt: new Date('2026-05-01'),
   };
 
-  const mockCreditProfile = {
-    id: 'credit-profile-1',
-    userId,
-    currentScore: 650,
-    previousScore: 630,
-    scoreTier: 'GOOD',
-    onTimePaymentCount: 5,
-    latePaymentCount: 1,
-    missedPaymentCount: 0,
-    currentUtilisationScore: 80,
-    lastCalculatedAt: new Date('2026-05-18'),
-    createdAt: new Date('2026-05-01'),
-    updatedAt: new Date('2026-05-18'),
-  };
+
 
   const mockRecentScoreEvents = [
     {
@@ -208,9 +195,6 @@ describe('DashboardService', () => {
   describe('getDashboard()', () => {
     it('should return data for the authed user', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(mockUserSummary);
-      mockPrismaService.creditProfile.findFirst.mockResolvedValue(
-        mockCreditProfile,
-      );
       mockPrismaService.scoreEvent.findMany.mockResolvedValue(
         mockRecentScoreEvents,
       );
@@ -218,8 +202,9 @@ describe('DashboardService', () => {
         mockGamificationProfile,
       );
       mockPrismaService.paymentOccurrence.findMany
-        .mockResolvedValueOnce(mockUpcomingPayments)
-        .mockResolvedValueOnce(mockOverduePayments);
+      .mockResolvedValueOnce(mockOverduePayments)
+        .mockResolvedValueOnce(mockUpcomingPayments);
+        
       mockPrismaService.userBadge.findMany.mockResolvedValue(mockRecentBadges);
       mockPrismaService.notification.findMany.mockResolvedValue(
         mockUnreadNotifications,
@@ -229,7 +214,6 @@ describe('DashboardService', () => {
 
       expect(result).toEqual({
         userSummary: mockUserSummary,
-        creditProfile: mockCreditProfile,
         recentScoreEvents: mockRecentScoreEvents,
         gamificationProfile: mockGamificationProfile,
         upcomingPayments: mockUpcomingPayments,
@@ -241,9 +225,6 @@ describe('DashboardService', () => {
 
     it('should return a user summary for the Correct user', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(mockUserSummary);
-      mockPrismaService.creditProfile.findFirst.mockResolvedValue(
-        mockCreditProfile,
-      );
       mockPrismaService.scoreEvent.findMany.mockResolvedValue(
         mockRecentScoreEvents,
       );
@@ -251,8 +232,8 @@ describe('DashboardService', () => {
         mockGamificationProfile,
       );
       mockPrismaService.paymentOccurrence.findMany
-        .mockResolvedValueOnce(mockUpcomingPayments)
-        .mockResolvedValueOnce(mockOverduePayments);
+        .mockResolvedValueOnce(mockOverduePayments)
+        .mockResolvedValueOnce(mockUpcomingPayments);
       mockPrismaService.userBadge.findMany.mockResolvedValue(mockRecentBadges);
       mockPrismaService.notification.findMany.mockResolvedValue(
         mockUnreadNotifications,
