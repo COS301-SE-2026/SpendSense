@@ -2,8 +2,15 @@ import { randomUUID } from 'node:crypto';
 
 type UserStore = {
   user: {
-    create: (args: { data: Record<string, unknown> }) => Promise<unknown>;
+    create: (args: { data: Record<string, unknown> }) => Promise<E2eUser>;
   };
+};
+
+export type E2eUser = {
+  id: string;
+  supabaseAuthId: string;
+  email: string;
+  displayName: string | null;
 };
 
 export type E2eUserInput = {

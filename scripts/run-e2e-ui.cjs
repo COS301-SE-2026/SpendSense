@@ -29,6 +29,10 @@ const result = spawnSync(
       E2E_ACCESS_TOKEN: token,
       E2E_API_URL: process.env.E2E_API_URL ?? 'http://127.0.0.1:3001/api/v1',
       E2E_BASE_URL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:5174',
+      E2E_SCENARIO_URL:
+        process.env.E2E_SCENARIO_URL ?? 'http://127.0.0.1:3002',
+      E2E_SCENARIO_SECRET:
+        process.env.E2E_SCENARIO_SECRET ?? 'spendsense-e2e-scenario-secret',
     },
   },
 );

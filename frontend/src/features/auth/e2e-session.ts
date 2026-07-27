@@ -1,8 +1,9 @@
 import { clearToken, getToken } from '../../lib/tokenStore';
 
 export const isE2eMode = import.meta.env.VITE_E2E_MODE === 'true';
+const isE2eBuild = import.meta.env.VITE_E2E_BUILD === 'true';
 
-if (isE2eMode && import.meta.env.PROD) {
+if (isE2eMode && import.meta.env.PROD && !isE2eBuild) {
   throw new Error('E2E authentication cannot be enabled in a production build.');
 }
 

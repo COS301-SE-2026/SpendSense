@@ -32,7 +32,7 @@
     "test": "npm run test:back && npm run test:front && npm run test:ai",
     "test:back": "docker compose run --rm --no-deps backend npm run test",
     "test:back:e2e": "docker compose run --rm backend npm run test:e2e",
-    "e2e:up": "docker compose -f docker-compose.e2e.yml up --build -d postgres-e2e backend-e2e frontend-e2e",
+    "e2e:up": "docker compose -f docker-compose.e2e.yml up --build -d postgres-e2e backend-e2e frontend-e2e scenario-e2e",
     "e2e:down": "docker compose -f docker-compose.e2e.yml down -v",
     "e2e:logs": "docker compose -f docker-compose.e2e.yml logs -f",
     "e2e:reset": "docker compose -f docker-compose.e2e.yml run --build --rm reset-e2e",
