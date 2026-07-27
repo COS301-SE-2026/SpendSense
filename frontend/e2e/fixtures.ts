@@ -17,7 +17,8 @@ const browserUser = {
 };
 
 export const test = base.extend<E2eFixtures>({
-  scenario: async ({}, provideScenario) => {
+  scenario: async ({ browserName }, provideScenario) => {
+    void browserName;
 
     await provideScenario({
       payments: {
