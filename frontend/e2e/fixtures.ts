@@ -17,8 +17,10 @@ const browserUser = {
 };
 
 export const test = base.extend<E2eFixtures>({
-  scenario: async ({}, use) => {
-    await use({
+  scenario: async (fixtureArgs, provideScenario) => {
+    void fixtureArgs;
+
+    await provideScenario({
       payments: {
         userWithUpcomingPayment: async (input = {}) => {
           const scenarioUrl = process.env.E2E_SCENARIO_URL;
