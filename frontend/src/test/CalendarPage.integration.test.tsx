@@ -144,7 +144,7 @@ describe('CalendarPage integration', ()=>{
 
 	it('does not navigate when a PAID occurrence card is tapped', async () => {
 		renderWithPayRoute()
-		const paidBtn = screen.getByRole('button', {name: /hatfield rent — paid/i })
+		const paidBtn = screen.getByRole('button', {name: /hatfield rent: paid/i })
 		expect(paidBtn).toBeDisabled()
 		expect(screen.queryByTestId('payment-form-page')).not.toBeInTheDocument()
 	})

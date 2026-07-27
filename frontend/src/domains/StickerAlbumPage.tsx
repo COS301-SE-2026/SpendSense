@@ -276,7 +276,7 @@ export default function StickerAlbumPage(){
                 <div className="pt-2 pb-2 text-center space-y-2">
                     <div>
                         <p className="text-5xl font-black text-[#091828] leading-none">
-                            {loading ? '—' : earnedCount} / {loading ? '—' : total}
+                            {loading ? '-' : earnedCount} / {loading ? '-' : total}
                         </p>
                         <p className="text-2xl font-bold text-[#091828] mt-1">Stickers Found</p>
                     </div>

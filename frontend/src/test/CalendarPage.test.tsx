@@ -226,7 +226,7 @@ describe('CalendarPage', ()=>{
 	it('switches to single-date view when a date is clicked', ()=>{
 		renderCalendar()
 		fireEvent.click(screen.getByRole('button', { name: 'May 25' }))
-		expect(screen.getByText(/may 25 — what's/i)).toBeInTheDocument()
+		expect(screen.getByText(/may 25: what's/i)).toBeInTheDocument()
 	})
  
 	it('shows only occurrences for the selected date', ()=>{

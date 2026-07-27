@@ -391,11 +391,11 @@ export default function CalendarPage(){
           <div className="rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-4 shadow-[2px_2px_0_#091828]">
             {selectedDate === null ? (
               <p className="text-xl font-extrabold text-[#091828]" aria-label="Showing all expenses">
-                {monthLabel.charAt(0) + monthLabel.slice(1).toLowerCase()} {displayYear} —<br />all expenses
+                {monthLabel.charAt(0) + monthLabel.slice(1).toLowerCase()} {displayYear}, <br />all expenses
               </p>
             ) : (
               <p className="text-xl font-extrabold text-[#091828]">
-                {monthLabel.charAt(0) + monthLabel.slice(1).toLowerCase()} {selectedDate} — what&apos;s<br />happening
+                {monthLabel.charAt(0) + monthLabel.slice(1).toLowerCase()} {selectedDate}, what&apos;s<br />happening
               </p>
             )}
           </div>
@@ -466,7 +466,7 @@ function OccurrenceCard({
         aria-label={
           isPayable
             ? `Pay ${occurrence.obligation.name}, ${formatCurrency(occurrence.amountDue)}`
-            : `${occurrence.obligation.name} — ${badge.label}`
+            : `${occurrence.obligation.name}, ${badge.label}`
         }
       >
         <div className="flex items-center gap-3">

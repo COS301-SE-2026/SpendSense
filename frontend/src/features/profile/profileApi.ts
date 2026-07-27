@@ -1,7 +1,7 @@
 import {apiFetch} from '../../lib/api'
 
 // profileApi: user identity, settings, and wrapped summaries
-// PLACEHOLDER — these endpoints do not exist on the backend yet.
+// PLACEHOLDER - these endpoints do not exist on the backend yet.
 // The paths below are the planned contract; update if the backend names differ.
 // planned endpoints:
 // GET   /api/v1/users/me/preferences
