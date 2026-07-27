@@ -34,7 +34,7 @@ services:
       DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
       SUPABASE_JWT_SECRET: spendsense-e2e-only-secret
       E2E_MODE: "true"
-      ALLOWED_ORIGINS: http://frontend-e2e:5173,http://localhost:5174
+      ALLOWED_ORIGINS: http://frontend-e2e:5173,http://127.0.0.1:5174
       PORT: 3000
       AI_SERVICE_URL: http://ai-e2e:8000
     ports:
@@ -51,12 +51,12 @@ services:
   frontend-e2e:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
-    environment:
-      VITE_API_URL: http://localhost:3001/api/v1
-      VITE_E2E_MODE: "true"
-      VITE_SUPABASE_URL: http://e2e.invalid
-      VITE_SUPABASE_ANON_KEY: e2e-browser-auth-is-not-configured
+      dockerfile: Dockerfile.e2e
+      args:
+        VITE_API_URL: http://127.0.0.1:3001/api/v1
+        VITE_E2E_MODE: "true"
+        VITE_SUPABASE_URL: http://e2e.invalid
+        VITE_SUPABASE_ANON_KEY: e2e-browser-auth-is-not-configured
     ports:
       - "5174:5173"
     depends_on:

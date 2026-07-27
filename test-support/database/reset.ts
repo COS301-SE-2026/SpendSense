@@ -25,6 +25,7 @@ export async function resetE2eDatabase(prisma: E2ePrisma): Promise<void> {
     SELECT tablename
     FROM pg_tables
     WHERE schemaname = 'public'
+      AND tablename <> '_prisma_migrations'
   `;
 
   if (tableNames.length === 0) {

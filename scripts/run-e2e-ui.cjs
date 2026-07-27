@@ -20,15 +20,15 @@ const token = `${header}.${payload}.${signature}`;
 
 const result = spawnSync(
   'npm',
-  ['--prefix', 'frontend', 'exec', 'playwright', 'test'],
+  ['--prefix', 'frontend', 'run', 'test:e2e'],
   {
     stdio: 'inherit',
     shell: process.platform === 'win32',
     env: {
       ...process.env,
       E2E_ACCESS_TOKEN: token,
-      E2E_API_URL: process.env.E2E_API_URL ?? 'http://localhost:3001/api/v1',
-      E2E_BASE_URL: process.env.E2E_BASE_URL ?? 'http://localhost:5174',
+      E2E_API_URL: process.env.E2E_API_URL ?? 'http://127.0.0.1:3001/api/v1',
+      E2E_BASE_URL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:5174',
     },
   },
 );
