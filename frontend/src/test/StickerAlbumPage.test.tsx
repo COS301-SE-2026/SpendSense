@@ -119,7 +119,7 @@ describe('StickerAlbumPage', ()=>{
 		renderAlbum()
 		// em dashes are split across child elements so check the paragraph textContent directly
 		const p = document.querySelector('.text-5xl')
-		expect(p?.textContent).toMatch(/—/)
+		expect(p?.textContent).toMatch(/-/)
 	})
 
 

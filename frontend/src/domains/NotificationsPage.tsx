@@ -281,6 +281,9 @@ export default function NotificationsPage(){
     const filtersActive=unreadOnly||selectedType!==""
     const totalPages=Math.max(1,pagination.totalPages)
     const allSelected=notifications.length>0&&selectedIds.size===notifications.length
+    const hasUnreadSelected=notifications.some(
+        (notification)=>selectedIds.has(notification.id)&&notification.readAt===null,
+    )
 
     return(
         <div className="min-h-screen bg-[#f4fbf7] pb-24">
@@ -309,7 +312,7 @@ export default function NotificationsPage(){
 
                 <section
                     aria-label="Notification filters"
-                    className="mt-4 flex items-center gap-3"
+                    className="mt-4 grid grid-cols-2 gap-3"
                 >
                     <button
                         type="button"
@@ -366,8 +369,9 @@ export default function NotificationsPage(){
             </div>
 
             <BulkActionBar
-                visible={manageMode&&selectedIds.size>0}
+                visible={manageMode}
                 selectedCount={selectedIds.size}
+                hasUnreadSelected={hasUnreadSelected}
                 confirmingDelete={confirmingDelete}
                 bulkPending={bulkPending}
                 onCancelDelete={()=>setConfirmingDelete(false)}
@@ -408,7 +412,7 @@ function UnreadHeader({
                 className={cn(
                     "shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold transition",
                     manageMode
-                        ?"bg-[#ffd8e6] text-[#ac2a5d]"
+                        ?"bg-[#ffd8e6] text-[#ac2a5d] hover:bg-[#ffc4da]"
                         :"text-[#6b6375] hover:text-[#091828]",
                 )}
             >
@@ -694,6 +698,7 @@ function PaginationControls({
 type BulkActionBarProps=Readonly<{
     visible:boolean
     selectedCount:number
+    hasUnreadSelected:boolean
     confirmingDelete:boolean
     bulkPending:boolean
     onCancelDelete:()=>void
@@ -705,6 +710,7 @@ type BulkActionBarProps=Readonly<{
 function BulkActionBar({
     visible,
     selectedCount,
+    hasUnreadSelected,
     confirmingDelete,
     bulkPending,
     onCancelDelete,
@@ -744,20 +750,22 @@ function BulkActionBar({
                     </div>
                 ):(
                     <div className="flex items-center gap-2">
+                        {hasUnreadSelected&&(
+                            <button
+                                type="button"
+                                disabled={bulkPending}
+                                onClick={onMarkRead}
+                                className="flex items-center gap-1.5 rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] transition-colors duration-150 hover:border-[#ac2a5d] hover:bg-[#fff2f7] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[#d4ded9] disabled:hover:bg-white"
+                            >
+                                <Check className="size-4"/>
+                                Mark read
+                            </button>
+                        )}
                         <button
                             type="button"
-                            disabled={bulkPending}
-                            onClick={onMarkRead}
-                            className="flex items-center gap-1.5 rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:opacity-50"
-                        >
-                            <Check className="size-4"/>
-                            Mark read
-                        </button>
-                        <button
-                            type="button"
-                            disabled={bulkPending}
+                            disabled={bulkPending||selectedCount===0}
                             onClick={onStartDelete}
-                            className="flex items-center gap-1.5 rounded-full bg-[#ffd9e1] px-4 py-2 text-sm font-semibold text-[#ac2a5d] disabled:opacity-50"
+                            className="flex items-center gap-1.5 rounded-full bg-[#ffd9e1] px-4 py-2 text-sm font-semibold text-[#ac2a5d] transition-colors duration-150 hover:bg-[#ffc4d3] hover:text-[#922149] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#ffd9e1] disabled:hover:text-[#ac2a5d]"
                         >
                             <Trash2 className="size-4"/>
                             Delete

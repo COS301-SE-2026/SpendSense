@@ -1,13 +1,28 @@
 import React from 'react'
-import {act,render,screen,waitFor} from '@testing-library/react'
+import {act,render,screen,waitFor,within} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {MemoryRouter,Route,Routes} from 'react-router-dom'
-import {beforeEach,describe,expect,it,vi} from 'vitest'
+import {beforeAll,beforeEach,describe,expect,it,vi} from 'vitest'
 import '@testing-library/jest-dom'
 import NotificationsPage from '../domains/NotificationsPage'
 import {NotificationsProvider} from '../features/notifications/NotificationsContext'
 import {getNotifications,markAsRead} from '../features/notifications/notificationsApi'
 import type {Notification,NotificationFilters,NotificationPagination,NotificationResponse,NotificationsResponse} from '../types/NotificationTypes'
+
+beforeAll(()=>{
+    Object.defineProperty(HTMLDialogElement.prototype,'showModal',{
+        configurable:true,
+        value:function(this:HTMLDialogElement){
+            this.setAttribute('open','')
+        },
+    })
+    Object.defineProperty(HTMLDialogElement.prototype,'close',{
+        configurable:true,
+        value:function(this:HTMLDialogElement){
+            this.removeAttribute('open')
+        },
+    })
+})
 
 vi.mock('../features/notifications/notificationsApi',()=>({
     deleteManyNotifications:vi.fn(),
@@ -302,13 +317,19 @@ describe('NotificationsPage',()=>{
         const user=userEvent.setup()
         renderPage()
         await screen.findByText('Score improved')
-
-        const typeFilter=screen.getByRole('combobox',{
-            name:'Notification type',
+        await user.click(
+            screen.getByRole('button',{
+                name:'All types',
+            }),
+        )
+        const typeDialog=screen.getByRole('dialog',{
+            name:'Filter by notification type',
         })
-
-        await user.selectOptions(typeFilter,'SCORE_CHANGE')
-
+        await user.click(
+            within(typeDialog).getByRole('button',{
+                name:'Score changes',
+            }),
+        )
         await waitFor(()=>{
             expect(getNotifications).toHaveBeenCalledWith(
                 {
@@ -320,8 +341,11 @@ describe('NotificationsPage',()=>{
                 expect.any(AbortSignal),
             )
         })
-
-        expect(typeFilter).toHaveValue('SCORE_CHANGE')
+        expect(
+            screen.getByRole('button',{
+                name:'Score changes',
+            }),
+        ).toBeInTheDocument()
     })
     it('moves between notification pages',async()=>{
         const user=userEvent.setup()
@@ -429,11 +453,18 @@ describe('NotificationsPage',()=>{
             }),
         )
         expect(await screen.findByText('Page 2 of 2')).toBeInTheDocument()
-        await user.selectOptions(
-            screen.getByRole('combobox',{
-                name:'Notification type',
+        await user.click(
+            screen.getByRole('button',{
+                name:'All types',
             }),
-            'REWARD',
+        )
+        const typeDialog=screen.getByRole('dialog',{
+            name:'Filter by notification type',
+        })
+        await user.click(
+            within(typeDialog).getByRole('button',{
+                name:'Rewards',
+            }),
         )
         expect(await screen.findByText('Reward earned')).toBeInTheDocument()
         await waitFor(()=>{
