@@ -5,15 +5,19 @@ import {
     Award,
     Banknote,
     Calendar,
+    Check,
     Gift,
     Info,
+    Trash2,
     TrendingUp,
 } from "lucide-react"
 import {CustomCard} from "@/components/ui/CustomCard"
 import {IconButton} from "@/components/common/IconButton"
 import {
+    deleteManyNotifications,
     getNotifications,
     markAsRead,
+    markManyAsRead,
 } from "@/features/notifications/notificationsApi"
 import { useNotifications } from "@/features/notifications/useNotifications"
 import {cn} from "@/lib/utils"
@@ -22,17 +26,9 @@ import type {
     NotificationPagination,
     NotifType,
 } from "@/types/NotificationTypes"
+import { NotificationTypeFilter } from "@/components/notifications/NotificationsTypeFilter"
 
 const PER_PAGE=10
-
-const TYPE_OPTIONS:{value:NotifType;label:string}[]=[
-    {value:"REMINDER",label:"Reminders"},
-    {value:"PAYMENT_STATUS",label:"Payment status"},
-    {value:"SCORE_CHANGE",label:"Score changes"},
-    {value:"BADGE_EARNED",label:"Badges"},
-    {value:"REWARD",label:"Rewards"},
-    {value:"SYSTEM",label:"System"},
-]
 
 export default function NotificationsPage(){
     const nav=useNavigate()
@@ -58,6 +54,12 @@ export default function NotificationsPage(){
     const [err,setErr]=React.useState<string|null>(null)
     const [markError,setMarkError]=React.useState<string|null>(null)
     const [markingId,setMarkingId]=React.useState<string|null>(null)
+
+    const [manageMode,setManageMode]=React.useState(false)
+    const [selectedIds,setSelectedIds]=React.useState<Set<string>>(new Set())
+    const [bulkPending,setBulkPending]=React.useState(false)
+    const [bulkError,setBulkError]=React.useState<string|null>(null)
+    const [confirmingDelete,setConfirmingDelete]=React.useState(false)
 
     const requestNotifications=React.useCallback((signal?:AbortSignal)=>{
         return getNotifications({
@@ -128,21 +130,99 @@ export default function NotificationsPage(){
     function changePage(nextPage:number){
         beginReload()
         setPage(nextPage)
+        setSelectedIds(new Set())
     }
 
     function handleUnreadFilter(){
         beginReload()
         setPage(1)
         setUnreadOnly((current)=>!current)
+        setSelectedIds(new Set())
     }
 
-    function handleTypeFilter(event:React.ChangeEvent<HTMLSelectElement>){
-        beginReload()
-        setPage(1)
-        setSelectedType(event.target.value as NotifType|"")
+    function toggleManageMode(){
+        setManageMode((current)=>!current)
+        setSelectedIds(new Set())
+        setBulkError(null)
+        setConfirmingDelete(false)
+    }
+
+    function toggleSelected(id:string){
+        setSelectedIds((current)=>{
+            const next=new Set(current)
+            if(next.has(id)){
+                next.delete(id)
+            }else{
+                next.add(id)
+            }
+            return next
+        })
+    }
+
+    function toggleSelectAll(){
+        setSelectedIds((current)=>{
+            if(current.size===notifications.length){
+                return new Set()
+            }
+            return new Set(notifications.map((item)=>item.id))
+        })
+    }
+
+    async function handleBulkMarkAsRead(){
+        if(selectedIds.size===0||bulkPending){
+            return
+        }
+        setBulkPending(true)
+        setBulkError(null)
+        try{
+            await markManyAsRead([...selectedIds])
+            await retryNotifications()
+            void refreshUnreadCount()
+            setSelectedIds(new Set())
+            setManageMode(false)
+        }catch(error){
+            if(isAuthenticationError(error)){
+                nav("/login",{replace:true})
+                return
+            }
+            console.error("markManyAsRead error: ",error)
+            setBulkError("Could not mark the selected notifications as read. Please try again.")
+        }finally{
+            setBulkPending(false)
+        }
+    }
+
+    async function handleBulkDelete(){
+        if(selectedIds.size===0||bulkPending){
+            return
+        }
+        setBulkPending(true)
+        setBulkError(null)
+        try{
+            await deleteManyNotifications([...selectedIds])
+            await retryNotifications()
+            void refreshUnreadCount()
+            setSelectedIds(new Set())
+            setManageMode(false)
+            setConfirmingDelete(false)
+        }catch(error){
+            if(isAuthenticationError(error)){
+                nav("/login",{replace:true})
+                return
+            }
+            console.error("deleteManyNotifications error: ",error)
+            setBulkError("Could not delete the selected notifications. Please try again.")
+        }finally{
+            setBulkPending(false)
+        }
     }
 
     async function handleRowClick(notification:Notification){
+        if(manageMode){
+            toggleSelected(notification.id)
+            return
+        }
+
         if(notification.readAt||markingId!==null){
             return
         }
@@ -200,9 +280,10 @@ export default function NotificationsPage(){
 
     const filtersActive=unreadOnly||selectedType!==""
     const totalPages=Math.max(1,pagination.totalPages)
+    const allSelected=notifications.length>0&&selectedIds.size===notifications.length
 
     return(
-        <div className="min-h-screen bg-[#f4fbf7] pb-10">
+        <div className="min-h-screen bg-[#f4fbf7] pb-24">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
                 <header className="flex items-center justify-between">
                     <IconButton
@@ -218,22 +299,13 @@ export default function NotificationsPage(){
                     <div className="size-10"/>
                 </header>
 
-                <div className="mt-6">
-                    {unreadLoading&&!unreadLoaded?(
-                        <p className="text-sm font-semibold text-[#6b6375]">Loading unread notifications...</p>
-                    ):unreadLoaded&&unreadCount===0?(
-                        <div>
-                            <p className="font-bold text-[#091828]">You're all caught up</p>
-                            <p className="mt-0.5 text-sm text-[#6b6375]">All your notifications have been read.</p>
-                        </div>
-                    ):unreadLoaded?(
-                        <p className="text-sm font-semibold text-[#6b6375]">
-                            {unreadCount} unread {unreadCount===1?"notification":"notifications"}
-                        </p>
-                    ):(
-                        <p className="text-sm font-semibold text-[#6b6375]">Unread count unavailable</p>
-                    )}
-                </div>
+                <UnreadHeader
+                    unreadCount={unreadCount}
+                    unreadLoaded={unreadLoaded}
+                    unreadLoading={unreadLoading}
+                    manageMode={manageMode}
+                    onToggleManage={toggleManageMode}
+                />
 
                 <section
                     aria-label="Notification filters"
@@ -244,140 +316,453 @@ export default function NotificationsPage(){
                         aria-pressed={unreadOnly}
                         onClick={handleUnreadFilter}
                         className={cn(
-                            "rounded-full border px-4 py-2 text-sm font-semibold transition",
+                            "flex h-11 flex-1 items-center justify-center rounded-full border px-4 text-sm font-semibold transition",
                             unreadOnly
-                                ?"border-[#ac2a5d] bg-[#ffd8e6] text-[#ac2a5d]"
-                                :"border-[#d4ded9] bg-white text-[#091828]",
+                                ? "border-[#ac2a5d] bg-[#ffd8e6] text-[#ac2a5d]"
+                                : "border-[#d4ded9] bg-white text-[#091828]",
                         )}
                     >
                         Unread only
                     </button>
 
-                    <label className="flex-1">
-                        <span className="sr-only">
-                            Notification type
-                        </span>
-
-                        <select
-                            aria-label="Notification type"
-                            value={selectedType}
-                            onChange={handleTypeFilter}
-                            className="w-full rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828]"
-                        >
-                            <option value="">All types</option>
-
-                            {TYPE_OPTIONS.map((option)=>(
-                                <option
-                                    key={option.value}
-                                    value={option.value}
-                                >
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                    <NotificationTypeFilter
+                        value={selectedType}
+                        onChange={(next)=>{
+                            beginReload()
+                            setPage(1)
+                            setSelectedType(next)
+                            setSelectedIds(new Set())
+                        }}
+                    />
                 </section>
 
-                {err&&(
-                    <div className="mt-6 flex items-center gap-3 rounded-2xl border-2 border-[#ac2a5d] bg-[#ffd9e1] px-4 py-3">
-                        <AlertTriangle className="size-4 shrink-0 text-[#ac2a5d]"/>
+                <SelectAllControl
+                    visible={manageMode&&notifications.length>0}
+                    allSelected={allSelected}
+                    onToggle={toggleSelectAll}
+                />
 
-                        <div className="flex-1">
-                            <p className="text-sm font-semibold text-[#ac2a5d]">
-                                {err}
-                            </p>
+                <NotificationMessages
+                    bulkError={bulkError}
+                    loadError={err}
+                    markError={markError}
+                    onRetry={()=>void retryNotifications()}
+                />
 
-                            <button
-                                type="button"
-                                onClick={()=>void retryNotifications()}
-                                className="mt-1 text-sm font-bold text-[#091828] underline"
-                            >
-                                Try again
-                            </button>
-                        </div>
-                    </div>
+                <NotificationContent
+                    loading={loading}
+                    loadError={err}
+                    notifications={notifications}
+                    filtersActive={filtersActive}
+                    markingId={markingId}
+                    manageMode={manageMode}
+                    selectedIds={selectedIds}
+                    pagination={pagination}
+                    page={page}
+                    totalPages={totalPages}
+                    onNotificationClick={(notification)=>void handleRowClick(notification)}
+                    onPageChange={changePage}
+                />
+            </div>
+
+            <BulkActionBar
+                visible={manageMode&&selectedIds.size>0}
+                selectedCount={selectedIds.size}
+                confirmingDelete={confirmingDelete}
+                bulkPending={bulkPending}
+                onCancelDelete={()=>setConfirmingDelete(false)}
+                onConfirmDelete={()=>void handleBulkDelete()}
+                onMarkRead={()=>void handleBulkMarkAsRead()}
+                onStartDelete={()=>setConfirmingDelete(true)}
+            />
+        </div>
+    )
+}
+
+type UnreadHeaderProps=Readonly<{
+    unreadCount:number
+    unreadLoaded:boolean
+    unreadLoading:boolean
+    manageMode:boolean
+    onToggleManage:()=>void
+}>
+
+function UnreadHeader({
+    unreadCount,
+    unreadLoaded,
+    unreadLoading,
+    manageMode,
+    onToggleManage,
+}:UnreadHeaderProps){
+    return(
+        <div className="mt-6 flex items-center justify-between gap-3">
+            <UnreadSummary
+                unreadCount={unreadCount}
+                unreadLoaded={unreadLoaded}
+                unreadLoading={unreadLoading}
+            />
+
+            <button
+                type="button"
+                onClick={onToggleManage}
+                className={cn(
+                    "shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold transition",
+                    manageMode
+                        ?"bg-[#ffd8e6] text-[#ac2a5d]"
+                        :"text-[#6b6375] hover:text-[#091828]",
                 )}
+            >
+                {manageMode?"Done":"Manage"}
+            </button>
+        </div>
+    )
+}
 
-                {markError&&(
-                    <div
-                        role="alert"
-                        className="mt-4 flex items-center gap-2 rounded-2xl border border-[#ac2a5d] bg-[#ffd9e1] px-4 py-3"
-                    >
-                        <AlertTriangle className="size-4 shrink-0 text-[#ac2a5d]"/>
+type UnreadSummaryProps=Readonly<{
+    unreadCount:number
+    unreadLoaded:boolean
+    unreadLoading:boolean
+}>
 
+function UnreadSummary({
+    unreadCount,
+    unreadLoaded,
+    unreadLoading,
+}:UnreadSummaryProps){
+    if(unreadLoading&&!unreadLoaded){
+        return(
+            <p className="text-sm font-semibold text-[#6b6375]">
+                Loading unread notifications...
+            </p>
+        )
+    }
+
+    if(!unreadLoaded){
+        return(
+            <p className="text-sm font-semibold text-[#6b6375]">
+                Unread count unavailable
+            </p>
+        )
+    }
+
+    if(unreadCount===0){
+        return(
+            <div>
+                <p className="font-bold text-[#091828]">You're all caught up</p>
+                <p className="mt-0.5 text-sm text-[#6b6375]">
+                    All your notifications have been read.
+                </p>
+            </div>
+        )
+    }
+
+    return(
+        <p className="text-sm font-semibold text-[#6b6375]">
+            {unreadCount} unread {unreadCount===1?"notification":"notifications"}
+        </p>
+    )
+}
+
+type SelectAllControlProps=Readonly<{
+    visible:boolean
+    allSelected:boolean
+    onToggle:()=>void
+}>
+
+function SelectAllControl({
+    visible,
+    allSelected,
+    onToggle,
+}:SelectAllControlProps){
+    if(!visible){
+        return null
+    }
+
+    return(
+        <button
+            type="button"
+            onClick={onToggle}
+            className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#091828]"
+        >
+            <span
+                className={cn(
+                    "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
+                    allSelected
+                        ?"border-[#ac2a5d] bg-[#ac2a5d] text-white"
+                        :"border-[#d4ded9] bg-white",
+                )}
+            >
+                {allSelected&&<Check className="size-3" strokeWidth={3}/>}
+            </span>
+            {allSelected?"Deselect all":"Select all"}
+        </button>
+    )
+}
+
+type NotificationMessagesProps=Readonly<{
+    bulkError:string|null
+    loadError:string|null
+    markError:string|null
+    onRetry:()=>void
+}>
+
+function NotificationMessages({
+    bulkError,
+    loadError,
+    markError,
+    onRetry,
+}:NotificationMessagesProps){
+    return(
+        <>
+            {bulkError&&(
+                <InlineError message={bulkError}/>
+            )}
+
+            {loadError&&(
+                <div className="mt-6 flex items-center gap-3 rounded-2xl border-2 border-[#ac2a5d] bg-[#ffd9e1] px-4 py-3">
+                    <AlertTriangle className="size-4 shrink-0 text-[#ac2a5d]"/>
+
+                    <div className="flex-1">
                         <p className="text-sm font-semibold text-[#ac2a5d]">
-                            {markError}
+                            {loadError}
                         </p>
-                    </div>
-                )}
 
-                {loading&&(
+                        <button
+                            type="button"
+                            onClick={onRetry}
+                            className="mt-1 text-sm font-bold text-[#091828] underline"
+                        >
+                            Try again
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {markError&&(
+                <InlineError message={markError}/>
+            )}
+        </>
+    )
+}
+
+function InlineError({message}:Readonly<{message:string}>){
+    return(
+        <div
+            role="alert"
+            className="mt-4 flex items-center gap-2 rounded-2xl border border-[#ac2a5d] bg-[#ffd9e1] px-4 py-3"
+        >
+            <AlertTriangle className="size-4 shrink-0 text-[#ac2a5d]"/>
+            <p className="text-sm font-semibold text-[#ac2a5d]">
+                {message}
+            </p>
+        </div>
+    )
+}
+
+type NotificationContentProps=Readonly<{
+    loading:boolean
+    loadError:string|null
+    notifications:Notification[]
+    filtersActive:boolean
+    markingId:string|null
+    manageMode:boolean
+    selectedIds:Set<string>
+    pagination:NotificationPagination
+    page:number
+    totalPages:number
+    onNotificationClick:(notification:Notification)=>void
+    onPageChange:(page:number)=>void
+}>
+
+function NotificationContent({
+    loading,
+    loadError,
+    notifications,
+    filtersActive,
+    markingId,
+    manageMode,
+    selectedIds,
+    pagination,
+    page,
+    totalPages,
+    onNotificationClick,
+    onPageChange,
+}:NotificationContentProps){
+    if(loading){
+        return(
+            <div
+                aria-label="Loading notifications"
+                className="mt-6 space-y-3"
+            >
+                {[1,2,3,4].map((item)=>(
                     <div
-                        aria-label="Loading notifications"
-                        className="mt-6 space-y-3"
-                    >
-                        {[1,2,3,4].map((item)=>(
-                            <div
-                                key={item}
-                                className="h-16 animate-pulse rounded-xl bg-[#d9ede7]"
-                            />
-                        ))}
+                        key={item}
+                        className="h-16 animate-pulse rounded-xl bg-[#d9ede7]"
+                    />
+                ))}
+            </div>
+        )
+    }
+    if(loadError){
+        return null
+    }
+    if(notifications.length===0){
+        return(
+            <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
+                <p className="font-bold text-[#091828]">
+                    {filtersActive?"No matching notifications":"You're caught up"}
+                </p>
+                <p className="max-w-xs text-sm text-[#6b6375]">
+                    {filtersActive
+                        ?"No notifications matched the selected filters."
+                        :"You do not have any notifications yet."}
+                </p>
+            </div>
+        )
+    }
+    return(
+        <>
+            <CustomCard className="mt-6 rounded-3xl bg-white shadow-sm">
+                {notifications.map((notification)=>(
+                    <NotificationRow
+                        key={notification.id}
+                        notification={notification}
+                        pending={markingId===notification.id}
+                        onClick={()=>onNotificationClick(notification)}
+                        selectMode={manageMode}
+                        selected={selectedIds.has(notification.id)}
+                    />
+                ))}
+            </CustomCard>
+            <PaginationControls
+                visible={pagination.totalPages>1}
+                page={page}
+                totalPages={totalPages}
+                loading={loading}
+                onPageChange={onPageChange}
+            />
+        </>
+    )
+}
+
+type PaginationControlsProps=Readonly<{
+    visible:boolean
+    page:number
+    totalPages:number
+    loading:boolean
+    onPageChange:(page:number)=>void
+}>
+
+function PaginationControls({
+    visible,
+    page,
+    totalPages,
+    loading,
+    onPageChange,
+}:PaginationControlsProps){
+    if(!visible){
+        return null
+    }
+
+    return(
+        <div className="mt-5 flex items-center justify-between">
+            <button
+                type="button"
+                disabled={page<=1||loading}
+                onClick={()=>onPageChange(page-1)}
+                className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+                Previous
+            </button>
+
+            <p className="text-sm font-semibold text-[#6b6375]">
+                Page {page} of {totalPages}
+            </p>
+
+            <button
+                type="button"
+                disabled={page>=totalPages||loading}
+                onClick={()=>onPageChange(page+1)}
+                className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+                Next
+            </button>
+        </div>
+    )
+}
+
+type BulkActionBarProps=Readonly<{
+    visible:boolean
+    selectedCount:number
+    confirmingDelete:boolean
+    bulkPending:boolean
+    onCancelDelete:()=>void
+    onConfirmDelete:()=>void
+    onMarkRead:()=>void
+    onStartDelete:()=>void
+}>
+
+function BulkActionBar({
+    visible,
+    selectedCount,
+    confirmingDelete,
+    bulkPending,
+    onCancelDelete,
+    onConfirmDelete,
+    onMarkRead,
+    onStartDelete,
+}:BulkActionBarProps){
+    if(!visible){
+        return null
+    }
+
+    return(
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e8e4f4] bg-white/95 backdrop-blur">
+            <div className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-5 py-3">
+                <p className="text-sm font-semibold text-[#091828]">
+                    {selectedCount} selected
+                </p>
+
+                {confirmingDelete?(
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            disabled={bulkPending}
+                            onClick={onCancelDelete}
+                            className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            disabled={bulkPending}
+                            onClick={onConfirmDelete}
+                            className="rounded-full bg-[#ac2a5d] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                        >
+                            {bulkPending?"Deleting...":"Confirm delete"}
+                        </button>
                     </div>
-                )}
-
-                {!loading&&!err&&notifications.length===0&&(
-                    <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
-                        <p className="font-bold text-[#091828]">
-                            {filtersActive
-                                ?"No matching notifications"
-                                :"You're caught up"}
-                        </p>
-
-                        <p className="max-w-xs text-sm text-[#6b6375]">
-                            {filtersActive
-                                ?"No notifications matched the selected filters."
-                                :"You do not have any notifications yet."}
-                        </p>
+                ):(
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            disabled={bulkPending}
+                            onClick={onMarkRead}
+                            className="flex items-center gap-1.5 rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:opacity-50"
+                        >
+                            <Check className="size-4"/>
+                            Mark read
+                        </button>
+                        <button
+                            type="button"
+                            disabled={bulkPending}
+                            onClick={onStartDelete}
+                            className="flex items-center gap-1.5 rounded-full bg-[#ffd9e1] px-4 py-2 text-sm font-semibold text-[#ac2a5d] disabled:opacity-50"
+                        >
+                            <Trash2 className="size-4"/>
+                            Delete
+                        </button>
                     </div>
-                )}
-
-                {!loading&&!err&&notifications.length>0&&(
-                    <>
-                        <CustomCard className="mt-6 rounded-3xl bg-white shadow-sm">
-                            {notifications.map((notification)=>(
-                                <NotificationRow
-                                    key={notification.id}
-                                    notification={notification}
-                                    pending={markingId===notification.id}
-                                    onClick={()=>void handleRowClick(notification)}
-                                />
-                            ))}
-                        </CustomCard>
-
-                        {pagination.totalPages>1&&(
-                            <div className="mt-5 flex items-center justify-between">
-                                <button
-                                    type="button"
-                                    disabled={page<=1||loading}
-                                    onClick={()=>changePage(page-1)}
-                                    className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                    Previous
-                                </button>
-                                <p className="text-sm font-semibold text-[#6b6375]">
-                                    Page {page} of {totalPages}
-                                </p>
-                                <button
-                                    type="button"
-                                    disabled={page>=pagination.totalPages||loading}
-                                    onClick={()=>changePage(page+1)}
-                                    className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        )}
-                    </>
                 )}
             </div>
         </div>
@@ -406,11 +791,15 @@ function NotificationRow({
     notification,
     pending,
     onClick,
-}:{
+    selectMode=false,
+    selected=false,
+}:Readonly<{
     notification:Notification
     pending:boolean
     onClick:()=>void
-}){
+    selectMode?:boolean
+    selected?:boolean
+}>){
     const unread=notification.readAt===null
 
     return(
@@ -419,12 +808,26 @@ function NotificationRow({
             disabled={pending}
             onClick={onClick}
             aria-label={`${notification.title}${unread?", unread":""}`}
+            aria-pressed={selectMode?selected:undefined}
             className={cn(
                 "flex w-full items-start gap-3 border-b border-[#e8e4f4] px-3 py-3 text-left transition last:border-b-0 hover:bg-[#f4fbf7]",
                 unread?"bg-[#fbfefc]":"bg-white",
                 pending&&"cursor-wait opacity-60",
             )}
         >
+            {selectMode&&(
+                <span
+                    className={cn(
+                        "mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border-2",
+                        selected
+                            ? "border-[#ac2a5d] bg-[#ac2a5d] text-white"
+                            : "border-[#d4ded9] bg-white",
+                    )}
+                >
+                    {selected&&<Check className="size-3" strokeWidth={3}/>}
+                </span>
+            )}
+
             <div
                 className={cn(
                     "flex size-9 shrink-0 items-center justify-center rounded-full",

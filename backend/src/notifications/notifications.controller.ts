@@ -1,5 +1,7 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -12,6 +14,7 @@ import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorato
 import { UsersService } from '../users/users.service';
 import { GetNotificationsQueryDto } from './dto/get-notifications-query.dto';
 import { NotificationsService } from './notifications.service';
+import { BulkNotificationIdsDto } from './dto/bulk-notifications.dto';
 
 @Controller('notifications')
 @UseGuards(SupabaseJwtGuard)
@@ -35,5 +38,30 @@ export class NotificationsController {
   ) {
     const user = await this.usersService.findOrCreateUser(authUser);
     return this.notificationsService.markAsRead(user.id, notificationId);
+  }
+  @Delete(':id')
+  async remove(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('id') notificationId: string,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.notificationsService.softDelete(user.id, notificationId);
+  }
+  @Patch('read')
+  async markManyAsRead(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Body() body: BulkNotificationIdsDto,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.notificationsService.markManyAsRead(user.id, body.ids);
+  }
+
+  @Delete()
+  async removeMany(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Body() body: BulkNotificationIdsDto,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.notificationsService.softDeleteMany(user.id, body.ids);
   }
 }
