@@ -2,12 +2,27 @@ import React from 'react'
 import {act,render,screen,waitFor,within} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {MemoryRouter,Route,Routes} from 'react-router-dom'
-import {beforeEach,describe,expect,it,vi} from 'vitest'
+import {beforeAll,beforeEach,describe,expect,it,vi} from 'vitest'
 import '@testing-library/jest-dom'
 import NotificationsPage from '../domains/NotificationsPage'
 import {NotificationsProvider} from '../features/notifications/NotificationsContext'
 import {getNotifications,markAsRead} from '../features/notifications/notificationsApi'
 import type {Notification,NotificationFilters,NotificationPagination,NotificationResponse,NotificationsResponse} from '../types/NotificationTypes'
+
+beforeAll(()=>{
+    Object.defineProperty(HTMLDialogElement.prototype,'showModal',{
+        configurable:true,
+        value:function(this:HTMLDialogElement){
+            this.setAttribute('open','')
+        },
+    })
+    Object.defineProperty(HTMLDialogElement.prototype,'close',{
+        configurable:true,
+        value:function(this:HTMLDialogElement){
+            this.removeAttribute('open')
+        },
+    })
+})
 
 vi.mock('../features/notifications/notificationsApi',()=>({
     deleteManyNotifications:vi.fn(),
