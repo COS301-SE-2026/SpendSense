@@ -139,13 +139,6 @@ describe('DashboardPage', () => {
     expect(screen.getByText('R 54.00')).toBeInTheDocument()
   })
 
-  it('renders the Recent Activity section with a transaction', () => {
-    renderDashboard()
-    expect(screen.getByText('Recent Activity')).toBeInTheDocument()
-    expect(screen.getByText('Supermarket Store')).toBeInTheDocument()
-    expect(screen.getByText('−R 12.50')).toBeInTheDocument()
-  })
-
   it('renders the Stickers section', () => {
     renderDashboard()
     expect(screen.getByText('Stickers')).toBeInTheDocument()

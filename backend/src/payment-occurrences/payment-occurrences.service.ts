@@ -25,7 +25,7 @@ export class PaymentOccurrencesService {
 
     const statusFilter: PaymentOccurrenceStatus[] = status
       ? (status.split(',').map((s) => s.trim()) as PaymentOccurrenceStatus[])
-      : [PaymentOccurrenceStatus.PENDING, PaymentOccurrenceStatus.OVERDUE];
+      : [PaymentOccurrenceStatus.PENDING];
 
     const where = {
       userId,
