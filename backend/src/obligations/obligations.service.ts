@@ -18,14 +18,22 @@ import {
 import { CreateObligationDto } from './dto/create-obligation.dto';
 import { ListObligationsDto } from './dto/list-obligations.dto';
 import { UpdateObligationDto } from './dto/update-obligation.dto';
+import { BadgeEngineService } from '../gamification/badge-engine.service';
 
 const OCCURRENCE_HORIZON_MONTHS = 6;
 
 @Injectable()
 export class ObligationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly badgeEngineService: BadgeEngineService,
+  ) {}
 
-  async create(userId: string, dto: CreateObligationDto) {
+  async create(
+    userId: string,
+    dto: CreateObligationDto,
+    defaultReminderDaysBefore: number,
+  ) {
     // validate that category actually exists
     const category = await this.prisma.category.findUnique({
       where: { id: dto.categoryId },
@@ -111,7 +119,9 @@ export class ObligationsService {
       );
 
       const remindersEnabled = dto.reminders?.enabled !== false;
-      const daysBefore = dto.reminders?.daysBefore ?? [3];
+      const daysBefore = dto.reminders?.daysBefore ?? [
+        defaultReminderDaysBefore,
+      ];
       const channels = dto.reminders?.channels ?? [ReminderChannel.IN_APP];
 
       const createdReminders: Array<{
@@ -153,6 +163,13 @@ export class ObligationsService {
           sourceId: obligation.id,
         },
       });
+      await this.badgeEngineService.evaluateObligationBadges(
+        {
+          userId,
+          sourceEventId: event.id,
+        },
+        tx,
+      );
 
       return {
         obligation,

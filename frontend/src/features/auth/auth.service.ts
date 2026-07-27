@@ -1,5 +1,6 @@
 import {supabase} from '../../lib/supabase'
 import {setToken, clearToken} from '../../lib/tokenStore'
+import { clearE2eSession, getE2eSession, isE2eMode } from './e2e-session'
 
 export async function signUp(email: string, password: string, displayName?: string) {
     const {data, error} = await supabase.auth.signUp({
@@ -26,6 +27,11 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signOut() {
+    if (isE2eMode) {
+        clearE2eSession()
+        return
+    }
+
     const {error} = await supabase.auth.signOut()
     if (error) 
         throw error
@@ -33,6 +39,10 @@ export async function signOut() {
 }
 
 export async function getCurrentSession() {
+    if (isE2eMode) {
+        return getE2eSession()
+    }
+
     const {data, error} = await supabase.auth.getSession()
     if (error) 
         throw error
@@ -42,6 +52,10 @@ export async function getCurrentSession() {
 // Call once at app startup so the stored token stays in sync with Supabase token refreshes.
 // Returns an unsubscribe function.
 export function initAuthListener(): () => void {
+    if (isE2eMode) {
+        return () => undefined
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.access_token) {
             setToken(session.access_token)

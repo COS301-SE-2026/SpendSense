@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
+import { UsersModule } from '../users/users.module';
+import { AuthModule } from '../auth/auth.module';
+import { RemindersController } from './reminders.controller';
+import { RemindersService } from './reminders.service';
+import { PrismaModule } from '../prisma/prisma.module';
 
-// RemindersModule: payment reminder scheduling and delivery
-// TODO: implement RemindersController and RemindersService
-
-// planned endpoints:
-// GET /api/v1/reminders
-// PATCH /api/v1/reminders/:id
-
-@Module({})
+@Module({
+  imports: [UsersModule, AuthModule, PrismaModule],
+  controllers: [RemindersController],
+  providers: [RemindersService],
+  exports: [RemindersService],
+})
 export class RemindersModule {}

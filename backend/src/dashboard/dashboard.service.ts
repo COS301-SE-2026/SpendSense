@@ -8,51 +8,12 @@ export class DashboardService {
 
   async getDashboard(userId: string) {
     const [
-      userSummary,
-      creditProfile,
       recentScoreEvents,
       gamificationProfile,
-      upcomingPayments,
       overduePayments,
       recentBadges,
       unreadNotifications,
     ] = await Promise.all([
-      this.prisma.user.findFirst({
-        where: {
-          id: userId,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          email: true,
-          displayName: true,
-          avatarUrl: true,
-          onboardingCompleted: true,
-          createdAt: true,
-        },
-      }),
-
-      this.prisma.creditProfile.findFirst({
-        where: {
-          userId,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          userId: true,
-          currentScore: true,
-          previousScore: true,
-          scoreTier: true,
-          onTimePaymentCount: true,
-          latePaymentCount: true,
-          missedPaymentCount: true,
-          currentUtilisationScore: true,
-          lastCalculatedAt: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      }),
-
       this.prisma.scoreEvent.findMany({
         where: {
           userId,
@@ -95,56 +56,6 @@ export class DashboardService {
           longestKnowledgeStreak: true,
           createdAt: true,
           updatedAt: true,
-        },
-      }),
-
-      this.prisma.paymentOccurrence.findMany({
-        where: {
-          userId,
-          deletedAt: null,
-          status: PaymentOccurrenceStatus.PENDING,
-        },
-        orderBy: {
-          dueDate: 'asc',
-        },
-        take: 5,
-        select: {
-          id: true,
-          userId: true,
-          obligationId: true,
-          scheduleId: true,
-          dueDate: true,
-          amountDue: true,
-          currency: true,
-          status: true,
-          sequenceNumber: true,
-          paidAt: true,
-          overdueAt: true,
-          missedAt: true,
-          createdAt: true,
-          updatedAt: true,
-          obligation: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              type: true,
-              status: true,
-              amount: true,
-              currency: true,
-              priority: true,
-              startDate: true,
-              endDate: true,
-              category: {
-                select: {
-                  id: true,
-                  name: true,
-                  iconKey: true,
-                  colourKey: true,
-                },
-              },
-            },
-          },
         },
       }),
 
@@ -257,9 +168,59 @@ export class DashboardService {
       }),
     ]);
 
+    const userSummary = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        avatarUrl: true,
+        onboardingCompleted: true,
+        createdAt: true,
+      },
+    });
+
+    console.log('Looking up user with ID:', userId);
+    console.log('User summary returned:', userSummary);
+
+    const today = new Date();
+
+    const upcomingPayments = await this.prisma.paymentOccurrence.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        status: PaymentOccurrenceStatus.PENDING,
+        dueDate: {
+          gte: today,
+        },
+      },
+      orderBy: {
+        dueDate: 'asc',
+      },
+      select: {
+        id: true,
+        amountDue: true,
+        currency: true,
+        status: true,
+        dueDate: true,
+        obligation: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            priority: true,
+          },
+        },
+      },
+    });
+
+    console.log('Upcoming Payments for User :', upcomingPayments);
+
     return {
       userSummary,
-      creditProfile,
       recentScoreEvents,
       gamificationProfile,
       upcomingPayments,

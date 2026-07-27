@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import {
   MascotMood,
+  NotificationType,
   PaymentOccurrenceStatus,
   PaymentRecordStatus,
   Prisma,
@@ -16,6 +17,8 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LogPaymentDto } from './dto/log-payment.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { BadgeEngineService } from '../gamification/badge-engine.service';
 
 const ON_TIME_SCORE_DELTA = 8;
 const LATE_SCORE_DELTA = -8;
@@ -71,7 +74,11 @@ type LogPaymentResult = {
 
 @Injectable()
 export class PaymentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+    private readonly badgeEngineService: BadgeEngineService,
+  ) {}
 
   async logPayment(
     dto: LogPaymentDto,
@@ -235,7 +242,22 @@ export class PaymentsService {
           },
         },
       });
-
+      if (scoreAfter !== scoreBefore) {
+        await this.notificationsService.create(
+          {
+            userId,
+            type: NotificationType.SCORE_CHANGE,
+            title: 'Credit score updated',
+            message:
+              scoreAfter > scoreBefore
+                ? `Your simulated credit score increased from ${scoreBefore} to ${scoreAfter}.`
+                : `Your simulated credit score decreased from ${scoreBefore} to ${scoreAfter}.`,
+            sourceType: UserEventSourceType.PAYMENT_RECORD,
+            sourceId: paymentRecord.id,
+          },
+          tx,
+        );
+      }
       const gamificationProfile = await tx.gamificationProfile.upsert({
         where: { userId },
         update: {},
@@ -277,7 +299,18 @@ export class PaymentsService {
           },
         });
       }
-
+      const badgesEarned = await this.badgeEngineService.evaluatePaymentBadges(
+        {
+          userId,
+          sourceEventId: paymentEvent.id,
+          onTimePaymentCount: isLate
+            ? creditProfile.onTimePaymentCount
+            : creditProfile.onTimePaymentCount + 1,
+          currentPaymentStreak,
+          currentScore: scoreAfter,
+        },
+        tx,
+      );
       return {
         message: 'Success. Users payment has been logged',
         payment: {
@@ -314,7 +347,7 @@ export class PaymentsService {
           currentPaymentStreak,
           longestPaymentStreak,
           mascotMood: isLate ? MascotMood.STRESSED : MascotMood.HAPPY,
-          badgesEarned: [],
+          badgesEarned,
         },
         paymentImpact: {
           isLate,
