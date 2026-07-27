@@ -391,11 +391,11 @@ export default function CalendarPage(){
           <div className="rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-4 shadow-[2px_2px_0_#091828]">
             {selectedDate === null ? (
               <p className="text-xl font-extrabold text-[#091828]" aria-label="Showing all expenses">
-                {monthLabel.charAt(0) + monthLabel.slice(1).toLowerCase()} {displayYear} —<br />all expenses
+                {monthLabel.charAt(0) + monthLabel.slice(1).toLowerCase()} {displayYear}, <br />all expenses
               </p>
             ) : (
               <p className="text-xl font-extrabold text-[#091828]">
-                {monthLabel.charAt(0) + monthLabel.slice(1).toLowerCase()} {selectedDate} — what&apos;s<br />happening
+                {monthLabel.charAt(0) + monthLabel.slice(1).toLowerCase()} {selectedDate}, what&apos;s<br />happening
               </p>
             )}
           </div>
@@ -466,7 +466,7 @@ function OccurrenceCard({
         aria-label={
           isPayable
             ? `Pay ${occurrence.obligation.name}, ${formatCurrency(occurrence.amountDue)}`
-            : `${occurrence.obligation.name} — ${badge.label}`
+            : `${occurrence.obligation.name}, ${badge.label}`
         }
       >
         <div className="flex items-center gap-3">
@@ -610,8 +610,8 @@ function BottomNav({ active }: { active: BottomNavTab }) {
         <BottomNavItem to="/"        icon={<Home className="size-5" />}        label="Home"     active={active === "home"} />
         <BottomNavItem to="/calendar" icon={<CalendarIcon className="size-5" />} label="Calendar" active={active === "calendar"} />
         <AddTransactionButton />
-        <BottomNavItem to="/quests"  icon={<Trophy className="size-5" />}      label="Quests"   active={active === "quests"}  disabled={true} />
-        <BottomNavItem to="/profile" icon={<User className="size-5" />}        label="Profile"  active={active === "profile"} disabled={true} />
+        <BottomNavItem to="/quests"  icon={<Trophy className="size-5" />}      label="Quests"   active={active === "quests"}  disabled={false} />
+        <BottomNavItem to="/profile" icon={<User className="size-5" />}        label="Profile"  active={active === "profile"} disabled={false} />
       </div>
     </nav>
   )

@@ -246,7 +246,7 @@ export default function StickerAlbumPage(){
             <header className="bg-[#F0F7F4] px-4 pt-5 pb-3 flex items-center justify-between">
                 <button
                     type="button"
-                    onClick={()=>navigate(-1)}
+                    onClick={()=>navigate("/")}
                     className="size-9 flex items-center justify-center rounded-full bg-white/80 text-[#091828] shadow-sm"
                     aria-label="Go back">
 
@@ -276,7 +276,7 @@ export default function StickerAlbumPage(){
                 <div className="pt-2 pb-2 text-center space-y-2">
                     <div>
                         <p className="text-5xl font-black text-[#091828] leading-none">
-                            {loading ? '—' : earnedCount} / {loading ? '—' : total}
+                            {loading ? '-' : earnedCount} / {loading ? '-' : total}
                         </p>
                         <p className="text-2xl font-bold text-[#091828] mt-1">Stickers Found</p>
                     </div>

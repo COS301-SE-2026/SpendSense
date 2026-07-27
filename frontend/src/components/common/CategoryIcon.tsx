@@ -1,10 +1,17 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
+
+const SIZE_CLASS={
+    sm:"size-7",
+    md:"size-10",
+} as const
 export function CategoryIcon({
     tone,
+    size = "md",
     children,
 }: {
     tone: "mint" | "lilac" | "pink" | "yellow" | "navy"
+    size?:keyof typeof SIZE_CLASS
     children: React.ReactNode
 }) {
     const toneClass: Record<typeof tone, string> = {
@@ -17,7 +24,8 @@ export function CategoryIcon({
     return (
         <div
             className={cn(
-                "flex size-10 shrink-0 items-center justify-center rounded-full",
+                "flex shrink-0 items-center justify-center rounded-full",
+                SIZE_CLASS[size],
                 toneClass[tone],
             )}
         >

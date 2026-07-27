@@ -1,0 +1,37 @@
+# ---- deps: install every dependency (incl. devDependencies) so TypeScript can compile ----
+FROM node:20-slim AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+# ---- build: compile TypeScript to dist/, and generate the Prisma client ----
+FROM node:20-slim AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npx prisma generate
+RUN npm run build
+
+# ---- prod-deps: install only production dependencies (no eslint/jest/nest-cli/etc) ----
+FROM node:20-slim AS prod-deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# ---- runner: the actual image that gets pushed to GHCR and runs on EC2 ----
+FROM node:20-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=prod-deps /app/node_modules ./node_modules
+# `npm ci` never runs `prisma generate` - the generated query engine only exists
+# after that command runs, so it has to be copied in on top of the prod node_modules.
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/dist ./dist
+COPY package*.json ./
+
+RUN chown -R node:node /app
+USER node
+
+EXPOSE 3000
+CMD ["node", "dist/main"]

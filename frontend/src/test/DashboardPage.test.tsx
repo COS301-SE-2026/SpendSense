@@ -1,10 +1,12 @@
 import React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach,describe, it, expect, vi } from 'vitest'
 import DashboardPage from '../domains/DashboardPage'
 import'@testing-library/jest-dom'
 import { signOut } from '../features/auth/auth.service'
+import {NotificationsProvider} from '../features/notifications/NotificationsContext'
+import {getNotifications} from '../features/notifications/notificationsApi'
 
 vi.mock('@hugeicons/react', () => ({
   HugeiconsIcon: () => null,
@@ -20,7 +22,12 @@ vi.mock('../features/dashboard/dashboardApi', () => ({
     data: {
       userSummary: { displayName: 'Rachel' },
       creditProfile: { currentScore: 742 },
-      gamificationProfile: { xp: 850, mascotLevel: 4, currentPaymentStreak: 7 },
+      gamificationProfile: {
+        xp: 850,
+        mascotLevel: 4,
+        currentPaymentStreak: 7,
+        currentKnowledgeStreak: 4,
+      },
       upcomingPayments: [{
         id: 'payment-1',
         amountDue: 54,
@@ -33,14 +40,35 @@ vi.mock('../features/dashboard/dashboardApi', () => ({
   }),
 }))
 
+vi.mock('../features/credit-score/credit-scoreApi', () => ({
+  getCrditScore: () => Promise.resolve({
+    data: {
+      applicableRisk: { applied: false, cap: 850, reason: 'NONE' },
+      reasonForRiskCaps: '',
+      creditScore: 742,
+      creditScoreTier: 'GOOD',
+      savingsBuffer: 0.2,
+      onTimePaymentCount: 8,
+      onLatePaymentCount: 1,
+    },
+  }),
+}))
+
 vi.mock('../features/auth/auth.service', () => ({
   signOut: vi.fn(),
+}))
+
+vi.mock('../features/notifications/notificationsApi',()=>({
+    getNotifications:vi.fn(),
+    markAsRead:vi.fn(),
 }))
 
 function renderDashboard() {
   return render(
     <MemoryRouter>
-      <DashboardPage />
+      <NotificationsProvider>
+        <DashboardPage />
+      </NotificationsProvider>
     </MemoryRouter>
   )
 }
@@ -51,6 +79,20 @@ async function renderLoadedDashboard() {
 }
 
 describe('DashboardPage', () => {
+  beforeEach(()=>{
+    vi.clearAllMocks()
+    vi.mocked(getNotifications).mockResolvedValue({
+      data:{
+        notifications:[],
+        pagination:{
+          page:1,
+          perPage:1,
+          total:3,
+          totalPages:3,
+        },
+      },
+    })
+  })
   it('renders the user greeting', async () => {
     await renderLoadedDashboard()
     const heading = screen.getByRole('heading', { level: 1 })
@@ -64,9 +106,23 @@ describe('DashboardPage', () => {
     expect(screen.getByText('CREDIT SCORE')).toBeInTheDocument()
   })
 
-  it('renders the streak and level badges', async () => {
+  it('renders the knowledge streak and level badge', async () => {
     await renderLoadedDashboard()
-    expect(screen.getByText('7 day streak')).toBeInTheDocument()
+
+    expect(screen.getByText(/knowledge streak/i)).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('img', {
+        name: '4-days',
+      }),
+    ).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('group', {
+        name: '4 day knowledge streak',
+      }),
+    ).toBeInTheDocument()
+
     expect(screen.getByText('Lvl 4')).toBeInTheDocument()
   })
 
@@ -81,13 +137,6 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Coming Up')).toBeInTheDocument()
     expect(screen.getByText('Internet Service')).toBeInTheDocument()
     expect(screen.getByText('R 54.00')).toBeInTheDocument()
-  })
-
-  it('renders the Recent Activity section with a transaction', () => {
-    renderDashboard()
-    expect(screen.getByText('Recent Activity')).toBeInTheDocument()
-    expect(screen.getByText('Supermarket Store')).toBeInTheDocument()
-    expect(screen.getByText('−R 12.50')).toBeInTheDocument()
   })
 
   it('renders the Stickers section', () => {
@@ -111,14 +160,19 @@ describe('DashboardPage', () => {
     expect(homeLink).toHaveAttribute('aria-current', 'page')
   })
 
-  it('disables Quests and Profile navigation tabs', () => {
-    renderDashboard()
+  it('enables Quests navigation tabs', async () => {
+    await renderLoadedDashboard()
     const questsLink = screen.getByRole('link', { name: /quests/i })
+    expect(questsLink).not.toHaveAttribute('aria-disabled', 'true')
+    expect(questsLink).not.toHaveClass('pointer-events-none')
+    
+  })
+
+  it('enables Profile navigation tab', async () =>{
+    await renderLoadedDashboard()
     const profileLink = screen.getByRole('link', { name: /profile/i })
-    expect(questsLink).toHaveAttribute('aria-disabled', 'true')
-    expect(profileLink).toHaveAttribute('aria-disabled', 'true')
-    expect(questsLink).toHaveClass('pointer-events-none')
-    expect(profileLink).toHaveClass('pointer-events-none')
+    expect(profileLink).not.toHaveAttribute('aria-disabled', 'true')
+    expect(profileLink).not.toHaveClass('pointer-events-none')
   })
 
   it('renders nav links pointing to correct routes', async () => {
@@ -138,13 +192,15 @@ describe('DashboardPage', () => {
     vi.mocked(signOut).mockResolvedValue(undefined)
 
     render(
-      <MemoryRouter initialEntries={['/']}>
+    <MemoryRouter initialEntries={['/']}>
+      <NotificationsProvider>
         <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/login" element={<div>Login page</div>} />
+          <Route path="/" element={<DashboardPage/>}/>
+          <Route path="/login" element={<div>Login page</div>}/>
         </Routes>
-      </MemoryRouter>,
-    )
+      </NotificationsProvider>
+    </MemoryRouter>,
+)
 
     fireEvent.click(screen.getByRole('button', { name: /sign out/i }))
 

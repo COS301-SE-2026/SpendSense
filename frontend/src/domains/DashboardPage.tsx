@@ -5,8 +5,9 @@ import {
 	Calendar as CalendarIcon,
 	Trophy,
 	User,
-	ShoppingBag,
 	LogOut,
+    TrendingUp,
+    ChevronRight,
 } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { SparklesIcon, FireIcon, SunriseIcon } from "@hugeicons/core-free-icons"
@@ -17,9 +18,9 @@ import { Sticker } from "@/components/ui/sticker"
 
 import { CreditScoreGauge } from "@/components/common/CreditScoreGauge"
 import { CustomBadge } from "@/components/common/CustomBadges"
-import { IconButton } from "@/components/common/IconButton"
 import { LongButton } from "@/components/common/LongButton"
 import { XpPill } from "@/components/common/XpPill"
+import { NotificationBell } from "@/components/notifications/NotificationBell"
 
 import { cn } from "@/lib/utils"
 
@@ -27,14 +28,20 @@ import { UpcomingPaymentsCard } from "@/components/dashboard/UpcomingPaymentsCar
 import { CreditStatsSection } from "@/components/dashboard/CreditStats"
 import { getDashboard } from "@/features/dashboard/dashboardApi"
 import { signOut } from "@/features/auth/auth.service"
+import { useNotifications } from "@/features/notifications/useNotifications"
 
 import type { DashboardData } from "@/types/DashboardTypes"
+import type { CreditScore } from "@/types/credit-scoreTypes"
+import { getCrditScore } from "@/features/credit-score/credit-scoreApi"
+import { StreakFlame } from "@/components/common/StreakFlame"
+import { StreakTicks } from "@/components/common/StreakTicks"
 
 export default function DashboardPage() {
 	const navigate = useNavigate()
-
+	const {clearUnreadCount}=useNotifications()
 
 	const [dashboard, setDashboard] = React.useState<DashboardData | null>(null)
+	const [creditScore, setCreditScore] = React.useState<CreditScore | null>(null)
 
 
 	// loading and detting the dashboard 
@@ -44,6 +51,9 @@ export default function DashboardPage() {
 				const response = await getDashboard()
 				console.log("getDashboard response: ", response)
 				setDashboard(response.data)
+				const creditScoreResponse = await getCrditScore()
+				console.log("getCrditScore response: ", creditScoreResponse)
+				setCreditScore(creditScoreResponse.data)
 
 			} catch (error) {
 				console.error("getDashboard response: ", error)
@@ -60,15 +70,15 @@ export default function DashboardPage() {
 
 
 	const userSummary = dashboard?.userSummary
-	const creditProfile = dashboard?.creditProfile
 	const gamificationProfile = dashboard?.gamificationProfile
 	const upcomingPayments = dashboard?.upcomingPayments ?? []
+	console.log('Upcoming payments:', upcomingPayments );
 
 	const name = userSummary?.displayName
 
-	const score_ = creditProfile?.currentScore ?? 0
+	const score_ = creditScore?.creditScore ?? 0 // cuyrrent credit score 
 	const level_ = gamificationProfile?.mascotLevel ?? 1
-	const streakDays_ = gamificationProfile?.currentPaymentStreak ?? 0
+	const knowledgeStreak=gamificationProfile?.currentKnowledgeStreak??0
 
 	const xp = {
 		current: gamificationProfile?.xp ?? 0,
@@ -79,6 +89,7 @@ export default function DashboardPage() {
 	async function handleSignOut() {
 		try {
 			await signOut()
+			clearUnreadCount()
 			navigate("/login")
 		} catch (error) {
 			console.error("Failed to sign out:", error)
@@ -97,16 +108,7 @@ export default function DashboardPage() {
 					</div>
 
 					<div className="flex items-center gap-2">
-						<div className="relative">
-							<IconButton
-								IconVariant="iconNotif"
-								aria-label="Notifications"
-							/>
-							<span
-								aria-hidden="true"
-								className="pointer-events-none absolute right-1 top-1 size-2.5 rounded-full bg-[#FF6B9D] ring-2 ring-[#F4FBF7]"
-							/>
-						</div>
+						<NotificationBell/>
 						<button
 							type="button"
 							aria-label="Sign out"
@@ -124,19 +126,42 @@ export default function DashboardPage() {
 					<CreditScoreGauge score={score_} max={850} size="lg" />
 				</div>
 
-				<div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
-
-					<CustomBadge variant="streak" size="md"> {streakDays_} day streak </CustomBadge>
-					<CustomBadge variant="level" size="md"> Lvl {level_} </CustomBadge>
-					<Sticker tone="yellow" shape="squircle" size="sm" tilt="right">
-						<span className="px-2 text-[10px] font-bold tracking-wide text-[#091828]"> Early Bird </span>
-					</Sticker>
-
+				<div className="mt-3 flex flex-col items-center gap-2">
+					<CustomCard
+						className="flex w-full max-w-[280px] flex-col items-center rounded-2xl bg-[#FFF4F7] p-4"
+						data-testid="knowledge-streak"
+					>
+						<p className="text-xs font-bold uppercase tracking-wide text-[#6b6375]">Knowledge streak</p>
+						<StreakFlame
+							days={knowledgeStreak}
+							label="days"
+							size="sm"
+						/>
+						<StreakTicks
+							total={7}
+							completed={Array.from(
+								{length:Math.min(knowledgeStreak,7)},
+								(_,index)=>index,
+							)}
+							size="sm"
+							aria-label={`${knowledgeStreak} day knowledge streak`}
+						/>
+					</CustomCard>
+					<div className="flex items-center justify-center gap-2">
+						<CustomBadge variant="level" size="md">
+							Lvl {level_}
+						</CustomBadge>
+						<Sticker tone="yellow" shape="squircle" size="sm" tilt="right">
+							<span className="px-2 text-[10px] font-bold tracking-wide text-[#091828]">
+								Early Bird
+							</span>
+						</Sticker>
+					</div>
 				</div>
 
             </CustomCard>
 
-			<CreditStatsSection creditProfile={creditProfile} />
+			<CreditStatsSection creditScore={creditScore}/>
 
 
 				<section aria-label="Experience progress" className="mt-5" >
@@ -163,31 +188,55 @@ export default function DashboardPage() {
 
 				<UpcomingPaymentsCard upcomingPayments={upcomingPayments} />
 
-            <CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
-            <SectionHeader title="Recent Activity" meta="Last logged 2h ago" />
-    
-            <div className="mt-4 rounded-2xl bg-[#F4FBF7] p-4">
-                <div className="flex items-center gap-3">
-                <CategoryIcon tone="lilac">
-                    <ShoppingBag className="size-5" />
-                </CategoryIcon>
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-[#091828]">Supermarket Store</p>
-                </div>
-                <p className="text-base font-extrabold text-[#ac2a5d]">−R 12.50</p>
-                </div>
-            </div>
-    
-            <LongButton
-                LongVariant="primaryDark"
-                LongSize="md"
-                className="mt-4"
-                showArrow={false}
-                asChild
-            >
-                <Link to="/transactions">See all transactions</Link>
-            </LongButton>
-            </CustomCard>
+
+
+
+            <Link to = "/insights" className="mt-6 block">
+                <CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3">
+                    <CategoryIcon tone="pink">
+                        <TrendingUp className="size-5"/>
+                    </CategoryIcon>
+
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-[#091828]">Insights</p>
+                        <p className="text-xs text-[#6b6375]">10% more was spent on Food this week than last week.</p>
+                    </div>
+
+                    <ChevronRight className="size-4 shrink-0 text-[#6b6375]"/>
+                </CustomCard>
+            </Link>
+
+
+			{/*friends hub card*/}
+
+			<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
+ 
+				<SectionHeader title="Friends" meta="See what friends are up to" />
+
+				<div className="mt-4 flex items-center gap-3 rounded-2xl bg-[#F4FBF7] p-4">
+					<CategoryIcon tone="mint">
+						<User className="size-5" />
+					</CategoryIcon>
+					<div className="min-w-0 flex-1">
+						<p className="text-sm font-bold text-[#091828]">Friends Hub</p>
+						{/*TO DO: avatar row and online count when friends endpoint exists */}
+						<p className="text-xs text-[#6b6375]">Connect, compete and celebrate together.</p>
+					</div>
+				</div>
+
+				<LongButton
+					LongVariant="primaryMint"
+					LongSize="md"
+					className="mt-4"
+					showArrow={false}
+					asChild
+				>
+					<Link to="/friends">View Friends</Link>
+				</LongButton>
+			</CustomCard>
+ 
+
+			{/*sticker album card*/}
 
 				<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
 
@@ -287,8 +336,8 @@ function BottomNav({ active }: { active: BottomNavTab }) {
 				{/* Floating + action */}
 				<AddTransactionButton />
 
-				<BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} disabled={true} />
-				<BottomNavItem to="/profile" icon={<User className="size-5" />} label="Profile" active={active === "profile"} disabled={true} />
+				<BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} />
+				<BottomNavItem to="/profile" icon={<User className="size-5" />} label="Profile" active={active === "profile"} disabled={false} />
 			</div>
 		</nav>
 	)

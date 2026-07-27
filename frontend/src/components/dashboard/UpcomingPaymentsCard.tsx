@@ -5,24 +5,18 @@ import { CustomBadge } from "@/components/common/CustomBadges"
 import { LongButton } from "@/components/common/LongButton"
 import { SectionHeader } from "@/components/common/SectionHeader"
 import { CategoryIcon } from "@/components/common/CategoryIcon"
+import type { DashboardPayment } from "@/types/DashboardTypes"
 
-type UpcomingPayment = {
-    id: string
-    amountDue: number | string
-    currency: string
-    status: string
-    obligation?: {
-        name?: string
-    }
-}
+
+
 
 type UpcomingPaymentsCardProps = {
-    upcomingPayments: UpcomingPayment[]
+    upcomingPayments: DashboardPayment[]
 }
 
 
 // function for the upcoming payments JSX
-export function UpcomingPaymentsCard({ upcomingPayments }: UpcomingPaymentsCardProps ) {
+export function UpcomingPaymentsCard({ upcomingPayments }: UpcomingPaymentsCardProps) {
     return (
         <CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
             <SectionHeader title="Coming Up" meta={`${upcomingPayments.length} upcoming payments`} />
@@ -47,10 +41,10 @@ export function UpcomingPaymentsCard({ upcomingPayments }: UpcomingPaymentsCardP
     )
 }
 
-function UpcomingPaymentItem({ payment }: { payment: UpcomingPayment }) {
+function UpcomingPaymentItem({ payment }: { payment: DashboardPayment }) {
 
     const name = payment?.obligation?.name ?? "unamed ayment"
-    const status = payment?.status ?? "PENDING"
+    const status = payment?.status ?? "UNKNOWN"
     const amount = Number(payment?.amountDue ?? 0).toFixed(2)
     const currency = payment?.currency === "ZAR" ? "R" : payment?.currency ?? "R"
 
