@@ -36,7 +36,6 @@ Functionalities like receipt scanning and optical character recognition, AI-gene
 As a User  
 I want to add a new financial obligation  
 So that I can track recurring or one-off payments and receive reminders before they are due  
-
 ###### Acceptance criteria
 Given I am logged into the app and have opened the New obligation page  
 When I enter the obligation amount, type, reason, priority, due date, optional end date, payment frequency, total occurrences, description, reminder choice, and notification medium, and select “Log it”  
@@ -47,7 +46,6 @@ Then the obligation is saved and the required payment occurrences and in-app rem
 As a User  
 I want to view my financial obligations on the calendar  
 So that I can see when each payment is due and whether it still requires attention  
-
 ###### Acceptance criteria
 Given I have at least one financial obligation with generated payment occurrences  
 When I open the financial calendar  
@@ -58,7 +56,6 @@ Then I can see the obligation and its payment occurrences together with their du
 As a User  
 I want to view the details of a financial obligation  
 So that I can understand the full payment schedule and the information saved for that obligation  
-
 ###### Acceptance criteria
 Given I am viewing the calendar or another available obligation view  
 When I select a financial obligation or one of its payment occurrences  
@@ -69,7 +66,6 @@ Then I can see its amount, type, reason, priority, due date, optional end date, 
 As a User  
 I want to edit an existing financial obligation  
 So that I can correct or update its payment and reminder information  
-
 ###### Acceptance criteria
 Given an existing financial obligation belongs to my account  
 When I open the obligation, edit its information, and save the changes  
@@ -80,7 +76,6 @@ Then the updated obligation is stored and its affected future payment occurrence
 As a User  
 I want to delete an existing financial obligation  
 So that obligations that are no longer relevant do not remain in my active financial records  
-
 ###### Acceptance criteria
 Given an existing financial obligation belongs to my account  
 When I select the option to delete the obligation and confirm the action  
@@ -92,7 +87,6 @@ Then the obligation is removed from my active obligations and its future occurre
 As a User  
 I want to select a due payment from the dashboard or calendar  
 So that I can record a payment against the correct financial obligation  
-
 ###### Acceptance criteria
 Given I have at least one outstanding payment occurrence  
 When I select the payment from the dashboard or calendar  
@@ -103,7 +97,6 @@ Then the Add Payment page displays the selected obligation name, payment type, p
 As a User  
 I want to enter the payment method, payment date, amount, and optional notes  
 So that the system can accurately record how and when the payment was made  
-
 ###### Acceptance criteria
 Given I have selected an outstanding payment occurrence  
 When I enter valid payment details  
@@ -114,7 +107,6 @@ Then the payment information is accepted and is ready to be submitted
 As a User  
 I want to submit the completed payment information  
 So that the payment is recorded and my financial progress is updated  
-
 ###### Acceptance criteria
 Given I have selected a payment occurrence and entered valid payment information  
 When I select “Log Payment”  
@@ -125,7 +117,6 @@ Then the payment is saved, the payment occurrence status is updated, and the rel
 As a User  
 I want to edit a payment that I previously recorded  
 So that I can correct inaccurate payment information  
-
 ###### Acceptance criteria
 Given an existing payment record belongs to my account  
 When I open the payment, update its amount, date, payment method, or notes, and save the changes  
@@ -136,7 +127,6 @@ Then the edited payment is stored and the related payment and financial-health i
 As a User  
 I want to delete an incorrect or duplicate payment  
 So that my payment history and financial-health information remain accurate  
-
 ###### Acceptance criteria
 Given an existing payment record belongs to my account  
 When I select the option to delete the payment and confirm the action  
@@ -147,7 +137,6 @@ Then the payment is removed and the related payment occurrence and financial-hea
 As a User  
 I want to view my payment history  
 So that I can review the payments I have made toward my financial obligations  
-
 ###### Acceptance criteria
 Given I have previously recorded one or more payments  
 When I open the payment history  
@@ -159,7 +148,6 @@ Then I can see my previous payments together with their amounts, payment dates, 
 As a User  
 I want to view my simulated credit score and its explanation  
 So that I can understand my current financial-health position and the reasons for it  
-
 ###### Acceptance criteria
 Given my account has financial-health information  
 When I open the dashboard or credit score page  
@@ -170,7 +158,6 @@ Then I can see my current simulated credit score, score tier, score breakdown, a
 As a User  
 I want to view my earned and locked badges  
 So that I can track my achievements and understand how to earn additional rewards  
-
 ###### Acceptance criteria
 Given I am logged into the application  
 When I open the badge or sticker collection page  
@@ -181,7 +168,6 @@ Then I can see the badges I have earned, the badges that remain locked, and the 
 As a User  
 I want to view my on-time payment streak  
 So that I can monitor how consistently I make payments by their due dates  
-
 ###### Acceptance criteria
 Given I have recorded payment activity  
 When I open the dashboard, profile, or gamification page  
@@ -192,7 +178,6 @@ Then I can see my current on-time payment streak and my longest recorded on-time
 As a User  
 I want to view my coins balance  
 So that I know how many coins I have earned from financial activities and rewards  
-
 ###### Acceptance criteria
 Given I have completed activities that can award coins  
 When I open a page that displays my gamification progress  
@@ -204,7 +189,6 @@ Then I can see my current coins balance
 As a User  
 I want to view my simulated credit score on the dashboard  
 So that I can quickly understand my current financial-health position  
-
 ###### Acceptance criteria
 Given I am logged into the application  
 When I open the dashboard  
@@ -215,7 +199,6 @@ Then I can see my current simulated credit score and its most recent movement
 As a User  
 I want to view the breakdown of my simulated credit score  
 So that I can understand which parts of my financial behaviour contribute to the score  
-
 ###### Acceptance criteria
 Given my simulated credit score has been calculated  
 When I open the credit score breakdown  
@@ -226,7 +209,6 @@ Then I can see the contributing factors, their effect on the score, and any appl
 As a User  
 I want to view the tier associated with my simulated credit score  
 So that I can understand how the system classifies my current financial-health position  
-
 ###### Acceptance criteria
 Given my simulated credit score has been calculated  
 When I view the dashboard or credit score details  
@@ -238,7 +220,6 @@ Then I can see the tier that corresponds to my current score
 As a User  
 I want to view a breakdown of my financial obligations by category  
 So that I can understand where my committed money is going  
-
 ###### Acceptance criteria
 Given I have financial obligations assigned to categories  
 When I open the spending category breakdown on the insights page  
@@ -249,7 +230,6 @@ Then I can see how my obligations are distributed across the available categorie
 As a User  
 I want to view changes in my financial obligations over time  
 So that I can see whether my committed spending is increasing, decreasing, or remaining stable  
-
 ###### Acceptance criteria
 Given I have obligation data for the current and previous periods  
 When I open the spending trends insight  
@@ -260,7 +240,6 @@ Then I can compare the current obligation total with the previous period and see
 As a User  
 I want to view my on-time payment rate  
 So that I can measure how reliably I make payments by their due dates  
-
 ###### Acceptance criteria
 Given I have recorded payment outcomes  
 When I open the on-time payment rate insight  
@@ -271,7 +250,6 @@ Then I can see the percentage of my payments made on time and its comparison wit
 As a User  
 I want to view my upcoming payment pressure  
 So that I can prepare for financial obligations that are due soon  
-
 ###### Acceptance criteria
 Given I have payment occurrences due within the upcoming period  
 When I open the upcoming payment pressure insight  
@@ -282,7 +260,6 @@ Then I can see the number and total value of the upcoming payments and whether t
 As a User  
 I want to view insights about my recent payment behaviour  
 So that I can identify positive payment streaks and behaviour that requires improvement  
-
 ###### Acceptance criteria
 Given I have recent payment activity  
 When I open the streak behaviour insight  
@@ -295,7 +272,6 @@ Then I can see behaviour-based information such as consecutive on-time payments 
 As a User  
 I want to complete a daily financial literacy quiz  
 So that I can improve my financial knowledge and earn gamification progress  
-
 ###### Acceptance criteria
 Given today’s daily quiz is available to me  
 When I answer all required questions correctly and complete the session  
@@ -306,7 +282,6 @@ Then the quiz is marked as complete and I receive the applicable coins, experien
 As a User  
 I want to resume an incomplete quiz  
 So that I can continue without losing the progress I already made  
-
 ###### Acceptance criteria
 Given I have an unfinished quiz session  
 When I return to the quiz page  
@@ -317,7 +292,6 @@ Then the existing session is restored and I continue from the current question w
 As a User  
 I want to view the available financial topic quizzes  
 So that I can choose a financial subject that I want to learn about  
-
 ###### Acceptance criteria
 Given financial topic quizzes are available  
 When I open the topic quiz selection page  
@@ -328,7 +302,6 @@ Then I can see the available financial topics and select one to continue
 As a User  
 I want to complete a lesson and quiz for a selected financial topic  
 So that I can learn the concept before testing my understanding  
-
 ###### Acceptance criteria
 Given I have selected an available financial topic  
 When I read its lesson and correctly answer all required quiz questions  
@@ -339,7 +312,6 @@ Then the topic quiz is completed and I receive the applicable results and reward
 As a User  
 I want to view my knowledge streak  
 So that I can monitor how consistently I complete financial learning activities  
-
 ###### Acceptance criteria
 Given I have completed financial literacy quizzes  
 When I open the quiz, dashboard, or profile page  
@@ -350,7 +322,6 @@ Then I can see my current knowledge streak and my longest recorded knowledge str
 As a User  
 I want to receive feedback after answering a quiz question  
 So that I can understand why my answer was correct or incorrect  
-
 ###### Acceptance criteria
 Given I am completing an active quiz session  
 When I select and submit an answer  
@@ -361,7 +332,6 @@ Then the system shows whether the answer is correct or incorrect, provides an ex
 As a User  
 I want to view my quiz results  
 So that I can review my performance and the progress earned from the completed session  
-
 ###### Acceptance criteria
 Given I have correctly answered all questions required to complete the quiz  
 When the quiz session ends  
@@ -373,7 +343,6 @@ Then I can see the quiz result summary and any applicable coins, experience poin
 As a User  
 I want to view my notifications inbox  
 So that I can see important reminders, warnings, score changes, and rewards  
-
 ###### Acceptance criteria
 Given notifications exist for my account  
 When I select the notification icon and open the inbox  
@@ -384,7 +353,6 @@ Then I can see my payment reminders, overdue payment notifications, credit score
 As a User  
 I want to mark a notification as read  
 So that I can distinguish notifications I have already reviewed from those that still require attention  
-
 ###### Acceptance criteria
 Given an unread notification exists in my inbox  
 When I open it or select the option to mark it as read  
@@ -395,7 +363,6 @@ Then the notification is marked as read and my unread notification count is upda
 As a User  
 I want to filter my notifications by type  
 So that I can find a particular category of notification more easily  
-
 ###### Acceptance criteria
 Given my notification inbox contains notifications of different types  
 When I choose a notification type filter  
@@ -406,7 +373,6 @@ Then the inbox displays only notifications that match the selected type
 As a User  
 I want to set how many days before a payment I receive a reminder  
 So that payment reminders are delivered according to my preferred notice period  
-
 ###### Acceptance criteria
 Given I am logged into the application and have opened the reminder settings  
 When I choose the number of days before a payment and save the preference  
@@ -417,7 +383,6 @@ Then the preference is stored and used when scheduling future in-app payment rem
 As a User  
 I want to manage the notifications in my inbox  
 So that I can keep track of which notifications still require my attention  
-
 ###### Acceptance criteria
 Given my notification inbox contains one or more notifications  
 When I open, select, mark as read, or remove supported notifications  
@@ -429,7 +394,6 @@ Then the selected actions are applied and the inbox and unread count are updated
 As a User  
 I want to view my profile page  
 So that I can see my account information and overall financial and gamification progress  
-
 ###### Acceptance criteria
 Given I am logged into the application  
 When I select the profile option from the application navigation  
@@ -440,7 +404,6 @@ Then I can see my profile information, credit score tier, payment and knowledge 
 As a User  
 I want to edit my profile details  
 So that my personal and financial profile information remains accurate  
-
 ###### Acceptance criteria
 Given I have opened my profile page  
 When I update supported details such as my display name, profile picture, or monthly budget and save the changes  
@@ -451,7 +414,6 @@ Then the updated information is stored and displayed on my profile page
 As a User  
 I want to edit my application settings  
 So that the application reflects my personal preferences  
-
 ###### Acceptance criteria
 Given I have opened the settings page  
 When I update one or more supported preferences and save the changes  
@@ -462,7 +424,6 @@ Then the selected preferences are stored in my account
 As a User  
 I want to view help and support information  
 So that I can understand how the application’s financial and gamification features work  
-
 ###### Acceptance criteria
 Given I am viewing the profile or settings page  
 When I select the help and support option  
@@ -473,7 +434,6 @@ Then I can access frequently asked questions, tutorials, and explanations of the
 As a User  
 I want to view my sticker album  
 So that I can review the stickers I have earned and the stickers I can still unlock  
-
 ###### Acceptance criteria
 Given I am logged into the application  
 When I select the sticker album option from my profile page  
@@ -484,7 +444,6 @@ Then I can see my earned and locked stickers together with the available informa
 As a User  
 I want to access my financial insights from my profile page  
 So that I can review information derived from my obligations and payment behaviour  
-
 ###### Acceptance criteria
 Given financial insight data is available for my account  
 When I select the insights option from my profile page  
