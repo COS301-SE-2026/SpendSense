@@ -33,9 +33,7 @@ Functionalities like receipt scanning and optical character recognition, AI-gene
 ## 3. Use Cases
 
 ### UC1: Financial Obligation Management
-<img width="1256" height="1500" alt="Image" src="https://github.com/user-attachments/assets/48e9e14c-2273-4f44-8da7-607c0394f1f2" />
-
-### UC1: Financial Obligation Management
+<img width="1200" alt="UC1: Financial Obligation Management" src="./images/UC1.jpeg" />
 
 #### UC1.1: Add obligation
 **This use case begins with** the authorised user accessing the New obligation page, putting in the obligation amount, picking the type of obligation, and supplying the necessary information. This information could be the reason for the obligation, its priority level, due date, optional end date, frequency of payments, total occurrence, description, reminder choice, and notification medium.
@@ -58,7 +56,7 @@ Functionalities like receipt scanning and optical character recognition, AI-gene
 **This use case ends with** the financial responsibility being deleted from the list of the user’s financial responsibilities as well as any notifications about them not appearing in the calendar anymore.
 
 ### UC2: Logging Payments
-<img width="1292" height="2320" alt="Image" src="https://github.com/user-attachments/assets/b7c2fe78-b360-4d0b-87fd-182816841db9" />
+<img width="1200" alt="UC2: Logging Payments" src="./images/UC2.jpeg" />
 
 #### UC2.1: Select a due payment
 **This use case begins with** the authorised user opening the calendar or dashboard and choosing an outstanding payment occurrence.
@@ -85,7 +83,7 @@ Functionalities like receipt scanning and optical character recognition, AI-gene
 **This use case ends with** viewing of the previous payments of the user along with their amounts, payment dates, obligations, and payment status.
 
 ### UC3: Gamification & Rewards
-<img width="1300" height="1580" alt="Image" src="https://github.com/user-attachments/assets/26d4e2a6-fa67-4983-9f0b-e75aae72699d" />
+<img width="1200" alt="UC3: Gamification & Rewards" src="./images/UC3.jpeg" />
 
 #### UC3.1: View Credit score & Explination
 **This use case begins with** the authorised user entering the dashboard or credit score page and choosing to check their credit score.
@@ -105,7 +103,7 @@ Functionalities like receipt scanning and optical character recognition, AI-gene
 
 
 ### UC4: Credit Score
-<img width="1260" height="972" alt="Image" src="https://github.com/user-attachments/assets/88a75ec7-8871-4ea4-a594-92b00b037606" />
+<img width="1200" alt="UC4: Credit Score" src="./images/UC4.jpeg" />
 
 #### UC4.1: View credit score on dashboard
 **This use case begins with** the authorised user accesses the dashboard after login into the application.
@@ -120,7 +118,7 @@ Functionalities like receipt scanning and optical character recognition, AI-gene
 **This use case ends with** the user gets to see the tier corresponding to the user's current credit score.
 
 ### UC5: Stats-based Insights
-<img width="1260" height="1560" alt="Image" src="https://github.com/user-attachments/assets/afdc53cb-74cf-4432-84be-3c31f209141f" />
+<img width="1200" alt="UC5: Stats-based Insights" src="./images/UC5.jpeg" />
 
 #### UC5.1: View spending category breakdown
 **This use case begins with** The authorised user visits the insights page and picks the category breakdown of spending.
@@ -143,7 +141,7 @@ Functionalities like receipt scanning and optical character recognition, AI-gene
 **This use case ends with** the user can check his/her behaviour-based details like streak of on-time payments and missed payments during the present period.
 
 ### UC6: Financial Literacy Quiz
-<img width="1272" height="1968" alt="Image" src="https://github.com/user-attachments/assets/0cb385ac-d2f4-45df-b9e9-fb6c4f4b08f2" />
+<img width="1200" alt="UC6: Financial Literacy Quiz" src="./images/UC6.jpeg" />
 
 #### UC6.1: Do daily quiz
 **This use case begins with** the authorised user accesses the quiz page and chooses the daily quiz.
@@ -198,7 +196,7 @@ Functionalities like receipt scanning and optical character recognition, AI-gene
 
 
 ### UC8: Profile Page
-<img width="1268" height="1712" alt="Image" src="https://github.com/user-attachments/assets/e1588b34-4823-4392-9ed8-bf109c6bed5d" />
+<img width="1200" alt="UC8: Profile Page" src="./images/UC8.jpeg" />
 
 #### UC8.1: View profile page
 **This use case begins with** the authorized user accesses the profile page using the application navigation menu.
