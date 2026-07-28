@@ -16,12 +16,7 @@ export async function getReminderPreferences(){
 
 export async function updateReminderPreferences(body:{
     inAppEnabled?: boolean
-    emailEnabled?: boolean
-    pushEnabled?: boolean
-    smsEnabled?: boolean
     defaultReminderDaysBefore?: number
-    quietHoursStart?: string | null
-    quietHoursEnd?: string | null
 }) 
 {
     return apiFetch('/reminder-preferences', {method: 'PATCH', body: JSON.stringify(body)})
