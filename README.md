@@ -3,33 +3,20 @@
 <br>
 
 <!-- replace with spendsense logo -->
-<img src="docs/assets/images/spendsense-logo-animated.svg" width="420" alt="SpendSense" />
+<img src="docs/assets/spendsense-logo-animated.svg" width="420" alt="SpendSense" />
 
 <br><br>
 
-<img src="docs/assets/images/MARK2-logo.png" width="430" alt="Team MARK2" />
+<img src="docs/assets/MARK2-logo.png" width="430" alt="Team MARK2" />
 
 <br><br>
 
-<img src="docs/assets/images/epiuse-advance-logo.webp" width="330" alt="EPI-USE Labs & Advance" />
+<img src="docs/assets/epiuse-advance-logo.webp" width="330" alt="EPI-USE Labs & Advance" />
 &nbsp;&nbsp;&nbsp;&nbsp;
-<img src="docs/assets/images/up-logo.webp" width="150" alt="University of Pretoria" />
+<img src="docs/assets/up-logo.webp" width="150" alt="University of Pretoria" />
 
 </div>
 
----
-
-# Table of contents
-
-- [What Is SpendSense?](#what-is-spendsense)
-- [Documentation](#documentation)
-- [Features](#features)
-- [Technology Stack](#technology-stack)
-- [Repository Structure](#repository-structure)
-- [Getting Started](#getting-started)
-- [Git Workflow](#git-workflow)
-- [Environment and Secrets](#environment-and-secrets)
-- [Team MARK2](#team-mark2)
 
 ---
 
@@ -57,6 +44,21 @@ _COS 301 Capstone 2026 · Team MARK2 · EPI-USE Labs & Advance · University of 
 [![Project Board](https://img.shields.io/badge/Project_Board-View-0075ca?style=for-the-badge&logo=github&logoColor=white)](https://github.com/orgs/COS301-SE-2026/projects/83)
 
 <br>
+
+---
+
+# Table of contents
+
+- [What Is SpendSense?](#what-is-spendsense)
+- [Documentation](#documentation)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Repository Structure](#repository-structure)
+- [Getting Started](#getting-started)
+- [Git Workflow](#git-workflow)
+- [Environment and Secrets](#environment-and-secrets)
+- [Team MARK2](#team-mark2)
+
 
 ---
 
