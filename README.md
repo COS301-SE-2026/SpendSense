@@ -254,7 +254,12 @@ docker compose exec backend npm run prisma:seed:demo
 ```
 ---
 
-Services run locally at:
+
+
+
+The backend dev container generates Prisma Client on startup, so teammates do not need to run `prisma generate` manually after normal Docker starts.
+
+Initially Docker may take a minute to get up and running but once complete check the services that run locally at:
 
 | Service | URL |
 |---|---|
@@ -265,8 +270,7 @@ Services run locally at:
 | MinIO | `http://localhost:9001` |
 
 
-
-The backend dev container generates Prisma Client on startup, so teammates do not need to run `prisma generate` manually after normal Docker starts.
+<br>
 
 <details>
 <summary><strong>All available commands</strong></summary>
@@ -325,19 +329,6 @@ Prisma docs:
 
 </details>
 
-<details>
-<summary><strong>First run notes</strong></summary>
-<br>
-
-The first Docker build on a new machine may take a while as base images and dependencies need to be downloaded. Once running, check:
-
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:3000`
-- AI health check: `http://localhost:8000/health`
-- AI OpenAPI spec: `http://localhost:8000/openapi.json`
-- MinIO: `http://localhost:9001`
-
-</details>
 
 ---
 
