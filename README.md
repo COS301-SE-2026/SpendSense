@@ -15,9 +15,29 @@
 &nbsp;&nbsp;&nbsp;&nbsp;
 <img src="docs/assets/images/up-logo.webp" width="150" alt="University of Pretoria" />
 
-<br><br>
+</div>
+
+---
+
+# Table of contents
+
+- [What Is SpendSense?](#what-is-spendsense)
+- [Documentation](#documentation)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Repository Structure](#repository-structure)
+- [Getting Started](#getting-started)
+- [Git Workflow](#git-workflow)
+- [Environment and Secrets](#environment-and-secrets)
+- [Team MARK2](#team-mark2)
+
+---
+
+<div align="center">
 
 # SpendSense
+
+</div>
 
 **A gamified financial tracking platform for students and young adults.**
 
@@ -37,22 +57,6 @@ _COS 301 Capstone 2026 · Team MARK2 · EPI-USE Labs & Advance · University of 
 [![Project Board](https://img.shields.io/badge/Project_Board-View-0075ca?style=for-the-badge&logo=github&logoColor=white)](https://github.com/orgs/COS301-SE-2026/projects/83)
 
 <br>
-
-</div>
-
----
-
-# Table of contents
-
-- [What Is SpendSense?](#what-is-spendsense)
-- [Features](#features)
-- [Technology Stack](#technology-stack)
-- [Repository Structure](#repository-structure)
-- [Documentation](#documentation)
-- [Getting Started](#getting-started)
-- [Git Workflow](#git-workflow)
-- [Environment and Secrets](#environment-and-secrets)
-- [Team MARK2](#team-mark2)
 
 ---
 
