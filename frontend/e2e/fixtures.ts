@@ -1,13 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 import { ProfileProgress } from '../../test-support/scenarios/profile';
 
-type ProfilePge={
-  mascotLevel: number;
-  coinBalance: number;
-  currentPaymentStreak: number;
-  scoreTier: 'BUILDING'|'FAIR'|'GOOD'|'EXCELLENT'|'ELITE';
-};
-
 type E2eFixtures = {
   scenario: {
     payments: {
