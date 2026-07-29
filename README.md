@@ -42,6 +42,20 @@ _COS 301 Capstone 2026 · Team MARK2 · EPI-USE Labs & Advance · University of 
 
 ---
 
+# Table of contents
+
+- [What Is SpendSense?](#what-is-spendsense)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Repository Structure](#repository-structure)
+- [Documentation](#documentation)
+- [Getting Started](#getting-started)
+- [Git Workflow](#git-workflow)
+- [Environment and Secrets](#environment-and-secrets)
+- [Team MARK2](#team-mark2)
+
+---
+
 <div align="center">
 
 ## What Is SpendSense?
@@ -53,6 +67,40 @@ Students juggle rent, subscriptions, BNPL instalments, and informal IOUs scatter
 Track what you owe and when it is due. See exactly how your payment behaviour would affect a simulated credit score, without any real-world risk. Get rewarded for paying on time through streaks, badges, coins, and a mascot that visibly reflects your financial health.
 
 > _"Make the invisible visible, simulate real-world consequences safely, and make good financial habits worth pursuing."_
+
+---
+
+<div align="center">
+
+## Documentation
+
+</div>
+
+<details>
+<summary> <b> Demo 1</b> </summary>
+</details>
+
+<details>
+<summary> <b> Demo 2</b> </summary>
+
+* [SRS](./docs/Demo2/SRS.md)
+* [SAS](./docs/Demo2/SAS.md)
+* [Updated Brand Style Guide PDF]()
+* [Coding Standards Document](./docs/Demo2/Coding-Standards-Document.md)
+* [User Manual Document](./docs/Demo2/User-Manual-Document.md)
+* [Testing Policy Document](./docs/Demo2/Testing-Policy-Document.md)
+
+</details>
+
+<details>
+<summary> <b> Demo 3</b> </summary>
+Watch this space !
+</details>
+
+<details>
+<summary> <b> Demo 4</b> </summary>
+Watch this space !
+</details>
 
 ---
 
@@ -158,35 +206,8 @@ SpendSense/
 └── docker-compose.yml
 ```
 
----
 
-<div align="center">
 
-## Documentation
-
-</div>
-
-| Document | Link |
-|---|---|
-| SRS Folder | [`docs/srs/`](docs/srs/) |
-| Functional Requirements | [`docs/srs/Functional Requirements.md`](docs/srs/Functional%20Requirements.md) |
-| User Stories | [`docs/srs/User Stories.md`](docs/srs/User%20Stories.md) |
-| Use Cases | [`docs/srs/Use Cases.md`](docs/srs/Use%20Cases.md) |
-| Quality Requirements | [`docs/srs/Quality Requirements.md`](docs/srs/Quality%20Requirements.md) |
-| Domain Model Explanation | [`docs/srs/Domain-Model-Explanation.md`](docs/srs/Domain-Model-Explanation.md) |
-| API Contract | [`docs/srs/api-contract.md`](docs/srs/api-contract.md) |
-
----
-
-Services run locally at:
-
-| Service | URL |
-|---|---|
-| Frontend | `http://localhost:5173` |
-| Backend | `http://localhost:3000` |
-| AI service | `http://localhost:8000` |
-| PostgreSQL | `localhost:5432` |
-| MinIO | `http://localhost:9001` |
 
 ---
 
@@ -225,6 +246,19 @@ docker compose exec backend npx prisma migrate deploy
 docker compose exec backend npm run prisma:seed
 docker compose exec backend npm run prisma:seed:demo
 ```
+---
+
+Services run locally at:
+
+| Service | URL |
+|---|---|
+| Frontend | `http://localhost:5173` |
+| Backend | `http://localhost:3000` |
+| AI service | `http://localhost:8000` |
+| PostgreSQL | `localhost:5432` |
+| MinIO | `http://localhost:9001` |
+
+
 
 The backend dev container generates Prisma Client on startup, so teammates do not need to run `prisma generate` manually after normal Docker starts.
 
