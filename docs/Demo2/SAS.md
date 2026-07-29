@@ -34,7 +34,7 @@ A regular flow starts at Presentation Layer and proceeds to Access Layer control
 
 **Trade-offs and limitations:** Adding layers adds to the number of components that the request needs to go through. This could lead to code and even more indirection and complexity of ideas. Simple actions might need the addition of a frontend component, API, a controller, a service action, data-access and finally the response model.
 However, the pattern will work effectively when there is consistency in the application of its boundaries. For instance, when there are business rules in the frontend component, there is no use of services while accessing the database in controllers and one service accessing the other module’s inner workings.
-This kind of abstraction increases maintainability and testability of the code, but also leads to overhead and makes the code harder to understand by new programmers. The separation and abstraction localise change but can add more layers and overhead
+This kind of abstraction increases maintainability and testability of the code, but also leads to overhead and makes the code harder to understand by new programmers. The separation and abstraction localize change but can add more layers and overhead.
 
 #### Client–Server Architecture
 **Purpose:** The purpose of the client-server architecture is to separate the application, which deals with the client end, from the central server that will process all the business logic and security and manage all the accesses to data.
@@ -135,25 +135,48 @@ The `use<Operation>Session` hooks operate as the facade design pattern, this enc
 ## 4. API Contracts
 ### 4.1 Authentication Services
 #### 4.1.1 User Registration Service
-**Description:** 
-**Endpoint:** 
+**Description:** Registers a new user account.
+
+**Endpoint:** `POST /api/v1/auth/register`
+
 **Inputs:** 
-**Outputs:** 
+| Name | Type| Description|
+|---|---|---|
+| payload | object| Registration payload|
+
+**Outputs:**  Authenticated session or registration result
+
 **Usage/Interaction Rules:** 
+- Send a `POST` request to `/api/v1/auth/register`
 
 #### 4.1.2 User Login Service
-**Description:** 
-**Endpoint:** 
+
+**Description:** Authenticates an existing user and creates a session
+
+**Endpoint:** `POST /api/v1/auth/login`
+
 **Inputs:** 
-**Outputs:** 
+| Name | Type| Description|
+|---|---|---|
+| credentials | object| User login credentials |
+
+**Outputs:** Authenticated session
+
 **Usage/Interaction Rules:** 
+- Send a `POST` request to `/api/v1/auth/login`
 
 #### 4.1.3 User Logout Service
-**Description:** 
-**Endpoint:** 
-**Inputs:** 
-**Outputs:** 
+
+**Description:** Terminate the current authenticated session.
+
+**Endpoint:** `POST /api/v1/auth/logout`
+
+**Inputs:** None
+
+**Outputs:** None
+
 **Usage/Interaction Rules:** 
+- Send a `POST` request to `/api/v1/auth/logout`
 
 ### 4.2 User Services
 #### 4.2.1 Get Current User Service
