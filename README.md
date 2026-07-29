@@ -205,9 +205,10 @@ SpendSense/
 ├── backend/          # NestJS API
 ├── ai/               # Python FastAPI AI microservice
 ├── docs/             # Project documentation
-│   ├── srs/          # Software Requirements Specification
-│   └── assets/
-│       └── images/   # Logos, team photos, and other assets
+│   ├── Demo1/        # Demo 1 Documentation
+|   ├── Demo2/        # Demo 2 Documentation
+│   ├── assets/       # logo images and animations
+│   └── team/         # team images
 ├── scripts/          # Helper scripts for local development
 └── docker-compose.yml
 ```
