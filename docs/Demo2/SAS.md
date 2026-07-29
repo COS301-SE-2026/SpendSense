@@ -87,14 +87,12 @@ Despite these downsides, this architecture consciously takes all those risks to 
 #### Model–View–ViewModel
 **Purpose:** The purpose of the Model-View-ViewModel design is to seperate the UI and its state from the logic of interaction and the models of data representation. Otherwise, the View will have to do both UI and all the other operations.
 **Why the pattern was selected:** In SpendSense, there are interactive views with states of loading, user interaction, validation, filtering, navigation, API calls, and changing finance data. It would complicate the frontend greatly if that code were to be added to UI elements directly.
-MVVM pattern was chosen to make the roles of the frontend clear:
-- The View deals with rendering UI and handling user interaction
-- The ViewModel handles the frontend behavior and interaction with the Model
+MVVM pattern was chosen to make the roles of the frontend clear where the View deals with rendering UI and handling user interaction and the ViewModel handles the frontend behavior and interaction with the Model.
 
 **Structure and application in SpendSense:** The following are the MVVM responsibilities in practice:
-- The View is made up of React pages and reusable view components. This part shows the data and passes user actions to the ViewModel.
-- The ViewModel includes presentation logic, hooks, form management, validation, event handling, and coordination with the API. It prepares the data to be shown by the View.
-- The Model contains frontend data types, domain models, API requests, and API responses sent by the backend.
+- *The View* is made up of React pages and reusable view components. This part shows the data and passes user actions to the ViewModel.
+- *The ViewModel* includes presentation logic, hooks, form management, validation, event handling, and coordination with the API. It prepares the data to be shown by the View.
+- *The Model* contains frontend data types, domain models, API requests, and API responses sent by the backend.
 
 The View doesn't communicate directly with the backend controllers. User actions are processed by the ViewModel, which performs the necessary frontend API calls and updates the presentation state based on the server's reply.
 For example, on the Notifications page, the View shows the notifications list, the filters, the loading state, and the unread notifications status. The ViewModel is responsible for loading notifications, applying the type filter, reading notifications, handling errors, and updating the displayed data. The Model contains notification types, API responses, pagination info, and read status values.
@@ -105,10 +103,25 @@ For example, on the Notifications page, the View shows the notifications list, t
 - *Reusability:* ViewModels, hooks, models, and visual parts can be used repeatedly in different pages.
 - *Usability:* predictable handling of presentation states makes possible proper loading, success, empty, and failure states.
 - *Understandability:* developers find it easier to determine which part is responsible for visual aspects, behaviour, and data.
+- 
 **Trade-offs and limitations:** With MVVM there is an extra level of abstraction between the View and the backend system. What was once a simple page will need separate pieces for hooks, components, models and API calls, making more files and abstractions.
 It is also possible to have confusion between the View and the ViewModel when using React due to hooks and component code being written in the same file. For that reason, the MVVM architecture has to be strictly adhered to, not by using separate files, but through naming conventions and responsibilities.
 Incorrectly developed ViewModels can grow too big and start including business rules which should stay in the backend Service Layer. The ViewModel on the client side is responsible for presentation logic only, while business rules and financial calculations should take place in the backend.
 ### 2.2 Design Patterns
+#### 2.2.1 Factory Method
+The factory method is used in end-to-end testing infrastructure, specifically within the mock object test factories. The test setup utilized the dedicated factory files to instantiate and populate the standardised test objects on demand. This provides a clean,  standard mock object generation pipeline for testing without hardcoding objects across test suits. It simplifies test data setup, prevents duplication and ensures consistency across the test cases.
+
+#### 2.2.2 Factory Method with Template Method
+The factory method combined with the template method is used for the users, if a user doesn't exist, the factory uses the template to create the user. This is done to centralize the multi-table initialization logic into a repeatable template structure. It ensures that when a new user is made all of its required entities are instantiated reliably without spreading the logic.
+
+#### 2.2.3 Observer 
+The observer design pattern is used in the notifications, since there is a notifications listener that continuously monitors the notifications endpoint for updates. when a new notification arrives, it automatically has a popup notification on the user interface. The purpose of this is to ensure that the user interface seamlessly reacts with real-time notifications and reminders in one central place without requiring manual page reloads or scattered event handling across components.
+
+#### 2.2.4 Adapter
+The `apiFetch` container acts as an adapter design pattern as it automatically unwraps the backend standard response containers into clean domain objects expected by the frontend. This is done to standardize the backend response structures and provides typed models to callers which isolates the details from the application logic.
+
+#### 2.2.5 Facade
+The `use<Operation>Session` hooks operate as the facade design pattern, this encapsulates multiple API endpoints, internal state tracking and cancelled requests behind a single simplified API. This provides a unified interface for UI components without exposing the underlying API complexity to the UI layer.
 
 ### 2.3 Constraints
 
@@ -120,5 +133,220 @@ Incorrectly developed ViewModels can grow too big and start including business r
 ## 3. Technology Requirements
 
 ## 4. API Contracts
+### 4.1 Authentication Services
+#### 4.1.1 User Registration Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.1.2 User Login Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.1.3 User Logout Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.2 User Services
+#### 4.2.1 Get Current User Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.2.2 Update Current User Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.3 Credit Score Services
+#### 4.3.1 Get Credit Score Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.4 Dashboard Services
+#### 4.4.1 Get Dashboard Data Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.5 Insights Services
+#### 4.5.1 Get insights service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.6 Gamification Services
+#### 4.6.1 Get Gamification Profile Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.6.2 Get Rewards Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.6.3 Get Badges Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.7 Category Services
+#### 4.7.1 Get Categories Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.8 Reminder Services
+#### 4.8.1 Get Reminder Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.8.2 Update Reminder Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.9 Notifications Services
+#### 4.9.1 Get Notifications Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.9.2 Mark Notification As Read Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.9.3 Mark Multiple Notifications As Read Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.9.4 Delete Notification Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.9.5 Delete Multiple Notifications Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.10 Quiz Services
+#### 4.10.1 Get Daily Quiz State Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.10.2  Get Quiz Topics Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.10.3 Get Quiz Topic Detail Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.10.4 Create quiz Session Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.10.5 Get quiz Session Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.10.6 Submit Quiz Answer Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.11 Payment Services
+#### 4.11.1 Get upcoming Payment Occurrences Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.11.2 Log Payment Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+### 4.12 Obligation Services
+#### 4.12.1 Create Obligation Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
+#### 4.12.2 Get Obligations Service
+**Description:** 
+**Endpoint:** 
+**Inputs:** 
+**Outputs:** 
+**Usage/Interaction Rules:** 
+
 
 ## 5. Deployment
