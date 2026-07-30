@@ -643,33 +643,217 @@ Then I can access my available financial statistics and insights based on my obl
 
 ## 4. Funtional Requirements
 
-* R1 Onboarding and Account Access
+* FR1 Onboarding and Account Access
+  * FR1.1 The system shall allow users to register for an account.
+    * FR1.1.1 Users shall be able to register using an email address and password.
+    * FR1.1.2 The system shall create a default user profile after successful registration.
+  * FR1.2 The system shall allow users to log into their account.
+    * FR1.2.1 Users shall be able to log in using their email address and password.
+    * FR1.2.2 The system shall redirect authenticated users to the dashboard.
+    * FR1.2.3 The system shall prevent unauthenticated users from accessing protected pages.
+  * FR1.3 The system shall allow users to log out of their account.
+    * FR1.3.1 The system shall end the user session after logout.
+    * FR1.3.2 The system shall redirect logged-out users back to the log-in page.
+  * FR1.4 The system shall provide onboarding for new users.
+    * FR1.4.1 The system shall introduce the user to the core purpose of the application.
+    * FR1.4.2 The system shall allow new users to configure basic reminder preferences.
+    * FR1.4.3 The system shall allow users to skip onboarding and use the default settings.
 
-  * R1.1 The system shall allow users to register for an account.
+* FR2 Financial Obligation Management
+  * FR2.1 The system shall allow authorised users to add financial obligations.
+    * FR2.1.1 The system shall allow users to enter the obligation amount.
+    * FR2.1.2 The system shall allow users to select an obligation type.
+    * FR2.1.3 The system shall allow users to enter the obligation reason.
+    * FR2.1.4 The system shall allow users to set the priority level.
+    * FR2.1.5 The system shall allow users to specify due dates, optional end dates, payment frequency, payment occurrences, descriptions, reminder preferences, and notification methods.
+    * FR2.1.6 The system shall store the financial obligation.
+    * FR2.1.7 The system shall create payment occurrences and reminders for the obligation.
+  * FR2.2 The system shall allow authorised users to view financial obligations on a calendar.
+    * FR2.2.1 The system shall display obligation dates.
+    * FR2.2.2 The system shall display payment amounts.
+    * FR2.2.3 The system shall display payment statuses.
+  * FR2.3 The system shall allow authorised users to view financial obligation details.
+  * FR2.4 The system shall allow authorised users to edit financial obligations.
+    * FR2.4.1 The system shall save updated obligation information.
+    * FR2.4.2 The system shall update future payment occurrences and reminders.
+  * FR2.5 The system shall allow authorised users to delete financial obligations.
+    * FR2.5.1 The system shall remove associated reminders and calendar entries.
 
-    * R1.1.1 Users shall be able to register using an email address and password.
-    * R1.1.4 The system shall create a default user profile after successful registration.
+* FR3 Payment Management
+  * FR3.1 The system shall allow authorised users to select outstanding payment occurrences.
+  * FR3.2 The system shall allow authorised users to record payment details.
+    * FR3.2.1 The system shall allow users to enter the payment amount.
+    * FR3.2.2 The system shall allow users to enter the payment date.
+    * FR3.2.3 The system shall allow users to select a payment method.
+    * FR3.2.4 The system shall allow users to enter payment notes.
+  * FR3.3 The system shall allow authorised users to submit payment records.
+    * FR3.3.1 The system shall store payment records.
+    * FR3.3.2 The system shall update the payment status.
+    * FR3.3.3 The system shall update the financial health score.
+    * FR3.3.4 The system shall update rewards and streaks.
+  * FR3.4 The system shall allow authorised users to edit payment records.
+  * FR3.5 The system shall allow authorised users to delete payment records.
+  * FR3.6 The system shall allow authorised users to view their payment history.
 
-  * R1.2 The system shall allow users to log into their account.
+* FR4 Gamification and Rewards
+  * FR4.1 The system shall display the user's simulated credit score.
+    * FR4.1.1 The system shall display the score level.
+    * FR4.1.2 The system shall display the score breakdown.
+    * FR4.1.3 The system shall display the reason for the score.
+  * FR4.2 The system shall display earned and locked badges.
+  * FR4.3 The system shall display the user's current and highest on-time payment streaks.
+  * FR4.4 The system shall display the user's coin balance.
 
-    * R1.2.1 Users shall be able to log in using their email address and password.
-    * R1.2.2 The system shall redirect authenticated users to the dashboard.
-    * R1.2.3 The system shall prevent unauthenticated users from accessing protected pages.
+* FR5 Credit Score
+  * FR5.1 The system shall display the user's current simulated credit score on the dashboard.
+  * FR5.2 The system shall display the factors contributing to the simulated credit score.
+    * FR5.2.1 The system shall display on-time payment performance.
+    * FR5.2.2 The system shall display budget utilisation.
+    * FR5.2.3 The system shall display late payment count.
+  * FR5.3 The system shall display the user's credit score tier.
 
-  * R1.3 The system shall allow users to log out of their account.
+* FR6 Statistics and Insights
+  * FR6.1 The system shall display spending by obligation category.
+  * FR6.2 The system shall display spending trends over time.
+  * FR6.3 The system shall display the user's on-time payment rate.
+  * FR6.4 The system shall display upcoming payment obligations and payment pressure.
+  * FR6.5 The system shall display the user's payment streak behaviour.
 
-    * R1.3.1 The system shall end the user session after logout.
-    * R1.3.2 The system shall redirect logged-out users back to the log-in page.
+* FR7 Financial Literacy Quiz
+  * FR7.1 The system shall allow authorised users to complete daily quizzes.
+    * FR7.1.1 The system shall award coins and experience points after quiz completion.
+    * FR7.1.2 The system shall update the user's knowledge streak.
+  * FR7.2 The system shall allow users to resume incomplete quizzes.
+  * FR7.3 The system shall allow users to browse financial topic quizzes.
+  * FR7.4 The system shall allow users to complete financial lessons and quizzes.
+  * FR7.5 The system shall display the user's current and highest knowledge streak.
+  * FR7.6 The system shall provide feedback after each quiz question.
+    * FR7.6.1 The system shall indicate whether the answer is correct or incorrect.
+    * FR7.6.2 The system shall display an explanation.
+    * FR7.6.3 The system shall requeue incorrectly answered questions when required.
+  * FR7.7 The system shall display quiz results after quiz completion.
 
-  * R1.4 The system shall provide onboarding for new users.
+* FR8 Notifications and Reminders
+  * FR8.1 The system shall display a notifications inbox.
+    * FR8.1.1 The system shall display payment reminders.
+    * FR8.1.2 The system shall display overdue payment notifications.
+    * FR8.1.3 The system shall display credit score notifications.
+    * FR8.1.4 The system shall display badge and reward notifications.
+  * FR8.2 The system shall allow users to mark notifications as read.
+  * FR8.3 The system shall allow users to filter notifications by type.
+  * FR8.4 The system shall allow users to configure reminder preferences.
+  * FR8.5 The system shall allow users to manage notifications.
+    * FR8.5.1 The system shall allow users to delete notifications.
+    * FR8.5.2 The system shall allow users to mark multiple notifications as read.
 
-    * R1.4.1 The system shall introduce the user to the core purpose of the application.
-    * R1.4.2 The system shall allow new users to configure basic reminder preferences.
-    * R1.4.3 The system shall allow users to skip onboarding and take you to the default settings.
+* FR9 Profile Management
+  * FR9.1 The system shall allow authorised users to view their profile.
+    * FR9.1.1 The system shall display financial progress.
+    * FR9.1.2 The system shall display the credit score tier.
+    * FR9.1.3 The system shall display streaks.
+    * FR9.1.4 The system shall display coins, experience points, and rewards.
+  * FR9.2 The system shall allow authorised users to update profile information.
+    * FR9.2.1 The system shall allow users to update their display name.
+    * FR9.2.2 The system shall allow users to update their profile picture.
+    * FR9.2.3 The system shall allow users to update their monthly budget.
+  * FR9.3 The system shall allow authorised users to modify application settings.
+  * FR9.4 The system shall provide access to help and support resources.
+  * FR9.5 The system shall display the user's sticker album.
+  * FR9.6 The system shall provide access to financial insights.
 
-* 
 
 ## 5. Non-Functional Requirements
 
 
+**NFR1 Security**
+
+* NFR1.1 The system shall only allow access to protected pages and API endpoints for users authenticated through Supabase Authentication
+  * Requests without a valid authentication token shall be rejected.
+
+* NFR1.2 The system shall validate the JSON Web Token (JWT) before processing every protected request.
+  * Requests containing missing, malformed, invalid, or expired JWTs shall return an authentication error.
+
+* NFR1.3 The system shall ensure that authenticated users can only retrieve, update, or delete information belonging to their own account.
+  * Cross-account access tests shall return zero records belonging to another user.
+  * Cross-account requests shall not modify another user's data.
+
+* NFR1.4 The system shall validate incoming data before processing business logic or updating stored information.
+    * Invalid values and unsupported fields shall be rejected without modifying the database.
+
+* NFR1.5 The system shall use HTTPS for all communication between the browser and SpendSense services.
+  * All browser and API requests shall use HTTPS in the deployed environment.
+
+* NFR1.6 The system shall not store credentials or secret values in the source code repository.
+  * The secret-scanning workflow shall complete without detecting committed credentials.
+
+**NFR2 Portability**
+* NFR2.1 The system shall be deployable using Docker containers.
+  * All required production containers shall start successfully using the documented Docker configuration.
+
+* NFR2.2 The system shall manage production services using Docker Compose.
+  * The Docker Compose configuration shall validate successfully and start all required services.
+
+* NFR2.3 The system shall store environment-specific settings using environment variables or deployment secrets.
+  * Deployment configuration changes shall not require source code modifications.
+
+* NFR2.4 The system shall verify a deployment before it is considered operational.
+  * The backend health endpoint shall respond successfully after deployment. And At least one authenticated frontend-to-backend request shall complete successfully.
+
+
+**NFR3 Maintainability**
+
+* NFR3.1 The system shall comply with the configured ESLint rules.
+  * The application shall contain zero ESLint errors before release.
+
+* NFR3.2 The system shall keep business logic and financial calculations within the backend service layer.
+  * Code reviews shall confirm that business logic is implemented in the backend.
+
+* NFR3.3 The system shall organise backend functionality into business modules.
+  * Feature changes shall primarily affect their responsible module and associated tests.
+
+* NFR3.4 The system shall automatically lint, test, and build the application before release.
+  * All required CI checks shall pass before the application is merged or deployed.
+
+* NFR3.5 The system shall provide a repeatable development and testing environment using Docker.
+  * The Docker configuration shall remain valid and all application containers shall build successfully.
+
+The maintainability requirements ensure that the system remains easy to modify, test, and extend while maintaining code quality and consistent development practices.
+
+**NFR4 Availability**
+
+* NFR4.1 The system shall achieve a minimum availability of 99.9% during normal operation.
+  * The measured availability shall be greater than or equal to 99.9%.
+
+* NFR4.2 The system shall provide a backend health endpoint to verify that the application is operational.
+  * The `/api/v1/health` endpoint shall return a successful response while the backend is running.
+
+* NFR4.3 The system shall prevent deployment when required build, test, or migration steps fail.
+  * A failed build, test, or migration shall prevent deployment from continuing.
+
+* NFR4.4 The system shall record the monitoring period and all periods of downtime.
+  * AWS CloudWatch shall provide evidence of the monitoring duration and recorded downtime.
+
+During a 2.5-week monitoring period (25,200 minutes), AWS CloudWatch recorded only 10 minutes of downtime, resulting in a measured availability of 99.96%. This exceeds the system's minimum availability requirement of 99.9%.
+
+**NFR5 Usability**
+
+* NFR5.1 The system shall allow users to complete core tasks without assistance.
+  * At least 80% of first-time users shall complete each core task without facilitator assistance.
+
+* NFR5.2 The system shall enable users to complete core tasks successfully.
+  * At least 90% of all attempted core tasks shall be completed successfully.
+
+* NFR5.3 The system shall prevent unrecoverable user errors during normal operation.
+  * Zero unrecoverable errors shall occur during usability testing.
+
+* NFR5.4 The system shall provide an interface that is easy to learn and use.
+  * Users shall give an average post-task ease rating of at least 4 out of 5.
+
+* NFR5.5 The system shall record user navigation issues during usability testing.
+  * All observed pauses, misclicks, and requests for assistance shall be documented.
+
+These usability requirements ensure that users can quickly learn the application, navigate its features confidently, and complete common tasks with minimal difficulty.
+
 ## 6. Domain Model
+<img width="2000" alt="Domain Mode;l" src="./images/Domain Model.png" />
+

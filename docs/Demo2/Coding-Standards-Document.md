@@ -1,161 +1,185 @@
 # SpendSense Coding Standards
-# Table of contents
+
+## 1. Purpose
+
+These standards give the team one shared way to organise, write, review, and maintain SpendSense code. They apply to new work and to existing code when that code is changed. They are intended to keep the project readable, predictable, safe, and easy to test.
 
 
+## 2. Repository structure
 
-- [Purpose](#-purpose)
-- [The Repository Structure](#--the-repository-structure)
-  - [Overview](#overview)
-    - [Environmental Containerisation](#environmental-contianerisation-)
-    - [Consistent Styling with ESLint](#eslint-)
-    - [High-Level Directory Tree](#directory-tree)
-  - [A Deeper Dive](#deeper-dive)
-    - [Backend](#backend)
-    - [Frontend](#frontend)
+SpendSense is a monorepo with three application services and shared project support.
 
-
-# 1. Purpose 📋
-> This document details our reasoning for the structure of our Repo, How we have configured various services to improve the consistency of our code, and how we keep our development uniform and maintainable.  
-
-
-# 2. The Repository Structure 📁 
-This section details the Structure of our Repository. The structure facilitates the containerisation of our applications` servies and our testing, linting and build verifications.  
-
-
-## 🔍 Overview 
-Below is a high Highlevel overview of the Repository Structure. You will note all our services have their own containerized development environment  <br>
-
-### Environmental contianerisation 🐳
-Using Docker provides environmental consistency across all development machines. The configuration ensures that every team member executes the backend using the same:
-
-* Node.js runtime version
-* Package dependencies
-* Environment configuration
-* Build process
-
-Instead of requiring developers to manually install and configure dependencies locally, the project uses the dependency definitions stored in `package.json`. Docker installs and manages these dependencies automatically, reducing environment-related issues and ensuring reproducible development environments
-
-### Consistent Styling with eslint 🧹
-
-
-
-### Highlevel directory tree visual 🌳
-
-
-```bash
-.
-├── backend                         # Backend Servce
-│   ├── coverage                    # testing coverage for backend
-│   ├── Dockerfile.dev              # docker configuration for dev
-│   ├── Dockerfile.prod             # docker configuration for deployed production
-│   ├── eslint.config.mjs           # backend linting 
-│   ├── nest-cli.json
-│   ├── package.json                # backend dependencies 
-│   ├── package-lock.json
-│   ├── prisma
-│   ├── README.md
-│   ├── scripts
-│   ├── src
-│   ├── test
-│   ├── tsconfig.build.json
-│   └── tsconfig.json
-|
-├── Caddyfile
-├── docker-compose.e2e.yml          # e2e testing service
-├── docker-compose.prod.yml
-├── docker-compose.yml
-|
-├── frontend                        # Frontend Service
-│   ├── components.json
-│   ├── Dockerfile.dev
-│   ├── Dockerfile.e2e
-│   ├── e2e
-│   ├── eslint.config.js
-│   ├── index.html
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── playwright
-│   ├── playwright.config.ts
-│   ├── playwright-report
-│   ├── public
-│   ├── README.md
-│   ├── src
-│   ├── test-results
-│   ├── tsconfig.app.json
-│   ├── tsconfig.json
-│   ├── tsconfig.node.json
-│   ├── vite.config.ts
-│   └── vitest.config.ts
-|
-├── package.json
-├── package-lock.json
-|
-├── scripts
-│   ├── print-local-links.cjs
-│   ├── print-supabase-swagger-token.cjs
-│   └── run-e2e-ui.cjs
-|
-└── test-support 
-    ├── auth
-    ├── database
-    ├── factories
-    ├── README.md
-    └── scenarios
+```text
+SpendSense/
+|-- .github/
+|   |-- ISSUE_TEMPLATE/       GitHub issue templates
+|   `-- workflows/            Pull request, release, E2E, Docker, and docs checks
+|-- ai/
+|   |-- tests/                Pytest tests
+|   |-- main.py               FastAPI application
+|   `-- requirements*.txt     Python runtime and development dependencies
+|-- backend/
+|   |-- prisma/
+|   |   |-- migrations/       Committed database migrations
+|   |   |-- seed/             Required and demo seed data
+|   |   `-- schema.prisma     Database schema
+|   |-- scripts/              Backend maintenance scripts
+|   |-- src/                  NestJS application code
+|   `-- test/                 API E2E tests
+|-- docs/                     Project and technical documentation
+|-- frontend/
+|   |-- e2e/                  Playwright browser tests
+|   |-- public/               Static public assets
+|   `-- src/
+|       |-- components/       Reusable interface components
+|       |-- domains/          Route-level pages and feature screens
+|       |-- features/         API clients and feature-specific state
+|       |-- hooks/            Shared React hooks
+|       |-- lib/              Cross-cutting frontend utilities
+|       |-- test/             Vitest tests and test setup
+|       `-- types/            Shared frontend types
+|-- scripts/                  Repository-level helper scripts
+|-- test-support/             Shared E2E factories, scenarios, auth, and database reset code
+|-- docker-compose*.yml       Development, production, and E2E environments
+|-- package.json              Root commands
+`-- README.md                 Project entry point
 ```
 
 
-<br>
 
-## 🔬 A deeper dive
+## 3. General code style
+* Two spaces for indentation.
+* One statement per line.
+* Single quotes.
+* Braces for control-flow blocks, including one-line blocks.
+* Blank lines used to separate ideas.
+* Prefer `const`. 
+* Use `let` only when a variable is reassigned. 
+* Do not use `var`.
+* Avoid `any`.
+  * _BUT_ If `any` is required at a third-party boundary, keep it local and add a short reason.
+* Use a specific type, a generic, or `unknown` with a type check. 
+
+
+## 4. Naming conventions
+
+| Item | Convention | Example |
+| --- | --- | --- |
+| TypeScript variable or function | `camelCase` | `currentUserId`, `createObligation` |
+| React hook | `use` followed by `PascalCase` | `useCalendarOccurrences` |
+| Class, interface, type, DTO, component | `PascalCase` | `PaymentsService`, `AuthUser`, `CreateObligationDto` |
+| Constant | `UPPER_SNAKE_CASE` | `OCCURRENCE_HORIZON_MONTHS` |
+| Boolean | Question wording | `isActive`, `hasError`, `canSubmit` |
+| Backend file | lowercase dash with Nest applicatory role | `payment-occurrences.service.ts` |
+| DTO file | lowercase dash ending in `.dto.ts` | `create-obligation.dto.ts` |
+| React component or page file | `PascalCase.tsx` | `DashboardPage.tsx` |
+| Frontend API module | `camelCaseApi.ts` | `notificationsApi.ts` |
+| Prisma model | singular `PascalCase` | `PaymentRecord` |
+| Prisma field | `camelCase` | `supabaseAuthId` |
+| Enum  | `UPPER_SNAKE_CASE` | `PAID_LATE` |
+| Environment variable | `UPPER_SNAKE_CASE` | `DATABASE_URL` |
+
+
+## 5. Backend standards
+
+*The backend follows the NestJS feature-module pattern.* A normal backend feature contains:
+
+```text
+feature/
+|-- dto/
+|   `-- create-feature.dto.ts
+|-- feature.controller.ts
+|-- feature.controller.spec.ts
+|-- feature.module.ts
+|-- feature.service.ts
+`-- feature.service.spec.ts
+```
+
+* **Controllers** handle HTTP concerns. They read the authenticated user, validate route inputs through DTOs, call a service, and return the service result. Business rules and Prisma operations belong in services.
+
+* **Modules** declare controllers, providers, imports, and exports. Use constructor injection and mark injected fields `private readonly` unless another access level is required.
+
+
+## 6. Frontend standards
+
+React components are function components. Route-level screens belong in `frontend/src/domains`. Reusable interface code belongs in `components`, and server communication belongs in a *feature API module*.
+
+* Regarding **Components and hooks** Move reusable request and state logic into a hook or feature module and define a named props type or interface for a component with more than a few simple props.
+* For **API access**make use of the shared `apiFetch` helper for authenticated backend requests. Put endpoint-specific calls and request or response types in the relevant `features/<name>` API module.
+* For **styling** Use Tailwind utilities and the shared CSS variables in `frontend/src/index.css`.
+
+
+## 7. Database standards
+
+`backend/prisma/schema.prisma` is the database schema source of truth.
+
+- Change the schema through Prisma, then create and commit a migration.
+- Give migrations a short name that describes the schema change.
+- Never edit a migration that has already been applied by another developer or environment.
+- Do not make manual production schema changes outside the migration process.
+- Add indexes for fields used often in filtering, ownership checks, ordering, or uniqueness.
+- Use explicit relation names only when Prisma cannot infer the relation clearly.
+- Use `createdAt`, `updatedAt`, and `deletedAt` consistently where records need auditing or soft deletion.
+- Seed required reference data through `backend/prisma/seed`.
+- Keep demo-only records in the demo seed.
+
+Destructive database commands must target the intended local or E2E database. E2E reset code must keep its `_e2e` database-name guard.
+
+
+## 8. Git and pull request actions
+
+* Development work starts from `dev`. 
+* Feature work is merged into `dev` by pull request. 
+* `dev` is merged into `release`
+* Finally milestone releases move from `release` to `main`.
+
+Use short branch names with a category:
+
+```text
+feature/payment-history
+fix/reminder-timezone
+docs/coding-standards
+test/quiz-session
+chore/update-dependencies
+```
 
 
 
-###  🔌 Backend 
-> The SpendSense backend follows a feature-based, use-case-driven architecture using NestJS. The application is structured around individual business domains, where each feature module contains the required controllers, services, data access logic, and supporting utilities required to implement a specific use case accoriding to the applications bussiness capabilities.
+## 9. Automated Builds, Linting and Tests
 
+| Area | Configuration | Enforcement |
+| --- | --- | --- |
+| Backend TypeScript | `backend/eslint.config.mjs` | ESLint recommended rules, typed TypeScript rules, and Prettier |
+| Backend compiler | `backend/tsconfig.json` | ES2023, null checking, casing checks, decorators, and build output |
+| Frontend TypeScript | `frontend/eslint.config.js` | ESLint, TypeScript, React Hooks, and Vite refresh rules |
+| Frontend compiler | `frontend/tsconfig.app.json` | Unused code checks, switch fallthrough checks, browser types, and no emit |
+| Database | `backend/prisma/schema.prisma` | Prisma schema and generated client |
+| Pull requests | `.github/workflows/pr-checks.yml` | Secret scan, lint, test, and build |
+| Releases | `.github/workflows/release-checks.yml` | Secret scan, lint, tests, backend coverage, and build |
+
+Run the full Docker-based check from the repository root:
 
 ```bash
-backend/
-│
-├── src/                
-│   ├── main.ts             
-│   ├── auth/           # auth logic for user verification
-│   ├── payments/       # payment logging related logic 
-│   ├── users/          # user creation / returning logic
-│   ├── prisma/         # database service integration
-│   └── ...             
-│
-├── prisma/
-│   ├── schema.prisma       # database schema definition
-│   ├── migrations/         # version-controlled database changes
-│   └── seed/               # initial development data
-│
-├── test/                   # e2e testing suite support
-│
-├── Dockerfile.dev          # development container configuration
-├── Dockerfile.prod         # droduction container configuration
-│
-└── package.json            # backend dependencies and scripts
-
+npm run test:ci
 ```
-<br>
 
-All Modules follow a very similar structure. Unit tests are developed alongside backend services to ensure that each use case behaves according to the expected requirements. This approach ensures that new functionality can be developed independently while maintaining a predictable foundation of existing logic. 
+Local checks are available when all local dependencies are installed:
 
 ```bash
-bussiness-logic-feature/
-├── .controller.ts      # handles requests and responses
-├── .service.ts         # business logic and use-case implementation
-├── .module.ts          # business logic and use-case implementation
-├── dto/                # validated input structures
-└── *.spec.ts           # unit tests for the module
-
+npm run local:lint
+npm run local:test
+npm run local:build
 ```
 
-<br>
+Useful focused checks are:
 
-###  🎨 Frontend 
-
-## 
-
-## 
+```bash
+npm --prefix backend run lint
+npm --prefix backend run test
+npm --prefix backend run build
+npm --prefix frontend run lint
+npm --prefix frontend run test:ci
+npm --prefix frontend run build
+cd ai && python -m ruff check .
+cd ai && python -m pytest
+```
