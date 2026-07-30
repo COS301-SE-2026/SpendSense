@@ -1,5 +1,7 @@
 import { expect, test as base } from '@playwright/test';
 import type { ProfileProgress } from '../../test-support/scenarios/profile';
+import type { ReminderPreferences } from '../../test-support/scenarios/reminders';
+import type { NotificationInput } from '../../test-support/factories/notification';
 
 type PaymentScenarioResult = {
   user: {
@@ -35,6 +37,24 @@ type ProfileScenarioResult = {
   progress: ProfileProgress;
 };
 
+type ReminderScenarioResult = {
+  user: {
+    id: string;
+    displayName: string | null;
+    email: string;
+  };
+  preferences: ReminderPreferences;
+};
+
+type NotificationScenarioResult = {
+  user: {
+    id: string;
+    displayName: string | null;
+    email: string;
+  };
+  notifications: Array<{ id: string; title: string }>;
+};
+
 type E2eFixtures = {
   scenario: {
     payments: {
@@ -49,6 +69,16 @@ type E2eFixtures = {
       userWithProgress: (input?: {
         progress?: Partial<ProfileProgress>;
       }) => Promise<ProfileScenarioResult>;
+    };
+    reminders: {
+      userWithPreferences: (
+        input?: Partial<ReminderPreferences>,
+      ) => Promise<ReminderScenarioResult>;
+    };
+    notifications: {
+      userWithInboxItems: (
+        input?: Omit<NotificationInput, 'userId'>[],
+      ) => Promise<NotificationScenarioResult>;
     };
   };
 };
@@ -125,6 +155,30 @@ export const test = base.extend<E2eFixtures>({
             'profile.userWithProgress',
             {
               progress: input.progress,
+            },
+          ),
+      },
+
+      reminders: {
+        userWithPreferences: (
+          input: Partial<ReminderPreferences> = {},
+        ) =>
+          provisionScenario<ReminderScenarioResult>(
+            'reminders.userWithPreferences',
+            {
+              preferences: input,
+            },
+          ),
+      },
+
+      notifications: {
+        userWithInboxItems: (
+          input: Omit<NotificationInput, 'userId'>[] = [{}],
+        ) =>
+          provisionScenario<NotificationScenarioResult>(
+            'notifications.userWithInboxItems',
+            {
+              notifications: input,
             },
           ),
       },

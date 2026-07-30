@@ -3,14 +3,22 @@ import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createUpcomingPaymentForUser } from './payments';
 import { createUserReadyForQuiz } from './quiz';
-import {addProfileProgressForUser, type ProfileProgress} from './profile'
+import { addProfileProgressForUser, type ProfileProgress } from './profile';
+import {
+  addReminderPreferencesForUser,
+  type ReminderPreferences,
+} from './reminders';
+import {
+  addNotificationsForUser,
+  type NotificationInput,
+} from './notifications';
 
 const requireFromProject = createRequire(`${process.cwd()}/package.json`);
 
 const { PrismaClient } = requireFromProject('@prisma/client') as {
   PrismaClient: new () => {
-   user: {
-      Unique: (args: {
+    user: {
+      findUnique: (args: {
         where: { supabaseAuthId: string };
       }) => Promise<E2eScenarioUser | null>;
       create: (args: {
@@ -44,24 +52,36 @@ const { PrismaClient } = requireFromProject('@prisma/client') as {
     };
     creditProfile: {
       upsert: (args: {
-        where: {userId: string};
+        where: { userId: string };
         create: Record<string, unknown>;
         update: Record<string, unknown>;
-      })=> Promise<{id: string; scoreTier: string}>;
+      }) => Promise<{ id: string; scoreTier: string }>;
     };
-    gamificationProfile:{
-      upsert: (args:{
-        where: {userId: string};
+    gamificationProfile: {
+      upsert: (args: {
+        where: { userId: string };
         create: Record<string, unknown>;
-        update:Record<string,unknown>;
-      })=> Promise<{id:string}>;
+        update: Record<string, unknown>;
+      }) => Promise<{ id: string }>;
     };
     userPreference: {
       upsert: (args: {
-        where: {userId: string};
+        where: { userId: string };
         create: Record<string, unknown>;
         update: Record<string, unknown>;
-      })=> Promise<{id: string}>;
+      }) => Promise<{ id: string }>;
+    };
+    notificationPreference: {
+      upsert: (args: {
+        where: { userId: string };
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
+      }) => Promise<{ id: string }>;
+    };
+    notification: {
+      create: (args: {
+        data: Record<string, unknown>;
+      }) => Promise<{ id: string }>;
     };
     $disconnect: () => Promise<void>;
   };
@@ -80,12 +100,16 @@ type ProvisionRequest = {
   email?: string;
   label?: string;
   progress?: Partial<ProfileProgress>;
+  preferences?: Partial<ReminderPreferences>;
+  notifications?: Omit<NotificationInput, 'userId'>[];
 };
 
 const validScenarios = new Set([
   'payments.userWithUpcomingPayment',
   'quizzes.userReadyForDailyQuiz',
   'profile.userWithProgress',
+  'reminders.userWithPreferences',
+  'notifications.userWithInboxItems',
 ]);
 
 const secret = process.env.E2E_SCENARIO_SECRET;
@@ -99,19 +123,19 @@ if (!secret) {
 const prisma = new PrismaClient();
 
 function sendJson(
-  response:ServerResponse,
-  status:number,
-  body:unknown,
-):void{
-  response.writeHead(status,{
-    'content-type':'application/json',
+  response: ServerResponse,
+  status: number,
+  body: unknown,
+): void {
+  response.writeHead(status, {
+    'content-type': 'application/json',
   });
   response.end(JSON.stringify(body));
 }
 
 async function readBody(
-  request:IncomingMessage,
-):Promise<ProvisionRequest> {
+  request: IncomingMessage,
+): Promise<ProvisionRequest> {
   let rawBody = '';
   for await (const chunk of request) {
     rawBody += chunk;
@@ -217,6 +241,38 @@ const server = createServer(async (request, response) => {
       sendJson(response, 201, {
         user,
         progress,
+      });
+      return;
+    }
+    if (scenario === 'reminders.userWithPreferences') {
+      const user = await findOrCreateBrowserUser(
+        supabaseAuthId,
+        email,
+      );
+      const preferences = await addReminderPreferencesForUser(
+        prisma,
+        user,
+        body.preferences ?? {},
+      );
+      sendJson(response, 201, {
+        user,
+        preferences,
+      });
+      return;
+    }
+    if (scenario === 'notifications.userWithInboxItems') {
+      const user = await findOrCreateBrowserUser(
+        supabaseAuthId,
+        email,
+      );
+      const notifications = await addNotificationsForUser(
+        prisma,
+        user,
+        body.notifications ?? [{}],
+      );
+      sendJson(response, 201, {
+        user,
+        notifications,
       });
       return;
     }
