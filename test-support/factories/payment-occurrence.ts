@@ -19,6 +19,8 @@ export type PaymentOccurrenceInput = {
   amountDue?: number;
   dueDate?: Date;
   status?: 'PENDING' | 'PAID' | 'PAID_LATE' | 'OVERDUE' | 'MISSED' | 'CANCELLED';
+  overdueAt?: Date;
+  missedAt?: Date;
 };
 
 export async function createPaymentOccurrence(
@@ -60,6 +62,8 @@ export async function createPaymentOccurrence(
       currency: 'ZAR',
       status: input.status ?? 'PENDING',
       sequenceNumber: 1,
+      ...(input.overdueAt ? { overdueAt: input.overdueAt } : {}),
+      ...(input.missedAt ? { missedAt: input.missedAt } : {}),
     },
   });
 

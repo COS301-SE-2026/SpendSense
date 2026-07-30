@@ -3,21 +3,28 @@
 <br>
 
 <!-- replace with spendsense logo -->
-<img src="docs/assets/images/spendsense-logo-animated.svg" width="420" alt="SpendSense" />
+<img src="docs/assets/spendsense-logo-animated.svg" width="420" alt="SpendSense" />
 
 <br><br>
 
-<img src="docs/assets/images/MARK2-logo.png" width="430" alt="Team MARK2" />
+<img src="docs/assets/MARK2-logo.png" width="430" alt="Team MARK2" />
 
 <br><br>
 
-<img src="docs/assets/images/epiuse-advance-logo.webp" width="330" alt="EPI-USE Labs & Advance" />
+<img src="docs/assets/epiuse-advance-logo.webp" width="330" alt="EPI-USE Labs & Advance" />
 &nbsp;&nbsp;&nbsp;&nbsp;
-<img src="docs/assets/images/up-logo.webp" width="150" alt="University of Pretoria" />
+<img src="docs/assets/up-logo.webp" width="150" alt="University of Pretoria" />
 
-<br><br>
+</div>
+
+
+---
+
+<div align="center">
 
 # SpendSense
+
+</div>
 
 **A gamified financial tracking platform for students and young adults.**
 
@@ -38,7 +45,20 @@ _COS 301 Capstone 2026 · Team MARK2 · EPI-USE Labs & Advance · University of 
 
 <br>
 
-</div>
+---
+
+# Table of contents
+
+- [What Is SpendSense?](#what-is-spendsense)
+- [Documentation](#documentation)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Repository Structure](#repository-structure)
+- [Getting Started](#getting-started)
+- [Git Workflow](#git-workflow)
+- [Environment and Secrets](#environment-and-secrets)
+- [Team MARK2](#team-mark2)
+
 
 ---
 
@@ -53,6 +73,53 @@ Students juggle rent, subscriptions, BNPL instalments, and informal IOUs scatter
 Track what you owe and when it is due. See exactly how your payment behaviour would affect a simulated credit score, without any real-world risk. Get rewarded for paying on time through streaks, badges, coins, and a mascot that visibly reflects your financial health.
 
 > _"Make the invisible visible, simulate real-world consequences safely, and make good financial habits worth pursuing."_
+
+---
+
+<div align="center">
+
+## Documentation
+
+</div>
+
+<details>
+<summary> <b> Demo 1</b> </summary>
+
+* [Software Requirements Specification (SRS)](<./docs/Demo1/SRS (Software Requirements and Design Specification).md>)
+* [Architecture Document](./docs/Demo1/Architecture.md)
+* [Database ERD](./docs/Demo1/database/erd.md)
+* [Database Schema Reference](./docs/Demo1/database/schema-reference.md)
+* [API Contract](./docs/Demo1/srs/api-contract.md)
+* [Use Cases](./docs/Demo1/srs/Use%20Cases.md)
+* [User Stories](./docs/Demo1/srs/User%20Stories.md)
+* [Functional Requirements](<./docs/Demo1/srs/Functional Requirements.md>)
+* [Quality Requirements](<./docs/Demo1/srs/Quality Requirements.md>)
+* [Wireframes](./docs/Demo1/wireframes/Spendsense.pdf)
+
+</details>
+
+<details>
+<summary> <b> Demo 2</b> </summary>
+
+* [Software Requirements Specification (SRS)](./docs/Demo2/SRS.md)
+* [Software Architecture Specification (SAS)](./docs/Demo2/SAS.md)
+* [Updated Brand Style Guide PDF]()
+* [Coding Standards Document](./docs/Demo2/Coding-Standards-Document.md)
+* [User Manual Document](./docs/Demo2/User-Manual-Document.md)
+* [Testing Policy Document](./docs/Demo2/Testing-Policy-Document.md)
+* [Demo 2 Video](https://drive.google.com/drive/folders/1RXFea81VvkyAPmqBhXl9xXfcXl81wNEq?usp=sharing)
+
+</details>
+
+<details>
+<summary> <b> Demo 3</b> </summary>
+Watch this space !
+</details>
+
+<details>
+<summary> <b> Demo 4</b> </summary>
+Watch this space !
+</details>
 
 ---
 
@@ -151,42 +218,16 @@ SpendSense/
 ├── backend/          # NestJS API
 ├── ai/               # Python FastAPI AI microservice
 ├── docs/             # Project documentation
-│   ├── srs/          # Software Requirements Specification
-│   └── assets/
-│       └── images/   # Logos, team photos, and other assets
+│   ├── Demo1/        # Demo 1 Documentation
+|   ├── Demo2/        # Demo 2 Documentation
+│   ├── assets/       # logo images and animations
+│   └── team/         # team images
 ├── scripts/          # Helper scripts for local development
 └── docker-compose.yml
 ```
 
----
 
-<div align="center">
 
-## Documentation
-
-</div>
-
-| Document | Link |
-|---|---|
-| SRS Folder | [`docs/srs/`](docs/srs/) |
-| Functional Requirements | [`docs/srs/Functional Requirements.md`](docs/srs/Functional%20Requirements.md) |
-| User Stories | [`docs/srs/User Stories.md`](docs/srs/User%20Stories.md) |
-| Use Cases | [`docs/srs/Use Cases.md`](docs/srs/Use%20Cases.md) |
-| Quality Requirements | [`docs/srs/Quality Requirements.md`](docs/srs/Quality%20Requirements.md) |
-| Domain Model Explanation | [`docs/srs/Domain-Model-Explanation.md`](docs/srs/Domain-Model-Explanation.md) |
-| API Contract | [`docs/srs/api-contract.md`](docs/srs/api-contract.md) |
-
----
-
-Services run locally at:
-
-| Service | URL |
-|---|---|
-| Frontend | `http://localhost:5173` |
-| Backend | `http://localhost:3000` |
-| AI service | `http://localhost:8000` |
-| PostgreSQL | `localhost:5432` |
-| MinIO | `http://localhost:9001` |
 
 ---
 
@@ -225,8 +266,25 @@ docker compose exec backend npx prisma migrate deploy
 docker compose exec backend npm run prisma:seed
 docker compose exec backend npm run prisma:seed:demo
 ```
+---
+
+
+
 
 The backend dev container generates Prisma Client on startup, so teammates do not need to run `prisma generate` manually after normal Docker starts.
+
+Initially Docker may take a minute to get up and running but once complete check the services that run locally at:
+
+| Service | URL |
+|---|---|
+| Frontend | `http://localhost:5173` |
+| Backend | `http://localhost:3000` |
+| AI service | `http://localhost:8000` |
+| PostgreSQL | `localhost:5432` |
+| MinIO | `http://localhost:9001` |
+
+
+<br>
 
 <details>
 <summary><strong>All available commands</strong></summary>
@@ -280,24 +338,11 @@ Use `frontend` instead of `backend` for the frontend service. Avoid `npm run dev
 Prisma docs:
 
 - Schema source of truth: `backend/prisma/schema.prisma`
-- Demo 1 ERD: `docs/database/erd.md`
-- Schema reference: `docs/database/schema-reference.md`
+- Demo 1 ERD: `docs/Demo1/database/erd.md`
+- Schema reference: `docs/Demo1/database/schema-reference.md`
 
 </details>
 
-<details>
-<summary><strong>First run notes</strong></summary>
-<br>
-
-The first Docker build on a new machine may take a while as base images and dependencies need to be downloaded. Once running, check:
-
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:3000`
-- AI health check: `http://localhost:8000/health`
-- AI OpenAPI spec: `http://localhost:8000/openapi.json`
-- MinIO: `http://localhost:9001`
-
-</details>
 
 ---
 
@@ -361,7 +406,7 @@ Authorization: Bearer <supabase_access_token>
 
 On first call, the backend creates the internal SpendSense `User` plus default preferences, notification preferences, credit profile, and gamification profile. Later feature work should scope user-owned records by the internal `User.id`, not directly by the Supabase auth ID.
 
-For a pre-populated walkthrough account, create or choose a dedicated Supabase Auth user, put its email in `DEMO_USER_EMAIL`, put its Supabase Auth user ID in `DEMO_SUPABASE_AUTH_ID`, then run `docker compose exec backend npm run prisma:seed:demo`. See `docs/backend/demo-seeding.md` for the full runbook.
+For a pre-populated walkthrough account, create or choose a dedicated Supabase Auth user, put its email in `DEMO_USER_EMAIL`, put its Supabase Auth user ID in `DEMO_SUPABASE_AUTH_ID`, then run `docker compose exec backend npm run prisma:seed:demo`. See `docs/Demo1/backend/demo-seeding.md` for the full runbook.
 
 ---
 
@@ -374,7 +419,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/allyson.jpg" width="140" alt="Allyson Andre">
+      <img src="docs/team/allyson.jpg" width="140" alt="Allyson Andre">
     </td>
     <td valign="top">
       <strong>Allyson Andre</strong> &nbsp; Full-Stack / Auth & Integration<br><br>
@@ -397,7 +442,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/morgan.jpg" width="140" alt="Morgan Wattrus">
+      <img src="docs/team/morgan.jpg" width="140" alt="Morgan Wattrus">
     </td>
     <td valign="top">
       <strong>Morgan Wattrus</strong> &nbsp; AI Microservice & Data Science<br><br>
@@ -420,7 +465,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/kahlan.jpeg" width="140" alt="Kahlan Hagerman">
+      <img src="docs/team/kahlan.jpeg" width="140" alt="Kahlan Hagerman">
     </td>
     <td valign="top">
       <strong>Kahlan Hagerman</strong> &nbsp; Backend API (NestJS) & Systems Programming<br><br>
@@ -443,7 +488,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/kyle.jpg" width="140" alt="Kyle McCalgan">
+      <img src="docs/team/kyle.jpg" width="140" alt="Kyle McCalgan">
     </td>
     <td valign="top">
       <strong>Kyle McCalgan</strong> &nbsp; System Architect / Backend Infrastructure<br><br>
@@ -466,7 +511,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/rachel.jpg" width="140" alt="Rachel Clifford">
+      <img src="docs/team/rachel.jpg" width="140" alt="Rachel Clifford">
     </td>
     <td valign="top">
       <strong>Rachel Clifford</strong> &nbsp; Frontend (React) & API Integration<br><br>

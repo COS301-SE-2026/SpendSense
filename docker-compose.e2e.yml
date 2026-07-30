@@ -75,7 +75,7 @@ services:
     ports:
       - "3002:3002"
     volumes:
-      - ./test-support:/test-support:ro
+      - ./test-support:/test-support:ro,z
     depends_on:
       migrate-e2e:
         condition: service_completed_successfully
@@ -95,7 +95,7 @@ services:
       SUPABASE_JWT_SECRET: spendsense-e2e-only-secret
       E2E_DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
     volumes:
-      - ./test-support:/test-support:ro
+      - ./test-support:/test-support:ro,z
     depends_on:
       migrate-e2e:
         condition: service_completed_successfully
@@ -108,7 +108,7 @@ services:
     environment:
       DATABASE_URL: postgresql://spendsense_e2e:spendsense_e2e@postgres-e2e:5432/spendsense_e2e
     volumes:
-      - ./test-support:/test-support:ro
+      - ./test-support:/test-support:ro,z
     depends_on:
       migrate-e2e:
         condition: service_completed_successfully

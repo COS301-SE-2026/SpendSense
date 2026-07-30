@@ -360,7 +360,7 @@ describe('CreditScoreService', () => {
       const result = await service.getCreditScore('user-1');
 
       expect(result).toMatchObject({
-        creditScore: 492.5,
+        creditScore: 493,
         creditScoreTier: 'BUILDING',
         onTimePaymentCount: 0,
         onLatePaymentCount: 0,
@@ -381,12 +381,17 @@ describe('CreditScoreService', () => {
         .spyOn(service as any, 'hasNoPaymentHistory')
         .mockResolvedValue(false);
 
+      jest
+        .spyOn(service as any, 'calculateSavingsBuffer')
+        .mockResolvedValue(0.9999999999);
+
       const result = await service.getCreditScore('user-1');
 
       expect(result.applicableRisks.applied).toBe(false);
       expect(result.reasonForRiskCaps).toBe('');
       expect(result.creditScore).toBeLessThanOrEqual(CREDIT_SCORE_RANGE.MAX);
       expect(result.creditScore).toBeGreaterThanOrEqual(CREDIT_SCORE_RANGE.MIN);
+      expect(Number.isInteger(result.savingsBuffer)).toBe(true);
     });
   });
 });
