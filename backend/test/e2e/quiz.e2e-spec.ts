@@ -1,4 +1,4 @@
-import { createApiE2eFixture } from './fixtures';
+import { createApiE2eFixture } from "./fixtures";
 
 type QuizOptionResponse = {
     key: string;
