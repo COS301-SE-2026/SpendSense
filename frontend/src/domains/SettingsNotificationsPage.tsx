@@ -19,15 +19,12 @@ interface ReminderPreferencesResponse {
     data?: ReminderPreferences
 }
 
-type ChannelKey = "inAppEnabled" | "emailEnabled" | "pushEnabled" | "smsEnabled"
+type ChannelKey = "inAppEnabled"
 
 const REMINDER_DAY_OPTIONS = [1, 3, 5, 7]
 
 const CHANNEL_ROWS: {key: ChannelKey; label: string; description: string}[] = [
     {key: "inAppEnabled", label: "In App Notifications", description: "Get notifications and reminders in the SpendSense app"},
-    {key: "emailEnabled", label: "Email Notifications", description: "Get notifications and reminders sent to your email address"},
-    {key: "pushEnabled", label: "Push Notifications", description: "Get notifications and reminders on your device"},
-    {key: "smsEnabled", label: "SMS Notifications", description: "Get notifications and reminders via text message"},
 ]
 
 export default function SettingsNotificationsPage(){

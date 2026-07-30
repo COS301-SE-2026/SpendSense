@@ -36,6 +36,7 @@ import SettingsNotificationsPage from './domains/SettingsNotificationsPage.tsx'
 import SettingsAccountPage from './domains/SettingsAccountPage.tsx'
 import EditProfilePage from './domains/EditProfilePage.tsx'
 import HelpPage from './domains/HelpPage.tsx'
+import HomeRoute from './components/HomeRoute'
 
 initAuthListener()
 import PaymentForm from './domains/PaymentForm.tsx'
@@ -46,7 +47,7 @@ createRoot(document.getElementById('root')!).render(
       <NotificationsProvider>
         <NotificationListener/>
         <Routes>
-          <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}/>
+          <Route path="/" element={<HomeRoute />}/>
           <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dev" element={<App />} />
           <Route path="/calendar" element={<CalendarPage />}/>

@@ -22,12 +22,19 @@ describe('NotificationsService', () => {
       updateMany: jest.fn<(args?: unknown) => Promise<{ count: number }>>(),
       create: jest.fn<(args?: unknown) => Promise<unknown>>(),
     },
+    notificationPreference: {
+      findUnique: jest.fn<(args?: unknown) => Promise<unknown>>(),
+    },
     $transaction:
       jest.fn<(operations: Promise<unknown>[]) => Promise<unknown[]>>(),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    prisma.notificationPreference.findUnique.mockResolvedValue({
+      inAppEnabled: true,
+    });
 
     prisma.$transaction.mockImplementation(
       async (operations: Promise<unknown>[]) => {
@@ -318,12 +325,18 @@ describe('NotificationsService', () => {
       };
 
       const transactionCreate = jest.fn<(args?: unknown) => Promise<unknown>>();
+      const transactionFindUnique =
+        jest.fn<(args?: unknown) => Promise<unknown>>();
 
       transactionCreate.mockResolvedValue(createdNotification);
+      transactionFindUnique.mockResolvedValue({ inAppEnabled: true });
 
       const transactionClient = {
         notification: {
           create: transactionCreate,
+        },
+        notificationPreference: {
+          findUnique: transactionFindUnique,
         },
       };
 
@@ -351,6 +364,44 @@ describe('NotificationsService', () => {
 
       expect(prisma.notification.create).not.toHaveBeenCalled();
       expect(result).toEqual(createdNotification);
+    });
+
+    it('does not make a notifications if the user has notifications disabled', async () => {
+      prisma.notificationPreference.findUnique.mockResolvedValue({
+        inAppEnabled: false,
+      });
+
+      const result = await service.create({
+        userId: 'user-1',
+        type: NotificationType.REMINDER,
+        title: 'Payment reminder',
+        message: 'Your payment is due soon.',
+      });
+
+      expect(prisma.notificationPreference.findUnique).toHaveBeenCalledWith({
+        where: { userId: 'user-1' },
+        select: { inAppEnabled: true },
+      });
+      expect(prisma.notification.create).not.toHaveBeenCalled();
+      expect(result).toBeNull();
+    });
+
+    it('creates notifications when the user has no preference row', async () => {
+      prisma.notificationPreference.findUnique.mockResolvedValue(null);
+
+      prisma.notification.create.mockResolvedValue({
+        id: 'notification-1',
+      });
+
+      const result = await service.create({
+        userId: 'user-1',
+        type: NotificationType.REMINDER,
+        title: 'Payment reminder',
+        message: 'Your payment is due soon.',
+      });
+
+      expect(prisma.notification.create).toHaveBeenCalled();
+      expect(result).toEqual({ id: 'notification-1' });
     });
   });
 

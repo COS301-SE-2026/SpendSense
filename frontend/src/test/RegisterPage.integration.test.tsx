@@ -26,8 +26,8 @@ function renderRegisterPage() {
         <MemoryRouter initialEntries={["/register"]}>
             <Routes>
                 <Route path="/register" element={<RegisterPage />} />
-                <Route path="/domains/dashboard" element={<div>Dashboard</div>} />
                 <Route path="/login" element={<div>Login</div>} />
+                <Route path="/onboarding" element={<div>Onboarding</div>} />
             </Routes>
         </MemoryRouter>
     );
@@ -62,7 +62,7 @@ function mockSuccessfulSignUp(mockToken = "mock.jwt.token") {
 }
 
 describe("Register page integration", () => {
-    it("navigates to dashboard and stores JWT after successful sign up", async() => {
+    it("navigates to onboarding and stores JWT after successful sign up", async() => {
         const mockToken = "mock.jwt.token";
         mockSuccessfulSignUp(mockToken);
 
@@ -71,7 +71,7 @@ describe("Register page integration", () => {
         fireEvent.click(screen.getByRole("button", {name: /join the quest/i}));
 
         await waitFor(() => {
-            expect(screen.getByText("Dashboard")).toBeInTheDocument();
+            expect(screen.getByText("Onboarding")).toBeInTheDocument();
         });
         expect(getToken()).toBe(mockToken);
     });
@@ -85,7 +85,7 @@ describe("Register page integration", () => {
         fireEvent.click(screen.getByRole("button", {name: /join the quest/i}));
 
         await waitFor(() => {
-            expect(screen.getByText("Dashboard")).toBeInTheDocument();
+            expect(screen.getByText("Onboarding")).toBeInTheDocument();
         });
 
         const getMeCall = fetchSpy.mock.calls.find(([url]) =>
@@ -152,7 +152,7 @@ describe("Register page integration", () => {
         fireEvent.click(screen.getByRole("button", {name: /join the quest/i}));
 
         await waitFor(() => {
-            expect(screen.getByText("Dashboard")).toBeInTheDocument();
+            expect(screen.getByText("Onboarding")).toBeInTheDocument();
         });
         expect(signUpSpy).toHaveBeenCalledWith(
             expect.objectContaining({
