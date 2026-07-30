@@ -642,31 +642,32 @@ Then I can access my available financial statistics and insights based on my obl
 **This use case ends with** the user being able to access their financial statistics and insights according to their obligations and payment patterns.
 
 ## 4. Funtional Requirements
-## R1: Onboarding and Account Access
 
-* R1.1 The system shall allow users to register for an account.
+* R1 Onboarding and Account Access
 
-  * R1.1.1 Users shall be able to register using an email address and password.
-  * R1.1.4 The system shall create a default user profile after successful registration.
+  * R1.1 The system shall allow users to register for an account.
 
-* R1.2 The system shall allow users to log into their account.
+    * R1.1.1 Users shall be able to register using an email address and password.
+    * R1.1.4 The system shall create a default user profile after successful registration.
 
-  * R1.2.1 Users shall be able to log in using their email address and password.
-  * R1.2.2 The system shall redirect authenticated users to the dashboard.
-  * R1.2.3 The system shall prevent unauthenticated users from accessing protected pages.
+  * R1.2 The system shall allow users to log into their account.
 
-* R1.3 The system shall allow users to log out of their account.
+    * R1.2.1 Users shall be able to log in using their email address and password.
+    * R1.2.2 The system shall redirect authenticated users to the dashboard.
+    * R1.2.3 The system shall prevent unauthenticated users from accessing protected pages.
 
-  * R1.3.1 The system shall end the user session after logout.
-  * R1.3.2 The system shall redirect logged-out users back to the log-in page.
+  * R1.3 The system shall allow users to log out of their account.
 
-* R1.4 The system shall provide onboarding for new users.
+    * R1.3.1 The system shall end the user session after logout.
+    * R1.3.2 The system shall redirect logged-out users back to the log-in page.
 
-  * R1.4.1 The system shall introduce the user to the core purpose of the application.
-  * R1.4.2 The system shall allow new users to configure basic reminder preferences.
-  * R1.4.3 The system shall allow users to skip onboarding and take you to the default settings.
+  * R1.4 The system shall provide onboarding for new users.
 
-## R2: SpendSense Help and Support
+    * R1.4.1 The system shall introduce the user to the core purpose of the application.
+    * R1.4.2 The system shall allow new users to configure basic reminder preferences.
+    * R1.4.3 The system shall allow users to skip onboarding and take you to the default settings.
+
+* 
 
 ## 5. Non-Functional Requirements
 
