@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { UpdateReminderPreferencesDto } from './dto/update-reminder-preferences.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import {
   ReminderStatus,
@@ -16,6 +17,7 @@ export class RemindersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly notificationService: NotificationsService,
   ) {}
 
   async getReminderPreferences(authUser: AuthUser) {
@@ -86,8 +88,8 @@ export class RemindersService {
     transaction: Prisma.TransactionClient,
     reminder: Reminder,
   ) {
-    return transaction.notification.create({
-      data: {
+    return this.notificationService.create(
+      {
         userId: reminder.userId,
         type: NotificationType.REMINDER,
         title: 'Payment reminder',
@@ -95,6 +97,7 @@ export class RemindersService {
         sourceType: UserEventSourceType.PAYMENT_OCCURRENCE,
         sourceId: reminder.occurrenceId,
       },
-    });
+      transaction,
+    );
   }
 }

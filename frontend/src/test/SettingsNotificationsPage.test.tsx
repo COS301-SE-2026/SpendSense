@@ -55,7 +55,14 @@ describe('SettingsNotificationsPage', () => {
         renderPage()
         expect(await screen.findByRole('button', {name: '3 days'})).toHaveAttribute('aria-pressed', 'true')
         expect(screen.getByRole('switch', {name: /in app notifications/i})).toHaveAttribute('aria-checked', 'true')
-        expect(screen.getByRole('switch', {name: /push notifications/i})).toHaveAttribute('aria-checked', 'false')
+    })
+
+    it('will not render email, sms, or push channel toggles', async () => {
+        renderPage()
+        await screen.findByRole('switch', {name: /in app notifications/i})
+        expect(screen.queryByRole('switch', {name: /email notifications/i})).not.toBeInTheDocument()
+        expect(screen.queryByRole('switch', {name: /sms notifications/i})).not.toBeInTheDocument()
+        expect(screen.queryByRole('switch', {name: /push notifications/i})).not.toBeInTheDocument()
     })
 
     it('will save a reminder change for the days immediately', async () => {
@@ -71,11 +78,11 @@ describe('SettingsNotificationsPage', () => {
     it('will save the channel toggle immediately', async () => {
         mockedUpdateReminderPreferences.mockResolvedValue({data: {}})
         renderPage()
-        const toggle = await screen.findByRole('switch', {name: /push notifications/i})
+        const toggle = await screen.findByRole('switch', {name: /in app notifications/i})
         fireEvent.click(toggle)
 
         await waitFor(() => {
-            expect(mockedUpdateReminderPreferences).toHaveBeenCalledWith({pushEnabled: true})
+            expect(mockedUpdateReminderPreferences).toHaveBeenCalledWith({inAppEnabled: false})
         })
         expect(await screen.findByText(/reminder settings saved/i)).toBeInTheDocument()
     })
@@ -84,7 +91,7 @@ describe('SettingsNotificationsPage', () => {
     it('will show an error feedback when saving fails', async () => {
         mockedUpdateReminderPreferences.mockRejectedValue(new Error('500'))
         renderPage()
-        fireEvent.click(await screen.findByRole('switch', {name: /email notifications/i}))
+        fireEvent.click(await screen.findByRole('switch', {name: /in app notifications/i}))
 
         expect(await screen.findByText(/couldn't be saved/i)).toBeInTheDocument()
     })

@@ -40,6 +40,7 @@ services:
     volumes:
       - ./backend:/app:z
       - /app/node_modules
+      - ./test-support:/test-support:ro,z
     depends_on:
       - postgres
       - ai

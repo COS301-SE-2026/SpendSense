@@ -28,7 +28,6 @@ const RECENT_MONTH_COUNT = 3;
 const WEEKS_PER_MONTH = 4.345;
 
 const INSIGHT_CURRENCY = Currency.ZAR; // for demo 2 we will be using ZAR
-const PAYMENT_HISTORY_MONTH_COUNT = 12;
 
 const STREAK_STATUSES: PaymentOccurrenceStatus[] = [
   PaymentOccurrenceStatus.PAID,
@@ -75,6 +74,8 @@ function emptyPaymentPeriod(): PaymentPeriodStats {
     onTimePaymentPercentage: 0,
   };
 }
+
+const PAYMENT_HISTORY_MONTH_COUNT = 12;
 
 @Injectable()
 export class InsightsService {
