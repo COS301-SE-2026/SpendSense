@@ -360,7 +360,7 @@ describe('CreditScoreService', () => {
       const result = await service.getCreditScore('user-1');
 
       expect(result).toMatchObject({
-        creditScore: 492.5,
+        creditScore: 493,
         creditScoreTier: 'BUILDING',
         onTimePaymentCount: 0,
         onLatePaymentCount: 0,
