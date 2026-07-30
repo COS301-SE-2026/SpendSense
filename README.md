@@ -89,12 +89,13 @@ Track what you owe and when it is due. See exactly how your payment behaviour wo
 <details>
 <summary> <b> Demo 2</b> </summary>
 
-* [SRS](./docs/Demo2/SRS.md)
-* [SAS](./docs/Demo2/SAS.md)
+* [Software Requirements Specification (SRS)](./docs/Demo2/SRS.md)
+* [Software Architecture Specification (SAS)](./docs/Demo2/SAS.md)
 * [Updated Brand Style Guide PDF]()
 * [Coding Standards Document](./docs/Demo2/Coding-Standards-Document.md)
 * [User Manual Document](./docs/Demo2/User-Manual-Document.md)
 * [Testing Policy Document](./docs/Demo2/Testing-Policy-Document.md)
+* [Demo 2 Video](https://drive.google.com/drive/folders/1RXFea81VvkyAPmqBhXl9xXfcXl81wNEq?usp=sharing)
 
 </details>
 
