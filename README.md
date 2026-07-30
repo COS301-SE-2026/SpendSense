@@ -84,6 +84,18 @@ Track what you owe and when it is due. See exactly how your payment behaviour wo
 
 <details>
 <summary> <b> Demo 1</b> </summary>
+
+* [Software Requirements Specification (SRS)](<./docs/Demo1/SRS (Software Requirements and Design Specification).md>)
+* [Architecture Document](./docs/Demo1/Architecture.md)
+* [Database ERD](./docs/Demo1/database/erd.md)
+* [Database Schema Reference](./docs/Demo1/database/schema-reference.md)
+* [API Contract](./docs/Demo1/srs/api-contract.md)
+* [Use Cases](./docs/Demo1/srs/Use%20Cases.md)
+* [User Stories](./docs/Demo1/srs/User%20Stories.md)
+* [Functional Requirements](<./docs/Demo1/srs/Functional Requirements.md>)
+* [Quality Requirements](<./docs/Demo1/srs/Quality Requirements.md>)
+* [Wireframes](./docs/Demo1/wireframes/Spendsense.pdf)
+
 </details>
 
 <details>
@@ -326,8 +338,8 @@ Use `frontend` instead of `backend` for the frontend service. Avoid `npm run dev
 Prisma docs:
 
 - Schema source of truth: `backend/prisma/schema.prisma`
-- Demo 1 ERD: `docs/database/erd.md`
-- Schema reference: `docs/database/schema-reference.md`
+- Demo 1 ERD: `docs/Demo1/database/erd.md`
+- Schema reference: `docs/Demo1/database/schema-reference.md`
 
 </details>
 
@@ -394,7 +406,7 @@ Authorization: Bearer <supabase_access_token>
 
 On first call, the backend creates the internal SpendSense `User` plus default preferences, notification preferences, credit profile, and gamification profile. Later feature work should scope user-owned records by the internal `User.id`, not directly by the Supabase auth ID.
 
-For a pre-populated walkthrough account, create or choose a dedicated Supabase Auth user, put its email in `DEMO_USER_EMAIL`, put its Supabase Auth user ID in `DEMO_SUPABASE_AUTH_ID`, then run `docker compose exec backend npm run prisma:seed:demo`. See `docs/backend/demo-seeding.md` for the full runbook.
+For a pre-populated walkthrough account, create or choose a dedicated Supabase Auth user, put its email in `DEMO_USER_EMAIL`, put its Supabase Auth user ID in `DEMO_SUPABASE_AUTH_ID`, then run `docker compose exec backend npm run prisma:seed:demo`. See `docs/Demo1/backend/demo-seeding.md` for the full runbook.
 
 ---
 
@@ -407,7 +419,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/allyson.jpg" width="140" alt="Allyson Andre">
+      <img src="docs/team/allyson.jpg" width="140" alt="Allyson Andre">
     </td>
     <td valign="top">
       <strong>Allyson Andre</strong> &nbsp; Full-Stack / Auth & Integration<br><br>
@@ -430,7 +442,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/morgan.jpg" width="140" alt="Morgan Wattrus">
+      <img src="docs/team/morgan.jpg" width="140" alt="Morgan Wattrus">
     </td>
     <td valign="top">
       <strong>Morgan Wattrus</strong> &nbsp; AI Microservice & Data Science<br><br>
@@ -453,7 +465,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/kahlan.jpeg" width="140" alt="Kahlan Hagerman">
+      <img src="docs/team/kahlan.jpeg" width="140" alt="Kahlan Hagerman">
     </td>
     <td valign="top">
       <strong>Kahlan Hagerman</strong> &nbsp; Backend API (NestJS) & Systems Programming<br><br>
@@ -476,7 +488,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/kyle.jpg" width="140" alt="Kyle McCalgan">
+      <img src="docs/team/kyle.jpg" width="140" alt="Kyle McCalgan">
     </td>
     <td valign="top">
       <strong>Kyle McCalgan</strong> &nbsp; System Architect / Backend Infrastructure<br><br>
@@ -499,7 +511,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
 <table>
   <tr>
     <td width="130" valign="top">
-      <img src="docs/assets/images/team/rachel.jpg" width="140" alt="Rachel Clifford">
+      <img src="docs/team/rachel.jpg" width="140" alt="Rachel Clifford">
     </td>
     <td valign="top">
       <strong>Rachel Clifford</strong> &nbsp; Frontend (React) & API Integration<br><br>
