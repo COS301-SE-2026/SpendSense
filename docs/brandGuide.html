@@ -1197,6 +1197,39 @@
     </div>
   </section>
 
-  
+  <section class="block" id="changelog">
+    <div class="container">
+      <div class="sec-num">11</div>
+      <h2>Changelog from Demo 1</h2>
+
+      <p class="lead">What changed between Demo 1 and now, and why.</p>
+
+      <div class="table-scroll"><table class="data-table">
+        <thead><tr><th>Change</th><th>Rationale</th></tr></thead>
+        <tbody>
+          <tr><td>Conformance target raised from WCAG 2.1 AA to WCAG 2.2 AA, and a full measured contrast table added, including the pairings that fail.</td><td>Demo 2 requires 2.2 with documented ratios. Publishing the failures forces honest rules about where pink and violet may carry text, instead of vague assurances.</td></tr>
+          <tr><td>RGB and HSL values added alongside HEX for every colour, with an intended-usage column mapping colours to primary action, informational, success, warning, error, and destructive roles.</td><td>Designers work in HSL, developers in HEX and RGB. One table now serves both, and the usage column makes the semantic mapping explicit.</td></tr>
+          <tr><td>Component section rebuilt from a showcase into a specification: every component now shows its variants and its default, hover, focus, active, disabled, loading, and error states. Inputs, selects, toasts, and modals are documented for the first time.</td><td>These components exist in the Demo 2 implementation, so the guide has to cover them or it stops being the source of truth.</td></tr>
+          <tr><td>Shadow and breakpoint tokens added to the token set, and a grid and breakpoints table added to the layout section.</td><td>Both were already in the code but undocumented, which is precisely the drift the tokens section exists to prevent.</td></tr>
+          <tr><td>Icon library formally specified: Lucide, 24px grid, 2px stroke, round caps and joins, with the three permitted rendering sizes.</td><td>The icons were used consistently in Demo 1, but the rules lived in the team's heads rather than on this page.</td></tr>
+          <tr><td>Font sources and licensing recorded, including the system-stack nature of the Georgia wordmark, and a heading 4 size added to complete the named scale.</td><td>Required by the Demo 2 specification, and licensing questions from the client are now answerable from the guide.</td></tr>
+          <tr><td>Reduced-motion support implemented on this page rather than merely described.</td><td>A brand guide that claims to respect prefers-reduced-motion while auto-playing its own logo loop undermines the standard it sets.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="closing">
+        <p>A design system isn't UI. It's how a team agrees, in writing and in code, what "good" looks like.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+  <div class="container">
+    <strong>SpendSense Brand Guide &middot; Version 2</strong>
+    Team MARK2 &middot; COS 301 Capstone Project &middot; University of Pretoria &middot; 2026<br>
+    Client: EPI-USE Labs &amp; Advance
+  </div>
+</footer>
 
 </body>
+</html>
