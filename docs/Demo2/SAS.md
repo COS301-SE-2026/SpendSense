@@ -68,7 +68,21 @@
     * [5.12.2 Get Obligations Service](#5-12-2-get-obligations-service)
     * [5.12.3 Update Obligation Service](#5-12-3-update-obligation-service)
 * [6. Deployment](#6-deployment)
-    * [6.1 Deployment Diagram](#61-deployment-diagram)
+  * [6.1 Deployment Requirements](#6-1-deployment-requirements)
+    * [6.1.1 One-time setup](#6-1-1-one-time-setup)
+    * [6.1.2 GitHub Actions secrets](#6-1-2-github-actions-secrets)
+    * [6.1.3 First deployment and updates](#6-1-3-first-deployment-and-updates)
+  * [6.2 Deployment Diagram](#6-2-deployment-diagram)
+    * [6.2.1 Systems used](#6-2-1-systems-used)
+    * [6.2.2 Deployment nodes](#6-2-2-deployment-nodes)
+    * [6.2.3 Communication paths](#6-2-3-communication-paths)
+  * [6.3 CI/CD Pipeline Diagram](#6-3-ci-cd-pipeline-diagram)
+    * [6.3.1 Branching flow](#6-3-1-branching-flow)
+    * [6.3.2 Development CI](#6-3-2-development-ci)
+    * [6.3.3 Release qualification](#6-3-3-release-qualification)
+    * [6.3.4 Production deployment](#6-3-4-production-deployment)
+    * [6.3.5 Deployment artefacts and target environments](#6-3-5-deployment-artefacts-and-target-environments)
+    * [6.3.6 Health checks and failure handling](#6-3-6-health-checks-and-failure-handling)
 
 ---
 
@@ -1312,7 +1326,12 @@ None.
 
 ## 6. Deployment
 
+<a id="6-1-deployment-requirements"></a>
+
 ### 6.1 Deployment Requirements
+
+<a id="6-1-1-one-time-setup"></a>
+
 #### 6.1.1 One-time setup
 
 1. Create a Supabase project. Copy its database connection string, project URL, anon key, and JWT secret. Configure the required sign-in methods in Supabase Auth.
@@ -1336,6 +1355,8 @@ SCHEDULER_SECRET=<strong random value>
 `SCHEDULER_SECRET` is needed only when the protected scheduled-job endpoint is used. Do not commit `.env.production` or any secret values.
 
 
+<a id="6-1-2-github-actions-secrets"></a>
+
 #### 6.1.2 GitHub Actions secrets
 
 Add these repository secrets before the first deployment.
@@ -1351,6 +1372,8 @@ Add these repository secrets before the first deployment.
 | `EC2_HOST` and `EC2_SSH_KEY` | EC2 public address and private SSH key used by the deployment workflow. |
 | `GHCR_READ_TOKEN` | GitHub token with permission to pull the published container images on EC2. |
 | `BACKEND_URL` | Public backend URL used by the post-deployment health check, for example `https://api.example.com`. |
+
+<a id="6-1-3-first-deployment-and-updates"></a>
 
 #### 6.1.3 First deployment and updates
 
@@ -1370,12 +1393,12 @@ When prompted by `docker login`, use the GitHub username and `GHCR_READ_TOKEN`.
 4. Test a frontend login and a protected API flow. This confirms the frontend URL is allowed by CORS and Supabase tokens are accepted by the backend.
 
 
-<<a id="6-2-deployment-diagram"></a>
+<a id="6-2-deployment-diagram"></a>
 
 ### 6.2 Deployment Diagram
 <img src="./images/SpendSense Deployment.png"/>
 
-<<a id="6-2-1-system-used"></a>
+<a id="6-2-1-systems-used"></a>
 
 #### 6.2.1 Systems used
 - AWS S3 and CloudFront host the React(Vite) frontend.
@@ -1384,7 +1407,7 @@ When prompted by `docker login`, use the GitHub username and `GHCR_READ_TOKEN`.
 - Supabase provides PostgreSQL and user authentication.
 - Caddy runs on EC2 and provides HTTPS for the backend API.
 
-<<a id="6-2-2-deployment-nodes"></a>
+<a id="6-2-2-deployment-nodes"></a>
 
 #### 6.2.2 Deployment nodes
 
@@ -1398,7 +1421,7 @@ When prompted by `docker login`, use the GitHub username and `GHCR_READ_TOKEN`.
 - **Supabase Auth:** Provides user authentication management.
 - **Supabase PostgreSQL:** Stores the data of the application.
 
-<<a id="6-2-3-communication-paths"></a>
+<a id="6-2-3-communication-paths"></a>
 
 #### 6.2.3 Communication paths
 
@@ -1461,7 +1484,7 @@ Additionally, the pipeline will prepare an end-to-end test environment, reset an
 
 The pull request can be merged into the `release` branch only after successful release validation, end-to-end tests and manual validation.
 
-<a id="6-3-4-production-deplotment"></a>
+<a id="6-3-4-production-deployment"></a>
 
 #### 6.3.4 Production deployment
 
@@ -1478,6 +1501,7 @@ These jobs must complete successfully before the EC2 deployment begins. The work
 GitHub Actions is responsible for building the frontend, publishing the backend and AI images, applying database migrations, and updating the EC2 deployment after approved changes reach `main`.
 
 
+<a id="6-3-5-deployment-artefacts-and-target-environments"></a>
 
 #### 6.3.5 Deployment artefacts and target environments
 
