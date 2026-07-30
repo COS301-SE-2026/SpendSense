@@ -2,6 +2,7 @@ import {
   createNotification,
   type NotificationInput,
   type NotificationStore,
+  type StoredNotification,
 } from '../factories/notification';
 import { createUser, type E2eUser, type E2eUserInput } from '../factories/user';
 
@@ -21,7 +22,7 @@ export async function createUserWithNotifications(
     ...userOverrides,
   });
 
-  const notifications = [];
+  const notifications: StoredNotification[] = [];
   for (const overrides of notificationOverrides) {
     notifications.push(
       await createNotification(prisma, { userId: user.id, ...overrides }),
@@ -36,7 +37,7 @@ export async function addNotificationsForUser(
   user: { id: string },
   notificationOverrides: Omit<NotificationInput, 'userId'>[] = [{}],
 ) {
-  const notifications = [];
+  const notifications: StoredNotification[] = [];
   for (const overrides of notificationOverrides) {
     notifications.push(
       await createNotification(prisma, { userId: user.id, ...overrides }),

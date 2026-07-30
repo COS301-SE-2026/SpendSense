@@ -1,4 +1,4 @@
-type StoredNotification = {
+export type StoredNotification = {
   id: string;
   userId: string;
   type: string;
