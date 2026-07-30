@@ -3,21 +3,28 @@
 <br>
 
 <!-- replace with spendsense logo -->
-<img src="docs/assets/images/spendsense-logo-animated.svg" width="420" alt="SpendSense" />
+<img src="docs/assets/spendsense-logo-animated.svg" width="420" alt="SpendSense" />
 
 <br><br>
 
-<img src="docs/assets/images/MARK2-logo.png" width="430" alt="Team MARK2" />
+<img src="docs/assets/MARK2-logo.png" width="430" alt="Team MARK2" />
 
 <br><br>
 
-<img src="docs/assets/images/epiuse-advance-logo.webp" width="330" alt="EPI-USE Labs & Advance" />
+<img src="docs/assets/epiuse-advance-logo.webp" width="330" alt="EPI-USE Labs & Advance" />
 &nbsp;&nbsp;&nbsp;&nbsp;
-<img src="docs/assets/images/up-logo.webp" width="150" alt="University of Pretoria" />
+<img src="docs/assets/up-logo.webp" width="150" alt="University of Pretoria" />
 
-<br><br>
+</div>
+
+
+---
+
+<div align="center">
 
 # SpendSense
+
+</div>
 
 **A gamified financial tracking platform for students and young adults.**
 
@@ -38,7 +45,20 @@ _COS 301 Capstone 2026 · Team MARK2 · EPI-USE Labs & Advance · University of 
 
 <br>
 
-</div>
+---
+
+# Table of contents
+
+- [What Is SpendSense?](#what-is-spendsense)
+- [Documentation](#documentation)
+- [Features](#features)
+- [Technology Stack](#technology-stack)
+- [Repository Structure](#repository-structure)
+- [Getting Started](#getting-started)
+- [Git Workflow](#git-workflow)
+- [Environment and Secrets](#environment-and-secrets)
+- [Team MARK2](#team-mark2)
+
 
 ---
 
@@ -53,6 +73,41 @@ Students juggle rent, subscriptions, BNPL instalments, and informal IOUs scatter
 Track what you owe and when it is due. See exactly how your payment behaviour would affect a simulated credit score, without any real-world risk. Get rewarded for paying on time through streaks, badges, coins, and a mascot that visibly reflects your financial health.
 
 > _"Make the invisible visible, simulate real-world consequences safely, and make good financial habits worth pursuing."_
+
+---
+
+<div align="center">
+
+## Documentation
+
+</div>
+
+<details>
+<summary> <b> Demo 1</b> </summary>
+</details>
+
+<details>
+<summary> <b> Demo 2</b> </summary>
+
+* [Software Requirements Specification (SRS)](./docs/Demo2/SRS.md)
+* [Software Architecture Specification (SAS)](./docs/Demo2/SAS.md)
+* [Updated Brand Style Guide PDF]()
+* [Coding Standards Document](./docs/Demo2/Coding-Standards-Document.md)
+* [User Manual Document](./docs/Demo2/User-Manual-Document.md)
+* [Testing Policy Document](./docs/Demo2/Testing-Policy-Document.md)
+* [Demo 2 Video](https://drive.google.com/drive/folders/1RXFea81VvkyAPmqBhXl9xXfcXl81wNEq?usp=sharing)
+
+</details>
+
+<details>
+<summary> <b> Demo 3</b> </summary>
+Watch this space !
+</details>
+
+<details>
+<summary> <b> Demo 4</b> </summary>
+Watch this space !
+</details>
 
 ---
 
@@ -151,42 +206,16 @@ SpendSense/
 ├── backend/          # NestJS API
 ├── ai/               # Python FastAPI AI microservice
 ├── docs/             # Project documentation
-│   ├── srs/          # Software Requirements Specification
-│   └── assets/
-│       └── images/   # Logos, team photos, and other assets
+│   ├── Demo1/        # Demo 1 Documentation
+|   ├── Demo2/        # Demo 2 Documentation
+│   ├── assets/       # logo images and animations
+│   └── team/         # team images
 ├── scripts/          # Helper scripts for local development
 └── docker-compose.yml
 ```
 
----
 
-<div align="center">
 
-## Documentation
-
-</div>
-
-| Document | Link |
-|---|---|
-| SRS Folder | [`docs/srs/`](docs/srs/) |
-| Functional Requirements | [`docs/srs/Functional Requirements.md`](docs/srs/Functional%20Requirements.md) |
-| User Stories | [`docs/srs/User Stories.md`](docs/srs/User%20Stories.md) |
-| Use Cases | [`docs/srs/Use Cases.md`](docs/srs/Use%20Cases.md) |
-| Quality Requirements | [`docs/srs/Quality Requirements.md`](docs/srs/Quality%20Requirements.md) |
-| Domain Model Explanation | [`docs/srs/Domain-Model-Explanation.md`](docs/srs/Domain-Model-Explanation.md) |
-| API Contract | [`docs/srs/api-contract.md`](docs/srs/api-contract.md) |
-
----
-
-Services run locally at:
-
-| Service | URL |
-|---|---|
-| Frontend | `http://localhost:5173` |
-| Backend | `http://localhost:3000` |
-| AI service | `http://localhost:8000` |
-| PostgreSQL | `localhost:5432` |
-| MinIO | `http://localhost:9001` |
 
 ---
 
@@ -225,8 +254,25 @@ docker compose exec backend npx prisma migrate deploy
 docker compose exec backend npm run prisma:seed
 docker compose exec backend npm run prisma:seed:demo
 ```
+---
+
+
+
 
 The backend dev container generates Prisma Client on startup, so teammates do not need to run `prisma generate` manually after normal Docker starts.
+
+Initially Docker may take a minute to get up and running but once complete check the services that run locally at:
+
+| Service | URL |
+|---|---|
+| Frontend | `http://localhost:5173` |
+| Backend | `http://localhost:3000` |
+| AI service | `http://localhost:8000` |
+| PostgreSQL | `localhost:5432` |
+| MinIO | `http://localhost:9001` |
+
+
+<br>
 
 <details>
 <summary><strong>All available commands</strong></summary>
@@ -285,19 +331,6 @@ Prisma docs:
 
 </details>
 
-<details>
-<summary><strong>First run notes</strong></summary>
-<br>
-
-The first Docker build on a new machine may take a while as base images and dependencies need to be downloaded. Once running, check:
-
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:3000`
-- AI health check: `http://localhost:8000/health`
-- AI OpenAPI spec: `http://localhost:8000/openapi.json`
-- MinIO: `http://localhost:9001`
-
-</details>
 
 ---
 
