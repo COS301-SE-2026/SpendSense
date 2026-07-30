@@ -647,5 +647,100 @@
     </div>
   </section>
 
+  <section class="block" if="logo">
+    <div class="container">
+      <div class="sec-num">03</div>
+      <h2>Logo and Iconography</h2>
+      <p class="lead">The SpendSense mark tells the whole brand story in one motion. A dot launching upwards pushing the two chevrons up to reach new heights, or in our case, new financial goals.</p>
+
+      <div class="logo-hero">
+        <svg width="500" height="180" viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SpendSense animated logo">
+          <title>SpendSense animated logo</title>
+          <desc>Two stacked chevrons with a dot that flies up and bounces them</desc>
+          <rect x="0" y="0" width="500" heigh="180" rx="16" ry="16" fill="#0F1117"/>
+
+          <style>
+            .chev-top{ fill: none; stroke: #ffffff; stroke-width: 5.5; stroke-linecap: round; stroke-linejoin: round; }
+            .chev-bottom { fill: none; stroke: #ffffff; stroke-width: 3;   stroke-linecap: round; stroke-linejoin: round; opacity: 0.45; }
+            .dot{ fill: #ffffff; }
+            .word-spend{ fill:#ffffff; font-family: Georgia, serif; font-style: italic; font-size: 52px; }
+            .word-sense{ fill:#ffffff; font-family: Arial, Helvetica, sans-serif; font-size: 52px; font-weight: 700; }
+
+            .dot{ animation: dotLaunch  5s linear  infinite; }
+            .chev-bottom{ animation: chevBounceBottom 5s ease-in-out infinite; }
+            .chev-top{ animation: chevBounceTop   5s ease-in-out infinite; }
+
+            @keyframes dotLaunch {
+              0%{ transform: translateY(0); opacity: 1; }
+              1.9%{ transform: translateY(-38px); opacity: 1; }
+              4.8%{ transform: translateY(-46px); opacity: 1; }
+              7.2%{ transform: translateY(-50px); opacity: 1; }
+              8.6%{ transform: translateY(-50px); opacity: 0; }
+              9.6%{ transform: translateY(-38px); opacity: 0; }
+              14.4%{ transform: translateY(-15px); opacity: 0; }
+              18.2%{ transform: translateY(0); opacity: 0; }
+              21.1%{ transform: translateY(0); opacity: 1; }
+              100%{ transform: translateY(0); opacity: 1; }
+            }
+
+            @keyframes chevBounceBottom {
+              0%{transform: translateY(0);}
+              2.9%{transform: translateY(0);}
+              6.7%{transform: translateY(-13px);}
+              11%{transform: translateY(2px);}
+              13.9%{transform: translateY(-4px);}
+              16.8%{transform: translateY(0);}
+              100%{transform: translateY(0);}
+            }
+
+            @keyframes chevBounceTop {
+              0%{ transform: translateY(0); }
+              6.2%{ transform: translateY(0); }
+              10.1%{ transform: translateY(-11px); }
+              13.9%{ transform: translateY(2px); }
+              16.8%{ transform: translateY(-3px); }
+              19.7%{ transform: translateY(0); }
+              100%{ transform: translateY(0); }
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              .dot, .chev-top, .chev-bottom { animation: none; }
+            }
+  
+          </style>
+
+          <polyline class="chev-top" points="42,78 66,52 90,77"/>
+          <polyline class="chev-bottom" points="42,104 66,78 90,104"/>
+          <circle class="dot" cx="66" cy="126" r="5"/>
+          <text x="114" y="116">
+            <tspan class="word-spend">Spend</tspan><tspan class="word-sense">Sense</tspan>
+          </text>
+        </svg>
+      </div>
+
+      <h3>Anatomy of the mark</h3>
+      <div class="rule-list">
+        <div class="rule-row">
+          <div class="term">The chevrons</div>
+          <div class="def">
+            <h5>Two trajectories, one ascent</h5>
+            <p>The upper chevron represents your goals, your future self. The lower chevron represents where you are and the dot is the energy pushing you upwards towards your goals.</p>
+          </div>
+        </div>
+
+        <div class="rule-row">
+          <div class="term">The dot</div>
+          <div class="def">
+            <h5>A single deposit, a single decision</h5>
+            <p>The dot represents one action launching you closer to your goals and resetting to do it all over again. Small actions, compounded, lift you up.</p>
+          </div>
+        </div>
+
+        
+
+      </div>
+    </div>
+  </section>
+
 
 </body>
