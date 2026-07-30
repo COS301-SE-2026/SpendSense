@@ -73,7 +73,7 @@ describe("RegisterPage Component",()=>{
    });
 
     //path submission and reg
-    it("should successfully call signUp and navigate to the dashboard with valid data",async ()=>{
+    it("should successfully call signUp and navigate to the onboarding with valid data",async ()=>{
         vi.mocked(signUp).mockResolvedValueOnce({
             user: {} as unknown as import("@supabase/supabase-js").User,
             session: { access_token: "mock.token" } as unknown as import("@supabase/supabase-js").Session,
@@ -92,7 +92,7 @@ describe("RegisterPage Component",()=>{
         await user.click(screen.getByRole("button",{name:/join the quest/i}));
         await waitFor(()=>{
             expect(signUp).toHaveBeenCalledWith("morgie@tuks.co.za","Password123","Morgie Walrus");
-            expect(mockNavigate).toHaveBeenCalledWith("/domains/dashboard");
+            expect(mockNavigate).toHaveBeenCalledWith("/onboarding");
        });
    });
 

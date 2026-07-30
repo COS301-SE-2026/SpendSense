@@ -100,12 +100,21 @@ export async function createUserWithMissedCriticalPayment(prisma: CreditScoreSce
     for (let index = 0; index < 6; index += 1) {
         const managed = managedObligations[index % managedObligations.length];
         const dueDate = addUtcMonths(today, index - 6);
+        let amountDue = 500 ;
+
+        if (managed.obligation.type === 'RENT') {
+            amountDue = 2_500 ;
+        } 
+        else if  (managed.obligation.type === 'UTILITY') {
+            amountDue = 700 ;
+        }
+
         onTimePayments.push(await createResolvedPayment(prisma, {
             userId: user.id,
             obligationId: managed.obligation.id,
             scheduleId: managed.schedule.id,
             dueDate,
-            amountDue: managed.obligation.type === 'RENT' ? 2_500 : managed.obligation.type === 'UTILITY' ? 700 : 500,
+            amountDue,
             sequenceNumber: index + 1,
             paymentStatus: 'ON_TIME',
             paidDate: dueDate,

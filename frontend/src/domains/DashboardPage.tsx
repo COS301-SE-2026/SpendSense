@@ -199,7 +199,6 @@ export default function DashboardPage() {
 
                     <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-[#091828]">Insights</p>
-                        <p className="text-xs text-[#6b6375]">10% more was spent on Food this week than last week.</p>
                     </div>
 
                     <ChevronRight className="size-4 shrink-0 text-[#6b6375]"/>
