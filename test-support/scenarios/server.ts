@@ -3,17 +3,23 @@ import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createUpcomingPaymentForUser } from './payments';
 import { createUserReadyForQuiz } from './quiz';
+import {addProfileProgressForUser, type ProfileProgress} from './profile'
 
 const requireFromProject = createRequire(`${process.cwd()}/package.json`);
 
 const { PrismaClient } = requireFromProject('@prisma/client') as {
   PrismaClient: new () => {
-    user: {
-      findUnique: (args: {
+   user: {
+      Unique: (args: {
         where: { supabaseAuthId: string };
       }) => Promise<E2eScenarioUser | null>;
       create: (args: {
         data: Record<string, unknown>;
+      }) => Promise<E2eScenarioUser>;
+      upsert: (args: {
+        where: { supabaseAuthId: string };
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
       }) => Promise<E2eScenarioUser>;
     };
     category: {
@@ -36,6 +42,27 @@ const { PrismaClient } = requireFromProject('@prisma/client') as {
         data: Record<string, unknown>;
       }) => Promise<{ id: string }>;
     };
+    creditProfile: {
+      upsert: (args: {
+        where: {userId: string};
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
+      })=> Promise<{id: string; scoreTier: string}>;
+    };
+    gamificationProfile:{
+      upsert: (args:{
+        where: {userId: string};
+        create: Record<string, unknown>;
+        update:Record<string,unknown>;
+      })=> Promise<{id:string}>;
+    };
+    userPreference: {
+      upsert: (args: {
+        where: {userId: string};
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
+      })=> Promise<{id: string}>;
+    };
     $disconnect: () => Promise<void>;
   };
 };
@@ -52,7 +79,14 @@ type ProvisionRequest = {
   supabaseAuthId?: string;
   email?: string;
   label?: string;
+  progress?: Partial<ProfileProgress>;
 };
+
+const validScenarios = new Set([
+  'payments.userWithUpcomingPayment',
+  'quizzes.userReadyForDailyQuiz',
+  'profile.userWithProgress',
+]);
 
 const secret = process.env.E2E_SCENARIO_SECRET;
 
@@ -86,23 +120,23 @@ async function readBody(
 }
 
 async function findOrCreateBrowserUser(
-  supabaseAuthId:string,
-  email:string,
-):Promise<E2eScenarioUser>{
-  const existingUser = await prisma.user.findUnique({
-    where:{
+  supabaseAuthId: string,
+  email: string,
+): Promise<E2eScenarioUser> {
+  return prisma.user.upsert({
+    where: {
       supabaseAuthId,
     },
-  });
-  if(existingUser){
-    return existingUser;
-  }
-  return prisma.user.create({
-    data:{
+    create: {
       supabaseAuthId,
       email,
-      displayName:'E2E Browser User',
-      onboardingCompleted:true,
+      displayName: 'E2E Browser User',
+      onboardingCompleted: true,
+    },
+    update: {
+      email,
+      displayName: 'E2E Browser User',
+      onboardingCompleted: true,
     },
   });
 }
@@ -132,17 +166,22 @@ const server = createServer(async (request, response) => {
 
   try {
     const body = await readBody(request);
-    if (!body.supabaseAuthId || !body.email || !body.scenario) {
+    const { scenario, supabaseAuthId, email } = body;
+    if (
+      !scenario ||
+      !supabaseAuthId ||
+      !email ||
+      !validScenarios.has(scenario)
+    ) {
       sendJson(response, 400, {
         message: 'Invalid E2E scenario request.',
       });
       return;
     }
-
-    if (body.scenario === 'payments.userWithUpcomingPayment') {
+    if (scenario === 'payments.userWithUpcomingPayment') {
       const user = await findOrCreateBrowserUser(
-        body.supabaseAuthId,
-        body.email,
+        supabaseAuthId,
+        email,
       );
       const payment = await createUpcomingPaymentForUser(
         prisma,
@@ -157,19 +196,36 @@ const server = createServer(async (request, response) => {
       });
       return;
     }
-    if (body.scenario === 'quizzes.userReadyForDailyQuiz') {
+    if (scenario === 'quizzes.userReadyForDailyQuiz') {
       const quizScenario = await createUserReadyForQuiz(prisma, {
-        supabaseAuthId: body.supabaseAuthId,
-        email: body.email,
+        supabaseAuthId,
+        email,
       });
       sendJson(response, 201, quizScenario);
       return;
     }
+    if (scenario === 'profile.userWithProgress') {
+      const user = await findOrCreateBrowserUser(
+        supabaseAuthId,
+        email,
+      );
+      const progress = await addProfileProgressForUser(
+        prisma,
+        { id: user.id },
+        body.progress ?? {},
+      );
+      sendJson(response, 201, {
+        user,
+        progress,
+      });
+      return;
+    }
     sendJson(response, 400, {
-      message: `Unknown E2E scenario: ${body.scenario}`,
+      message: `Unhandled E2E scenario: ${scenario}`,
     });
-  }catch(error){
-    const message=error instanceof Error?error.message:'Scenario failed.';
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Scenario failed.';
     sendJson(response, 500, {
       message,
     });

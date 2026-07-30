@@ -80,7 +80,7 @@ export class CreditScoreService {
       reasonForRiskCaps: reason,
       creditScore: finalScore,
       creditScoreTier: finalScoreTier,
-      savingsBuffer,
+      savingsBuffer: Math.round(savingsBuffer),
       onTimePaymentCount,
       onLatePaymentCount,
     };
