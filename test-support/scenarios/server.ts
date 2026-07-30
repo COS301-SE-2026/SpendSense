@@ -2,16 +2,19 @@ import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createUpcomingPaymentForUser } from './payments';
+import {addProfileProgressForUser, type ProfileProgress} from './profile'
 
 const requireFromProject = createRequire(`${process.cwd()}/package.json`);
 const { PrismaClient } = requireFromProject('@prisma/client') as {
   PrismaClient: new () => {
     user: {
-      findUnique: (args: {
-        where: { supabaseAuthId: string };
-      }) => Promise<E2eScenarioUser | null>;
       create: (args: {
         data: Record<string, unknown>;
+      }) => Promise<E2eScenarioUser>;
+      upsert: (args: {
+        where: { supabaseAuthId: string };
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
       }) => Promise<E2eScenarioUser>;
     };
     category: {
@@ -34,6 +37,27 @@ const { PrismaClient } = requireFromProject('@prisma/client') as {
         data: Record<string, unknown>;
       }) => Promise<{ id: string }>;
     };
+    creditProfile: {
+      upsert: (args: {
+        where: {userId: string};
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
+      })=> Promise<{id: string; scoreTier: string}>;
+    };
+    gamificationProfile:{
+      upsert: (args:{
+        where: {userId: string};
+        create: Record<string, unknown>;
+        update:Record<string,unknown>;
+      })=> Promise<{id:string}>;
+    };
+    userPreference: {
+      upsert: (args: {
+        where: {userId: string};
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
+      })=> Promise<{id: string}>;
+    };
     $disconnect: () => Promise<void>;
   };
 };
@@ -50,7 +74,13 @@ type ProvisionRequest = {
   supabaseAuthId?: string;
   email?: string;
   label?: string;
+  progress?: Partial<ProfileProgress>;
 };
+
+const validScenarios=new Set([
+  'payments.userWithUpcomingPayment',
+  'profile.userWithProgress',
+]);
 
 const secret = process.env.E2E_SCENARIO_SECRET;
 if (!secret) {
@@ -91,7 +121,8 @@ const server = createServer(async (request, response) => {
   try {
     const body = await readBody(request);
     if (
-      body.scenario !== 'payments.userWithUpcomingPayment' ||
+      !body.scenario ||
+      !validScenarios.has(body.scenario) ||
       !body.supabaseAuthId ||
       !body.email
     ) {
@@ -99,23 +130,39 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    const user =
-      (await prisma.user.findUnique({
-        where: { supabaseAuthId: body.supabaseAuthId },
-      })) ??
-      (await prisma.user.create({
-        data: {
-          supabaseAuthId: body.supabaseAuthId,
-          email: body.email,
-          displayName: 'E2E Browser User',
-          onboardingCompleted: true,
-        },
-      }));
-    const payment = await createUpcomingPaymentForUser(prisma, user, {
-      obligationName: `E2E Rent ${body.label ?? 'payment'}`,
+    const user = await prisma.user.upsert({
+      where: { supabaseAuthId: body.supabaseAuthId },
+      create: {
+        supabaseAuthId: body.supabaseAuthId,
+        email: body.email,
+        displayName: 'E2E Browser User',
+        onboardingCompleted: true,
+      },
+      update: {
+        displayName: 'E2E Browser User',
+        onboardingCompleted: true,
+      },
     });
 
-    sendJson(response, 201, { user, ...payment });
+    if(body.scenario === 'payments.userWithUpcomingPayment'){
+      const payment=await createUpcomingPaymentForUser(prisma, user, {
+        obligationName: `E2E Rent ${body.label ?? 'payment'}`,
+      });
+      sendJson(response, 201, {user, ...payment});
+      return;
+    }
+
+    if(body.scenario === 'profile.userWithProgress'){
+      const progress=await addProfileProgressForUser(
+        prisma,
+        {id: user.id},
+        body.progress ?? {},
+      );
+      sendJson(response, 201, {user, progress});
+      return;
+    }
+    
+    sendJson(response, 400, { message: 'Unhandled scenario' });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Scenario failed.';
     sendJson(response, 500, { message });
