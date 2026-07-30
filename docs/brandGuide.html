@@ -1096,6 +1096,46 @@
     </div>
   </section>
 
+  <section class="block" id="layout">
+    <div class="container">
+      <div class="sec-num">08</div>
+      <h2>Layout and Spacing</h2>
+      <p class="lead">The base unit is 4px. Every margin, gap, and padding is a multiple of it. The eye reads consistent spacing as designed and arbitrary spacing as rushed.</p>
+
+      <h3>Spacing scale</h3>
+      <div class="spacing-strip">
+        <div class="sp-block"><div class="box" style="width: 4px; height: 4px;"></div><div class="label">4 &middot; xs</div></div>
+        <div class="sp-block"><div class="box" style="width: 8px; height: 8px;"></div><div class="label">8 &middot; s</div></div>
+        <div class="sp-block"><div class="box" style="width: 12px; height: 12px;"></div><div class="label">12 &middot; sm</div></div>
+        <div class="sp-block"><div class="box" style="width: 16px; height: 16px;"></div><div class="label">16 &middot; md</div></div>
+        <div class="sp-block"><div class="box" style="width: 24px; height: 24px;"></div><div class="label">24 &middot; lg</div></div>
+        <div class="sp-block"><div class="box" style="width: 32px; height: 32px;"></div><div class="label">32 &middot; xl</div></div>
+        <div class="sp-block"><div class="box" style="width: 48px; height: 48px;"></div><div class="label">48 &middot; 2xl</div></div>
+        <div class="sp-block"><div class="box" style="width: 64px; height: 64px;"></div><div class="label">64 &middot; 3xl</div></div>
+      </div>
+
+      <h3>Grid and Breakpoints</h3>
+      <div class="table-scroll"><table class="data-table">
+        <thead><tr><th>Range</th><th>Columns</th><th>Gutter</th><th>What changes</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">below 720px</td><td>Single column</td><td>16px</td><td>Mobile first. Card grids stack, the bottom tab bar and floating action button carry navigation, and touch targets stay at 44px minimum.</td></tr>
+          <tr><td class="mono">720px to 900px</td><td>Fluid 2 up</td><td>24px</td><td>Card grids flow into two columns using auto-fit tracks with a 240px to 280px minimum.</td></tr>
+          <tr><td class="mono">above 900px</td><td>Fluid, up to 4</td><td>24px</td><td>Full top navigation appears, dashboards spread to three or four columns, content stays inside a 1200px max-width container.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Corner radius scale</h3>
+      <p class="note" style="margin-top: 0;">Pills are fully rounded, cards are spacious, buttons and inputs sit in between. Nothing in the UI feels sharp or rigid.</p>
+      <div class="radius-strip">
+        <div class="radius-chip" style="border-radius: 8px;"><div class="rl">sm &middot; 8px</div>inputs</div>
+        <div class="radius-chip" style="border-radius: 12px;"><div class="rl">md &middot; 12px</div>icon bubbles, toasts</div>
+        <div class="radius-chip" style="border-radius: 20px;"><div class="rl">lg &middot; 20px</div>cards, modals</div>
+        <div class="radius-chip" style="border-radius: 999px;"><div class="rl">pill &middot; 999px</div>pills and buttons</div>
+      </div>
+
+    </div>
+  </section>
+
   
 
 </body>
