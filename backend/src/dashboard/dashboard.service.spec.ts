@@ -27,8 +27,6 @@ describe('DashboardService', () => {
     createdAt: new Date('2026-05-01'),
   };
 
-
-
   const mockRecentScoreEvents = [
     {
       id: 'score-event-1',
@@ -202,9 +200,9 @@ describe('DashboardService', () => {
         mockGamificationProfile,
       );
       mockPrismaService.paymentOccurrence.findMany
-      .mockResolvedValueOnce(mockOverduePayments)
+        .mockResolvedValueOnce(mockOverduePayments)
         .mockResolvedValueOnce(mockUpcomingPayments);
-        
+
       mockPrismaService.userBadge.findMany.mockResolvedValue(mockRecentBadges);
       mockPrismaService.notification.findMany.mockResolvedValue(
         mockUnreadNotifications,
