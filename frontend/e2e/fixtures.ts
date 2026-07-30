@@ -8,6 +8,12 @@ type E2eFixtures = {
         occurrence: { id: string };
       }>;
     };
+    quizzes:{
+      userReadyForDailyQuiz:()=>
+        provisionScenario<QuizScenarioResult>(
+          'quizzes.userReadyForDailyQuiz',
+      ),
+    },
   };
 };
 
