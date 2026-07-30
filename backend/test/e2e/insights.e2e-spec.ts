@@ -68,7 +68,6 @@ describe('Insights E2E', () => {
         severity: 'warning',
       });
 
-
       const upcomingPressure = findInsight(body, 'upcoming-pressure');
 
       expect(compactMoney(upcomingPressure.value)).toBe(

@@ -75,7 +75,7 @@ function emptyPaymentPeriod(): PaymentPeriodStats {
   };
 }
 
-const PAYMENT_HISTORY_MONTH_COUNT = 12 ;
+const PAYMENT_HISTORY_MONTH_COUNT = 12;
 
 @Injectable()
 export class InsightsService {
@@ -124,8 +124,6 @@ export class InsightsService {
       ],
     };
   }
-
-  
 
   private async getOnTimePaymentRate(
     userId: string,
