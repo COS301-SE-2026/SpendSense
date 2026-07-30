@@ -1,4 +1,4 @@
-import { IsOptional, IsIn } from 'class-validator';
+import { IsOptional, IsIn, IsBoolean } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateReminderPreferencesDto {
@@ -10,4 +10,12 @@ export class UpdateReminderPreferencesDto {
   @IsOptional()
   @IsIn([1, 3, 5, 7])
   defaultReminderDaysBefore?: number;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Whether the user will receive in app notifications',
+  })
+  @IsOptional()
+  @IsBoolean()
+  inAppEnabled?: boolean;
 }

@@ -1,6 +1,7 @@
 import { RemindersService } from './reminders.service';
 import type { UsersService } from '../users/users.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { NotificationsService } from '../notifications/notifications.service';
 import {
   NotificationType,
   ReminderStatus,
@@ -10,6 +11,7 @@ import {
 
 describe('RemindersService', () => {
   let usersService: jest.Mocked<Pick<UsersService, 'findOrCreateUser'>>;
+  let notificationService: jest.Mocked<Pick<NotificationsService, 'create'>>;
   let service: RemindersService;
   let prisma: {
     notificationPreference: { update: jest.Mock };
@@ -17,7 +19,6 @@ describe('RemindersService', () => {
     $transaction: jest.Mock;
   };
   let transaction: {
-    notification: { create: jest.Mock };
     reminder: { update: jest.Mock };
   };
 
@@ -47,6 +48,10 @@ describe('RemindersService', () => {
       findOrCreateUser: jest.fn(),
     };
 
+    notificationService = {
+      create: jest.fn(),
+    };
+
     prisma = {
       notificationPreference: { update: jest.fn() },
       reminder: { findMany: jest.fn() },
@@ -60,13 +65,10 @@ describe('RemindersService', () => {
     service = new RemindersService(
       prisma as unknown as PrismaService,
       usersService as unknown as UsersService,
+      notificationService as unknown as NotificationsService,
     );
 
     transaction = {
-      notification: {
-        create: jest.fn(),
-      },
-
       reminder: {
         update: jest.fn(),
       },
@@ -151,7 +153,7 @@ describe('RemindersService', () => {
       const rslt = await service.processDueReminders();
 
       expect(rslt).toEqual({ processedCount: 2 });
-      expect(transaction.notification.create).toHaveBeenCalledTimes(2);
+      expect(notificationService.create).toHaveBeenCalledTimes(2);
       expect(transaction.reminder.update).toHaveBeenCalledTimes(2);
     });
 
@@ -161,8 +163,8 @@ describe('RemindersService', () => {
       prisma.reminder.findMany.mockResolvedValue([reminder]);
       const rslt = await service.processDueReminders();
 
-      expect(transaction.notification.create).toHaveBeenCalledWith({
-        data: {
+      expect(notificationService.create).toHaveBeenCalledWith(
+        {
           userId: reminder.userId,
           title: 'Payment reminder',
           type: NotificationType.REMINDER,
@@ -170,7 +172,8 @@ describe('RemindersService', () => {
           sourceId: reminder.occurrenceId,
           sourceType: UserEventSourceType.PAYMENT_OCCURRENCE,
         },
-      });
+        transaction,
+      );
 
       expect(transaction.reminder.update).toHaveBeenCalledWith({
         where: { id: reminder.id },
@@ -191,11 +194,12 @@ describe('RemindersService', () => {
       prisma.reminder.findMany.mockResolvedValue([reminder]);
 
       await service.processDueReminders();
-      expect(transaction.notification.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+      expect(notificationService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
           message: 'You have a payment coming up soon.',
         }) as unknown,
-      });
+        transaction,
+      );
     });
 
     it('returns processedCount = 0 and does not do anything when no reminders due', async () => {
@@ -203,7 +207,7 @@ describe('RemindersService', () => {
       const rslt = await service.processDueReminders();
 
       expect(rslt).toEqual({ processedCount: 0 });
-      expect(transaction.notification.create).not.toHaveBeenCalled();
+      expect(notificationService.create).not.toHaveBeenCalled();
       expect(transaction.reminder.update).not.toHaveBeenCalled();
     });
 
@@ -228,13 +232,13 @@ describe('RemindersService', () => {
       const firstRslt = await service.processDueReminders();
 
       expect(firstRslt).toEqual({ processedCount: 1 });
-      expect(transaction.notification.create).toHaveBeenCalledTimes(1);
+      expect(notificationService.create).toHaveBeenCalledTimes(1);
 
       prisma.reminder.findMany.mockResolvedValueOnce([]);
       const secondRslt = await service.processDueReminders();
 
       expect(secondRslt).toEqual({ processedCount: 0 });
-      expect(transaction.notification.create).toHaveBeenCalledTimes(1);
+      expect(notificationService.create).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -50,7 +50,7 @@ export class CreditScoreService {
       CREDIT_SCORE_RANGE.MIN + sumValues * CREDIT_SCORE_RANGE.RANGE;
 
     const applicableRisks = await this.determineApplicableRiskCaps(userId);
-    const finalScore = Math.min(calculateScore, applicableRisks.cap);
+    const finalScore = Math.round(Math.min(calculateScore, applicableRisks.cap));
 
     const finalScoreTier = this.determineScoreTier(finalScore);
 

@@ -56,7 +56,10 @@ export async function createApiE2eFixture() {
       return {
         user,
         token,
-        api: request(app.getHttpServer()).set('Authorization', `Bearer ${token}`),
+        api: request(app.getHttpServer()).set(
+          'Authorization',
+          `Bearer ${token}`,
+        ),
       };
     },
     async close() {

@@ -80,6 +80,15 @@ export class NotificationsService {
     input: CreateNotificationInput,
     client: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
+    const preference = await client.notificationPreference.findUnique({
+      where: { userId: input.userId },
+      select: { inAppEnabled: true },
+    });
+
+    if (preference?.inAppEnabled === false) {
+      return null;
+    }
+
     return client.notification.create({
       data: {
         userId: input.userId,
