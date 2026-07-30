@@ -648,7 +648,7 @@ Then I can access my available financial statistics and insights based on my obl
   * R1.1 The system shall allow users to register for an account.
 
     * R1.1.1 Users shall be able to register using an email address and password.
-    * R1.1.4 The system shall create a default user profile after successful registration.
+    * R1.1.2 The system shall create a default user profile after successful registration.
 
   * R1.2 The system shall allow users to log into their account.
 
