@@ -1156,4 +1156,47 @@
     </div>
   </section>
 
+  <section class="block" id="accessibility">
+    <div class="container">
+      <div class="sec-num">10</div>
+      <h2>Accessibility</h2>
+      <p class="lead">The conformance target is WCAG 2.2 AA, raised from 2.1 in Demo 1, with AAA achieved for all body text pairings as shown in the contrast table in section 04. The four principles below shaped all our decisions.</p>
+      
+      <div class="rule-list">
+        <div class="rule-row">
+          <div class="term">Perceivable</div>
+          <div class="def">
+            <h5>Can users sense the content?</h5>
+            <p>Every text-on-background pairing is measured against the hex values in this guide, with the results published in section 04, including the pairings that fail.</p>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="term">Operable</div>
+          <div class="def">
+            <h5>Can users drive the interface?</h5>
+            <p>All interactive elements are keyboard accessible in a logical tab order, including the floating action button and the bottom navigation. The focus indicator is a 2px navy outline with a 2px offset on every focusable component, visible against every surface in the palette. Touch targets are 44px minimum, and no interaction requires dragging, in line with the 2.2 dragging-movements criterion.</p>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="term">Understandable</div>
+          <div class="def">
+            <h5>Can users predict behaviour?</h5>
+            <p>Navigation is consistent on every screen. Error messages are written in plain language that says what to do next, not just what went wrong. Form labels sit above their inputs, and placeholders are never the only label.</p>
+          </div>
+        </div>
+        <div class="rule-row">
+          <div class="term">Robust</div>
+          <div class="def">
+            <h5>Will it work everywhere?</h5>
+            <p>Semantic HTML throughout, with ARIA only where semantics fall short: labels on icon-only buttons, dialog roles on modals, live regions on toasts. The prefers-reduced-motion preference is respected across the app and on this page, with the logo animation and all in-app bounces fading or stopping for users who request it.</p>
+          </div>
+        </div>
+      </div>
+
+      
+    </div>
+  </section>
+
+  
+
 </body>
