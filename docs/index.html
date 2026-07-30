@@ -365,11 +365,13 @@
     padding: var(--s-6) var(--s-4); display: flex; justify-content: center;
     width: 100%;
   }
-  .modal-card {
+  dialog.modal-card {
+    position: relative; border: none; margin: 0;
     background: var(--bg-card); border-radius: var(--r-lg);
     padding: var(--s-5); max-width: 360px; width: 100%;
     box-shadow: var(--shadow-card);
   }
+  dialog.modal-card::backdrop { display: none; }
   .modal-card h5 { font-family: var(--font-display); font-size: 19px; font-weight: 800; margin-bottom: var(--s-2); }
   .modal-card p { font-size: 14px; opacity: 0.75; margin-bottom: var(--s-4); }
   .modal-card .actions { display: flex; gap: var(--s-3); justify-content: flex-end; }
@@ -982,11 +984,11 @@
       <div class="demo-strip">
         <div class="demo-label">Text inputs and selects &middot; states</div>
         <div class="demo-content" style="align-items: flex-start;">
-          <span class="field"><label>Amount</label><input type="text" placeholder="R0.00"><span class="state-label" style="text-align:left">default</span></span>
-          <span class="field"><label>Amount</label><input type="text" class="is-focus" value="R45"><span class="state-label" style="text-align:left">focus</span></span>
-          <span class="field"><label>Amount</label><input type="text" class="is-error" value="R-12"><span class="err-msg">Looks like this amount might be wrong. Try taking another look.</span><span class="state-label" style="text-align:left">error</span></span>
-          <span class="field"><label>Amount</label><input type="text" value="R 45" disabled><span class="state-label" style="text-align:left">disabled</span></span>
-          <span class="field"><label>Category</label><select><option>Food</option><option>Transport</option><option>Subscriptions</option><option>Rent</option><option>Utilities</option><option>Shopping</option></select><span class="state-label" style="text-align:left">select, default</span></span>
+          <span class="field"><label for="amount-default">Amount</label><input id="amount-default" type="text" placeholder="R0.00"><span class="state-label" style="text-align:left">default</span></span>
+          <span class="field"><label for="amount-focus">Amount</label><input id="amount-focus" type="text" class="is-focus" value="R45"><span class="state-label" style="text-align:left">focus</span></span>
+          <span class="field"><label for="amount-error">Amount</label><input id="amount-error" type="text" class="is-error" value="R-12"><span class="err-msg">Looks like this amount might be wrong. Try taking another look.</span><span class="state-label" style="text-align:left">error</span></span>
+          <span class="field"><label for="amount-disabled">Amount</label><input id="amount-disabled" type="text" value="R 45" disabled><span class="state-label" style="text-align:left">disabled</span></span>
+          <span class="field"><label for="category-default">Category</label><select id="category-default"><option>Food</option><option>Transport</option><option>Subscriptions</option><option>Rent</option><option>Utilities</option><option>Shopping</option></select><span class="state-label" style="text-align:left">select, default</span></span>
         </div>
       </div>
 
@@ -1003,14 +1005,14 @@
         <div class="demo-label">Modal</div>
         <div class="demo-content">
           <div class="modal-demo">
-            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title-demo">
+            <dialog class="modal-card" open aria-labelledby="modal-title-demo">
               <h5 id="modal-title-demo">Delete this expense?</h5>
               <p>The R45 at Vida e Caff&egrave; will be removed from today's total. This can't be undone.</p>
               <div class="actions">
                 <button class="btn btn-tertiary">Keep it</button>
                 <button class="btn btn-primary" style="background: var(--color-strawberry);">Delete</button>
               </div>
-            </div>
+            </dialog>
           </div>
         </div>
       </div>
