@@ -960,6 +960,142 @@
     </div>
   </section>
 
+  <section class="block" id="components">
+    <div class="container">
+      <div class="sec-num">07</div>
+      <h2>Component Library</h2>
+      <p class="lead">Every standard component in the product, shown with its variants and states. The rendered examples below use the production tokens, so what you see here is what ships. States that depend on a pointer (hover, active) are also shown statically.</p>
+
+      <div class="demo-strip">
+        <div class="demo-label">Buttons &middot; variants</div>
+        <div class="demo-content">
+          <button class="btn btn-primary">Log it</button>
+          <button class="btn btn-secondary">See insights</button>
+          <button class="btn btn-tertiary">Skip for now</button>
+        </div>
+
+      </div>
+
+      <div class="demo-strip">
+        <div class="demo-label">Buttons &middot; states, primary variant shown</div>
+        <div class="demo-content">
+          <span class="state-cell"><button class="btn btn-primary">Log it</button><span class="state-label">default</span></span>
+          <span class="state-cell"><button class="btn btn-primary is-hover">Log it</button><span class="state-label">hover</span></span>
+          <span class="state-cell"><button class="btn btn-primary is-focus">Log it</button><span class="state-label">focus</span></span>
+          <span class="state-cell"><button class="btn btn-primary is-active">Log it</button><span class="state-label">active</span></span>
+          <span class="state-cell"><button class="btn btn-primary" disabled>Log it</button><span class="state-label">disabled</span></span>
+          <span class="state-cell"><button class="btn btn-primary is-loading">Log it</button><span class="state-label">loading</span></span>
+        </div>
+      </div>
+
+      <div class="demo-strip">
+        <div class="demo-label">Text inputs and selects &middot; states</div>
+        <div class="demo-content" style="align-items: flex-start;">
+          <span class="field"><label>Amount</label><input type="text" placeholder="R0.00"><span class="state-label" style="text-align:left">default</span></span>
+          <span class="field"><label>Amount</label><input type="text" class="is-focus" value="R45"><span class="state-label" style="text-align:left">focus</span></span>
+          <span class="field"><label>Amount</label><input type="text" class="is-error" value="R-12"><span class="err-msg">Looks like this amount might be wrong. Try taking another look.</span><span class="state-label" style="text-align:left">error</span></span>
+          <span class="field"><label>Amount</label><input type="text" value="R 45" disabled><span class="state-label" style="text-align:left">disabled</span></span>
+          <span class="field"><label>Category</label><select><option>Food</option><option>Transport</option><option>Subscriptions</option><option>Rent</option><option>Utilities</option><option>Shopping</option></select><span class="state-label" style="text-align:left">select, default</span></span>
+        </div>
+      </div>
+
+      <div class="demo-strip">
+        <div class="demo-label">Toasts</div>
+        <div class="demo-content">
+          <div class="toast success"><span class="t-dot"></span>Expense logged. Nice one!</div>
+          <div class="toast reward"><span class="t-dot"></span>+25 XP earned</div>
+          <div class="toast error"><span class="t-dot"></span>Couldn't save that. Try again?</div>
+        </div>
+      </div>
+
+      <div class="demo-strip">
+        <div class="demo-label">Modal</div>
+        <div class="demo-content">
+          <div class="modal-demo">
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title-demo">
+              <h5 id="modal-title-demo">Delete this expense?</h5>
+              <p>The R45 at Vida e Caff&egrave; will be removed from today's total. This can't be undone.</p>
+              <div class="actions">
+                <button class="btn btn-tertiary">Keep it</button>
+                <button class="btn btn-primary" style="background: var(--color-strawberry);">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-strip">
+        <div class="demo-label">Pills &middot; status and gamification</div>
+        <div class="demo-content">
+          <span class="pill pill-xp">+25 XP</span>
+          <span class="pill pill-streak">7 day streak</span>
+          <span class="pill pill-level">Lvl 4</span>
+          <span class="pill pill-paid">Paid</span>
+          <span class="pill pill-due">Bills due</span>
+        </div>
+      </div>
+
+      <div class="demo-strip">
+        <div class="demo-label">Sticker badges &middot; rarity tiers</div>
+        <div class="demo-content">
+          <div class="sticker-demo">
+            <div class="sticker sticker-common">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+              <span>FIRST LOG</span>
+            </div>
+            <div class="sticker sticker-rare">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+              <span>BUDGET BOSS</span>
+            </div>
+            <div class="sticker sticker-epic">
+              <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+              <span>EARLY BIRD</span>
+            </div>
+            <div class="sticker sticker-legendary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/></svg>
+              <span>CASH SAGE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-strip">
+        <div class="demo-label">Progress bars</div>
+        <div class="demo-content" style="flex-direction: column; align-items: stretch; max-width: 420px;">
+          <div>
+            <div class="progress-track"><div class="progress-fill pf-xp"></div></div>
+            <div class="progress-caption">XP &middot; 850/1200</div>
+          </div>
+          <div>
+            <div class="progress-track"><div class="progress-fill pf-mint"></div></div>
+            <div class="progress-caption">Goal &middot; 80% complete</div>
+          </div>
+          <div>
+            <div class="progress-track"><div class="progress-fill pf-pink"></div></div>
+            <div class="progress-caption">Budget &middot; 45% used</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo-strip" style="border-bottom: none;">
+        <div class="demo-label">Transaction row</div>
+        <div class="demo-content">
+          <div class="tx-row">
+            <div class="ic-bubble ic-pink sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18"/><path d="M5 11v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="who">
+              <div class="name">Vida e Caff&egrave;</div>
+              <div class="meta">10:42 AM &middot; Card</div>
+            </div>
+            <div class="amt">&minus;R45</div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </section>
+
   
 
 </body>
