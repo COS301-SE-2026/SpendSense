@@ -782,5 +782,70 @@
     </div>
   </section>
 
+  <section class="block" id="colour">
+    <div class="container">
+      <div class="sec-num">04</div>
+        <h2>Colour</h2>
+        <p class="lead">Colour in SpendSense carries meaning. Yellow is always rewards, pink is always transactions, mint is always success. The full palette is documented below along with the intended usage of each.</p>
+
+        <h3>Palette</h3>
+        <div class="table-scroll"><table class="data-table">
+          <thead><tr><th>Colour</th><th>Token name</th><th>HEX</th><th>RGB</th><th>HSL</th><th>Intended usage</th></tr></thead>
+          <tbody>
+            <tr><td><span class="sw" style="background:#1F2D3D"></span>Deep navy</td><td class="mono">color-navy</td><td class="mono">#1F2D3D</td><td class="mono">31, 45, 61</td><td class="mono">212&deg;, 33%, 18%</td><td>Primary action buttons, navigation, headings, body text</td></tr>
+            <tr><td><span class="sw" style="background:#3D5A80"></span>Denim blue</td><td class="mono">color-denim</td><td class="mono">#3D5A80</td><td class="mono">61, 90, 128</td><td class="mono">214&deg;, 35%, 37%</td><td>Informational accents, avatars, active nav states, links</td></tr>
+            <tr><td><span class="sw" style="background:#FFCB47"></span>Sunshine yellow</td><td class="mono">color-yellow</td><td class="mono">#FFCB47</td><td class="mono">255, 203, 71</td><td class="mono">43&deg;, 100%, 64%</td><td>Reward and warning states: XP, streaks, levels, caution notices</td></tr>
+            <tr><td><span class="sw" style="background:#6FC9B0"></span>Fresh mint</td><td class="mono">color-mint</td><td class="mono">#6FC9B0</td><td class="mono">111, 201, 176</td><td class="mono">163&deg;, 45%, 61%</td><td>Success states: paid status, completed quests, income, progress</td></tr>
+            <tr><td><span class="sw" style="background:#FF6B9D"></span>Bubblegum pink</td><td class="mono">color-pink</td><td class="mono">#FF6B9D</td><td class="mono">255, 107, 157</td><td class="mono">340&deg;, 100%, 71%</td><td>Transactions and energy: spend amounts, secondary CTAs</td></tr>
+            <tr><td><span class="sw" style="background:#E84855"></span>Strawberry red</td><td class="mono">color-strawberry</td><td class="mono">#E84855</td><td class="mono">232, 72, 85</td><td class="mono">355&deg;, 78%, 60%</td><td>Destructive and error states: bills due, missed payments, form errors</td></tr>
+            <tr><td><span class="sw" style="background:#9B7EDE"></span>Soft violet</td><td class="mono">color-violet</td><td class="mono">#9B7EDE</td><td class="mono">155, 126, 222</td><td class="mono">258&deg;, 59%, 68%</td><td>Legendary tier badges and rare celebratory moments, used sparingly</td></tr>
+            <tr><td><span class="sw" style="background:#F4FBF7"></span>Mint tint</td><td class="mono">bg-page</td><td class="mono">#F4FBF7</td><td class="mono">244, 251, 247</td><td class="mono">146&deg;, 47%, 97%</td><td>Page background</td></tr>
+            <tr><td><span class="sw" style="background:#FFFFFF"></span>Pure white</td><td class="mono">bg-card</td><td class="mono">#FFFFFF</td><td class="mono">255, 255, 255</td><td class="mono">0&deg;, 0%, 100%</td><td>Card surfaces</td></tr>
+            <tr><td><span class="sw" style="background:#DCEFE8"></span>Pale mint</td><td class="mono">bg-track</td><td class="mono">#DCEFE8</td><td class="mono">220, 239, 232</td><td class="mono">158&deg;, 37%, 90%</td><td>Progress tracks, borders, dividers</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>Contrast ratios, WCAG 2.2</h3>
+        <p class="note" style="margin-top: 0; margin-bottom: var(--s-2);">Ratios below are calculated from the hex values above using the WCAG relative luminance formula. The conformance target is AA. AAA is achieved for all body text pairings. AA for normal text requires 4.5:1, AA for large text (18.66px bold or 24px regular and up) requires 3:1, and AAA requires 7:1.</p>
+        <div class="table-scroll"><table class="data-table">
+          <thead><tr><th>Foreground on background</th><th>Ratio</th><th>Level</th><th>Where it appears</th></tr></thead>
+
+          <tbody>
+            <tr><td><span class="sw" style="background:#1F2D3D"></span>Navy on white</td><td class="mono">13.99:1</td><td><span class="pass">AAA</span></td><td>Body text and headings on cards</td></tr>
+            <tr><td><span class="sw" style="background:#1F2D3D"></span>Navy on mint tint</td><td class="mono">13.32:1</td><td><span class="pass">AAA</span></td><td>Body text and headings on the page background</td></tr>
+            <tr><td><span class="sw" style="background:#1F2D3D"></span>Navy on pale mint</td><td class="mono">11.70:1</td><td><span class="pass">AAA</span></td><td>Labels on tracks and dividers</td></tr>
+            <tr><td><span class="sw" style="background:#1F2D3D"></span>Navy on yellow</td><td class="mono">9.25:1</td><td><span class="pass">AAA</span></td><td>XP pills, reward and warning banners</td></tr>
+            <tr><td><span class="sw" style="background:#1F2D3D"></span>Navy on fresh mint</td><td class="mono">7.10:1</td><td><span class="pass">AAA</span></td><td>Paid pills, success banners, mint stickers</td></tr>
+            <tr><td><span class="sw" style="background:#FFFFFF"></span>White on navy</td><td class="mono">13.99:1</td><td><span class="pass">AAA</span></td><td>Primary buttons, level pills, token block</td></tr>
+            <tr><td><span class="sw" style="background:#FFFFFF"></span>White on denim</td><td class="mono">7.06:1</td><td><span class="pass">AAA</span></td><td>Avatars, transport bubbles, active nav</td></tr>
+            <tr><td><span class="sw" style="background:#3D5A80"></span>Denim on white</td><td class="mono">7.06:1</td><td><span class="pass">AAA</span></td><td>Links and informational text on cards</td></tr>
+            <tr><td><span class="sw" style="background:#3D5A80"></span>Denim on mint tint</td><td class="mono">6.72:1</td><td><span class="pass">AA</span></td><td>Links and informational text on the page background</td></tr>
+            <tr><td><span class="sw" style="background:#FFFFFF"></span>White on strawberry</td><td class="mono">3.83:1</td><td><span class="pass-large">AA large only</span></td><td>Bills-due pills and error toasts. Text on strawberry must be 14px bold or larger, which every current usage satisfies.</td></tr>
+            <tr><td><span class="sw" style="background:#E84855"></span>Strawberry on white</td><td class="mono">3.83:1</td><td><span class="pass-large">AA large only</span></td><td>Inline error messages are 12px, so they render bold and are always paired with a border change and an icon or label, never colour alone.</td></tr>
+            <tr><td><span class="sw" style="background:#FFFFFF"></span>White on violet</td><td class="mono">3.26:1</td><td><span class="pass-large">AA large only</span></td><td>Legendary stickers. Sticker text is bold, decorative, and duplicated by the badge name in accessible text.</td></tr>
+            <tr><td><span class="sw" style="background:#FF6B9D"></span>Pink on white</td><td class="mono">2.68:1</td><td><span class="fail">Fails AA</span></td><td>Pink never carries text that must be read on light surfaces. Spend amounts in pink are large bold display numbers accompanied by a navy merchant name and sign. Pink text at body size is not permitted.</td></tr>
+            <tr><td><span class="sw" style="background:#FFFFFF"></span>White on pink</td><td class="mono">2.68:1</td><td><span class="fail">Fails AA</span></td><td>Restricted to the secondary button, where the label is 14px bold, and to decorative surfaces. Any critical action offers a navy primary alternative.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3>Colour Grammar</h3>
+        <div class="table-scroll"><table class="data-table">
+          <thead><tr><th>Meaning</th><th>Colour</th><th>Used for</th></tr></thead>
+
+          <tbody>
+            <tr><td>Rewards earned</td><td><span class="sw" style="background:#FFCB47"></span>Sunshine yellow</td><td>XP, levels, streaks, achievement glows</td></tr>
+            <tr><td>Transactions and energy</td><td><span class="sw" style="background:#FF6B9D"></span>Bubblegum pink</td><td>Spend amounts, secondary CTAs, transaction dots</td></tr>
+            <tr><td>Success and progress</td><td><span class="sw" style="background:#6FC9B0"></span>Fresh mint</td><td>Paid status, completed quests, on-time rate</td></tr>
+            <tr><td>Income and positive deltas</td><td><span class="sw" style="background:#6FC9B0"></span>Fresh mint</td><td>Money in, salary deposits, savings wins</td></tr>
+            <tr><td>Bills due and urgency</td><td><span class="sw" style="background:#E84855"></span>Strawberry red</td><td>Upcoming bills, missed payments, never default red</td></tr>
+            <tr><td>Legendary moments</td><td><span class="sw" style="background:#9B7EDE"></span>Soft violet</td><td>Rarest tier badges and level-ups, used sparingly</td></tr>
+            <tr><td>Primary UI</td><td><span class="sw" style="background:#1F2D3D"></span>Deep navy</td><td>Primary buttons, navigation, headings</td></tr>
+          </tbody>
+        </table></div>
+
+    </div>
+  </section>
+
+  
 
 </body>
