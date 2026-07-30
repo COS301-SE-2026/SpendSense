@@ -57,8 +57,9 @@ describe('Scheduler E2E', () => {
     const e2e = await createApiE2eFixture();
 
     try {
-      const { user, occurrence } =
-        await createUserWithMissedEligibleOccurrence(e2e.prisma);
+      const { user, occurrence } = await createUserWithMissedEligibleOccurrence(
+        e2e.prisma,
+      );
 
       await e2e.request
         .post('/api/v1/scheduler/run')

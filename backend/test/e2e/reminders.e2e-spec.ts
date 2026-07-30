@@ -23,7 +23,7 @@ describe('Reminder Preferences E2E', () => {
       await e2e.close();
     }
   });
-  
+
   it('GET /reminder-preferences will return the seeded preferences for user', async () => {
     const e2e = await createApiE2eFixture();
 

@@ -9,7 +9,12 @@ type NotificationListResponse = {
       title: string;
       readAt: string | null;
     }>;
-    pagination: { page: number; perPage: number; total: number; totalPages: number };
+    pagination: {
+      page: number;
+      perPage: number;
+      total: number;
+      totalPages: number;
+    };
   };
 };
 
@@ -27,8 +32,14 @@ describe('Notifications E2E', () => {
 
     try {
       const { user } = await createUserWithNotifications(e2e.prisma, [
-        { title: 'old notification', createdAt: new Date('2027-01-01T00:00:00.000Z') },
-        { title: 'new notification', createdAt: new Date('2027-01-02T00:00:00.000Z') },
+        {
+          title: 'old notification',
+          createdAt: new Date('2027-01-01T00:00:00.000Z'),
+        },
+        {
+          title: 'new notification',
+          createdAt: new Date('2027-01-02T00:00:00.000Z'),
+        },
       ]);
       const token = await createE2eAccessToken(user);
 
@@ -73,9 +84,10 @@ describe('Notifications E2E', () => {
     const e2e = await createApiE2eFixture();
 
     try {
-      const { user, notifications } = await createUserWithNotifications(e2e.prisma, [
-        { title: 'mark read' },
-      ]);
+      const { user, notifications } = await createUserWithNotifications(
+        e2e.prisma,
+        [{ title: 'mark read' }],
+      );
       const token = await createE2eAccessToken(user);
       const [notification] = notifications;
 
@@ -84,7 +96,9 @@ describe('Notifications E2E', () => {
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
-      expect((response.body as NotificationResponse).data.readAt).not.toBeNull();
+      expect(
+        (response.body as NotificationResponse).data.readAt,
+      ).not.toBeNull();
 
       const stored = await e2e.prisma.notification.findUnique({
         where: { id: notification.id },
@@ -99,11 +113,12 @@ describe('Notifications E2E', () => {
     const e2e = await createApiE2eFixture();
 
     try {
-      const { notifications: notificationsA } = await createUserWithNotifications(
-        e2e.prisma,
-        [{ title: 'belongs to user 1' }],
-        { email: 'e2e-notifications-1@example.test' },
-      );
+      const { notifications: notificationsA } =
+        await createUserWithNotifications(
+          e2e.prisma,
+          [{ title: 'belongs to user 1' }],
+          { email: 'e2e-notifications-1@example.test' },
+        );
       const { user: userB } = await createUserWithNotifications(
         e2e.prisma,
         [],
@@ -125,10 +140,10 @@ describe('Notifications E2E', () => {
     const e2e = await createApiE2eFixture();
 
     try {
-      const { user, notifications } = await createUserWithNotifications(e2e.prisma, [
-        { title: '1st unread' },
-        { title: '2nd unread' },
-      ]);
+      const { user, notifications } = await createUserWithNotifications(
+        e2e.prisma,
+        [{ title: '1st unread' }, { title: '2nd unread' }],
+      );
       const token = await createE2eAccessToken(user);
       const ids = notifications.map((notification) => notification.id);
 
@@ -153,9 +168,10 @@ describe('Notifications E2E', () => {
     const e2e = await createApiE2eFixture();
 
     try {
-      const { user, notifications } = await createUserWithNotifications(e2e.prisma, [
-        { title: 'delete this' },
-      ]);
+      const { user, notifications } = await createUserWithNotifications(
+        e2e.prisma,
+        [{ title: 'delete this' }],
+      );
       const token = await createE2eAccessToken(user);
       const [notification] = notifications;
 
@@ -169,7 +185,9 @@ describe('Notifications E2E', () => {
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
-      expect((listResponse.body as NotificationListResponse).data.notifications).toHaveLength(0);
+      expect(
+        (listResponse.body as NotificationListResponse).data.notifications,
+      ).toHaveLength(0);
     } finally {
       await e2e.close();
     }
@@ -188,10 +206,10 @@ describe('Notifications E2E', () => {
     const e2e = await createApiE2eFixture();
 
     try {
-      const { user, notifications } = await createUserWithNotifications(e2e.prisma, [
-        { title: 'Bulk delete me one' },
-        { title: 'Bulk delete me two' },
-      ]);
+      const { user, notifications } = await createUserWithNotifications(
+        e2e.prisma,
+        [{ title: 'Bulk delete me one' }, { title: 'Bulk delete me two' }],
+      );
       const token = await createE2eAccessToken(user);
       const ids = notifications.map((notification) => notification.id);
 
@@ -201,7 +219,9 @@ describe('Notifications E2E', () => {
         .send({ ids })
         .expect(200);
 
-      expect((response.body as { data: { deleted: number } }).data.deleted).toBe(2);
+      expect(
+        (response.body as { data: { deleted: number } }).data.deleted,
+      ).toBe(2);
 
       const listResponse = await e2e.request
         .get('/api/v1/notifications')
