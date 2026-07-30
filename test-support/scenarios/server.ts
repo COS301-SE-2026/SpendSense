@@ -2,16 +2,19 @@ import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createUpcomingPaymentForUser } from './payments';
+import {
+  addReminderPreferencesForUser,
+  type ReminderPreferences,
+} from './reminders';
 
 const requireFromProject = createRequire(`${process.cwd()}/package.json`);
 const { PrismaClient } = requireFromProject('@prisma/client') as {
   PrismaClient: new () => {
     user: {
-      findUnique: (args: {
+      upsert: (args: {
         where: { supabaseAuthId: string };
-      }) => Promise<E2eScenarioUser | null>;
-      create: (args: {
-        data: Record<string, unknown>;
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
       }) => Promise<E2eScenarioUser>;
     };
     category: {
@@ -34,6 +37,13 @@ const { PrismaClient } = requireFromProject('@prisma/client') as {
         data: Record<string, unknown>;
       }) => Promise<{ id: string }>;
     };
+    notificationPreference: {
+      upsert: (args: {
+        where: { userId: string };
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
+      }) => Promise<{ id: string }>;
+    };
     $disconnect: () => Promise<void>;
   };
 };
@@ -50,7 +60,13 @@ type ProvisionRequest = {
   supabaseAuthId?: string;
   email?: string;
   label?: string;
+  preferences?: Partial<ReminderPreferences>;
 };
+
+const validScenarios = new Set([
+  'payments.userWithUpcomingPayment',
+  'reminders.userWithPreferences',
+]);
 
 const secret = process.env.E2E_SCENARIO_SECRET;
 if (!secret) {
@@ -91,7 +107,8 @@ const server = createServer(async (request, response) => {
   try {
     const body = await readBody(request);
     if (
-      body.scenario !== 'payments.userWithUpcomingPayment' ||
+      !body.scenario ||
+      !validScenarios.has(body.scenario) ||
       !body.supabaseAuthId ||
       !body.email
     ) {
@@ -99,23 +116,39 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    const user =
-      (await prisma.user.findUnique({
-        where: { supabaseAuthId: body.supabaseAuthId },
-      })) ??
-      (await prisma.user.create({
-        data: {
-          supabaseAuthId: body.supabaseAuthId,
-          email: body.email,
-          displayName: 'E2E Browser User',
-          onboardingCompleted: true,
-        },
-      }));
-    const payment = await createUpcomingPaymentForUser(prisma, user, {
-      obligationName: `E2E Rent ${body.label ?? 'payment'}`,
+    const user = await prisma.user.upsert({
+      where: { supabaseAuthId: body.supabaseAuthId },
+      create: {
+        supabaseAuthId: body.supabaseAuthId,
+        email: body.email,
+        displayName: 'E2E browser user',
+        onboardingCompleted: true,
+      },
+      update: {
+        displayName: 'E2E browser user',
+        onboardingCompleted: true,
+      },
     });
 
-    sendJson(response, 201, { user, ...payment });
+    if (body.scenario === 'payments.userWithUpcomingPayment') {
+      const payment = await createUpcomingPaymentForUser(prisma, user, {
+        obligationName: `E2E rent ${body.label ?? 'payment'}`,
+      });
+      sendJson(response, 201, { user, ...payment });
+      return;
+    }
+
+    if (body.scenario === 'reminders.userWithPreferences') {
+      const preferences = await addReminderPreferencesForUser(
+        prisma,
+        user,
+        body.preferences ?? {},
+      );
+      sendJson(response, 201, { user, preferences });
+      return;
+    }
+
+    sendJson(response, 400, { message: 'Unhandled scenario' });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Scenario failed.';
     sendJson(response, 500, { message });
