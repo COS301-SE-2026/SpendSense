@@ -1,47 +1,84 @@
-import { test as base, expect } from '@playwright/test';
+import { expect, test as base } from '@playwright/test';
+import type { ProfileProgress } from '../../test-support/scenarios/profile';
+import type { ReminderPreferences } from '../../test-support/scenarios/reminders';
+import type { NotificationInput } from '../../test-support/factories/notification';
 
-type ReminderPreferences = {
-  emailEnabled: boolean;
-  pushEnabled: boolean;
-  smsEnabled: boolean;
-  inAppEnabled: boolean;
-  defaultReminderDaysBefore: number;
-  quietHoursStart: string | null;
-  quietHoursEnd: string | null;
+type PaymentScenarioResult = {
+  user: {
+    id: string;
+    supabaseAuthId: string;
+    email: string;
+    displayName: string | null;
+  };
+  obligation: {
+    id: string;
+    name: string;
+  };
+  occurrence: {
+    id: string;
+  };
 };
 
-type NotificationSeed = {
-  title?: string;
-  message?: string;
-  type?:
-    | 'REMINDER'
-    | 'SCORE_CHANGE'
-    | 'REWARD'
-    | 'BADGE_EARNED'
-    | 'PAYMENT_STATUS'
-    | 'SYSTEM';
-  readAt?: string | null;
+type QuizScenarioResult = {
+  user: {
+    id: string;
+    supabaseAuthId: string;
+    email: string;
+    displayName: string | null;
+  };
+};
+
+type ProfileScenarioResult = {
+  user: {
+    id: string;
+    displayName: string | null;
+    email: string;
+  };
+  progress: ProfileProgress;
+};
+
+type ReminderScenarioResult = {
+  user: {
+    id: string;
+    displayName: string | null;
+    email: string;
+  };
+  preferences: ReminderPreferences;
+};
+
+type NotificationScenarioResult = {
+  user: {
+    id: string;
+    displayName: string | null;
+    email: string;
+  };
+  notifications: Array<{ id: string; title: string }>;
 };
 
 type E2eFixtures = {
   scenario: {
     payments: {
-      userWithUpcomingPayment: (input?: { label?: string }) => Promise<{
-        obligation: { id: string; name: string };
-        occurrence: { id: string };
-      }>;
+      userWithUpcomingPayment: (
+        input?: { label?: string },
+      ) => Promise<PaymentScenarioResult>;
+    };
+    quizzes: {
+      userReadyForDailyQuiz: () => Promise<QuizScenarioResult>;
+    };
+    profile: {
+      userWithProgress: (input?: {
+        progress?: Partial<ProfileProgress>;
+      }) => Promise<ProfileScenarioResult>;
     };
     reminders: {
       userWithPreferences: (
         input?: Partial<ReminderPreferences>,
-      ) => Promise<{
-        preferences: ReminderPreferences;
-      }>;
+      ) => Promise<ReminderScenarioResult>;
     };
     notifications: {
-      userWithInboxItems: (input?: NotificationSeed[]) => Promise<{
-        notifications: Array<{ id: string; title: string }>;
-      }>;
+      userWithInboxItems: (
+        input?: Omit<NotificationInput, 'userId'>[],
+      ) => Promise<NotificationScenarioResult>;
     };
   };
 };
@@ -51,9 +88,13 @@ const browserUser = {
   email: 'e2e-browser@spendsense.test',
 };
 
-async function provision(scenario: string, body: Record<string, unknown>) {
+async function provisionScenario<T>(
+  scenario: string,
+  input: Record<string, unknown> = {},
+): Promise<T> {
   const scenarioUrl = process.env.E2E_SCENARIO_URL;
   const scenarioSecret = process.env.E2E_SCENARIO_SECRET;
+
   if (!scenarioUrl || !scenarioSecret) {
     throw new Error(
       'E2E scenario provisioning is not configured for this browser test.',
@@ -66,15 +107,20 @@ async function provision(scenario: string, body: Record<string, unknown>) {
       'content-type': 'application/json',
       'x-e2e-scenario-secret': scenarioSecret,
     },
-    body: JSON.stringify({ scenario, ...browserUser, ...body }),
+    body: JSON.stringify({
+      scenario,
+      ...browserUser,
+      ...input,
+    }),
   });
+
   if (!response.ok) {
     throw new Error(
       `Unable to provision browser E2E scenario: ${await response.text()}`,
     );
   }
 
-  return response.json();
+  return (await response.json()) as T;
 }
 
 export const test = base.extend<E2eFixtures>({
@@ -83,22 +129,58 @@ export const test = base.extend<E2eFixtures>({
 
     await provideScenario({
       payments: {
-        userWithUpcomingPayment: async (input = {}) =>
-          provision('payments.userWithUpcomingPayment', {
-            label: input.label,
-          }),
+        userWithUpcomingPayment: (
+          input: { label?: string } = {},
+        ) =>
+          provisionScenario<PaymentScenarioResult>(
+            'payments.userWithUpcomingPayment',
+            {
+              label: input.label,
+            },
+          ),
       },
+
+      quizzes: {
+        userReadyForDailyQuiz: () =>
+          provisionScenario<QuizScenarioResult>(
+            'quizzes.userReadyForDailyQuiz',
+          ),
+      },
+
+      profile: {
+        userWithProgress: (
+          input: { progress?: Partial<ProfileProgress> } = {},
+        ) =>
+          provisionScenario<ProfileScenarioResult>(
+            'profile.userWithProgress',
+            {
+              progress: input.progress,
+            },
+          ),
+      },
+
       reminders: {
-        userWithPreferences: async (input = {}) =>
-          provision('reminders.userWithPreferences', {
-            preferences: input,
-          }),
+        userWithPreferences: (
+          input: Partial<ReminderPreferences> = {},
+        ) =>
+          provisionScenario<ReminderScenarioResult>(
+            'reminders.userWithPreferences',
+            {
+              preferences: input,
+            },
+          ),
       },
+
       notifications: {
-        userWithInboxItems: async (input = [{}]) =>
-          provision('notifications.userWithInboxItems', {
-            notifications: input,
-          }),
+        userWithInboxItems: (
+          input: Omit<NotificationInput, 'userId'>[] = [{}],
+        ) =>
+          provisionScenario<NotificationScenarioResult>(
+            'notifications.userWithInboxItems',
+            {
+              notifications: input,
+            },
+          ),
       },
     });
   },
