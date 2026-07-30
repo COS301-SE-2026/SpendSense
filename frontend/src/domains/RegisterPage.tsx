@@ -58,7 +58,7 @@ export default function RegisterPage(){
 			const result = await signUp(data.email, data.password, data.displayName);
 			if (result.session) {
 				await getMe();
-				navigate("/domains/dashboard");
+				navigate("/onboarding");
 			} else {
 				setError("Check your email to confirm your account before signing in.");
 			}
