@@ -21,11 +21,11 @@ async function resetAndSeed(prisma: PrismaClient): Promise<void> {
 }
 
 export async function createApiE2eFixture() {
-  const moduleFixture=await Test.createTestingModule({
+  const moduleFixture = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
 
-  const app=moduleFixture.createNestApplication<INestApplication<App>>();
+  const app = moduleFixture.createNestApplication<INestApplication<App>>();
   app.setGlobalPrefix('api/v1');
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalPipes(
@@ -38,7 +38,7 @@ export async function createApiE2eFixture() {
   app.useGlobalFilters(new HttpExceptionFilter());
   await app.init();
 
-  const prisma=new PrismaClient();
+  const prisma = new PrismaClient();
   await prisma.$connect();
   await resetAndSeed(prisma);
 
@@ -48,11 +48,11 @@ export async function createApiE2eFixture() {
     request: request(app.getHttpServer()),
     reset: () => resetAndSeed(prisma),
     async user() {
-      const user=(await createUser(prisma)) as {
+      const user = (await createUser(prisma)) as {
         supabaseAuthId: string;
         email: string;
       };
-      const token=await createE2eAccessToken(user);
+      const token = await createE2eAccessToken(user);
       return {
         user,
         token,
