@@ -30,3 +30,18 @@ export async function createUserWithNotifications(
 
   return { user, notifications };
 }
+
+export async function addNotificationsForUser(
+  prisma: NotificationStore,
+  user: { id: string },
+  notificationOverrides: Omit<NotificationInput, 'userId'>[] = [{}],
+) {
+  const notifications = [];
+  for (const overrides of notificationOverrides) {
+    notifications.push(
+      await createNotification(prisma, { userId: user.id, ...overrides }),
+    );
+  }
+  return notifications;
+}
+

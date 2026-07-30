@@ -183,4 +183,36 @@ describe('Notifications E2E', () => {
       await e2e.close();
     }
   });
+
+  it('DELETE /notifications will soft delete multiple notifications and return a count of the deleted', async () => {
+    const e2e = await createApiE2eFixture();
+
+    try {
+      const { user, notifications } = await createUserWithNotifications(e2e.prisma, [
+        { title: 'Bulk delete me one' },
+        { title: 'Bulk delete me two' },
+      ]);
+      const token = await createE2eAccessToken(user);
+      const ids = notifications.map((notification) => notification.id);
+
+      const response = await e2e.request
+        .delete('/api/v1/notifications')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ ids })
+        .expect(200);
+
+      expect((response.body as { data: { deleted: number } }).data.deleted).toBe(2);
+
+      const listResponse = await e2e.request
+        .get('/api/v1/notifications')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(
+        (listResponse.body as NotificationListResponse).data.notifications,
+      ).toHaveLength(0);
+    } finally {
+      await e2e.close();
+    }
+  });
 });

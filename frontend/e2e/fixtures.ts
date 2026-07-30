@@ -10,6 +10,19 @@ type ReminderPreferences = {
   quietHoursEnd: string | null;
 };
 
+type NotificationSeed = {
+  title?: string;
+  message?: string;
+  type?:
+    | 'REMINDER'
+    | 'SCORE_CHANGE'
+    | 'REWARD'
+    | 'BADGE_EARNED'
+    | 'PAYMENT_STATUS'
+    | 'SYSTEM';
+  readAt?: string | null;
+};
+
 type E2eFixtures = {
   scenario: {
     payments: {
@@ -23,6 +36,11 @@ type E2eFixtures = {
         input?: Partial<ReminderPreferences>,
       ) => Promise<{
         preferences: ReminderPreferences;
+      }>;
+    };
+    notifications: {
+      userWithInboxItems: (input?: NotificationSeed[]) => Promise<{
+        notifications: Array<{ id: string; title: string }>;
       }>;
     };
   };
@@ -74,6 +92,12 @@ export const test = base.extend<E2eFixtures>({
         userWithPreferences: async (input = {}) =>
           provision('reminders.userWithPreferences', {
             preferences: input,
+          }),
+      },
+      notifications: {
+        userWithInboxItems: async (input = [{}]) =>
+          provision('notifications.userWithInboxItems', {
+            notifications: input,
           }),
       },
     });

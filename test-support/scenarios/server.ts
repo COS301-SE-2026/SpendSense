@@ -6,6 +6,10 @@ import {
   addReminderPreferencesForUser,
   type ReminderPreferences,
 } from './reminders';
+import {
+  addNotificationsForUser,
+  type NotificationInput,
+} from './notifications';
 
 const requireFromProject = createRequire(`${process.cwd()}/package.json`);
 const { PrismaClient } = requireFromProject('@prisma/client') as {
@@ -44,6 +48,11 @@ const { PrismaClient } = requireFromProject('@prisma/client') as {
         update: Record<string, unknown>;
       }) => Promise<{ id: string }>;
     };
+    notification: {
+      create: (args: {
+        data: Record<string, unknown>;
+      }) => Promise<{ id: string }>;
+    };
     $disconnect: () => Promise<void>;
   };
 };
@@ -61,11 +70,13 @@ type ProvisionRequest = {
   email?: string;
   label?: string;
   preferences?: Partial<ReminderPreferences>;
+  notifications?: Omit<NotificationInput, 'userId'>[];
 };
 
 const validScenarios = new Set([
   'payments.userWithUpcomingPayment',
   'reminders.userWithPreferences',
+  'notifications.userWithInboxItems',
 ]);
 
 const secret = process.env.E2E_SCENARIO_SECRET;
@@ -121,18 +132,18 @@ const server = createServer(async (request, response) => {
       create: {
         supabaseAuthId: body.supabaseAuthId,
         email: body.email,
-        displayName: 'E2E browser user',
+        displayName: 'E2E Browser User',
         onboardingCompleted: true,
       },
       update: {
-        displayName: 'E2E browser user',
+        displayName: 'E2E Browser User',
         onboardingCompleted: true,
       },
     });
 
     if (body.scenario === 'payments.userWithUpcomingPayment') {
       const payment = await createUpcomingPaymentForUser(prisma, user, {
-        obligationName: `E2E rent ${body.label ?? 'payment'}`,
+        obligationName: `E2E Rent ${body.label ?? 'payment'}`,
       });
       sendJson(response, 201, { user, ...payment });
       return;
@@ -145,6 +156,16 @@ const server = createServer(async (request, response) => {
         body.preferences ?? {},
       );
       sendJson(response, 201, { user, preferences });
+      return;
+    }
+
+    if (body.scenario === 'notifications.userWithInboxItems') {
+      const notifications = await addNotificationsForUser(
+        prisma,
+        user,
+        body.notifications ?? [{}],
+      );
+      sendJson(response, 201, { user, notifications });
       return;
     }
 
