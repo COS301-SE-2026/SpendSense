@@ -75,6 +75,8 @@ function emptyPaymentPeriod(): PaymentPeriodStats {
   };
 }
 
+const PAYMENT_HISTORY_MONTH_COUNT = 12 ;
+
 @Injectable()
 export class InsightsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -123,22 +125,30 @@ export class InsightsService {
     };
   }
 
+  
+
   private async getOnTimePaymentRate(
     userId: string,
     asOf: Date,
   ): Promise<OnTimePaymentStats> {
-    const currentStart = startOfUtcMonth(asOf);
-    const currentEnd = addUtcMonths(currentStart, 1);
-    const previousStart = addUtcMonths(currentStart, -1);
+    // const userId = await this.resolveUserId(supabaseAuthId);
+    const currentMonthStart = startOfUtcMonth(asOf);
+    const currentStart = addUtcMonths(
+      currentMonthStart,
+      -(PAYMENT_HISTORY_MONTH_COUNT - 1),
+    );
+
+    const currentEnd = addUtcMonths(currentMonthStart, 1);
+    const previousStart = addUtcMonths(
+      currentStart,
+      -PAYMENT_HISTORY_MONTH_COUNT,
+    );
 
     const occurrences = await this.prisma.paymentOccurrence.findMany({
       where: {
         userId,
         deletedAt: null,
-        dueDate: {
-          gte: previousStart,
-          lt: currentEnd,
-        },
+        dueDate: { gte: previousStart, lt: currentEnd },
         status: {
           in: [
             PaymentOccurrenceStatus.PAID,
@@ -146,20 +156,12 @@ export class InsightsService {
             PaymentOccurrenceStatus.MISSED,
           ],
         },
-        obligation: {
-          is: {
-            deletedAt: null,
-          },
-        },
+        obligation: { is: { deletedAt: null } },
       },
       select: {
         dueDate: true,
         status: true,
-        payment: {
-          select: {
-            paymentStatus: true,
-          },
-        },
+        payment: { select: { paymentStatus: true } },
       },
     });
 

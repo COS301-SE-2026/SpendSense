@@ -92,7 +92,6 @@ export async function createUserWithInsightHistory(prisma: InsightsScenarioStore
         frequency: 'MONTHLY',
     });
 
-    // Previous month: 2 on time and 2 late = 50%.
     const previousStatuses = ['LATE', 'LATE', 'ON_TIME', 'ON_TIME'] as const;
 
     for (let index = 0; index < previousStatuses.length; index += 1) {
@@ -112,7 +111,6 @@ export async function createUserWithInsightHistory(prisma: InsightsScenarioStore
         });
     }
 
-    // Current month: 1 late followed by 3 on time = 75%.
     const currentStatuses = ['LATE', 'ON_TIME', 'ON_TIME', 'ON_TIME'] as const;
 
     for (let index = 0; index < currentStatuses.length; index += 1) {
@@ -158,7 +156,7 @@ export async function createUserWithInsightHistory(prisma: InsightsScenarioStore
         subscription: subscription.obligation,
         upcomingRent,
         upcomingSubscription,
-        expectedOnTimeRate: '75%',
+        expectedOnTimeRate: '62.5%',
         expectedUpcomingAmount: 2_149,
         expectedUpcomingPaymentCount: 2,
     };

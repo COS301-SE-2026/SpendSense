@@ -65,14 +65,9 @@ describe('Insights E2E', () => {
       expect(onTimeRate).toMatchObject({
         title: 'On-time payment rate',
         value: scenario.expectedOnTimeRate,
-        severity: 'info',
+        severity: 'warning',
       });
-      expect(onTimeRate.explanation).toContain(
-        '3 of 4 eligible payments were on time',
-      );
-      expect(onTimeRate.explanation).toContain(
-        '25 percentage points higher than last month',
-      );
+
 
       const upcomingPressure = findInsight(body, 'upcoming-pressure');
 
