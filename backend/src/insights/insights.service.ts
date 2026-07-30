@@ -28,7 +28,6 @@ const RECENT_MONTH_COUNT = 3;
 const WEEKS_PER_MONTH = 4.345;
 
 const INSIGHT_CURRENCY = Currency.ZAR; // for demo 2 we will be using ZAR
-const PAYMENT_HISTORY_MONTH_COUNT = 12;
 
 const STREAK_STATUSES: PaymentOccurrenceStatus[] = [
   PaymentOccurrenceStatus.PAID,
@@ -128,24 +127,18 @@ export class InsightsService {
     userId: string,
     asOf: Date,
   ): Promise<OnTimePaymentStats> {
-    // const userId = await this.resolveUserId(supabaseAuthId);
-    const currentMonthStart = startOfUtcMonth(asOf);
-    const currentStart = addUtcMonths(
-      currentMonthStart,
-      -(PAYMENT_HISTORY_MONTH_COUNT - 1),
-    );
-
-    const currentEnd = addUtcMonths(currentMonthStart, 1);
-    const previousStart = addUtcMonths(
-      currentStart,
-      -PAYMENT_HISTORY_MONTH_COUNT,
-    );
+    const currentStart = startOfUtcMonth(asOf);
+    const currentEnd = addUtcMonths(currentStart, 1);
+    const previousStart = addUtcMonths(currentStart, -1);
 
     const occurrences = await this.prisma.paymentOccurrence.findMany({
       where: {
         userId,
         deletedAt: null,
-        dueDate: { gte: previousStart, lt: currentEnd },
+        dueDate: {
+          gte: previousStart,
+          lt: currentEnd,
+        },
         status: {
           in: [
             PaymentOccurrenceStatus.PAID,
@@ -153,12 +146,20 @@ export class InsightsService {
             PaymentOccurrenceStatus.MISSED,
           ],
         },
-        obligation: { is: { deletedAt: null } },
+        obligation: {
+          is: {
+            deletedAt: null,
+          },
+        },
       },
       select: {
         dueDate: true,
         status: true,
-        payment: { select: { paymentStatus: true } },
+        payment: {
+          select: {
+            paymentStatus: true,
+          },
+        },
       },
     });
 
