@@ -452,7 +452,7 @@ Then I can access my available financial statistics and insights based on my obl
 ## 3. Use Cases
 
 ### UC1: Financial Obligation Management
-<img width="1200" alt="UC1: Financial Obligation Management" src="./images/UC1.jpeg" />
+<img width="600" alt="UC1: Financial Obligation Management" src="./images/UC1.jpeg" />
 
 #### UC1.1: Add obligation
 **This use case begins with** the authorised user accessing the New obligation page, putting in the obligation amount, picking the type of obligation, and supplying the necessary information. This information could be the reason for the obligation, its priority level, due date, optional end date, frequency of payments, total occurrence, description, reminder choice, and notification medium.
@@ -475,7 +475,7 @@ Then I can access my available financial statistics and insights based on my obl
 **This use case ends with** the financial responsibility being deleted from the list of the user’s financial responsibilities as well as any notifications about them not appearing in the calendar anymore.
 
 ### UC2: Logging Payments
-<img width="1200" alt="UC2: Logging Payments" src="./images/UC2.jpeg" />
+<img width="600" alt="UC2: Logging Payments" src="./images/UC2.jpeg" />
 
 #### UC2.1: Select a due payment
 **This use case begins with** the authorised user opening the calendar or dashboard and choosing an outstanding payment occurrence.
@@ -502,7 +502,7 @@ Then I can access my available financial statistics and insights based on my obl
 **This use case ends with** viewing of the previous payments of the user along with their amounts, payment dates, obligations, and payment status.
 
 ### UC3: Gamification & Rewards
-<img width="1200" alt="UC3: Gamification & Rewards" src="./images/UC3.jpeg" />
+<img width="600" alt="UC3: Gamification & Rewards" src="./images/UC3.jpeg" />
 
 #### UC3.1: View Credit score & Explination
 **This use case begins with** the authorised user entering the dashboard or credit score page and choosing to check their credit score.
@@ -522,7 +522,7 @@ Then I can access my available financial statistics and insights based on my obl
 
 
 ### UC4: Credit Score
-<img width="1200" alt="UC4: Credit Score" src="./images/UC4.jpeg" />
+<img width="600" alt="UC4: Credit Score" src="./images/UC4.jpeg" />
 
 #### UC4.1: View credit score on dashboard
 **This use case begins with** the authorised user accesses the dashboard after login into the application.
@@ -537,7 +537,7 @@ Then I can access my available financial statistics and insights based on my obl
 **This use case ends with** the user gets to see the tier corresponding to the user's current credit score.
 
 ### UC5: Stats-based Insights
-<img width="1200" alt="UC5: Stats-based Insights" src="./images/UC5.jpeg" />
+<img width="600" alt="UC5: Stats-based Insights" src="./images/UC5.jpeg" />
 
 #### UC5.1: View spending category breakdown
 **This use case begins with** The authorised user visits the insights page and picks the category breakdown of spending.
@@ -560,7 +560,7 @@ Then I can access my available financial statistics and insights based on my obl
 **This use case ends with** the user can check his/her behaviour-based details like streak of on-time payments and missed payments during the present period.
 
 ### UC6: Financial Literacy Quiz
-<img width="1200" alt="UC6: Financial Literacy Quiz" src="./images/UC6.jpeg" />
+<img width="600" alt="UC6: Financial Literacy Quiz" src="./images/UC6.jpeg" />
 
 #### UC6.1: Do daily quiz
 **This use case begins with** the authorised user accesses the quiz page and chooses the daily quiz.
@@ -591,7 +591,7 @@ Then I can access my available financial statistics and insights based on my obl
 **This use case ends with** the user is able to view their quiz results.
 
 ### UC7: Notifications & Reminders
-<img width="1276" height="1404" alt="Image" src="https://github.com/user-attachments/assets/26a0995a-cbf2-495e-b40e-d7b3f7fee22b" />
+<img width="600"alt="Image" src="./images/UC7.jpeg />
 
 #### UC7.1: View notifications inbox
 **This use case begins with** he authorised user clicks on the notifications icon to see the notifications inbox.
@@ -615,7 +615,7 @@ Then I can access my available financial statistics and insights based on my obl
 
 
 ### UC8: Profile Page
-<img width="1200" alt="UC8: Profile Page" src="./images/UC8.jpeg" />
+<img width="600" alt="UC8: Profile Page" src="./images/UC8.jpeg" />
 
 #### UC8.1: View profile page
 **This use case begins with** the authorised user accesses the profile page using the application navigation menu.

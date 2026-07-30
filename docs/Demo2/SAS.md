@@ -286,11 +286,75 @@ The `use<Operation>Session` hooks operate as the facade design pattern, this enc
 <a id="3-5-mapping-quality-requirements-to-architectural-decisions"></a>
 
 ### 3.5 Mapping Quality Requirements to Architectural Decisions
+| SRS requirement | Quality attribute | Architectural and technology decisions | How the decision satisfies the requirement |
+|---|---|---|---|
+| NFR1.1 | Security | Supabase Authentication; client-server architecture; protected page handling and backend authentication checks | Authentication is centralised through Supabase. Protected requests are accepted by the backend only when a valid authenticated session is supplied, while unauthenticated users are prevented from accessing protected application functions. |
+| NFR1.2 | Security | JWT validation in the Access Layer before controller operations are forwarded to the Service Layer | Every protected API request is checked before business logic is executed. Missing, malformed, invalid, or expired tokens are rejected at the system boundary. |
+| NFR1.3 | Security | Server-side authorisation; user-scoped service and data-access operations; four-tier separation | The authenticated user identity is used by the backend when retrieving or changing data. Ownership checks remain in the Access and Service Layers rather than relying on a user identifier supplied by the client, preventing cross-account access and modification. |
+| NFR1.4 | Security | Request validation in the Access Layer; typed request models; Service Layer business-rule validation | Incoming values and supported fields are validated before database operations occur. Invalid requests are rejected before they can change persisted information. |
+| NFR1.5 | Security | Amazon CloudFront HTTPS endpoint for the frontend; Caddy reverse proxy providing HTTPS for the backend API | Browser traffic to the deployed frontend and API is transmitted over HTTPS. Internal container communication remains isolated within the EC2 Docker network. |
+| NFR1.6 | Security | Environment variables; GitHub Actions repository secrets; excluded production environment files; Gitleaks secret scanning | Credentials and deployment secrets are supplied at deployment time instead of being committed to source control. The CI pipeline scans the repository and blocks a release when exposed credentials are detected. |
+| NFR2.1 | Portability | Docker images for the backend and supporting services | Application services are packaged together with their runtime dependencies, allowing the same container images to run consistently in development, testing, and production environments. |
+| NFR2.2 | Portability | Docker Compose production configuration | Docker Compose defines the production services, networks, environment configuration, and startup process as one repeatable deployment unit. The configuration is validated in CI before release. |
+| NFR2.3 | Portability | Environment variables, `.env.production`, and GitHub Actions deployment secrets | Environment-specific URLs, credentials, origins, ports, and service addresses can be changed without modifying application source code. |
+| NFR2.4 | Portability | `/api/v1/health` endpoint; post-deployment health check; authenticated frontend-to-backend smoke test | A deployment is not treated as operational until the backend responds successfully and a protected flow confirms that the frontend, backend, CORS configuration, authentication, and database connection work together. |
+| NFR3.1 | Maintainability | ESLint rules for the frontend and backend; lint checks in GitHub Actions | Static code-quality rules are applied consistently. Pull requests and releases cannot qualify while required lint checks contain errors. |
+| NFR3.2 | Maintainability | Four-tier layered architecture; client-server architecture; backend Service Layer | Financial calculations and business rules are centralised in backend services. React ViewModels coordinate presentation behaviour but do not implement authoritative financial rules. |
+| NFR3.3 | Maintainability | NestJS modular monolith organised by business capability | Obligations, payments, credit scoring, gamification, notifications, quizzes, insights, and profiles are separated into responsible modules. Changes are therefore localised to the relevant module and its tests. |
+| NFR3.4 | Maintainability | GitHub Actions CI/CD pipeline with lint, test, build, end-to-end, and migration gates | Automated checks run before merging and deployment. A failed required check prevents code from progressing to the next branch or production environment. |
+| NFR3.5 | Maintainability | Docker and Docker Compose development and test environments; CI Docker validation | Developers and CI use repeatable service definitions. `docker compose config` and image builds verify that the environment remains reproducible. |
+| NFR4.1 | Availability | AWS-hosted deployment; CloudFront delivery; EC2 service hosting; Docker-managed services; AWS CloudWatch monitoring | The deployment architecture supports continuous operation and measurement of availability. CloudWatch evidence recorded 99.96% availability over the SRS monitoring period, exceeding the required 99.9%. |
+| NFR4.2 | Availability | Dedicated backend `/api/v1/health` endpoint | The running state of the backend can be checked directly by deployment automation and operational monitoring. |
+| NFR4.3 | Availability | Staged GitHub Actions pipeline; required build, test, migration, and health-check dependencies | Production deployment proceeds only after required jobs succeed. Failed builds, tests, database migrations, or deployment health checks prevent a release from being accepted as operational. |
+| NFR4.4 | Availability | AWS CloudWatch availability monitoring and downtime records | Monitoring provides evidence of the observation period and recorded downtime, allowing the availability percentage to be calculated and compared with the target. |
+| NFR5.1 | Usability | React presentation layer; MVVM separation; reusable views and ViewModels; help and support content | Core tasks are presented through focused interfaces, while presentation logic handles loading, validation, success, empty, and error states consistently. This supports first-time task completion without facilitator assistance. |
+| NFR5.2 | Usability | Consistent client-server workflows; typed API models; frontend validation and backend validation; end-to-end user-flow testing | Clear workflows and validation reduce failed task attempts. Playwright and manual usability tests verify whether users can complete the required core tasks successfully. |
+| NFR5.3 | Usability | Controlled error handling in ViewModels and backend services; validation before persistence; recoverable UI states | Invalid actions are rejected with feedback instead of leaving the application in an unrecoverable state. Server-side validation protects stored data while the UI allows the user to correct input or retry an operation. |
+| NFR5.4 | Usability | MVVM presentation structure; reusable React components; consistent navigation and feedback patterns | Separating visual components from interaction logic supports a predictable interface that is easier to learn and use. The required ease rating remains a usability-test acceptance measure rather than an architectural guarantee. |
+| NFR5.5 | Usability | Manual usability test sessions and documented test observations | Navigation pauses, misclicks, and requests for assistance are recorded during usability testing. The findings can be traced back to the affected View, ViewModel, or workflow for correction. |
 
 <a id="4-technology-requirements"></a>
 
 ## 4. Technology Requirements
+SpendSense uses the following technologies to implement, test, deploy, and monitor the system.
 
+| Technology | Use in SpendSense | Related requirements |
+|---|---|---|
+| React | Builds the user interface and reusable components. | Supports usability and the Presentation Layer. |
+| TypeScript | Provides typed frontend and backend code. | Supports maintainability and reduces integration errors. |
+| Vite | Builds the React frontend for deployment. | Supports repeatable frontend deployment. |
+| NestJS | Implements the backend API, services, validation, and business modules. | Supports NFR3.2 and NFR3.3. |
+| Node.js 20 | Runs the NestJS backend. | Supports consistent development and production environments. |
+| Prisma | Provides database access and manages migrations. | Supports maintainability and controlled data access. |
+| Supabase PostgreSQL | Stores SpendSense application data. | Provides persistent relational storage. |
+| Supabase Authentication | Authenticates users and issues JWTs. | Supports NFR1.1, NFR1.2, and NFR1.3. |
+| FastAPI and Python 3.11 | Runs the optional supporting AI service. | Core features must still work when it is unavailable. |
+| Docker | Packages services and dependencies into containers. | Supports NFR2.1 and NFR3.5. |
+| Docker Compose | Starts and manages the required containers. | Supports NFR2.2. |
+| Caddy | Routes API requests and provides HTTPS. | Supports NFR1.5. |
+| Amazon S3 and CloudFront | Host and deliver the frontend over HTTPS. | Support secure and independent frontend deployment. |
+| Amazon EC2 | Hosts the production backend containers. | Provides the backend production environment. |
+| AWS CloudWatch | Monitors system availability and downtime. | Supports NFR4.1 and NFR4.4. |
+| GitHub | Provides source control and collaboration. | Supports controlled development changes. |
+| GitHub Actions | Lints, tests, builds, scans, deploys, and verifies the application. | Supports NFR3.4 and NFR4.3. |
+| ESLint | Checks code quality rules. | Supports NFR3.1. |
+| Gitleaks | Checks for committed credentials and secrets. | Supports NFR1.6. |
+| Playwright | Tests important user workflows. | Supports integrated and usability testing. |
+| Environment variables and deployment secrets | Store settings and secrets outside the source code. | Support NFR1.6 and NFR2.3. |
+| `/api/v1/health` endpoint | Confirms that the backend is running. | Supports NFR2.4 and NFR4.2. |
+
+### 4.1 Technology Usage Constraints
+
+The chosen technologies will be used in the following constraints:
+
+* The frontend will not make any authoritative financial calculations nor access the database of the application directly. The business logic will be implemented in NestJS services.
+* The protected backend endpoints will authenticate using Supabase JWTs and will scope the data access to the current user.
+* The application data will be accessible via backend and Prisma-managed Data Layer.
+* The communication of the browser-side frontend and API will happen over HTTPS in the deployment environment.
+* The environment-specific values and secrets will be provided using environment variables or deployment secrets storage and won't be checked into the repository.
+* The Docker and Docker Compose configuration will be valid for the development, testing, and production usage.
+* All linting, testing, building, secret scan, migration, and health check requirements must pass before accepting the production deployment.
+* The optional supporting services will not hinder the usage of core functionality of SpendSense in case these services are not available.
 
 <a id="5-api-contracts"></a>
 
