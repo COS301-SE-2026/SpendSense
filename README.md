@@ -45,10 +45,19 @@ _COS 301 Capstone 2026 · Team MARK2 · EPI-USE Labs & Advance · University of 
 
 <br>
 
+## Live Demo
+
+**[https://d33z1c39vjhkej.cloudfront.net](https://d33z1c39vjhkej.cloudfront.net)**
+
+<img src="docs/assets/qr.png" width="150" alt="QR code to live demo" />
+
+<br>
+
 ---
 
 # Table of contents
 
+- [Live Demo](#live-demo)
 - [What Is SpendSense?](#what-is-spendsense)
 - [Documentation](#documentation)
 - [Features](#features)
