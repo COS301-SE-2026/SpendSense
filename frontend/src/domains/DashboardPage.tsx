@@ -37,7 +37,6 @@ import { StreakFlame } from "@/components/common/StreakFlame"
 import { StreakTicks } from "@/components/common/StreakTicks"
 import { BottomNav } from "@/components/common/BottomNav"
 
-
 export default function DashboardPage() {
 	const navigate = useNavigate()
 	const {clearUnreadCount}=useNotifications()
@@ -46,7 +45,7 @@ export default function DashboardPage() {
 	const [creditScore, setCreditScore] = React.useState<CreditScore | null>(null)
 
 
-	// loading and detting the dashboard 
+	// loading and getting the dashboard 
 	React.useEffect(() => {
 		async function loadDashboard() {
 			try {
@@ -78,7 +77,7 @@ export default function DashboardPage() {
 
 	const name = userSummary?.displayName
 
-	const score_ = creditScore?.creditScore ?? 0 // cuyrrent credit score 
+	const score_ = creditScore?.creditScore ?? 0 // current credit score 
 	const level_ = gamificationProfile?.mascotLevel ?? 1
 	const knowledgeStreak=gamificationProfile?.currentKnowledgeStreak??0
 
@@ -99,12 +98,12 @@ export default function DashboardPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-[#F4FBF7] pb-24">
+		<div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
 			<div className="mx-auto w-full max-w-md px-5 pt-6">
 
 				<header className="flex items-start justify-between gap-3">
 					<div>
-						<h1 className="text-3xl font-extrabold leading-tight text-[#091828]">
+						<h1 className="text-3xl font-extrabold leading-tight text-[#091828] dark:text-white">
 							Hey<br />{name}
 						</h1>
 					</div>
@@ -115,14 +114,14 @@ export default function DashboardPage() {
 							type="button"
 							aria-label="Sign out"
 							onClick={handleSignOut}
-							className="flex size-10 items-center justify-center rounded-full bg-[#FFD9E1] text-[#AC2A5D] transition hover:bg-[#FFB3C6] active:translate-y-px"
+							className="flex size-10 items-center justify-center rounded-full bg-[#FFD9E1] text-[#AC2A5D] transition hover:bg-[#FFB3C6] active:translate-y-px dark:bg-[#ff6b9d]/20 dark:text-[#ff6b9d] dark:hover:bg-[#ff6b9d]/30"
 						>
 							<LogOut className="size-5" />
 						</button>
 					</div>
 				</header>
 
-            <CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
+            <CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#131b2e] dark:shadow-lg dark:shadow-black/20">
 
 				<div className="flex justify-center">
 					<CreditScoreGauge score={score_} max={850} size="lg" />
@@ -130,10 +129,10 @@ export default function DashboardPage() {
 
 				<div className="mt-3 flex flex-col items-center gap-2">
 					<CustomCard
-						className="flex w-full max-w-[280px] flex-col items-center rounded-2xl bg-[#FFF4F7] p-4"
+						className="flex w-full max-w-[280px] flex-col items-center rounded-2xl bg-[#FFF4F7] p-4 dark:bg-[#1c263c]"
 						data-testid="knowledge-streak"
 					>
-						<p className="text-xs font-bold uppercase tracking-wide text-[#6b6375]">Knowledge streak</p>
+						<p className="text-xs font-bold uppercase tracking-wide text-[#6b6375] dark:text-[#ff6b9d]">Knowledge streak</p>
 						<StreakFlame
 							days={knowledgeStreak}
 							label="days"
@@ -150,11 +149,11 @@ export default function DashboardPage() {
 						/>
 					</CustomCard>
 					<div className="flex items-center justify-center gap-2">
-						<CustomBadge variant="level" size="md">
+						<CustomBadge variant="level" size="md" className="dark:border dark:border-solid dark:border-white/10 dark:bg-black">
 							Lvl {level_}
 						</CustomBadge>
-						<Sticker tone="yellow" shape="squircle" size="sm" tilt="right">
-							<span className="px-2 text-[10px] font-bold tracking-wide text-[#091828]">
+						<Sticker tone="yellow" shape="squircle" size="sm" tilt="right" className="dark:bg-[#ffd166] dark:text-black">
+							<span className="px-2 text-[10px] font-bold tracking-wide text-[#091828] dark:text-black">
 								Early Bird
 							</span>
 						</Sticker>
@@ -168,9 +167,9 @@ export default function DashboardPage() {
 
 				<section aria-label="Experience progress" className="mt-5" >
 
-					<div className="flex items-center justify-between text-xs font-semibold text-[#091828]">
+					<div className="flex items-center justify-between text-xs font-semibold text-[#091828] dark:text-white">
 						<span>{xp.current.toLocaleString()} / {xp.next.toLocaleString()} XP</span>
-						<span className="text-[#6b6375]">Next Level: {xp.nextLevel}</span>
+						<span className="text-[#6b6375] dark:text-[#a0aec0]">Next Level: {xp.nextLevel}</span>
 					</div>
 
 					<Progress
@@ -180,8 +179,8 @@ export default function DashboardPage() {
 					/>
 
 					<div className="mt-4 flex items-center justify-between gap-3">
-						<XpPill amount={xp.current} className="shrink-0" />
-						<span className="text-xs font-medium text-[#6b6375]">
+						<XpPill amount={xp.current} className="shrink-0 dark:border-black dark:bg-[#ffd166] dark:text-black dark:shadow-[2px_3px_0_#000]" />
+						<span className="text-xs font-medium text-[#6b6375] dark:text-[#a0aec0]">
 							Next reward unlocked soon
 						</span>
 					</div>
@@ -194,41 +193,41 @@ export default function DashboardPage() {
 
 
             <Link to = "/insights" className="mt-6 block">
-                <CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3">
+                <CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3 dark:border-white/5 dark:bg-[#131b2e]">
                     <CategoryIcon tone="pink">
                         <TrendingUp className="size-5"/>
                     </CategoryIcon>
 
                     <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-[#091828]">Insights</p>
+                        <p className="text-sm font-bold text-[#091828] dark:text-white">Insights</p>
                     </div>
 
-                    <ChevronRight className="size-4 shrink-0 text-[#6b6375]"/>
+                    <ChevronRight className="size-4 shrink-0 text-[#6b6375] dark:text-[#a0aec0]"/>
                 </CustomCard>
             </Link>
 
 
 			{/*friends hub card*/}
 
-			<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
+			<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#131b2e] dark:shadow-lg dark:shadow-black/20">
  
 				<SectionHeader title="Friends" meta="See what friends are up to" />
 
-				<div className="mt-4 flex items-center gap-3 rounded-2xl bg-[#F4FBF7] p-4">
+				<div className="mt-4 flex items-center gap-3 rounded-2xl bg-[#F4FBF7] p-4 dark:bg-[#1c263c]">
 					<CategoryIcon tone="mint">
 						<User className="size-5" />
 					</CategoryIcon>
 					<div className="min-w-0 flex-1">
-						<p className="text-sm font-bold text-[#091828]">Friends Hub</p>
+						<p className="text-sm font-bold text-[#091828] dark:text-white">Friends Hub</p>
 						{/*TO DO: avatar row and online count when friends endpoint exists */}
-						<p className="text-xs text-[#6b6375]">Connect, compete and celebrate together.</p>
+						<p className="text-xs text-[#6b6375] dark:text-[#a0aec0]">Connect, compete and celebrate together.</p>
 					</div>
 				</div>
 
 				<LongButton
 					LongVariant="primaryMint"
 					LongSize="md"
-					className="mt-4"
+					className="mt-4 dark:bg-[#5eead4] dark:text-[#134e4a] dark:hover:bg-[#2dd4bf]"
 					showArrow={false}
 					asChild
 				>
@@ -239,27 +238,27 @@ export default function DashboardPage() {
 
 			{/*sticker album card*/}
 
-				<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
+				<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#131b2e] dark:shadow-lg dark:shadow-black/20">
 
 					<SectionHeader title="Stickers" meta="24 collected · 32 to go" />
 
 					<div className="mt-4 grid grid-cols-4 justify-items-center gap-3">
-						<Sticker tone="pink" shape="circle" size="lg" tilt="left">
+						<Sticker tone="pink" shape="circle" size="lg" tilt="left" className="dark:bg-[#ff6b9d]/20 dark:text-[#ff6b9d]">
 							<HugeiconsIcon icon={SparklesIcon} size={44} color="currentColor" strokeWidth={1.5} />
 						</Sticker>
-						<Sticker tone="yellow" shape="circle" size="lg" tilt="right">
+						<Sticker tone="yellow" shape="circle" size="lg" tilt="right" className="dark:bg-[#ffd166]/20 dark:text-[#ffd166]">
 							<HugeiconsIcon icon={FireIcon} size={44} color="currentColor" strokeWidth={1.5} />
 						</Sticker>
-						<Sticker tone="mint" shape="circle" size="lg" tilt="left">
+						<Sticker tone="mint" shape="circle" size="lg" tilt="left" className="dark:bg-[#5eead4]/20 dark:text-[#5eead4]">
 							<HugeiconsIcon icon={SunriseIcon} size={44} color="currentColor" strokeWidth={1.5} />
 						</Sticker>
-						<Sticker tone="slate" shape="circle" size="lg" state="locked" />
+						<Sticker tone="slate" shape="circle" size="lg" state="locked" className="dark:border-[#a0aec0]/50 dark:text-[#a0aec0]" />
 					</div>
 
 					<LongButton
 						LongVariant="primaryYellow"
 						LongSize="md"
-						className="mt-4"
+						className="mt-4 dark:bg-[#ffd166] dark:text-black dark:hover:bg-[#e6bd5c]"
 						showArrow={false}
 						asChild
 					>
@@ -284,9 +283,9 @@ function SectionHeader({
 }) {
 	return (
 		<div className="flex items-baseline justify-between gap-3">
-			<h2 className="text-lg font-extrabold text-[#091828]">{title}</h2>
+			<h2 className="text-lg font-extrabold text-[#091828] dark:text-white">{title}</h2>
 			{meta && (
-				<span className="text-xs font-medium text-[#6b6375]">{meta}</span>
+				<span className="text-xs font-medium text-[#6b6375] dark:text-[#a0aec0]">{meta}</span>
 			)}
 		</div>
 	)
@@ -301,11 +300,11 @@ function CategoryIcon({
 	children: React.ReactNode
 }) {
 	const toneClass: Record<typeof tone, string> = {
-		mint: "bg-[#DCEFE8] text-[#091828]",
-		lilac: "bg-[#E8E4F4] text-[#5b4d8b]",
-		pink: "bg-[#FFD8E6] text-[#ac2a5d]",
-		yellow: "bg-[#FFE9B5] text-[#7a5a00]",
-		navy: "bg-[#0a1929] text-white",
+		mint: "bg-[#DCEFE8] text-[#091828] dark:bg-[#131b2e] dark:text-[#a0aec0]",
+		lilac: "bg-[#E8E4F4] text-[#5b4d8b] dark:bg-[#131b2e] dark:text-[#a0aec0]",
+		pink: "bg-[#FFD8E6] text-[#ac2a5d] dark:bg-[#ff6b9d]/20 dark:text-[#ff6b9d]",
+		yellow: "bg-[#FFE9B5] text-[#7a5a00] dark:bg-[#ffd166]/20 dark:text-[#ffd166]",
+		navy: "bg-[#0a1929] text-white dark:bg-[#1c263c]",
 	}
 	return (
 		<div
@@ -318,6 +317,3 @@ function CategoryIcon({
 		</div>
 	)
 }
-
-
-
