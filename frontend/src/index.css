@@ -44,6 +44,7 @@
 }
 
 .dark{
+  color-scheme: dark;
   --ss-text: #9ca3af;
   --ss-text-h: #f3f4f6;
   --ss-bg: #16171d;
