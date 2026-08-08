@@ -5,10 +5,7 @@ import{
 	Mountain,
 	Gift,
 	ChevronRight,
-	Home,
-	Calendar as CalendarIcon,
 	Trophy,
-	User,
 	AlertTriangle,
 	Coins,
 } from "lucide-react"
@@ -17,12 +14,11 @@ import{ CustomCard } from "@/components/ui/CustomCard"
 import{ Progress } from "@/components/ui/progress"
 import{ LongButton } from "@/components/common/LongButton"
 import{ CustomBadge } from "@/components/common/CustomBadges"
-import{ AddTransactionButton } from "@/components/common/AddTransactionButton"
+import{ BottomNav } from "@/components/common/BottomNav"
 import{ StreakFlame } from "@/components/common/StreakFlame"
 import{ StreakTicks } from "@/components/common/StreakTicks"
 import { useGamificationProfile } from "@/hooks/useGamificationProfile"
 import { useQuizSession } from "@/hooks/useQuizSession"
-import{ cn } from "@/lib/utils"
 import{ getDailyQuiz, getQuizTopics } from "@/features/quiz/quizApi"
 import type{ DailyQuizState, QuizTopicSummary } from "@/features/quiz/quizTypes"
 
@@ -116,37 +112,40 @@ export default function QuestsPage(){
 		}
 	}
 	return(
-		<div className="min-h-screen bg-[#F4FBF7] pb-24">
+		<div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
 			<div className="mx-auto w-full max-w-md px-5 pt-6">
 				<header className="flex items-center gap-3">
-					<div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828]">
-						<Trophy className="size-5 text-[#6E0034]"/>
+					<div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#ffb1c5]">
+						<Trophy className="size-5 text-[#6E0034] dark:text-[#650030]"/>
 					</div>
 					<div className="flex flex-1 items-center justify-center">
-						<div className="rounded-full border-2 border-[#091828] bg-white px-8 py-2.5 shadow-[4px_4px_0_#091828]" style={{transform:"rotate(-3deg)"}}>
-							<h1 className="text-base font-bold text-[#091828]">Quests</h1>
-						</div>
-					</div>
-					<div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFE9B5] shadow-[4px_4px_0_#091828]">
-						<Coins className="size-5 text-[#7A5A00]"/>
+                        <div
+                            className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
+                            style={{transform: "rotate(-3deg)"}}>
+                                
+                            <span className="text-base font-bold text-[#091828] dark:text-[#091828]">Quests</span>
+                        </div>
+                    </div>
+					<div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFE9B5] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#ffd166]/20">
+						<Coins className="size-5 text-[#7A5A00] dark:text-[#ffd166]"/>
 					</div>
 				</header>
-				<div className="mt-8 rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-5 shadow-[4px_4px_0_#091828]">
-					<p className="text-xs font-bold uppercase tracking-[0.14em] text-[#AC2A5D]">Your learning path</p>
-					<h2 className="mt-2 text-2xl font-extrabold leading-tight text-[#091828]">Choose your next quest.</h2>
-					<p className="mt-1 text-sm leading-relaxed text-[#6b6375]">Build your money knowledge and collect rewards as you go.</p>
+				<div className="mt-8 rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#2d1b2e]">
+					<p className="text-xs font-bold uppercase tracking-[0.14em] text-[#AC2A5D] dark:text-[#ff6b9d]">Your learning path</p>
+					<h2 className="mt-2 text-2xl font-extrabold leading-tight text-[#091828] dark:text-white">Choose your next quest.</h2>
+					<p className="mt-1 text-sm leading-relaxed text-[#6b6375] dark:text-[#a0aec0]">Build your money knowledge and collect rewards as you go.</p>
 				</div>
 				{error &&(
-					<div className="mt-6 flex items-center gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFF1F4] px-4 py-3">
-						<AlertTriangle className="size-4 shrink-0 text-[#AC2A5D]"/>
-						<p className="flex-1 text-sm font-semibold text-[#AC2A5D]">{pageError}</p>
+					<div className="mt-6 flex items-center gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFF1F4] px-4 py-3 dark:border-[#ffb4ab] dark:bg-[#93000a]/30">
+						<AlertTriangle className="size-4 shrink-0 text-[#AC2A5D] dark:text-[#ffb4ab]"/>
+						<p className="flex-1 text-sm font-semibold text-[#AC2A5D] dark:text-[#ffb4ab]">{pageError}</p>
 						<button
 							type="button"
 							onClick={()=>{
 								reload()
 								refetchGamification()
 							}}
-							className="shrink-0 text-sm font-bold text-[#AC2A5D] underline"
+							className="shrink-0 text-sm font-bold text-[#AC2A5D] underline dark:text-[#ffb4ab]"
 						>
 							Retry
 						</button>
@@ -155,10 +154,10 @@ export default function QuestsPage(){
 				<section className="mt-7">
 					<div className="mb-3 flex items-end justify-between">
 						<div>
-							<p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6b6375]">Start here</p>
-							<h2 className="mt-1 text-xl font-extrabold text-[#091828]">Quiz quests</h2>
+							<p className="text-xs font-bold uppercase tracking-[0.14em] text-[#6b6375] dark:text-[#a0aec0]">Start here</p>
+							<h2 className="mt-1 text-xl font-extrabold text-[#091828] dark:text-white">Quiz quests</h2>
 						</div>
-						<p className="text-xs font-semibold text-[#6b6375]">Earn XP as you learn</p>
+						<p className="text-xs font-semibold text-[#6b6375] dark:text-[#a0aec0]">Earn XP as you learn</p>
 					</div>
 					{loading?(
 						<QuestCardSkeleton/>
@@ -195,13 +194,13 @@ export default function QuestsPage(){
 						/>
 					)}
 				</section>
-				<button type="button" className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-dashed border-[#B8CBBF] bg-white/70 px-4 py-3 text-left">
+				<button type="button" className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-dashed border-[#B8CBBF] bg-white/70 px-4 py-3 text-left dark:border-[#a0aec0]/40 dark:bg-[#131b2e]/70">
 					<QuestIcon tone="yellow"><Gift className="size-5"/></QuestIcon>
 					<span className="min-w-0 flex-1">
-						<span className="block text-sm font-bold text-[#091828]">Rewards</span>
-						<span className="block text-xs text-[#6b6375]">Redeem your coins and claim exclusive perks.</span>
+						<span className="block text-sm font-bold text-[#091828] dark:text-white">Rewards</span>
+						<span className="block text-xs text-[#6b6375] dark:text-[#a0aec0]">Redeem your coins and claim exclusive perks.</span>
 					</span>
-					<ChevronRight className="size-4 shrink-0 text-[#6b6375]"/>
+					<ChevronRight className="size-4 shrink-0 text-[#6b6375] dark:text-[#a0aec0]"/>
 				</button>
 			</div>
 			<DailyQuizConfirmDialog
@@ -247,7 +246,7 @@ function DailyQuizConfirmDialog({
 	}
 	return(
 		<div
-			className="fixed inset-0 z-40 flex items-end bg-[#091828]/55 px-5 pb-6 pt-16 sm:items-center sm:justify-center sm:p-6"
+			className="fixed inset-0 z-40 flex items-end bg-[#091828]/55 px-5 pb-6 pt-16 dark:bg-black/70 sm:items-center sm:justify-center sm:p-6"
 			onMouseDown={(event)=>{
 				if(event.target===event.currentTarget&&!isStarting){
 					onCancel()
@@ -258,26 +257,26 @@ function DailyQuizConfirmDialog({
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="daily-quiz-confirm-title"
-				className="w-full max-w-sm rounded-3xl border-2 border-[#091828] bg-[#FFF9FB] p-5 shadow-[6px_6px_0_#091828]"
+				className="w-full max-w-sm rounded-3xl border-2 border-[#091828] bg-[#FFF9FB] p-5 shadow-[6px_6px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[6px_6px_0_#060e20]"
 			>
-				<div className="flex size-11 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFD8E6] text-[#AC2A5D]">
+				<div className="flex size-11 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFD8E6] text-[#AC2A5D] dark:border-[#060e20] dark:bg-[#ff6b9d]/20 dark:text-[#ff6b9d]">
 					<CalendarCheck className="size-5"/>
 				</div>
-				<p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-[#AC2A5D]">Daily quiz</p>
-				<h2 id="daily-quiz-confirm-title" className="mt-1 text-xl font-extrabold text-[#091828]">
+				<p className="mt-4 text-xs font-bold uppercase tracking-[0.14em] text-[#AC2A5D] dark:text-[#ff6b9d]">Daily quiz</p>
+				<h2 id="daily-quiz-confirm-title" className="mt-1 text-xl font-extrabold text-[#091828] dark:text-white">
 					{mode==="RESUME"?"Continue where you left off?":"Ready to begin?"}
 				</h2>
-				<p className="mt-2 text-sm leading-relaxed text-[#6b6375]">
+				<p className="mt-2 text-sm leading-relaxed text-[#6b6375] dark:text-[#a0aec0]">
 					{mode==="RESUME"&&progress
 						?`You have answered ${progress.answeredAttempts} of ${progress.initialQuestions} questions so far.`
 						:"Your five-question quiz starts now. Once you begin, you can resume it later today."}
 				</p>
-				{error&&<p className="mt-3 rounded-xl border border-[#AC2A5D] bg-[#FFF1F4] px-3 py-2 text-sm font-semibold text-[#AC2A5D]">{error}</p>}
+				{error&&<p className="mt-3 rounded-xl border border-[#AC2A5D] bg-[#FFF1F4] px-3 py-2 text-sm font-semibold text-[#AC2A5D] dark:border-[#ffb4ab] dark:bg-[#93000a]/30 dark:text-[#ffb4ab]">{error}</p>}
 				<div className="mt-5 grid grid-cols-2 gap-3">
-					<LongButton LongVariant="outline" LongSize="sm" showArrow={false} onClick={onCancel} disabled={isStarting}>
+					<LongButton LongVariant="outline" LongSize="sm" showArrow={false} onClick={onCancel} disabled={isStarting} className="dark:border-[#060e20] dark:bg-[#1c263c] dark:text-white dark:shadow-[3px_4px_0_#060e20] dark:hover:bg-[#2d3449]">
 						Not yet
 					</LongButton>
-					<LongButton LongVariant="primaryDark" LongSize="sm" showArrow={false} onClick={onConfirm} disabled={isStarting}>
+					<LongButton LongVariant="primaryDark" LongSize="sm" showArrow={false} onClick={onConfirm} disabled={isStarting} className="dark:bg-[#1e293b] dark:hover:bg-[#334155]">
 						{isStarting?"Starting...":mode==="RESUME"?"Continue quiz":"Start quiz"}
 					</LongButton>
 				</div>
@@ -359,36 +358,36 @@ function QuizQuestCard({
     to?:string
     disabled?:boolean
 }>){return (
-	<CustomCard variant="navyShaddow" size="md" className="border-2 border-[#091828]">
+	<CustomCard variant="navyShaddow" size="md" className="border-2 border-[#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[3px_4px_0_#060e20]">
 		<div className="flex items-start gap-3">
 			<QuestIcon tone={tone}>{icon}</QuestIcon>
 
 			<div className="min-w-0 flex-1">
 				<div className="flex items-start justify-between gap-2">
 					<div>
-						<p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6b6375]">
+						<p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#6b6375] dark:text-[#a0aec0]">
 							{eyebrow}
 						</p>
-						<p className="mt-1 text-lg font-extrabold leading-tight text-[#091828]">
+						<p className="mt-1 text-lg font-extrabold leading-tight text-[#091828] dark:text-white">
 							{title}
 						</p>
 					</div>
 
 					{(badgeLabel || (xp ?? 0) > 0) && (
-						<CustomBadge variant="xp" size="sm">
+						<CustomBadge variant="xp" size="sm" className="dark:border-[#060e20] dark:bg-[#ffd166] dark:shadow-[3px_4px_0_#060e20]">
 							{badgeLabel ?? `+${xp} XP`}
 						</CustomBadge>
 					)}
 				</div>
 
-				<p className="mt-2 text-sm leading-relaxed text-[#6b6375]">
+				<p className="mt-2 text-sm leading-relaxed text-[#6b6375] dark:text-[#a0aec0]">
 					{description}
 				</p>
 
 				{progress !== undefined && (
 					<div className="mt-4">
 						<Progress value={progress} className="h-2" aria-label={progressLabel} />
-						<p className="mt-1 text-[11px] font-semibold text-[#6b6375]">
+						<p className="mt-1 text-[11px] font-semibold text-[#6b6375] dark:text-[#a0aec0]">
 							{progressLabel}
 						</p>
 					</div>
@@ -398,7 +397,7 @@ function QuizQuestCard({
 
 		{knowledgeStreak !== undefined && (
 			<div
-				className="mt-4 rounded-2xl border border-[#FFD8E6] bg-[#FFF7F9] px-4 py-3"
+				className="mt-4 rounded-2xl border border-[#FFD8E6] bg-[#FFF7F9] px-4 py-3 dark:border-[#ff6b9d]/30 dark:bg-[#1c263c]"
 				data-testid="knowledge-streak"
 			>
 				<div className="grid grid-cols-[72px_1fr] items-center gap-4">
@@ -407,10 +406,10 @@ function QuizQuestCard({
 					</div>
 
 					<div className="min-w-0 text-center">
-						<p className="text-[11px] font-bold uppercase tracking-wide text-[#AC2A5D]">
+						<p className="text-[11px] font-bold uppercase tracking-wide text-[#AC2A5D] dark:text-[#ff6b9d]">
 							Knowledge streak
 						</p>
-						<p className="mt-0.5 text-xs text-[#6b6375]">
+						<p className="mt-0.5 text-xs text-[#6b6375] dark:text-[#a0aec0]">
 							Keep learning every day
 						</p>
 
@@ -433,7 +432,7 @@ function QuizQuestCard({
 		<LongButton
 			LongVariant="primaryDark"
 			LongSize="sm"
-			className="mt-3"
+			className="mt-3 dark:bg-[#1e293b] dark:hover:bg-[#334155]"
 			showArrow={false}
 			aria-label={actionAriaLabel}
 			asChild={asLink}
@@ -448,27 +447,27 @@ function QuizQuestCard({
 
 function QuestCardSkeleton(){
 	return(
-		<CustomCard variant="greenShaddow" size="sm">
+		<CustomCard variant="greenShaddow" size="sm" className="dark:bg-[#131b2e] dark:shadow-none">
 			<div className="flex items-start gap-3">
-				<div className="size-10 shrink-0 animate-pulse rounded-full bg-[#DCEFE8]"/>
+				<div className="size-10 shrink-0 animate-pulse rounded-full bg-[#DCEFE8] dark:bg-[#1c263c]"/>
 				<div className="min-w-0 flex-1 space-y-2">
-					<div className="h-4 w-1/2 animate-pulse rounded bg-[#DCEFE8]"/>
-					<div className="h-3 w-4/5 animate-pulse rounded bg-[#DCEFE8]"/>
+					<div className="h-4 w-1/2 animate-pulse rounded bg-[#DCEFE8] dark:bg-[#1c263c]"/>
+					<div className="h-3 w-4/5 animate-pulse rounded bg-[#DCEFE8] dark:bg-[#1c263c]"/>
 				</div>
 			</div>
-			<div className="mt-3 h-9 w-full animate-pulse rounded-full bg-[#DCEFE8]"/>
+			<div className="mt-3 h-9 w-full animate-pulse rounded-full bg-[#DCEFE8] dark:bg-[#1c263c]"/>
 		</CustomCard>
 	)
 }
 
 function TopicCardSkeleton(){
 	return(
-		<CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3">
-			<div className="size-10 shrink-0 animate-pulse rounded-full bg-[#E8E4F4]"/>
+		<CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3 dark:border-[#060e20] dark:bg-[#131b2e]">
+			<div className="size-10 shrink-0 animate-pulse rounded-full bg-[#E8E4F4] dark:bg-[#1c263c]"/>
 			<div className="min-w-0 flex-1 space-y-2">
-				<div className="h-4 w-2/3 animate-pulse rounded bg-[#E8E4F4]"/>
-				<div className="h-3 w-4/5 animate-pulse rounded bg-[#E8E4F4]"/>
-				<div className="h-1.5 w-full animate-pulse rounded bg-[#E8E4F4]"/>
+				<div className="h-4 w-2/3 animate-pulse rounded bg-[#E8E4F4] dark:bg-[#1c263c]"/>
+				<div className="h-3 w-4/5 animate-pulse rounded bg-[#E8E4F4] dark:bg-[#1c263c]"/>
+				<div className="h-1.5 w-full animate-pulse rounded bg-[#E8E4F4] dark:bg-[#1c263c]"/>
 			</div>
 		</CustomCard>
 	)
@@ -482,70 +481,14 @@ function QuestIcon({
     children:React.ReactNode
 }>){
     const toneClass:Record<typeof tone, string> ={
-        pink:"bg-[#FFD8E6] text-[#ac2a5d]",
-        mint:"bg-[#DCEFE8] text-[#091828]",
-        yellow:"bg-[#FFE9B5] text-[#7a5a00]",
-        lilac:"bg-[#E8E4F4] text-[#5b4d8b]",
+        pink:"bg-[#FFD8E6] text-[#ac2a5d] dark:bg-[#ff6b9d]/20 dark:text-[#ff6b9d]",
+        mint:"bg-[#DCEFE8] text-[#091828] dark:bg-[#1c263c] dark:text-[#a0aec0]",
+        yellow:"bg-[#FFE9B5] text-[#7a5a00] dark:bg-[#ffd166]/20 dark:text-[#ffd166]",
+        lilac:"bg-[#E8E4F4] text-[#5b4d8b] dark:bg-[#9B7EDE]/20 dark:text-[#c5b3f0]",
     }
     return(
         <div className={`flex size-10 shrink-0 items-center justify-center rounded-full ${toneClass[tone]}`}>
 			{children}
 		</div>
 	)
-}
-
-type BottomNavTab="home"|"calendar"|"quests"|"profile"
-
-function BottomNav({ active }:{ active:BottomNavTab }){
-    return(
-        <nav
-            aria-label="Primary"
-            className="fixed inset-x-0 bottom-0 z-30 border-t border-[#E8E4F4] bg-white/95 backdrop-blur"
-        >
-            <div className="mx-auto flex w-full max-w-md items-center justify-around px-4 py-2">
-                <BottomNavItem to="/" icon={<Home className="size-5"/>} label="Home" active={active==="home"}/>
-                <BottomNavItem to="/calendar" icon={<CalendarIcon className="size-5"/>} label="Calendar" active={active==="calendar"}/>
-                <AddTransactionButton/>
-                <BottomNavItem to="/quests" icon={<Trophy className="size-5"/>} label="Quests" active={active==="quests"}/>
-                <BottomNavItem to="/profile" icon={<User className="size-5"/>} label="Profile" active={active==="profile"} disabled={false}/>
-            </div>
-        </nav>
-    )
-}
-
-function BottomNavItem({
-    to,
-    icon,
-    label,
-    active,
-    disabled,
-}:Readonly<{
-    to:string
-    icon:React.ReactNode
-    label:string
-    active:boolean
-    disabled?:boolean
-}>){
-    return(
-        <Link
-            to={to}
-            aria-disabled={disabled}
-            onClick={(e) =>{
-                if(disabled){
-                    e.preventDefault();
-                }
-            }}
-            className={cn(
-                "flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition",
-                active
-                   ?"bg-[#FFD8E6] text-[#ac2a5d]"
-                   :"text-[#6b6375] hover:text-[#091828]",
-                disabled && "opacity-35 pointer-events-none cursor-not-allowed select-none"
-            )}
-            aria-current={active?"page":undefined}
-        >
-           {icon}
-            <span>{label}</span>
-        </Link>
-    )
 }
