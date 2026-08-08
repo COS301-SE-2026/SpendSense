@@ -18,6 +18,7 @@ import { CustomCard } from "@/components/ui/CustomCard"
 import { cn } from "@/lib/utils"
 import { apiFetch } from "@/lib/api"
 import { useCalendarOccurrences, type CalendarOccurrence } from "@/hooks/useCalendarOccurrences"
+import { BottomNav } from "@/components/common/BottomNav"
  
  
 // TYPES
@@ -64,12 +65,12 @@ const MONTH_NAMES =[
 const DAY_HEADERS =["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
  
 const BADGE_STYLES: Record<OccurrenceStatus, { bg: string; text: string; label: string }> ={
-  PENDING: { bg: "bg-[#FFD9E1]", text: "text-[#3F001B]", label: "DUE SOON"},
-  OVERDUE: { bg: "bg-[#AC2A5D]", text: "text-white", label: "OVERDUE"},
-  PAID: { bg: "bg-[#6FC9B0]", text: "text-white", label: "PAID"},
-  PAID_LATE: { bg: "bg-[#6FC9B0]", text: "text-white", label: "PAID LATE"},
-  MISSED: { bg: "bg-[#AC2A5D]", text: "text-white", label: "MISSED"},
-  CANCELLED: { bg: "bg-[#D3D3D3]", text: "text-[#555]", label: "CANCELLED"},
+  PENDING: { bg: "bg-[#FFD9E1] dark:bg-[#2d1b2e]", text: "text-[#3F001B] dark:text-[#ff6b9d]", label: "DUE SOON"},
+  OVERDUE: { bg: "bg-[#AC2A5D] dark:bg-[#93000a]", text: "text-white dark:text-[#ffdad6]", label: "OVERDUE"},
+  PAID: { bg: "bg-[#6FC9B0] dark:bg-[#0f4f42]", text: "text-white dark:text-[#5eead4]", label: "PAID"},
+  PAID_LATE: { bg: "bg-[#6FC9B0] dark:bg-[#0f4f42]", text: "text-white dark:text-[#5eead4]", label: "PAID LATE"},
+  MISSED: { bg: "bg-[#AC2A5D] dark:bg-[#93000a]", text: "text-white dark:text-[#ffdad6]", label: "MISSED"},
+  CANCELLED: { bg: "bg-[#D3D3D3] dark:bg-[#2d3449]", text: "text-[#555] dark:text-[#a0aec0]", label: "CANCELLED"},
 }
  
  
@@ -114,17 +115,17 @@ function calcSummary(occurrences: CalendarOccurrence[]){
 function dotForStatus(status: OccurrenceStatus): DotType{
   switch (status){
     case "PAID":
-    case "PAID_LATE": return { color: "bg-[#6FC9B0]", check: true }
+    case "PAID_LATE": return { color: "bg-[#6FC9B0] dark:bg-[#5eead4]", check: true }
     case "OVERDUE":
-    case "MISSED": return { color: "bg-[#AC2A5D]" }
+    case "MISSED": return { color: "bg-[#AC2A5D] dark:bg-[#ffb4ab]" }
     case "PENDING":
-    default: return { color: "bg-[#F2BF3C]" }
+    default: return { color: "bg-[#F2BF3C] dark:bg-[#ffd166]" }
   }
 }
  
 function iconBgForType(type: string): string{
   switch (type){
-    case "RENT": return "bg-[#091828]"
+    case "RENT": return "bg-[#091828] dark:bg-[#a0aec0]"
     case "SUBSCRIPTION": return "bg-[#E9D5FF]"
     case "UTILITY": return "bg-[#DCEFE8]"
     case "BNPL": return "bg-[#FFE9B5]"
@@ -253,7 +254,7 @@ export default function CalendarPage(){
   const monthLabel = MONTH_NAMES[displayMonth]
  
   return(
-    <div className="min-h-screen bg-[#F4FBF7] pb-24">
+    <div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
       <div className="mx-auto w-full max-w-md px-5 pt-6">
  
         {/* HEADER */}
@@ -261,25 +262,25 @@ export default function CalendarPage(){
           <Link
             to="/"
             aria-label="Go back"
-            className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828]"
+            className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]"
           >
-            <ChevronLeft className="size-5 text-[#6E0034]" />
+            <ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]" />
           </Link>
  
           <div className="flex flex-1 items-center justify-center">
-            <div
-              className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828]"
-              style={{ transform: "rotate(-3deg)" }}
-            >
-              <span className="text-base font-bold text-[#091828]">Money Calendar</span>
-            </div>
+              <div
+                  className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
+                  style={{transform: "rotate(-3deg)"}}>
+                      
+                  <span className="text-base font-bold text-[#091828] dark:text-[#091828]">Profile</span>
+              </div>
           </div>
  
           <button
             aria-label="Calendar settings"
-            className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#E3EAE6] shadow-[4px_4px_0_#091828]"
+            className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#E3EAE6] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#1c263c] dark:shadow-[4px_4px_0_#060e20]"
           >
-            <AlignJustify className="size-5 text-[#091828]" />
+            <AlignJustify className="size-5 text-[#091828] dark:text-[#a0aec0]" />
           </button>
         </header>
  
@@ -288,19 +289,19 @@ export default function CalendarPage(){
           <button
             aria-label="Previous month"
             onClick={goToPreviousMonth}
-            className="flex size-10 items-center justify-center rounded-full border-2 border-[#FF6B9D] text-[#FF6B9D] bg-[#FFD9E1] shadow-[2px_2px_0_#091828]"
+            className="flex size-10 items-center justify-center rounded-full border-2 border-[#FF6B9D] text-[#FF6B9D] bg-[#FFD9E1] shadow-[2px_2px_0_#091828] dark:bg-[#ff6b9d]/20 dark:shadow-[2px_2px_0_#060e20]"
           >
             <ChevronLeft className="size-5" />
           </button>
  
-          <h1 className="text-center text-3xl font-extrabold leading-tight text-[#091828]">
+          <h1 className="text-center text-3xl font-extrabold leading-tight text-[#091828] dark:text-white">
             {monthLabel}<br />{displayYear}
           </h1>
  
           <button
             aria-label="Next month"
             onClick={goToNextMonth}
-            className="flex size-10 items-center justify-center rounded-full border-2 border-[#FF6B9D] text-[#FF6B9D] bg-[#FFD9E1] shadow-[2px_2px_0_#091828]"
+            className="flex size-10 items-center justify-center rounded-full border-2 border-[#FF6B9D] text-[#FF6B9D] bg-[#FFD9E1] shadow-[2px_2px_0_#091828] dark:bg-[#ff6b9d]/20 dark:shadow-[2px_2px_0_#060e20]"
           >
             <ChevronRight className="size-5" />
           </button>
@@ -308,49 +309,49 @@ export default function CalendarPage(){
  
         {/* error banner */}
         {error && (
-          <div className="mt-4 flex items-center gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFD9E1] px-4 py-3">
-            <AlertTriangle className="size-4 shrink-0 text-[#AC2A5D]" />
-            <p className="text-sm font-semibold text-[#AC2A5D]">{error}</p>
+          <div className="mt-4 flex items-center gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFD9E1] px-4 py-3 dark:border-[#ffb4ab] dark:bg-[#93000a]/30">
+            <AlertTriangle className="size-4 shrink-0 text-[#AC2A5D] dark:text-[#ffb4ab]" />
+            <p className="text-sm font-semibold text-[#AC2A5D] dark:text-[#ffb4ab]">{error}</p>
           </div>
         )}
  
         {/* SUMMARY CARDS */}
         <div className="mt-6 flex flex-col gap-3">
           <div style={{ transform: "rotate(-2deg)" }}>
-            <div className="rounded-3xl border-2 border-[#091828] bg-white px-5 py-4 shadow-[4px_4px_0_#091828]">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375]">
+            <div className="rounded-3xl border-2 border-[#091828] bg-white px-5 py-4 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
                 PAID THIS MONTH&nbsp;
-                <Check className="inline size-3 text-[#6FC9B0]" strokeWidth={3} />
+                <Check className="inline size-3 text-[#6FC9B0] dark:text-[#5eead4]" strokeWidth={3} />
               </p>
               {loading
-                ? <div className="mt-2 h-7 w-24 animate-pulse rounded-full bg-[#E3EAE6]" />
-                : <p className="mt-1 text-2xl font-extrabold text-[#6FC9B0]">{formatCurrency(summary.paid)}</p>
+                ? <div className="mt-2 h-7 w-24 animate-pulse rounded-full bg-[#E3EAE6] dark:bg-[#1c263c]" />
+                : <p className="mt-1 text-2xl font-extrabold text-[#6FC9B0] dark:text-[#5eead4]">{formatCurrency(summary.paid)}</p>
               }
             </div>
           </div>
  
           <div style={{ transform: "rotate(1.5deg)" }}>
-            <div className="rounded-3xl border-2 border-[#091828] bg-white px-5 py-4 shadow-[4px_4px_0_#091828]">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375]">
+            <div className="rounded-3xl border-2 border-[#091828] bg-white px-5 py-4 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
                 DUE SOON&nbsp;
-                <Clock className="inline size-3 text-[#F2BF3C]" />
+                <Clock className="inline size-3 text-[#F2BF3C] dark:text-[#ffd166]" />
               </p>
               {loading
-                ? <div className="mt-2 h-7 w-24 animate-pulse rounded-full bg-[#E3EAE6]" />
-                : <p className="mt-1 text-2xl font-extrabold text-[#F2BF3C]">{formatCurrency(summary.dueSoon)}</p>
+                ? <div className="mt-2 h-7 w-24 animate-pulse rounded-full bg-[#E3EAE6] dark:bg-[#1c263c]" />
+                : <p className="mt-1 text-2xl font-extrabold text-[#F2BF3C] dark:text-[#ffd166]">{formatCurrency(summary.dueSoon)}</p>
               }
             </div>
           </div>
  
           <div>
-            <div className="rounded-3xl border-2 border-[#091828] bg-white px-5 py-4 shadow-[4px_4px_0_#091828]">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375]">
+            <div className="rounded-3xl border-2 border-[#091828] bg-white px-5 py-4 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
                 MISSED&nbsp;
-                <X className="inline size-3 text-[#AC2A5D]" strokeWidth={3} />
+                <X className="inline size-3 text-[#AC2A5D] dark:text-[#ffb4ab]" strokeWidth={3} />
               </p>
               {loading
-                ? <div className="mt-2 h-7 w-24 animate-pulse rounded-full bg-[#E3EAE6]" />
-                : <p className="mt-1 text-2xl font-extrabold text-[#AC2A5D]">{formatCurrency(summary.overdue)}</p>
+                ? <div className="mt-2 h-7 w-24 animate-pulse rounded-full bg-[#E3EAE6] dark:bg-[#1c263c]" />
+                : <p className="mt-1 text-2xl font-extrabold text-[#AC2A5D] dark:text-[#ffb4ab]">{formatCurrency(summary.overdue)}</p>
               }
             </div>
           </div>
@@ -360,7 +361,7 @@ export default function CalendarPage(){
         <div className="mt-6" aria-label="Calendar">
           <div className="grid grid-cols-7">
             {DAY_HEADERS.map(d => (
-              <div key={d} className="py-1 text-center text-[10px] font-semibold text-[#6b6375]">
+              <div key={d} className="py-1 text-center text-[10px] font-semibold text-[#6b6375] dark:text-[#a0aec0]">
                 {d}
               </div>
             ))}
@@ -370,7 +371,7 @@ export default function CalendarPage(){
             ? (
               <div className="mt-2 grid grid-cols-7 gap-1">
                 {Array.from({ length: 35 }).map((_, i) => (
-                  <div key={i} className="mx-auto size-10 animate-pulse rounded-full bg-[#E3EAE6]" />
+                  <div key={i} className="mx-auto size-10 animate-pulse rounded-full bg-[#E3EAE6] dark:bg-[#1c263c]" />
                 ))}
               </div>
             ): (
@@ -388,13 +389,13 @@ export default function CalendarPage(){
  
         {/* CONTEXT PANEL */}
         <div className="mt-6" style={{ transform: "rotate(1deg)" }}>
-          <div className="rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-4 shadow-[2px_2px_0_#091828]">
+          <div className="rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-4 shadow-[2px_2px_0_#091828] dark:border-[#060e20] dark:bg-[#2d1b2e] dark:shadow-[2px_2px_0_#060e20]">
             {selectedDate === null ? (
-              <p className="text-xl font-extrabold text-[#091828]" aria-label="Showing all expenses">
+              <p className="text-xl font-extrabold text-[#091828] dark:text-white" aria-label="Showing all expenses">
                 {monthLabel.charAt(0) + monthLabel.slice(1).toLowerCase()} {displayYear}, <br />all expenses
               </p>
             ) : (
-              <p className="text-xl font-extrabold text-[#091828]">
+              <p className="text-xl font-extrabold text-[#091828] dark:text-white">
                 {monthLabel.charAt(0) + monthLabel.slice(1).toLowerCase()} {selectedDate}, what&apos;s<br />happening
               </p>
             )}
@@ -405,10 +406,10 @@ export default function CalendarPage(){
         <div className="mt-4 flex flex-col gap-3">
           {loading ? (
             Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-3xl bg-[#E3EAE6]" />
+              <div key={i} className="h-20 animate-pulse rounded-3xl bg-[#E3EAE6] dark:bg-[#1c263c]" />
             ))
           ) : visibleOccurrences.length === 0 ? (
-            <p className="py-6 text-center text-sm text-[#6b6375]">
+            <p className="py-6 text-center text-sm text-[#6b6375] dark:text-[#a0aec0]">
               {selectedDate === null ? "No upcoming payments this month." : "No expenses on this date"}
             </p>
           ) : (
@@ -454,7 +455,7 @@ function OccurrenceCard({
   const monthShort = new Date(occurrence.dueDate).toLocaleString("en-ZA", { month: "short" })
  
   return(
-    <CustomCard className="rounded-3xl border-2 border-[#091828] bg-white p-4 shadow-sm">
+    <CustomCard className="rounded-3xl border-2 border-[#091828] bg-white p-4 shadow-sm dark:border-[#060e20] dark:bg-[#131b2e]">
       <button
         type="button"
         disabled={!isPayable || isTapping}
@@ -472,7 +473,7 @@ function OccurrenceCard({
         <div className="flex items-center gap-3">
           <div
             className={cn(
-              "flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828]",
+              "flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] dark:border-[#060e20]",
               iconBg,
             )}
           >
@@ -484,26 +485,26 @@ function OccurrenceCard({
  
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-bold text-[#091828]">{occurrence.obligation.name}</p>
+              <p className="text-sm font-bold text-[#091828] dark:text-white">{occurrence.obligation.name}</p>
               {showDate && (
-                <span className="text-[10px] font-semibold text-[#6b6375]">
+                <span className="text-[10px] font-semibold text-[#6b6375] dark:text-[#a0aec0]">
                   {monthShort} {dayOfMonth}
                 </span>
               )}
             </div>
             <div className="mt-1 flex items-center gap-2">
-              <span className={cn("inline-block rounded-full border border-[#091828] px-2 py-0.5", badge.bg)}>
+              <span className={cn("inline-block rounded-full border border-[#091828] px-2 py-0.5 dark:border-[#060e20]", badge.bg)}>
                 <span className={cn("text-[10px] font-bold", badge.text)}>{badge.label}</span>
               </span>
               {isPayable && !isTapping && (
-                <span className="text-[10px] font-semibold text-[#AC2A5D]">Tap to pay →</span>
+                <span className="text-[10px] font-semibold text-[#AC2A5D] dark:text-[#ff6b9d]">Tap to pay →</span>
               )}
             </div>
           </div>
  
           <p className={cn(
             "text-base font-extrabold",
-            status === "OVERDUE" ? "text-[#AC2A5D]" : "text-[#091828]",
+            status === "OVERDUE" ? "text-[#AC2A5D] dark:text-[#ffb4ab]" : "text-[#091828] dark:text-white",
           )}>
             {formatCurrency(occurrence.amountDue)}
           </p>
@@ -564,10 +565,10 @@ function CalendarGrid({
                   className={cn(
                     "flex size-10 items-center justify-center text-xl font-extrabold transition",
                     isToday
-                      ? "rounded-full border-2 border-[#091828] text-[#091828]"
+                      ? "rounded-full border-2 border-[#091828] text-[#091828] dark:border-[#ff6b9d] dark:text-white"
                       : isSelected
-                      ? "underline decoration-2 underline-offset-2 text-[#091828]"
-                      : "text-[#091828]",
+                      ? "underline decoration-2 underline-offset-2 text-[#091828] dark:text-white"
+                      : "text-[#091828] dark:text-white",
                   )}
                 >
                   {day}
@@ -578,7 +579,7 @@ function CalendarGrid({
                     {eventDots[day].map((dot, i) =>
                       dot.check ? (
                         <div key={i} className={cn("size-3 rounded-full flex items-center justify-center", dot.color)}>
-                          <Check className="size-2 text-white" strokeWidth={3} />
+                          <Check className="size-2 text-white dark:text-[#0b1326]" strokeWidth={3} />
                         </div>
                       ) : (
                         <div key={i} className={cn("size-2.5 rounded-full", dot.color)} />
@@ -595,47 +596,3 @@ function CalendarGrid({
   )
 }
  
- 
-// BOTTOM NAV
- 
-type BottomNavTab = "home" | "calendar" | "quests" | "profile"
- 
-function BottomNav({ active }: { active: BottomNavTab }) {
-  return (
-    <nav
-      aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-[#E8E4F4] bg-white/95 backdrop-blur"
-    >
-      <div className="mx-auto flex w-full max-w-md items-center justify-around px-4 py-2">
-        <BottomNavItem to="/"        icon={<Home className="size-5" />}        label="Home"     active={active === "home"} />
-        <BottomNavItem to="/calendar" icon={<CalendarIcon className="size-5" />} label="Calendar" active={active === "calendar"} />
-        <AddTransactionButton />
-        <BottomNavItem to="/quests"  icon={<Trophy className="size-5" />}      label="Quests"   active={active === "quests"}  disabled={false} />
-        <BottomNavItem to="/profile" icon={<User className="size-5" />}        label="Profile"  active={active === "profile"} disabled={false} />
-      </div>
-    </nav>
-  )
-}
- 
-function BottomNavItem({
-  to, icon, label, active, disabled,
-}: {
-  to: string; icon: React.ReactNode; label: string; active: boolean; disabled?: boolean
-}) {
-  return (
-    <Link
-      to={to}
-      aria-current={active ? "page" : undefined}
-      aria-disabled={disabled}
-      onClick={(e) => { if (disabled) e.preventDefault() }}
-      className={cn(
-        "flex flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition",
-        active ? "bg-[#FFD8E6] text-[#ac2a5d]" : "text-[#6b6375] hover:text-[#091828]",
-        disabled && "opacity-35 pointer-events-none cursor-not-allowed select-none"
-      )}
-    >
-      {icon}
-      <span>{label}</span>
-    </Link>
-  )
-}
