@@ -43,7 +43,7 @@ export default function EditProfilePage(){
 
     return(
         <SubPageShell title="Edit Profile" subtitle="Update your details">
-            {loading && <p className="text-sm text-[#6B6375]">Loading...</p>}
+            {loading && <p className="text-sm text-[#6B6375] dark:text-[#a0aec0]">Loading...</p>}
             {user && !loading &&(
                 <>
                     <CustomCard variant="navyBorder" size="md" className="flex flex-col items-center text-center">
@@ -55,20 +55,20 @@ export default function EditProfilePage(){
                             />
 
                         ):(
-                            <div className="flex size-16 items-center justify-center rounded-full bg-[#0A1929] text-lg font-bold text-white">
+                            <div className="flex size-16 items-center justify-center rounded-full bg-[#0A1929] text-lg font-bold text-white dark:bg-[#1e293b]">
                                 {initialsFor(trimmed || user.displayName)}
                             </div>
                         )}
 
                         {/*TODO: avatar upload or URL field*/}
-                        <p className="mt-2 text-xs text-[#6B6375]">Avatar is generated from your name</p>
+                        <p className="mt-2 text-xs text-[#6B6375] dark:text-[#a0aec0]">Avatar is generated from your name</p>
                     </CustomCard>
 
                     {/*Details*/}
                     <CustomCard variant="navyBorder" size="md">
                         <div className="flex flex-col gap-4">
                             <div>
-                                <label htmlFor="displayName" className="text-xs font-bold uppercase tracking-wide text-[#6B6375]">
+                                <label htmlFor="displayName" className="text-xs font-bold uppercase tracking-wide text-[#6B6375] dark:text-[#a0aec0]">
                                     Display Name
                                 </label>
                                 <CustomInput
@@ -81,22 +81,22 @@ export default function EditProfilePage(){
                                 />
 
                                 {nameError && (
-                                    <p className="mt-1 text-xs text-[#AC2A5D]">{nameError}</p>
+                                    <p className="mt-1 text-xs text-[#AC2A5D] dark:text-[#ff6b9d]">{nameError}</p>
                                 )}
 
 
                             </div>
 
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-wide text-[#6B6375]">Email</p>
-                                <p className="mt-1 text-sm text-[#091828]">{user.email}</p>
-                                <p className="mt-0.5 text-xs text-[#6B6375]">Email changes go through account security, not this form</p>
+                                <p className="text-xs font-bold uppercase tracking-wide text-[#6B6375] dark:text-[#a0aec0]">Email</p>
+                                <p className="mt-1 text-sm text-[#091828] dark:text-[#ffffff]">{user.email}</p>
+                                <p className="mt-0.5 text-xs text-[#6B6375] dark:text-[#a0aec0]">Email changes go through account security, not this form</p>
                             </div>
                     
 
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wide text-[#6B6375]">Member Since</p>
-                            <p className="mt-1 text-sm text-[#091828]">{user.memberSince}</p>
+                            <p className="text-xs font-bold uppercase tracking-wide text-[#6B6375] dark:text-[#a0aec0]">Member Since</p>
+                            <p className="mt-1 text-sm text-[#091828] dark:text-[#ffffff]">{user.memberSince}</p>
                         </div>
                     </div>
                     
@@ -108,12 +108,13 @@ export default function EditProfilePage(){
                         showArrow={false}
                         onClick={handleSave}
                         disabled={saving||loading||Boolean(nameError)}
+                        className="dark:bg-[#ffb1c5] dark:text-[#650030] dark:hover:bg-[#ffc4d4]"
                     >
                         {saving ? "Saving...": "Save Changes"}
                     </LongButton>
 
                     {feedback && (
-                        <p className={`text-center text-xs ${feedback.kind === "success" ? "text-[#3DBFA0]" : "text-[#AC2A5D]"}`}>
+                        <p className={`text-center text-xs ${feedback.kind === "success" ? "text-[#3DBFA0] dark:text-[#5eead4]" : "text-[#AC2A5D] dark:text-[#ff6b9d]"}`}>
                             {feedback.message}
                         </p>
                     )}
