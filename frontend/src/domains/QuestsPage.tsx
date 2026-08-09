@@ -123,7 +123,7 @@ export default function QuestsPage(){
                             className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
                             style={{transform: "rotate(-3deg)"}}>
                                 
-                            <span className="text-base font-bold text-[#091828] dark:text-[#091828]">Quests</span>
+                            <h1 className="text-base font-bold text-[#091828] dark:text-[#091828]">Quests</h1>
                         </div>
                     </div>
 					<div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFE9B5] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#ffd166]/20">

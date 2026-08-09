@@ -1,10 +1,6 @@
 import * as React from "react"
 import { Link, useNavigate } from "react-router-dom"
 import {
-  Home,
-  Calendar as CalendarIcon,
-  Trophy,
-  User,
   ChevronLeft,
   ChevronRight,
   Check,
@@ -13,7 +9,6 @@ import {
   AlignJustify,
   AlertTriangle,
 } from "lucide-react"
-import { AddTransactionButton } from "@/components/common/AddTransactionButton"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { cn } from "@/lib/utils"
 import { apiFetch } from "@/lib/api"
@@ -272,7 +267,7 @@ export default function CalendarPage(){
                   className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
                   style={{transform: "rotate(-3deg)"}}>
                       
-                  <span className="text-base font-bold text-[#091828] dark:text-[#091828]">Calendar</span>
+                  <span className="text-base font-bold text-[#091828] dark:text-[#091828]">Money Calendar</span>
               </div>
           </div>
  

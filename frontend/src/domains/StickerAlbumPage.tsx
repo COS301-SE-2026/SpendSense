@@ -244,7 +244,7 @@ export default function StickerAlbumPage(){
 
             {/* HEADER */}
             <header className="bg-[#F0F7F4] px-4 pt-5 pb-3 flex items-center justify-between dark:bg-[#1c263c]">
-                <button type="button" aria-label="Go back" onClick={() => nav(-1)} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
+                <button type="button" aria-label="Go back" onClick={() => nav("/")} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
                         <ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]" />
                 </button>
                 <div className="flex flex-1 items-center justify-center">

@@ -1,9 +1,6 @@
 import * as React from "react"
 import { Link, useNavigate } from "react-router-dom"
 import {
-	Home,
-	Calendar as CalendarIcon,
-	Trophy,
 	User,
 	LogOut,
     TrendingUp,
@@ -11,7 +8,6 @@ import {
 } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { SparklesIcon, FireIcon, SunriseIcon } from "@hugeicons/core-free-icons"
-import { AddTransactionButton } from "@/components/common/AddTransactionButton"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { Progress } from "@/components/ui/progress"
 import { Sticker } from "@/components/ui/sticker"

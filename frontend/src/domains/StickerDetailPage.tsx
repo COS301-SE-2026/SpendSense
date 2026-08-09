@@ -159,18 +159,18 @@ export default function StickerDetailPage(){
         <div className="w-full max-w-sm flex flex-col min-h-screen">
 
             <header className="px-5 pt-5 flex items-center justify-between">
-                <button type="button" aria-label="Go back" onClick={() => navigate(-1)} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
+                <button type="button" aria-label="Go back" onClick={() => navigate("/stickers")} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
                         <ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]" />
                 </button>
-                    
+
                 <div className="flex flex-1 items-center justify-center">
                     <div
                         className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
                         style={{transform: "rotate(-3deg)"}}>
-                            
-                        <span className="text-base font-bold text-[#091828] dark:text-[#091828]">Sticker Details</span>
+
+                        <h1 className="text-base font-bold text-[#091828] dark:text-[#091828]">Quest Reward</h1>
                     </div>
-                </div>                
+                </div>
                 <button
                     type="button"
                     className="size-9 flex items-center justify-center rounded-full bg-white/60 text-[#091828] dark:bg-[#131b2e]/60 dark:text-[#ffffff]"
