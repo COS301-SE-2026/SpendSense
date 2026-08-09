@@ -1,7 +1,7 @@
 import {useNavigate} from "react-router-dom"
 import {cn} from "@/lib/utils"
 import {
-    ArrowLeft,
+    ChevronLeft,
     Search,
     Award,
     PiggyBank,
@@ -49,25 +49,25 @@ const CATEGORY_CONFIG: Record<string, {label: string; icon: React.ReactNode}>={
 }
 
 const CATEGORY_BG: Record<string, string>={
-    CORE_MILESTONES: "bg-[#E8D5F5]",
-    SAVINGS_QUESTS: "bg-[#D6EEE8]",
-    SPECIAL_EVENTS: "bg-[#1C1028]",
-    PAYMENT: "bg-[#DCEFE8]",
-    STREAK: "bg-[#FFD9E1]",
-    MILESTONE: "bg-[#FFE7AE]",
-    KNOWLEDGE: "bg-[#DCE8F7]",
-    SCORE: "bg-[#FFE7AE]",
+    CORE_MILESTONES: "bg-[#E8D5F5] dark:bg-[#332352]",
+    SAVINGS_QUESTS: "bg-[#D6EEE8] dark:bg-[#0f4f42]",
+    SPECIAL_EVENTS: "bg-[#1C1028] dark:bg-[#3d2a5c]",
+    PAYMENT: "bg-[#DCEFE8] dark:bg-[#12463d]",
+    STREAK: "bg-[#FFD9E1] dark:bg-[#2d1b2e]",
+    MILESTONE: "bg-[#FFE7AE] dark:bg-[#3f2e00]",
+    KNOWLEDGE: "bg-[#DCE8F7] dark:bg-[#1e3352]",
+    SCORE: "bg-[#FFE7AE] dark:bg-[#3f2e00]",
 }
 
 const CATEGORY_ICON_COLOR: Record<string, string>={
-    CORE_MILESTONES: "text-[#7C3AED]",
-    SAVINGS_QUESTS: "text-[#0D9488]",
+    CORE_MILESTONES: "text-[#7C3AED] dark:text-[#c5b3f0]",
+    SAVINGS_QUESTS: "text-[#0D9488] dark:text-[#5eead4]",
     SPECIAL_EVENTS: "text-white",
-    PAYMENT: "text-[#16635A]",
-    STREAK: "text-[#AC2A5D]",
-    MILESTONE: "text-[#7A4A00]",
-    KNOWLEDGE: "text-[#1E4FAE]",
-    SCORE: "text-[#7A4A00]",
+    PAYMENT: "text-[#16635A] dark:text-[#7fd8c4]",
+    STREAK: "text-[#AC2A5D] dark:text-[#ff6b9d]",
+    MILESTONE: "text-[#7A4A00] dark:text-[#ffdf9b]",
+    KNOWLEDGE: "text-[#1E4FAE] dark:text-[#9dc0ea]",
+    SCORE: "text-[#7A4A00] dark:text-[#ffdf9b]",
 }
 
 function stickerShape(category: string, code: string): string{
@@ -117,8 +117,8 @@ function StickerCell({badge, isEarned, onPress}: {
     const earnedAt = 'earnedAt' in badge ? badge.earnedAt : null
     const newBadge = isNew(earnedAt)
     const shape = stickerShape(badge.category, badge.badgeKey)
-    const bg = CATEGORY_BG[badge.category] ?? "bg-[#DCEFE8]"
-    const iconColor = CATEGORY_ICON_COLOR[badge.category] ?? "text-[#6b6375]"
+    const bg = CATEGORY_BG[badge.category] ?? "bg-[#DCEFE8] dark:bg-[#12463d]"
+    const iconColor = CATEGORY_ICON_COLOR[badge.category] ?? "text-[#6b6375] dark:text-[#a0aec0]"
     const isSpecial = badge.category === "SPECIAL_EVENTS"
 
     return(
@@ -132,7 +132,7 @@ function StickerCell({badge, isEarned, onPress}: {
             <div className="relative">
                 {newBadge && (
                     <span
-                        className="absolute -top-1 -right-1 z-10 size-3.5 rounded-full bg-[#FF3B5C] border-2 border-white"
+                        className="absolute -top-1 -right-1 z-10 size-3.5 rounded-full bg-[#FF3B5C] border-2 border-white dark:border-[#2d3449]"
                         aria-label="newly earned"
                     />
                 )}
@@ -141,21 +141,21 @@ function StickerCell({badge, isEarned, onPress}: {
                         "size-[88px] flex items-center justify-center transition-transform group-hover:scale-105 group-active:scale-95",
                         shape,
                         bg,
-                        isSpecial && "border-[3px] border-[#2D1B4E]"
+                        isSpecial && "border-[3px] border-[#2D1B4E] dark:border-[#6b4f9e]"
                     )}>
                         <span className={iconColor}>
                             <StickerIcon iconKey={badge.iconKey ?? 'star'} size={isSpecial ? 36 : 30}/>
                         </span>
                     </div>
                 ) : (
-                    <div className="size-[88px] rounded-full border-2 border-dashed border-[#B8CBBF] bg-transparent flex items-center justify-center">
-                        <HelpCircle size={26} className="text-[#B8CBBF]"/>
+                    <div className="size-[88px] rounded-full border-2 border-dashed border-[#B8CBBF] bg-transparent flex items-center justify-center dark:border-[#2d3449]">
+                        <HelpCircle size={26} className="text-[#B8CBBF] dark:text-[#a0aec0]"/>
                     </div>
                 )}
             </div>
             <span className={cn(
                 "text-xs font-semibold text-center leading-tight w-[88px]",
-                isEarned ? "text-[#091828]" : "text-[#B8CBBF]"
+                isEarned ? "text-[#091828] dark:text-[#ffffff]" : "text-[#B8CBBF] dark:text-[#a0aec0]"
             )}>
                 {isEarned ? badge.name : "Locked"}
             </span>
@@ -176,9 +176,9 @@ function CategorySection({category, badges, earnedKeys, onSelect}: {
 
     return(
         <section className="space-y-4">
-            <h2 className="text-xl font-bold text-[#091828] flex items-center gap-2">
+            <h2 className="text-xl font-bold text-[#091828] flex items-center gap-2 dark:text-[#ffffff]">
                 {config.label}
-                <span className="text-[#6b6375]">{config.icon}</span>
+                <span className="text-[#6b6375] dark:text-[#a0aec0]">{config.icon}</span>
             </h2>
             <div className="grid grid-cols-2 gap-x-6 gap-y-6">
                 {badges.map(b=>(
@@ -203,7 +203,7 @@ function CategorySection({category, badges, earnedKeys, onSelect}: {
 // MAIN PAGE
 
 export default function StickerAlbumPage(){
-    const navigate = useNavigate()
+    const nav = useNavigate()
     const {profile, loading, error} = useGamificationProfile()
 
     const earnedBadges = profile?.badges ?? []
@@ -239,23 +239,24 @@ export default function StickerAlbumPage(){
         .filter(g => g.items.length > 0)
 
     return(
-        <div className="min-h-screen bg-[#F0F7F4] flex flex-col items-center">
+        <div className="min-h-screen bg-[#F0F7F4] flex flex-col items-center dark:bg-[#0b1326]">
         <div className="w-full max-w-sm flex flex-col min-h-screen">
 
             {/* HEADER */}
-            <header className="bg-[#F0F7F4] px-4 pt-5 pb-3 flex items-center justify-between">
-                <button
-                    type="button"
-                    onClick={()=>navigate("/")}
-                    className="size-9 flex items-center justify-center rounded-full bg-white/80 text-[#091828] shadow-sm"
-                    aria-label="Go back">
-
-                    <ArrowLeft size={20}/>
+            <header className="bg-[#F0F7F4] px-4 pt-5 pb-3 flex items-center justify-between dark:bg-[#1c263c]">
+                <button type="button" aria-label="Go back" onClick={() => nav(-1)} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
+                        <ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]" />
                 </button>
-                <h1 className="text-base font-bold text-[#091828]">Sticker Album</h1>
-                <button
+                <div className="flex flex-1 items-center justify-center">
+                    <div
+                        className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
+                        style={{transform: "rotate(-3deg)"}}>
+                            
+                        <span className="text-base font-bold text-[#091828] dark:text-[#091828]">Sticker Album</span>
+                    </div>
+                </div>                <button
                     type="button"
-                    className="size-9 flex items-center justify-center rounded-full bg-white/80 text-[#091828] shadow-sm"
+                    className="size-9 flex items-center justify-center rounded-full bg-white/80 text-[#091828] shadow-sm dark:text-[#ffffff]"
                     aria-label="Search stickers"
                 >
                     <Search size={20}/>
@@ -266,28 +267,28 @@ export default function StickerAlbumPage(){
 
                 {/* error banner */}
                 {error && (
-                    <div className="flex items-center gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFD9E1] px-4 py-3">
-                        <AlertTriangle className="size-4 shrink-0 text-[#AC2A5D]"/>
-                        <p className="text-sm font-semibold text-[#AC2A5D]">{error}</p>
+                    <div className="flex items-center gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFD9E1] px-4 py-3 dark:border-[#ff6b9d] dark:bg-[#2d1b2e]">
+                        <AlertTriangle className="size-4 shrink-0 text-[#AC2A5D] dark:text-[#ff6b9d]"/>
+                        <p className="text-sm font-semibold text-[#AC2A5D] dark:text-[#ff6b9d]">{error}</p>
                     </div>
                 )}
 
                 {/* PROGRESS HERO */}
                 <div className="pt-2 pb-2 text-center space-y-2">
                     <div>
-                        <p className="text-5xl font-black text-[#091828] leading-none">
+                        <p className="text-5xl font-black text-[#091828] leading-none dark:text-[#ffffff]">
                             {loading ? '-' : earnedCount} / {loading ? '-' : total}
                         </p>
-                        <p className="text-2xl font-bold text-[#091828] mt-1">Stickers Found</p>
+                        <p className="text-2xl font-bold text-[#091828] mt-1 dark:text-[#ffffff]">Stickers Found</p>
                     </div>
                     <div className="space-y-1 px-2">
-                        <div className="h-2.5 w-full rounded-full bg-[#D9EDE7] overflow-hidden">
+                        <div className="h-2.5 w-full rounded-full bg-[#D9EDE7] overflow-hidden dark:bg-[#1c263c]">
                             <div
                                 className="h-full rounded-full bg-[#3DBFA0] transition-[width] duration-700"
                                 style={{width: `${completionPct}%`}}
                             />
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375]">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
                             Completion: {completionPct}%
                         </p>
                     </div>
@@ -298,11 +299,11 @@ export default function StickerAlbumPage(){
                     <div className="space-y-8">
                         {[4, 4, 2].map((n, i)=>(
                             <div key={i} className="space-y-4">
-                                <div className="h-7 w-40 rounded-full bg-[#D9EDE7] animate-pulse"/>
+                                <div className="h-7 w-40 rounded-full bg-[#D9EDE7] animate-pulse dark:bg-[#1c263c]"/>
                                 <div className="grid grid-cols-2 gap-6">
                                     {Array.from({length: n}).map((_, j)=>(
                                         <div key={j} className="flex justify-center">
-                                            <div className="size-[88px] rounded-full bg-[#D9EDE7] animate-pulse"/>
+                                            <div className="size-[88px] rounded-full bg-[#D9EDE7] animate-pulse dark:bg-[#1c263c]"/>
                                         </div>
                                     ))}
                                 </div>
@@ -316,7 +317,7 @@ export default function StickerAlbumPage(){
                             category={cat}
                             badges={items}
                             earnedKeys={earnedKeys}
-                            onSelect={(b)=>navigate(`/stickers/${b.badgeKey}`, {state: {badge: b}})}
+                            onSelect={(b)=>nav(`/stickers/${b.badgeKey}`, {state: {badge: b}})}
                         />
                     ))
                 )}
