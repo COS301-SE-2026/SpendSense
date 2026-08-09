@@ -22,13 +22,13 @@ export default function WrappedPage(){
 
     return (
         <SubPageShell title="Wrapped" subtitle="Your monthly highlights">
-            <CustomCard variant= "navyBorder" size="md" className ="bg-[#E8E4F4] text-center">
-                <div className ="mx-auto flex size-12 items-center justify-center rounded-full bg-white text-[#5B4D8B]">
+            <CustomCard variant= "navyBorder" size="md" className ="bg-[#E8E4F4] text-center dark:bg-[#1c263c]">
+                <div className ="mx-auto flex size-12 items-center justify-center rounded-full bg-white text-[#5B4D8B] dark:bg-[#131b2e]">
                     <Gift className ="size-6"/>
                 </div>
 
-                <p className ="mt-3 text-lg font-extrabold text-[#091828]">You crushed it this month</p>
-                <p className ="mt-1 text-xs text-[#6B6375]">
+                <p className ="mt-3 text-lg font-extrabold text-[#091828] dark:text-[#ffffff]">You crushed it this month</p>
+                <p className ="mt-1 text-xs text-[#6B6375] dark:text-[#a0aec0]">
                     {wrapped ? wrapped.month: "Stats will appear once data is available"}
                 </p>
 
@@ -45,7 +45,7 @@ export default function WrappedPage(){
 
             {/*TODO: month picker and sharing with friends */}
 
-            <LongButton LongVariant ="primaryDark" LongSize="md" showArrow={false}>
+            <LongButton LongVariant ="primaryDark" LongSize="md" showArrow={false} className="dark:bg-[#ffb1c5] dark:text-[#650030] dark:hover:bg-[#ffc4d4]">
                 Share Your Wrap
 
             </LongButton>
@@ -64,8 +64,8 @@ function StatCard({
 }>) {
     return (
         <CustomCard variant ="navyBorder" size="sm" className="text-center">
-            <p className ="text-lg font-extrabold text-[#091828]">{value}</p>
-            <p className ="mt-0.5 text-xs text-[#6B6375]">{label}</p>
+            <p className ="text-lg font-extrabold text-[#091828] dark:text-[#ffffff]">{value}</p>
+            <p className ="mt-0.5 text-xs text-[#6B6375] dark:text-[#a0aec0]">{label}</p>
         </CustomCard>
     )
 }
