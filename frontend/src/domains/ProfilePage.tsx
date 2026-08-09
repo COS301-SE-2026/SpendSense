@@ -34,7 +34,7 @@ const menuItems: MenuItem[]=[
     {label: "Settings", icon: <Settings className="size-5"/>, to: "/settings", enabled: true},
     {label: "Friends & Social", icon: <Users className="size-5"/>, to: "/friends", enabled: true},
     {label: "Sticker Album", icon: <Star className="size-5"/>, to: "/stickers", enabled: true},
-    {label: "Wrapped", icon: <Gift className="size-5"/>, to: "/insights", enabled: true},
+    {label: "Wrapped", icon: <Gift className="size-5"/>, to: "/wrapped", enabled: true},
     {label: "Mascot Home", icon: <Smile className="size-5"/>, to: "/mascot", enabled: true},
     {label: "Help & Support", icon: <HelpCircle className="size-5"/>, to: "/help", enabled: true},
 
