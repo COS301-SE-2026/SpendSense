@@ -7,12 +7,16 @@ import {
   UserEventType,
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RewardService } from '../rewards/reward.service';
 import { BadgeEngineService } from './badge-engine.service';
 
 describe('BadgeEngineService', () => {
   let service: BadgeEngineService;
   let notificationsService: {
     create: jest.Mock;
+  };
+  let rewardService: {
+    grantCoins: jest.Mock;
   };
   let transaction: {
     badgeDefinition: {
@@ -36,6 +40,7 @@ describe('BadgeEngineService', () => {
     name: 'On-Time Starter',
     criteriaType: BadgeCriteriaType.FIRST_ON_TIME_PAYMENT,
     criteriaValue: 1,
+    bonusCoins: 25,
   };
   const firstObligationBadge = {
     id: 'badge-definition-2',
@@ -43,10 +48,14 @@ describe('BadgeEngineService', () => {
     name: 'First Obligation',
     criteriaType: BadgeCriteriaType.FIRST_OBLIGATION,
     criteriaValue: 1,
+    bonusCoins: 20,
   };
   beforeEach(() => {
     notificationsService = {
       create: jest.fn().mockResolvedValue({ id: 'notification-1' }),
+    };
+    rewardService = {
+      grantCoins: jest.fn().mockResolvedValue({ coinBalance: 0 }),
     };
     transaction = {
       badgeDefinition: {
@@ -66,6 +75,7 @@ describe('BadgeEngineService', () => {
     };
     service = new BadgeEngineService(
       notificationsService as unknown as NotificationsService,
+      rewardService as unknown as RewardService,
     );
   });
   it('creates a badge and notification when a payment badge is earned', async () => {
@@ -98,6 +108,7 @@ describe('BadgeEngineService', () => {
         name: true,
         criteriaType: true,
         criteriaValue: true,
+        bonusCoins: true,
       },
     });
     expect(transaction.userBadge.create).toHaveBeenCalledWith({
@@ -121,6 +132,12 @@ describe('BadgeEngineService', () => {
         },
       },
     });
+    expect(rewardService.grantCoins).toHaveBeenCalledWith(transaction, {
+      userId: 'user-1',
+      amount: firstOnTimeBadge.bonusCoins,
+      reason: 'Badge unlock: On-Time Starter',
+      sourceEventId: 'badge-event-1',
+    });
     expect(notificationsService.create).toHaveBeenCalledWith(
       {
         userId: 'user-1',
@@ -133,6 +150,23 @@ describe('BadgeEngineService', () => {
       transaction,
     );
     expect(result).toEqual(['On-Time Starter']);
+  });
+  it('does not grant a bonus when the badge has no bonusCoins configured', async () => {
+    transaction.badgeDefinition.findMany.mockResolvedValue([
+      { ...firstOnTimeBadge, bonusCoins: 0 },
+    ]);
+    await service.evaluatePaymentBadges(
+      {
+        userId: 'user-1',
+        sourceEventId: 'payment-event-1',
+        onTimePaymentCount: 1,
+        currentPaymentStreak: 1,
+        currentScore: 608,
+      },
+      transaction as unknown as Prisma.TransactionClient,
+    );
+    expect(rewardService.grantCoins).not.toHaveBeenCalled();
+    expect(notificationsService.create).toHaveBeenCalledTimes(1);
   });
   it('does not create another notification when the badge is already earned', async () => {
     transaction.badgeDefinition.findMany.mockResolvedValue([firstOnTimeBadge]);
@@ -153,6 +187,7 @@ describe('BadgeEngineService', () => {
     expect(transaction.userBadge.create).not.toHaveBeenCalled();
     expect(transaction.userBadge.update).not.toHaveBeenCalled();
     expect(transaction.userEvent.create).not.toHaveBeenCalled();
+    expect(rewardService.grantCoins).not.toHaveBeenCalled();
     expect(notificationsService.create).not.toHaveBeenCalled();
     expect(result).toEqual([]);
   });
@@ -193,6 +228,7 @@ describe('BadgeEngineService', () => {
         name: 'Three Payment Streak',
         criteriaType: BadgeCriteriaType.PAYMENT_STREAK_COUNT,
         criteriaValue: 3,
+        bonusCoins: 50,
       },
     ]);
     const result = await service.evaluatePaymentBadges(
@@ -229,6 +265,7 @@ describe('BadgeEngineService', () => {
       ),
     ).rejects.toThrow('Badge creation failed');
     expect(transaction.userEvent.create).not.toHaveBeenCalled();
+    expect(rewardService.grantCoins).not.toHaveBeenCalled();
     expect(notificationsService.create).not.toHaveBeenCalled();
   });
   it('creates the first obligation badge and notification', async () => {
@@ -263,6 +300,7 @@ describe('BadgeEngineService', () => {
         name: true,
         criteriaType: true,
         criteriaValue: true,
+        bonusCoins: true,
       },
     });
     expect(transaction.userBadge.create).toHaveBeenCalledWith({
@@ -272,6 +310,12 @@ describe('BadgeEngineService', () => {
         progress: firstObligationBadge.criteriaValue,
         earnedAt: expect.any(Date) as Date,
       },
+    });
+    expect(rewardService.grantCoins).toHaveBeenCalledWith(transaction, {
+      userId: 'user-1',
+      amount: firstObligationBadge.bonusCoins,
+      reason: 'Badge unlock: First Obligation',
+      sourceEventId: 'badge-event-1',
     });
     expect(notificationsService.create).toHaveBeenCalledWith(
       {

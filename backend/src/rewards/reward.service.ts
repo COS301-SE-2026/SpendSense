@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { MascotMood, Prisma, RewardTransactionType } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
+import { CreateNotificationInput } from '../notifications/dto/create-notification.dto';
 import { calculateMascotLevel } from './mascot-level';
 
 export class InsufficientCoinsException extends BadRequestException {
@@ -51,13 +53,29 @@ type AdvanceStreakResult = {
 type SetMascotMoodInput = {
   userId: string;
   mood: MascotMood;
-  // Not persisted yet — no column for it on GamificationProfile today. Accepted now so every
-  // call site is already passing it once UC-B's `moodReason` profile field lands.
   reason: string;
+};
+
+type SettleActionInput = {
+  userId: string;
+  sourceEventId: string;
+  coins?: { amount: number; reason: string };
+  xp?: { amount: number };
+  streak?: { field: StreakField; advance: boolean };
+  mood?: { value: MascotMood; reason: string };
+};
+
+type SettleActionResult = {
+  coinBalance?: number;
+  xp?: number;
+  mascotLevel?: number;
+  leveledUp?: boolean;
+  streak?: AdvanceStreakResult;
 };
 
 @Injectable()
 export class RewardService {
+  constructor(private readonly notificationsService: NotificationsService) {}
   async grantCoins(
     tx: Prisma.TransactionClient,
     { userId, amount, reason, sourceEventId }: CoinMutationInput,
@@ -194,5 +212,58 @@ export class RewardService {
       update: { mascotMood: mood, mascotMoodUpdatedAt: new Date() },
       create: { userId, mascotMood: mood, mascotMoodUpdatedAt: new Date() },
     });
+  }
+
+  // Not auto-fired by grantCoins/spendCoins/etc - not every reward mutation deserves its own
+  // notification (e.g. a payment reward is already covered by the score-change notification).
+  // Every call site reaches NotificationsService through here only so they're consistent about it.
+  async notify(
+    tx: Prisma.TransactionClient,
+    input: CreateNotificationInput,
+  ): Promise<void> {
+    await this.notificationsService.create(input, tx);
+  }
+
+  // Composed helper for the common caller shape (grant coins + xp, advance a streak, set a mood).
+  // Wager/Cosmetics purchases deliberately don't use this - they only need spendCoins/adjustCoins
+  // directly, not this bundle, which is why the primitives above stay separately callable.
+  async settleAction(
+    tx: Prisma.TransactionClient,
+    input: SettleActionInput,
+  ): Promise<SettleActionResult> {
+    const result: SettleActionResult = {};
+    if (input.coins && input.coins.amount > 0) {
+      const { coinBalance } = await this.grantCoins(tx, {
+        userId: input.userId,
+        amount: input.coins.amount,
+        reason: input.coins.reason,
+        sourceEventId: input.sourceEventId,
+      });
+      result.coinBalance = coinBalance;
+    }
+    if (input.xp && input.xp.amount > 0) {
+      const { xp, mascotLevel, leveledUp } = await this.grantXp(tx, {
+        userId: input.userId,
+        amount: input.xp.amount,
+      });
+      result.xp = xp;
+      result.mascotLevel = mascotLevel;
+      result.leveledUp = leveledUp;
+    }
+    if (input.streak) {
+      result.streak = await this.advanceStreak(tx, {
+        userId: input.userId,
+        field: input.streak.field,
+        advance: input.streak.advance,
+      });
+    }
+    if (input.mood) {
+      await this.setMascotMood(tx, {
+        userId: input.userId,
+        mood: input.mood.value,
+        reason: input.mood.reason,
+      });
+    }
+    return result;
   }
 }

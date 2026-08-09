@@ -1,5 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
-import { MascotMood, RewardTransactionType } from '@prisma/client';
+import {
+  MascotMood,
+  NotificationType,
+  RewardTransactionType,
+} from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { InsufficientCoinsException, RewardService } from './reward.service';
 
 // to run the tests in this file by itself: npm test -- reward.service.spec.ts
@@ -20,11 +25,21 @@ type RewardPrismaMock = {
 describe('RewardService', () => {
   let service: RewardService;
   let tx: RewardPrismaMock;
+  let notificationsService: {
+    create: jest.Mock<Promise<unknown>, [unknown, unknown?]>;
+  };
 
   const userId = 'user-1';
 
   beforeEach(() => {
-    service = new RewardService();
+    notificationsService = {
+      create: jest.fn<Promise<unknown>, [unknown, unknown?]>().mockResolvedValue({
+        id: 'notification-1',
+      }),
+    };
+    service = new RewardService(
+      notificationsService as unknown as NotificationsService,
+    );
     tx = {
       gamificationProfile: {
         upsert: jest.fn(),
@@ -338,6 +353,84 @@ describe('RewardService', () => {
           mascotMoodUpdatedAt: expect.any(Date),
         },
       });
+    });
+  });
+
+  describe('notify', () => {
+    it('delegates to NotificationsService.create with the same transaction client', async () => {
+      const input = {
+        userId,
+        type: NotificationType.REWARD,
+        title: 'Reward earned',
+        message: 'You earned 15 coins.',
+      };
+
+      await service.notify(tx as never, input);
+
+      expect(notificationsService.create).toHaveBeenCalledWith(input, tx);
+    });
+  });
+
+  describe('settleAction', () => {
+    it('grants coins, xp, advances a streak, and sets mood in one call', async () => {
+      tx.gamificationProfile.upsert
+        .mockResolvedValueOnce({ coinBalance: 115 }) // grantCoins
+        .mockResolvedValueOnce({ xp: 90 }) // grantXp read-before-update
+        .mockResolvedValueOnce({
+          currentPaymentStreak: 2,
+          longestPaymentStreak: 4,
+        }) // advanceStreak read-before-update
+        .mockResolvedValueOnce({}); // setMascotMood
+
+      const result = await service.settleAction(tx as never, {
+        userId,
+        sourceEventId: 'payment-event-1',
+        coins: { amount: 15, reason: 'On-time payment reward' },
+        xp: { amount: 10 },
+        streak: { field: 'currentPaymentStreak', advance: true },
+        mood: { value: MascotMood.HAPPY, reason: 'On-time payment' },
+      });
+
+      expect(result).toEqual({
+        coinBalance: 115,
+        xp: 100,
+        mascotLevel: 2,
+        leveledUp: true,
+        streak: { current: 3, longest: 4 },
+      });
+    });
+
+    it('skips coins and xp when amount is 0, but still advances the streak and sets mood', async () => {
+      tx.gamificationProfile.upsert
+        .mockResolvedValueOnce({ currentPaymentStreak: 3, longestPaymentStreak: 5 })
+        .mockResolvedValueOnce({});
+
+      const result = await service.settleAction(tx as never, {
+        userId,
+        sourceEventId: 'payment-event-2',
+        coins: { amount: 0, reason: 'Late payment' },
+        xp: { amount: 0 },
+        streak: { field: 'currentPaymentStreak', advance: false },
+        mood: { value: MascotMood.STRESSED, reason: 'Late payment' },
+      });
+
+      expect(tx.rewardTransaction.create).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        streak: { current: 0, longest: 5 },
+      });
+    });
+
+    it('does nothing beyond what is passed in (no streak/mood keys means no calls)', async () => {
+      tx.gamificationProfile.upsert.mockResolvedValue({ coinBalance: 25 });
+
+      const result = await service.settleAction(tx as never, {
+        userId,
+        sourceEventId: 'quiz-event-1',
+        coins: { amount: 25, reason: 'Quiz reward' },
+      });
+
+      expect(tx.gamificationProfile.upsert).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ coinBalance: 25 });
     });
   });
 });

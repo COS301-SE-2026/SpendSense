@@ -8,6 +8,7 @@ import {
   UserEventType,
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RewardService } from '../rewards/reward.service';
 
 type PaymentBadgeInput = {
   userId: string;
@@ -26,11 +27,15 @@ type BadgeDefinitionCandidate = {
   name: string;
   criteriaType: BadgeCriteriaType;
   criteriaValue: number;
+  bonusCoins: number;
 };
 
 @Injectable()
 export class BadgeEngineService {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly rewardService: RewardService,
+  ) {}
   async evaluatePaymentBadges(
     input: PaymentBadgeInput,
     client: Prisma.TransactionClient,
@@ -53,6 +58,7 @@ export class BadgeEngineService {
         name: true,
         criteriaType: true,
         criteriaValue: true,
+        bonusCoins: true,
       },
     });
     const qualifiedBadges = badgeDefinitions.filter((badge) =>
@@ -89,6 +95,7 @@ export class BadgeEngineService {
         name: true,
         criteriaType: true,
         criteriaValue: true,
+        bonusCoins: true,
       },
     });
     const qualifiedBadges = badgeDefinitions.filter(
@@ -158,7 +165,7 @@ export class BadgeEngineService {
               earnedAt,
             },
           });
-      await client.userEvent.create({
+      const badgeEvent = await client.userEvent.create({
         data: {
           userId,
           eventType: UserEventType.BADGE_EARNED,
@@ -171,6 +178,14 @@ export class BadgeEngineService {
           },
         },
       });
+      if (badge.bonusCoins > 0) {
+        await this.rewardService.grantCoins(client, {
+          userId,
+          amount: badge.bonusCoins,
+          reason: `Badge unlock: ${badge.name}`,
+          sourceEventId: badgeEvent.id,
+        });
+      }
       await this.notificationsService.create(
         {
           userId,

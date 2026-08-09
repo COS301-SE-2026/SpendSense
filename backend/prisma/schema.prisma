@@ -561,6 +561,7 @@ model BadgeDefinition {
   category      BadgeCategory
   criteriaType  BadgeCriteriaType
   criteriaValue Int               @default(1)
+  bonusCoins    Int               @default(0)
   iconKey       String?
   isActive      Boolean           @default(true)
   createdAt     DateTime          @default(now())
