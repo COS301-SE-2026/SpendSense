@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { RewardTransactionType } from '@prisma/client';
+import { MascotMood, RewardTransactionType } from '@prisma/client';
 import { InsufficientCoinsException, RewardService } from './reward.service';
 
 // to run the tests in this file by itself: npm test -- reward.service.spec.ts
@@ -8,6 +8,7 @@ type PrismaMockMethod = jest.Mock<Promise<unknown>, [unknown]>;
 type RewardPrismaMock = {
   gamificationProfile: {
     upsert: PrismaMockMethod;
+    update: PrismaMockMethod;
     updateMany: PrismaMockMethod;
     findUniqueOrThrow: PrismaMockMethod;
   };
@@ -27,6 +28,7 @@ describe('RewardService', () => {
     tx = {
       gamificationProfile: {
         upsert: jest.fn(),
+        update: jest.fn(),
         updateMany: jest.fn(),
         findUniqueOrThrow: jest.fn(),
       },
@@ -221,6 +223,121 @@ describe('RewardService', () => {
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(tx.gamificationProfile.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('grantXp', () => {
+    it('increments xp and recomputes mascotLevel, reporting leveledUp when the threshold is crossed', async () => {
+      tx.gamificationProfile.upsert.mockResolvedValue({ xp: 90 });
+
+      const result = await service.grantXp(tx as never, {
+        userId,
+        amount: 20,
+      });
+
+      expect(tx.gamificationProfile.update).toHaveBeenCalledWith({
+        where: { userId },
+        data: { xp: 110, mascotLevel: 2 },
+      });
+      expect(result).toEqual({ xp: 110, mascotLevel: 2, leveledUp: true });
+    });
+
+    it('reports leveledUp: false when the xp award does not cross a level threshold', async () => {
+      tx.gamificationProfile.upsert.mockResolvedValue({ xp: 10 });
+
+      const result = await service.grantXp(tx as never, {
+        userId,
+        amount: 20,
+      });
+
+      expect(result).toEqual({ xp: 30, mascotLevel: 1, leveledUp: false });
+    });
+
+    it('rejects a non-positive amount without touching the database', async () => {
+      await expect(
+        service.grantXp(tx as never, { userId, amount: 0 }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(tx.gamificationProfile.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('advanceStreak', () => {
+    it('increments the current streak and tracks the longest, for the payment streak field', async () => {
+      tx.gamificationProfile.upsert.mockResolvedValue({
+        currentPaymentStreak: 2,
+        longestPaymentStreak: 4,
+      });
+
+      const result = await service.advanceStreak(tx as never, {
+        userId,
+        field: 'currentPaymentStreak',
+        advance: true,
+      });
+
+      expect(tx.gamificationProfile.update).toHaveBeenCalledWith({
+        where: { userId },
+        data: { currentPaymentStreak: 3, longestPaymentStreak: 4 },
+      });
+      expect(result).toEqual({ current: 3, longest: 4 });
+    });
+
+    it('updates the longest streak once the current streak exceeds it', async () => {
+      tx.gamificationProfile.upsert.mockResolvedValue({
+        currentPaymentStreak: 4,
+        longestPaymentStreak: 4,
+      });
+
+      const result = await service.advanceStreak(tx as never, {
+        userId,
+        field: 'currentPaymentStreak',
+        advance: true,
+      });
+
+      expect(result).toEqual({ current: 5, longest: 5 });
+    });
+
+    it('resets the current streak to 0 without touching the longest streak, for the knowledge streak field', async () => {
+      tx.gamificationProfile.upsert.mockResolvedValue({
+        currentKnowledgeStreak: 6,
+        longestKnowledgeStreak: 9,
+      });
+
+      const result = await service.advanceStreak(tx as never, {
+        userId,
+        field: 'currentKnowledgeStreak',
+        advance: false,
+      });
+
+      expect(tx.gamificationProfile.update).toHaveBeenCalledWith({
+        where: { userId },
+        data: { currentKnowledgeStreak: 0, longestKnowledgeStreak: 9 },
+      });
+      expect(result).toEqual({ current: 0, longest: 9 });
+    });
+  });
+
+  describe('setMascotMood', () => {
+    it('writes mascotMood and stamps mascotMoodUpdatedAt', async () => {
+      tx.gamificationProfile.upsert.mockResolvedValue({});
+
+      await service.setMascotMood(tx as never, {
+        userId,
+        mood: MascotMood.CELEBRATING,
+        reason: 'Badge earned',
+      });
+
+      expect(tx.gamificationProfile.upsert).toHaveBeenCalledWith({
+        where: { userId },
+        update: {
+          mascotMood: MascotMood.CELEBRATING,
+          mascotMoodUpdatedAt: expect.any(Date),
+        },
+        create: {
+          userId,
+          mascotMood: MascotMood.CELEBRATING,
+          mascotMoodUpdatedAt: expect.any(Date),
+        },
+      });
     });
   });
 });

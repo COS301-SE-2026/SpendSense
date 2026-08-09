@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma, RewardTransactionType } from '@prisma/client';
+import { MascotMood, Prisma, RewardTransactionType } from '@prisma/client';
+import { calculateMascotLevel } from './mascot-level';
 
 export class InsufficientCoinsException extends BadRequestException {
   constructor(userId: string, amount: number) {
@@ -16,6 +17,43 @@ type CoinMutationInput = {
 
 type CoinMutationResult = {
   coinBalance: number;
+};
+
+type GrantXpInput = {
+  userId: string;
+  amount: number;
+};
+
+type GrantXpResult = {
+  xp: number;
+  mascotLevel: number;
+  leveledUp: boolean;
+};
+
+type StreakField = 'currentPaymentStreak' | 'currentKnowledgeStreak';
+
+const LONGEST_STREAK_FIELD: Record<StreakField, 'longestPaymentStreak' | 'longestKnowledgeStreak'> = {
+  currentPaymentStreak: 'longestPaymentStreak',
+  currentKnowledgeStreak: 'longestKnowledgeStreak',
+};
+
+type AdvanceStreakInput = {
+  userId: string;
+  field: StreakField;
+  advance: boolean;
+};
+
+type AdvanceStreakResult = {
+  current: number;
+  longest: number;
+};
+
+type SetMascotMoodInput = {
+  userId: string;
+  mood: MascotMood;
+  // Not persisted yet — no column for it on GamificationProfile today. Accepted now so every
+  // call site is already passing it once UC-B's `moodReason` profile field lands.
+  reason: string;
 };
 
 @Injectable()
@@ -104,5 +142,57 @@ export class RewardService {
       },
     });
     return { coinBalance: profile.coinBalance };
+  }
+
+  async grantXp(
+    tx: Prisma.TransactionClient,
+    { userId, amount }: GrantXpInput,
+  ): Promise<GrantXpResult> {
+    if (amount <= 0) {
+      throw new BadRequestException('grantXp amount must be positive.');
+    }
+    const before = await tx.gamificationProfile.upsert({
+      where: { userId },
+      update: {},
+      create: { userId },
+    });
+    const levelBefore = calculateMascotLevel(before.xp);
+    const xp = before.xp + amount;
+    const mascotLevel = calculateMascotLevel(xp);
+    await tx.gamificationProfile.update({
+      where: { userId },
+      data: { xp, mascotLevel },
+    });
+    return { xp, mascotLevel, leveledUp: mascotLevel > levelBefore };
+  }
+
+  async advanceStreak(
+    tx: Prisma.TransactionClient,
+    { userId, field, advance }: AdvanceStreakInput,
+  ): Promise<AdvanceStreakResult> {
+    const longestField = LONGEST_STREAK_FIELD[field];
+    const profile = await tx.gamificationProfile.upsert({
+      where: { userId },
+      update: {},
+      create: { userId },
+    });
+    const current = advance ? profile[field] + 1 : 0;
+    const longest = Math.max(profile[longestField], current);
+    await tx.gamificationProfile.update({
+      where: { userId },
+      data: { [field]: current, [longestField]: longest },
+    });
+    return { current, longest };
+  }
+
+  async setMascotMood(
+    tx: Prisma.TransactionClient,
+    { userId, mood }: SetMascotMoodInput,
+  ): Promise<void> {
+    await tx.gamificationProfile.upsert({
+      where: { userId },
+      update: { mascotMood: mood, mascotMoodUpdatedAt: new Date() },
+      create: { userId, mascotMood: mood, mascotMoodUpdatedAt: new Date() },
+    });
   }
 }

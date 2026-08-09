@@ -506,6 +506,7 @@ model GamificationProfile {
   xp                     Int        @default(0)
   mascotLevel            Int        @default(1)
   mascotMood             MascotMood @default(NEUTRAL)
+  mascotMoodUpdatedAt    DateTime?
   currentPaymentStreak   Int        @default(0)
   longestPaymentStreak   Int        @default(0)
   currentKnowledgeStreak Int        @default(0)
