@@ -9,7 +9,6 @@ import {
   PaymentOccurrenceStatus,
   PaymentRecordStatus,
   Prisma,
-  RewardTransactionType,
   ScoreEventType,
   ScoreTier,
   UserEventSourceType,
@@ -19,6 +18,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LogPaymentDto } from './dto/log-payment.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BadgeEngineService } from '../gamification/badge-engine.service';
+import { RewardService } from '../rewards/reward.service';
 
 const ON_TIME_SCORE_DELTA = 8;
 const LATE_SCORE_DELTA = -8;
@@ -78,6 +78,7 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly badgeEngineService: BadgeEngineService,
+    private readonly rewardService: RewardService,
   ) {}
 
   async logPayment(
@@ -266,39 +267,26 @@ export class PaymentsService {
 
       const coinsAwarded = isLate ? 0 : ON_TIME_COINS;
       const xpAwarded = isLate ? 0 : ON_TIME_XP;
-      const currentPaymentStreak = isLate
-        ? 0
-        : gamificationProfile.currentPaymentStreak + 1;
-      const longestPaymentStreak = Math.max(
-        gamificationProfile.longestPaymentStreak,
-        currentPaymentStreak,
-      );
-      const coinBalance = gamificationProfile.coinBalance + coinsAwarded;
-      const xp = gamificationProfile.xp + xpAwarded;
+      const mascotMood = isLate ? MascotMood.STRESSED : MascotMood.HAPPY;
 
-      await tx.gamificationProfile.update({
-        where: { id: gamificationProfile.id },
-        data: {
-          coinBalance,
-          xp,
-          currentPaymentStreak,
-          longestPaymentStreak,
-          mascotMood: isLate ? MascotMood.STRESSED : MascotMood.HAPPY,
+      const settlement = await this.rewardService.settleAction(tx, {
+        userId,
+        sourceEventId: paymentEvent.id,
+        coins: { amount: coinsAwarded, reason: 'On-time payment reward' },
+        xp: { amount: xpAwarded },
+        streak: { field: 'currentPaymentStreak', advance: !isLate },
+        mood: {
+          value: mascotMood,
+          reason: isLate ? 'Late payment' : 'On-time payment',
         },
       });
 
-      if (coinsAwarded > 0) {
-        await tx.rewardTransaction.create({
-          data: {
-            userId,
-            sourceEventId: paymentEvent.id,
-            type: RewardTransactionType.EARNED,
-            amount: coinsAwarded,
-            balanceAfter: coinBalance,
-            reason: 'On-time payment reward',
-          },
-        });
-      }
+      const coinBalance =
+        settlement.coinBalance ?? gamificationProfile.coinBalance;
+      const xp = settlement.xp ?? gamificationProfile.xp;
+      const currentPaymentStreak = settlement.streak?.current ?? 0;
+      const longestPaymentStreak = settlement.streak?.longest ?? 0;
+
       const badgesEarned = await this.badgeEngineService.evaluatePaymentBadges(
         {
           userId,
@@ -346,7 +334,7 @@ export class PaymentsService {
           xp,
           currentPaymentStreak,
           longestPaymentStreak,
-          mascotMood: isLate ? MascotMood.STRESSED : MascotMood.HAPPY,
+          mascotMood,
           badgesEarned,
         },
         paymentImpact: {
