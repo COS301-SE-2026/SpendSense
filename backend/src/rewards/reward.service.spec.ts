@@ -33,22 +33,24 @@ describe('RewardService', () => {
 
   beforeEach(() => {
     notificationsService = {
-      create: jest.fn<Promise<unknown>, [unknown, unknown?]>().mockResolvedValue({
-        id: 'notification-1',
-      }),
+      create: jest
+        .fn<Promise<unknown>, [unknown, unknown?]>()
+        .mockResolvedValue({
+          id: 'notification-1',
+        }),
     };
     service = new RewardService(
       notificationsService as unknown as NotificationsService,
     );
     tx = {
       gamificationProfile: {
-        upsert: jest.fn(),
-        update: jest.fn(),
-        updateMany: jest.fn(),
-        findUniqueOrThrow: jest.fn(),
+        upsert: jest.fn<Promise<unknown>, [unknown]>(),
+        update: jest.fn<Promise<unknown>, [unknown]>(),
+        updateMany: jest.fn<Promise<unknown>, [unknown]>(),
+        findUniqueOrThrow: jest.fn<Promise<unknown>, [unknown]>(),
       },
       rewardTransaction: {
-        create: jest.fn(),
+        create: jest.fn<Promise<unknown>, [unknown]>(),
       },
     };
   });
@@ -155,17 +157,23 @@ describe('RewardService', () => {
       // (coinBalance >= amount), not application code, is what must reject the second one.
       let balance = 20;
       tx.gamificationProfile.updateMany.mockImplementation(
-        async ({ where, data }: { where: { coinBalance: { gte: number } }; data: { coinBalance: { decrement: number } } }) => {
+        ({
+          where,
+          data,
+        }: {
+          where: { coinBalance: { gte: number } };
+          data: { coinBalance: { decrement: number } };
+        }) => {
           if (balance >= where.coinBalance.gte) {
             balance -= data.coinBalance.decrement;
-            return { count: 1 };
+            return Promise.resolve({ count: 1 });
           }
-          return { count: 0 };
+          return Promise.resolve({ count: 0 });
         },
       );
-      tx.gamificationProfile.findUniqueOrThrow.mockImplementation(async () => ({
-        coinBalance: balance,
-      }));
+      tx.gamificationProfile.findUniqueOrThrow.mockImplementation(() =>
+        Promise.resolve({ coinBalance: balance }),
+      );
 
       const first = await service.spendCoins(tx as never, {
         userId,
@@ -345,12 +353,12 @@ describe('RewardService', () => {
         where: { userId },
         update: {
           mascotMood: MascotMood.CELEBRATING,
-          mascotMoodUpdatedAt: expect.any(Date),
+          mascotMoodUpdatedAt: expect.any(Date) as Date,
         },
         create: {
           userId,
           mascotMood: MascotMood.CELEBRATING,
-          mascotMoodUpdatedAt: expect.any(Date),
+          mascotMoodUpdatedAt: expect.any(Date) as Date,
         },
       });
     });
@@ -402,7 +410,10 @@ describe('RewardService', () => {
 
     it('skips coins and xp when amount is 0, but still advances the streak and sets mood', async () => {
       tx.gamificationProfile.upsert
-        .mockResolvedValueOnce({ currentPaymentStreak: 3, longestPaymentStreak: 5 })
+        .mockResolvedValueOnce({
+          currentPaymentStreak: 3,
+          longestPaymentStreak: 5,
+        })
         .mockResolvedValueOnce({});
 
       const result = await service.settleAction(tx as never, {

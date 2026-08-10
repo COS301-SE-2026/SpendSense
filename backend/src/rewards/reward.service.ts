@@ -34,7 +34,10 @@ type GrantXpResult = {
 
 type StreakField = 'currentPaymentStreak' | 'currentKnowledgeStreak';
 
-const LONGEST_STREAK_FIELD: Record<StreakField, 'longestPaymentStreak' | 'longestKnowledgeStreak'> = {
+const LONGEST_STREAK_FIELD: Record<
+  StreakField,
+  'longestPaymentStreak' | 'longestKnowledgeStreak'
+> = {
   currentPaymentStreak: 'longestPaymentStreak',
   currentKnowledgeStreak: 'longestKnowledgeStreak',
 };
