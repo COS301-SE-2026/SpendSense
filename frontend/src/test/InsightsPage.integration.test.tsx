@@ -5,6 +5,7 @@ import {describe, it, expect, vi, beforeEach} from 'vitest'
 import '@testing-library/jest-dom'
 import InsightsPage from '../domains/InsightsPage'
 import ProfilePage from '../domains/ProfilePage'
+import WrappedPage from '../domains/WrappedPage'
 import {apiFetch} from '../lib/api'
 
 vi.mock('../lib/api', ()=> ({
@@ -84,12 +85,12 @@ function renderInsightsRoute(){
     )
 }
 
-function renderProfileAndInsightsRoutes(){
+function renderProfileAndWrappedRoutes(){
     return render(
         <MemoryRouter initialEntries={['/profile']}>
             <Routes>
                 <Route path="/profile" element={<ProfilePage/>}/>
-                <Route path="/insights" element={<InsightsPage />}/>
+                <Route path="/wrapped" element={<WrappedPage />}/>
             </Routes>
         </MemoryRouter>
     )
@@ -186,20 +187,17 @@ describe('Insights integration', ()=>{
         expect(screen.getByText(/no obligation amounts are scheduled/i)).toBeInTheDocument()
     })
 
-    it('navigates from the Profile "Wrapped" row to /insights and loads real data', async()=> {
-        mockedApiFetch.mockResolvedValueOnce(sampleInsightsResponse)
-        renderProfileAndInsightsRoutes()
+    it('navigates from the Profile "Wrapped" row to /wrapped', async()=> {
+        renderProfileAndWrappedRoutes()
 
         const wrappedRow=screen.getByRole('link', {name: /wrapped/i})
-        expect(wrappedRow).toHaveAttribute('href', '/insights')
+        expect(wrappedRow).toHaveAttribute('href', '/wrapped')
 
         fireEvent.click(wrappedRow)
 
         await waitFor(()=> {
-            expect(screen.getByText('On-time payment rate')).toBeInTheDocument()
+            expect(screen.getByText('Your monthly highlights')).toBeInTheDocument()
         })
-
-        expect(mockedApiFetch).toHaveBeenCalledWith('/insights')
     })
 
     it('displays the as-of date returned by the server', async()=> {

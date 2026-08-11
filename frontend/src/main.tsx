@@ -11,6 +11,7 @@ import ObligationForm from './domains/ObligationForm.tsx'
 import StickerAlbumPage from './domains/StickerAlbumPage'
 import StickerDetailPage from './domains/StickerDetailPage'
 import {initAuthListener} from './features/auth/auth.service'
+import {initTheme} from './lib/theme'
 import QuestsPage from './domains/QuestsPage'
 import QuizPage from './domains/QuizPage'
 import FriendsPage from './domains/FriendsPage'
@@ -39,6 +40,7 @@ import HelpPage from './domains/HelpPage.tsx'
 import HomeRoute from './components/HomeRoute'
 
 initAuthListener()
+initTheme()
 import PaymentForm from './domains/PaymentForm.tsx'
 
 createRoot(document.getElementById('root')!).render(

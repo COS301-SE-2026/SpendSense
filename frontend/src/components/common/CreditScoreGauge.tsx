@@ -76,16 +76,16 @@ export function CreditScoreGauge({
         size={size}
         aria-label={`Credit score ${score} out of ${max}${label ? `, ${label}` : ""}`}
       >
-        <span className="text-3xl font-bold leading-none text-[#091828]">
+        <span className="text-3xl font-bold leading-none text-[#091828] dark:text-white">
           {score}
         </span>
-        <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#6b6375]">
+        <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#6b6375] dark:text-[#a0aec0]">
           {caption}
         </span>
       </Gauge>
  
       {showBandLabel && label && (
-        <span className="-mt-1 text-sm font-semibold text-[#091828]">
+        <span className="-mt-1 text-sm font-semibold text-[#091828] dark:text-white">
           {label}
         </span>
       )}

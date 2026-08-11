@@ -184,7 +184,7 @@ export default function QuizQuestionPage(){
     }
     const interactionDisabled=isSubmitting||hasSubmitted
     return(
-        <div className="min-h-screen bg-[#F4FBF7] pb-10">
+        <div className="min-h-screen bg-[#F4FBF7] pb-10 dark:bg-[#0b1326]">
             {answerToast&&(
                 <div
                     className="fixed inset-x-0 top-4 z-50 flex justify-center px-5"
@@ -192,23 +192,28 @@ export default function QuizQuestionPage(){
                     aria-live="polite"
                 >
                     <div
-                        className="flex w-full max-w-md items-start gap-3 rounded-2xl border-2 border-[#091828] px-4 py-3 shadow-[4px_4px_0_#091828] animate-ss-toast-in"
-                        style={{backgroundColor:answerToast.isCorrect?"#DCEFE8":"#FFD9E1"}}
+                        className={cn(
+                            "flex w-full max-w-md items-start gap-3 rounded-2xl border-2 border-[#091828] px-4 py-3 shadow-[4px_4px_0_#091828] animate-ss-toast-in",
+                            "dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20]",
+                            answerToast.isCorrect
+                                ?"bg-[#DCEFE8] dark:bg-[#0f4f42]"
+                                :"bg-[#FFD9E1] dark:bg-[#2d1b2e]",
+                        )}
                     >
                         <span
-                            className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-white"
+                            className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-white dark:border-[#060e20] dark:bg-[#131b2e]"
                         >
                             {answerToast.isCorrect?(
-                                <Check className="size-4 text-[#0E7A5F]" strokeWidth={3}/>
+                                <Check className="size-4 text-[#0E7A5F] dark:text-[#5eead4]" strokeWidth={3}/>
                             ):(
-                                <X className="size-4 text-[#AC2A5D]" strokeWidth={3}/>
+                                <X className="size-4 text-[#AC2A5D] dark:text-[#ff6b9d]" strokeWidth={3}/>
                             )}
                         </span>
                         <div className="min-w-0 flex-1">
-                            <p className="text-sm font-extrabold text-[#091828]">{answerToast.isCorrect?"Correct!":"Not quite"}</p>
-                            <p className="mt-0.5 text-xs font-semibold leading-relaxed text-[#091828]/70">{answerToast.explanation}</p>
+                            <p className="text-sm font-extrabold text-[#091828] dark:text-white">{answerToast.isCorrect?"Correct!":"Not quite"}</p>
+                            <p className="mt-0.5 text-xs font-semibold leading-relaxed text-[#091828]/70 dark:text-white/70">{answerToast.explanation}</p>
                             {!answerToast.isCorrect&&answerToast.requeued&&(
-                                <p className="mt-1 text-xs font-bold text-[#8A6D00]">This question will come back later.</p>
+                                <p className="mt-1 text-xs font-bold text-[#8A6D00] dark:text-[#ffdf9b]">This question will come back later.</p>
                             )}
                         </div>
                     </div>
@@ -219,25 +224,25 @@ export default function QuizQuestionPage(){
                     <button
                         type="button"
                         onClick={handleBack}
-                        className="flex items-center gap-1 text-sm font-semibold text-[#6b6375] transition hover:text-[#091828]"
+                        className="flex items-center gap-1 text-sm font-semibold text-[#6b6375] transition hover:text-[#091828] dark:text-[#a0aec0] dark:hover:text-white"
                     >
                         <ArrowLeft className="size-4"/>
                         Exit quiz
                     </button>
                     <div className="mt-5 flex items-end justify-between gap-4">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#AC2A5D]">{formatTopicName(currentQuestion.topic)}</p>
-                            <h1 className="mt-1 text-2xl font-extrabold text-[#091828]">
+                            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#AC2A5D] dark:text-[#ff6b9d]">{formatTopicName(currentQuestion.topic)}</p>
+                            <h1 className="mt-1 text-2xl font-extrabold text-[#091828] dark:text-white">
                                 Question {questionNumber} of{" "}
                                 {session.progress.initialQuestions}
                             </h1>
                         </div>
-                        <div className="rounded-full bg-[#FFD9E1] px-3 py-1.5 text-xs font-bold text-[#AC2A5D]">
+                        <div className="rounded-full bg-[#FFD9E1] px-3 py-1.5 text-xs font-bold text-[#AC2A5D] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]">
                             {session.progress.correct} correct
                         </div>
                     </div>
                     <div
-                        className="mt-4 h-3 overflow-hidden rounded-full bg-[#DCEFE8]"
+                        className="mt-4 h-3 overflow-hidden rounded-full bg-[#DCEFE8] dark:bg-[#1c263c]"
                         role="progressbar"
                         aria-valuemin={0}
                         aria-valuemax={session.progress.initialQuestions}
@@ -245,7 +250,7 @@ export default function QuizQuestionPage(){
                         aria-label={`${session.progress.answeredAttempts} of ${session.progress.initialQuestions} questions completed`}
                     >
                         <div
-                            className="h-full rounded-full bg-[#6FC9B0] transition-[width] duration-300"
+                            className="h-full rounded-full bg-[#6FC9B0] transition-[width] duration-300 dark:bg-[#5eead4]"
                             style={{width:`${progressPercentage}%`}}
                         />
                     </div>
@@ -253,10 +258,10 @@ export default function QuizQuestionPage(){
                 <CustomCard
                     variant="greenShaddow"
                     size="sm"
-                    className="mt-6"
+                    className="mt-6 dark:bg-[#131b2e] dark:shadow-none"
                 >
-                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6b6375]">Choose the best answer</p>
-                    <h2 className="mt-2 text-xl font-extrabold leading-snug text-[#091828]">{currentQuestion.prompt}</h2>
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#6b6375] dark:text-[#a0aec0]">Choose the best answer</p>
+                    <h2 className="mt-2 text-xl font-extrabold leading-snug text-[#091828] dark:text-white">{currentQuestion.prompt}</h2>
                 </CustomCard>
                 <fieldset
                     disabled={interactionDisabled}
@@ -277,22 +282,22 @@ export default function QuizQuestionPage(){
                                 disabled={interactionDisabled}
                                 aria-pressed={isSelected}
                                 className={cn(
-                                    "flex w-full items-center gap-3 rounded-2xl border-2 bg-white px-4 py-4 text-left shadow-sm transition",
-                                    "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FFD9E1]",
-                                    isSelectedCorrect&&"border-[#0E7A5F] bg-[#DCEFE8]",
-                                    isSelectedWrong&&"border-[#AC2A5D] bg-[#FFD9E1]",
-                                    isSelected&&!showResult&&"border-[#AC2A5D] bg-[#FFF4F7]",
-                                    !isSelected&&"border-transparent hover:border-[#D6EEE8]",
+                                    "flex w-full items-center gap-3 rounded-2xl border-2 bg-white px-4 py-4 text-left shadow-sm transition dark:bg-[#131b2e]",
+                                    "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FFD9E1] dark:focus-visible:ring-[#ff6b9d]/40",
+                                    isSelectedCorrect&&"border-[#0E7A5F] bg-[#DCEFE8] dark:border-[#5eead4] dark:bg-[#0f4f42]",
+                                    isSelectedWrong&&"border-[#AC2A5D] bg-[#FFD9E1] dark:border-[#ff6b9d] dark:bg-[#2d1b2e]",
+                                    isSelected&&!showResult&&"border-[#AC2A5D] bg-[#FFF4F7] dark:border-[#ff6b9d] dark:bg-[#1c263c]",
+                                    !isSelected&&"border-transparent hover:border-[#D6EEE8] dark:hover:border-[#2d3449]",
                                     interactionDisabled?"cursor-not-allowed":"active:scale-[0.99]"
                                 )}
                             >
                                 <span
                                     className={cn(
                                         "flex size-10 shrink-0 items-center justify-center rounded-full border-2 text-sm font-extrabold",
-                                        isSelectedCorrect&&"border-[#0E7A5F] bg-[#0E7A5F] text-white",
-                                        isSelectedWrong&&"border-[#AC2A5D] bg-[#AC2A5D] text-white",
-                                        isSelected&&!showResult&&"border-[#AC2A5D] bg-[#AC2A5D] text-white",
-                                        !isSelected&&"border-[#B8CBBF] bg-[#F4FBF7] text-[#091828]"
+                                        isSelectedCorrect&&"border-[#0E7A5F] bg-[#0E7A5F] text-white dark:border-[#5eead4] dark:bg-[#5eead4] dark:text-[#0b1326]",
+                                        isSelectedWrong&&"border-[#AC2A5D] bg-[#AC2A5D] text-white dark:border-[#ff6b9d] dark:bg-[#ff6b9d] dark:text-[#6e0035]",
+                                        isSelected&&!showResult&&"border-[#AC2A5D] bg-[#AC2A5D] text-white dark:border-[#ff6b9d] dark:bg-[#ff6b9d] dark:text-[#6e0035]",
+                                        !isSelected&&"border-[#B8CBBF] bg-[#F4FBF7] text-[#091828] dark:border-[#2d3449] dark:bg-[#1c263c] dark:text-white"
                                     )}
                                 >
                                     {isSelectedWrong?(
@@ -303,28 +308,28 @@ export default function QuizQuestionPage(){
                                         option.key
                                     )}
                                 </span>
-                                <span className="flex-1 text-sm font-semibold leading-relaxed text-[#091828]">{option.text}</span>
+                                <span className="flex-1 text-sm font-semibold leading-relaxed text-[#091828] dark:text-white">{option.text}</span>
                             </button>
                         )
                     })}
                 </fieldset>
                 {error&&session&&(
-                    <div className="mt-4 flex items-start gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFD9E1] px-4 py-3">
-                        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[#AC2A5D]"/>
-                        <p className="flex-1 text-sm font-semibold text-[#AC2A5D]">{error}</p>
+                    <div className="mt-4 flex items-start gap-2 rounded-2xl border-2 border-[#AC2A5D] bg-[#FFD9E1] px-4 py-3 dark:border-[#ffb4ab] dark:bg-[#93000a]/30">
+                        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[#AC2A5D] dark:text-[#ffb4ab]"/>
+                        <p className="flex-1 text-sm font-semibold text-[#AC2A5D] dark:text-[#ffb4ab]">{error}</p>
                     </div>
                 )}
                 <LongButton
                     LongVariant="primaryDark"
                     LongSize="sm"
-                    className="mt-6"
+                    className="mt-6 dark:bg-[#1e293b] dark:hover:bg-[#334155]"
                     showArrow={false}
                     disabled={!selectedOptionKey||isSubmitting||hasSubmitted}
                     onClick={handleSubmit}
                 >
                     {isSubmitting||hasSubmitted?"Checking answer...":"Submit Answer"}
                 </LongButton>
-                <p className="mt-3 text-center text-xs leading-relaxed text-[#6b6375]">Incorrect answers may return later so you can try them again.</p>
+                <p className="mt-3 text-center text-xs leading-relaxed text-[#6b6375] dark:text-[#a0aec0]">Incorrect answers may return later so you can try them again.</p>
             </main>
         </div>
     )
@@ -332,25 +337,25 @@ export default function QuizQuestionPage(){
 
 function QuizQuestionSkeleton(){
     return(
-        <div className="min-h-screen bg-[#F4FBF7]">
+        <div className="min-h-screen bg-[#F4FBF7] dark:bg-[#0b1326]">
             <main className="mx-auto w-full max-w-md px-5 pt-6">
-                <div className="h-5 w-20 animate-pulse rounded bg-[#DCEFE8]"/>
-                <div className="mt-6 h-8 w-2/3 animate-pulse rounded bg-[#DCEFE8]"/>
-                <div className="mt-4 h-3 w-full animate-pulse rounded-full bg-[#DCEFE8]"/>
+                <div className="h-5 w-20 animate-pulse rounded bg-[#DCEFE8] dark:bg-[#1c263c]"/>
+                <div className="mt-6 h-8 w-2/3 animate-pulse rounded bg-[#DCEFE8] dark:bg-[#1c263c]"/>
+                <div className="mt-4 h-3 w-full animate-pulse rounded-full bg-[#DCEFE8] dark:bg-[#1c263c]"/>
                 <CustomCard
                     variant="greenShaddow"
                     size="sm"
-                    className="mt-6 space-y-3"
+                    className="mt-6 space-y-3 dark:bg-[#131b2e] dark:shadow-none"
                 >
-                    <div className="h-3 w-32 animate-pulse rounded bg-[#DCEFE8]"/>
-                    <div className="h-6 w-full animate-pulse rounded bg-[#DCEFE8]"/>
-                    <div className="h-6 w-4/5 animate-pulse rounded bg-[#DCEFE8]"/>
+                    <div className="h-3 w-32 animate-pulse rounded bg-[#DCEFE8] dark:bg-[#1c263c]"/>
+                    <div className="h-6 w-full animate-pulse rounded bg-[#DCEFE8] dark:bg-[#1c263c]"/>
+                    <div className="h-6 w-4/5 animate-pulse rounded bg-[#DCEFE8] dark:bg-[#1c263c]"/>
                 </CustomCard>
                 <div className="mt-5 space-y-3">
                     {[1,2,3,4].map((item)=>(
                         <div
                             key={item}
-                            className="h-20 animate-pulse rounded-2xl bg-white shadow-sm"
+                            className="h-20 animate-pulse rounded-2xl bg-white shadow-sm dark:bg-[#131b2e]"
                         />
                     ))}
                 </div>
@@ -369,19 +374,19 @@ function QuizQuestionError({
     retryLabel:string
 }){
     return(
-        <div className="flex min-h-screen items-center justify-center bg-[#F4FBF7] px-5">
+        <div className="flex min-h-screen items-center justify-center bg-[#F4FBF7] px-5 dark:bg-[#0b1326]">
             <CustomCard
                 variant="greenShaddow"
                 size="sm"
-                className="w-full max-w-md text-center"
+                className="w-full max-w-md text-center dark:bg-[#131b2e] dark:shadow-none"
             >
-                <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[#FFD9E1]"><AlertTriangle className="size-6 text-[#AC2A5D]"/></div>
-                <h1 className="mt-4 text-xl font-extrabold text-[#091828]">Quiz unavailable</h1>
-                <p className="mt-2 text-sm text-[#6b6375]">{message}</p>
+                <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[#FFD9E1] dark:bg-[#2d1b2e]"><AlertTriangle className="size-6 text-[#AC2A5D] dark:text-[#ff6b9d]"/></div>
+                <h1 className="mt-4 text-xl font-extrabold text-[#091828] dark:text-white">Quiz unavailable</h1>
+                <p className="mt-2 text-sm text-[#6b6375] dark:text-[#a0aec0]">{message}</p>
                 <LongButton
                     LongVariant="primaryDark"
                     LongSize="sm"
-                    className="mt-5"
+                    className="mt-5 dark:bg-[#1e293b] dark:hover:bg-[#334155]"
                     showArrow={false}
                     onClick={onRetry}
                 >

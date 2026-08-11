@@ -23,7 +23,7 @@ export function AddTransactionButton() {
             aria-expanded={isOpen}
             aria-haspopup="true"
             aria-label="Add transaction options"
-            className="flex size-14 -translate-y-1 items-center justify-center rounded-full bg-[#0a1929] text-white shadow-lg ring-4 ring-white transition-transform hover:scale-105 active:scale-95"
+            className="flex size-14 -translate-y-1 items-center justify-center rounded-full bg-[#0a1929] text-white shadow-lg ring-4 ring-white transition-transform hover:scale-105 active:scale-95 dark:bg-[#ffb1c5] dark:text-[#650030] dark:ring-[#0b1326]"
         >
             <Plus className={`size-6 transition-transform duration-200 ${isOpen ? 'rotate-45' : ''}`} />
         </button>
