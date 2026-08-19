@@ -14,6 +14,7 @@ import {
   UserEventType,
 } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
+import { BadgeEngineService } from '../gamification/badge-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RewardService } from '../rewards/reward.service';
 import { UsersService } from '../users/users.service';
@@ -37,8 +38,9 @@ type DailyDateRange = {
 export class QuizService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rewardService: RewardService,
     private readonly usersService: UsersService,
+    private readonly rewardService: RewardService,
+    private readonly badgeEngineService: BadgeEngineService,
   ) {}
 
   async listTopics() {
@@ -384,6 +386,7 @@ export class QuizService {
           longest: number;
           advanced: boolean;
         };
+        badgesEarned: string[];
       } | null = null;
 
       if (completed) {
@@ -519,11 +522,15 @@ export class QuizService {
     const currentKnowledgeStreak = streak?.current ?? previousKnowledgeStreak;
     const longestKnowledgeStreak =
       streak?.longest ?? previousLongestKnowledgeStreak;
+    const badgesEarned = await this.badgeEngineService.evaluateQuizBadges(
+      { userId, sourceEventId: event.id },
+      tx,
+    );
     await tx.quizSession.update({
       where: { id: session.id },
       data: {
         status: QuizSessionStatus.COMPLETED,
-        completedAt: new Date(),
+        completedAt: now,
         score,
         coinsAwarded: reward.coins,
         xpAwarded: reward.xp,
@@ -540,7 +547,16 @@ export class QuizService {
         longest: longestKnowledgeStreak,
         advanced: advancesStreak && !streakIsCurrent,
       },
+      badgesEarned,
     };
+  }
+
+  private daysBetweenJohannesburgDates(earlier: string, later: string): number {
+    const earlierDate = new Date(`${earlier}T00:00:00.000Z`);
+    const laterDate = new Date(`${later}T00:00:00.000Z`);
+    return Math.round(
+      (laterDate.getTime() - earlierDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
   }
 
   private readonly sessionSelect = {
