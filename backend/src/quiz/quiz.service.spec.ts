@@ -2,6 +2,7 @@ import { QuizSessionStatus, QuizSessionType, QuizTopic } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { UsersService } from '../users/users.service';
+import { RewardService } from '../rewards/reward.service';
 import { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
 import { QuizService } from './quiz.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -69,6 +70,9 @@ describe('QuizService', () => {
   let usersService: {
     findOrCreateUser: jest.Mock<Promise<MockUser>, [AuthUser]>;
   };
+  let rewardService: {
+    settleAction: jest.Mock;
+  };
 
   beforeEach(() => {
     prisma = {
@@ -104,16 +108,20 @@ describe('QuizService', () => {
           },
         }),
     };
+    rewardService = {
+      settleAction: jest.fn(),
+    };
 
     service = new QuizService(
       prisma as unknown as PrismaService,
+      rewardService as unknown as RewardService,
       usersService as unknown as UsersService,
     );
   });
 
   it('marks seeded active topics as available and others as unavailable', async () => {
     prisma.quizQuestion.count.mockImplementation(({ where }) =>
-      Promise.resolve(where.topic === QuizTopic.CREDIT_SCORE ? 5 : 0),
+      Promise.resolve(where?.topic === QuizTopic.CREDIT_SCORE ? 5 : 0),
     );
 
     const topics = await service.listTopics();
@@ -619,6 +627,13 @@ describe('QuizService', () => {
       rewardTransaction: { create: transactionMockMethod() },
     };
     prisma.$transaction.mockImplementation((callback) => callback(tx));
+    rewardService.settleAction.mockResolvedValue({
+      coinBalance: 35,
+      xp: 70,
+      mascotLevel: 1,
+      leveledUp: false,
+      streak: { current: 4, longest: 7 },
+    });
 
     const result = await service.submitAnswer(authUser, 'session-123', {
       questionId: question.id,
@@ -643,16 +658,25 @@ describe('QuizService', () => {
         totalQuestions: 1,
         reward: { xp: 50, coins: 25 },
         knowledgeStreak: {
-          previous: 2,
-          current: 3,
-          longest: 4,
+          previous: 3,
+          current: 4,
+          longest: 7,
           advanced: true,
         },
       },
     });
     expect(tx.userEvent.create).toHaveBeenCalled();
-    expect(tx.gamificationProfile.update).toHaveBeenCalled();
-    expect(tx.rewardTransaction.create).toHaveBeenCalled();
+    expect(rewardService.settleAction).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        userId: 'user-123',
+        sourceEventId: 'event-123',
+        coins: { amount: 25, reason: 'Quiz completion reward' },
+        xp: { amount: 50 },
+        streak: { field: 'currentKnowledgeStreak', advance: true },
+        mood: { value: 'HAPPY', reason: 'Quiz completed' },
+      }),
+    );
     const updateCall = tx.quizSession.update.mock.calls[0]?.[0] as {
       data: {
         status: QuizSessionStatus;
@@ -716,6 +740,12 @@ describe('QuizService', () => {
       rewardTransaction: { create: transactionMockMethod() },
     };
     prisma.$transaction.mockImplementation((callback) => callback(tx));
+    rewardService.settleAction.mockResolvedValue({
+      coinBalance: 20,
+      xp: 70,
+      mascotLevel: 1,
+      leveledUp: false,
+    });
 
     const result = await service.submitAnswer(authUser, 'session-456', {
       questionId: question.id,
@@ -729,18 +759,26 @@ describe('QuizService', () => {
         score: 1,
         totalQuestions: 1,
         knowledgeStreak: {
-          previous: 2,
-          current: 2,
-          longest: 4,
+          previous: 3,
+          current: 3,
+          longest: 7,
           advanced: false,
         },
       },
     });
-    const profileUpdateCall = tx.gamificationProfile.update.mock
-      .calls[0]?.[0] as {
-      data: Record<string, unknown>;
-    };
-    expect(profileUpdateCall.data).not.toHaveProperty('currentKnowledgeStreak');
-    expect(profileUpdateCall.data).not.toHaveProperty('longestKnowledgeStreak');
+    expect(rewardService.settleAction).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        userId: 'user-123',
+        sourceEventId: 'event-456',
+        coins: { amount: 10, reason: 'Quiz completion reward' },
+        xp: { amount: 20 },
+        mood: { value: 'HAPPY', reason: 'Quiz completed' },
+      }),
+    );
+    const settleCall = rewardService.settleAction.mock.calls[0] as
+      | [unknown, Record<string, unknown>]
+      | undefined;
+    expect(settleCall?.[1]).not.toHaveProperty('streak');
   });
 });

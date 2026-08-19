@@ -10,12 +10,12 @@ import {
   QuizSessionStatus,
   QuizSessionType,
   QuizTopic,
-  RewardTransactionType,
   UserEventSourceType,
   UserEventType,
 } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { PrismaService } from '../prisma/prisma.service';
+import { RewardService } from '../rewards/reward.service';
 import { UsersService } from '../users/users.service';
 import type { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
 import type { SubmitQuizAnswerDto } from './dto/submit-quiz-answer.dto';
@@ -37,6 +37,7 @@ type DailyDateRange = {
 export class QuizService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly rewardService: RewardService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -391,6 +392,8 @@ export class QuizService {
           user.id,
           score,
           answersAfter.length,
+          user.gamificationProfile?.currentKnowledgeStreak ?? 0,
+          user.gamificationProfile?.longestKnowledgeStreak ?? 0,
         );
       }
 
@@ -444,6 +447,8 @@ export class QuizService {
     userId: string,
     score: number,
     answeredAttempts: number,
+    previousKnowledgeStreak: number,
+    previousLongestKnowledgeStreak: number,
   ) {
     const reward =
       session.type === QuizSessionType.DAILY
@@ -462,34 +467,26 @@ export class QuizService {
         },
       },
     });
-    const profile = await tx.gamificationProfile.upsert({
-      where: { userId },
-      update: {},
-      create: { userId },
-    });
     const advancesStreak = session.type === QuizSessionType.DAILY;
-    const previousKnowledgeStreak = profile.currentKnowledgeStreak;
-    const currentKnowledgeStreak = advancesStreak
-      ? previousKnowledgeStreak + 1
-      : previousKnowledgeStreak;
-    const longestKnowledgeStreak = Math.max(
-      profile.longestKnowledgeStreak,
-      currentKnowledgeStreak,
-    );
-    const coinBalance = profile.coinBalance + reward.coins;
-    const xp = profile.xp + reward.xp;
-
-    await tx.gamificationProfile.update({
-      where: { id: profile.id },
-      data: {
-        coinBalance,
-        xp,
-        ...(advancesStreak
-          ? { currentKnowledgeStreak, longestKnowledgeStreak }
-          : {}),
-        mascotMood: MascotMood.CELEBRATING,
+    const settlement = await this.rewardService.settleAction(tx, {
+      userId,
+      sourceEventId: event.id,
+      coins: { amount: reward.coins, reason: 'Quiz completion reward' },
+      xp: { amount: reward.xp },
+      ...(advancesStreak
+        ? {
+            streak: { field: 'currentKnowledgeStreak' as const, advance: true },
+          }
+        : {}),
+      mood: {
+        value: MascotMood.HAPPY,
+        reason: 'Quiz completed',
       },
     });
+    const currentKnowledgeStreak =
+      settlement.streak?.current ?? previousKnowledgeStreak;
+    const longestKnowledgeStreak =
+      settlement.streak?.longest ?? previousLongestKnowledgeStreak;
     await tx.quizSession.update({
       where: { id: session.id },
       data: {
@@ -500,17 +497,6 @@ export class QuizService {
         xpAwarded: reward.xp,
       },
     });
-    await tx.rewardTransaction.create({
-      data: {
-        userId,
-        sourceEventId: event.id,
-        type: RewardTransactionType.EARNED,
-        amount: reward.coins,
-        balanceAfter: coinBalance,
-        reason: 'Quiz completion reward',
-      },
-    });
-
     return {
       score,
       totalQuestions: session.totalQuestions,
