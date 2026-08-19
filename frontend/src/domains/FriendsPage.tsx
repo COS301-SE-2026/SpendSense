@@ -1,15 +1,11 @@
 import * as React from "react"
 import { Link } from "react-router-dom"
 import {
-	Users,
 	UserPlus,
 	Trophy,
 	Swords,
 	Activity,
 	Search,
-	Home,
-	Calendar as CalendarIcon,
-	User,
 	Medal,
 	Coins,
 	Check,
@@ -18,7 +14,6 @@ import {
 
 import { CustomCard } from "@/components/ui/CustomCard"
 import { LongButton } from "@/components/common/LongButton"
-import { AddTransactionButton } from "@/components/common/AddTransactionButton"
 import { FriendAvatar, type AvatarTone } from "@/components/common/FriendAvatar"
 import { ActivityRow, type ActivityItem } from "@/components/common/ActivityRow"
 import { cn } from "@/lib/utils"
