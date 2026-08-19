@@ -67,6 +67,30 @@
     * [5.12.1 Create Obligation Service](#5-12-1-create-obligation-service)
     * [5.12.2 Get Obligations Service](#5-12-2-get-obligations-service)
     * [5.12.3 Update Obligation Service](#5-12-3-update-obligation-service)
+  * [5.13 Friends & Social Competition Services](#5-13-friends-social-competition-services)
+    * [5.13.1 Search Users Service](#5-13-1-search-users-service)
+    * [5.13.2 Send Friend Request Service](#5-13-2-send-friend-request-service)
+    * [5.13.3 Get Friend Requests Service](#5-13-3-get-friend-requests-service)
+    * [5.13.4 Accept Friend Request Service](#5-13-4-accept-friend-request-service)
+    * [5.13.5 Decline Friend Request Service](#5-13-5-decline-friend-request-service)
+    * [5.13.6 Cancel Friend Request Service](#5-13-6-cancel-friend-request-service)
+    * [5.13.7 Get Friends Service](#5-13-7-get-friends-service)
+    * [5.13.8 Get Friend Detail Service](#5-13-8-get-friend-detail-service)
+    * [5.13.9 Remove Friend Service](#5-13-9-remove-friend-service)
+    * [5.13.10 Get Friends Leaderboard Service](#5-13-10-get-friends-leaderboard-service)
+    * [5.13.11 Create Wager Service](#5-13-11-create-wager-service)
+    * [5.13.12 Get Wagers Service](#5-13-12-get-wagers-service)
+    * [5.13.13 Get Wager Detail Service](#5-13-13-get-wager-detail-service)
+    * [5.13.14 Accept Wager Service](#5-13-14-accept-wager-service)
+    * [5.13.15 Decline Wager Service](#5-13-15-decline-wager-service)
+    * [5.13.16 Cancel Wager Service](#5-13-16-cancel-wager-service)
+  * [5.14 Mascot Home & Customisation Services](#5-14-mascot-home-customisation-services)
+    * [5.14.1 Get Cosmetics Service](#5-14-1-get-cosmetics-service)
+    * [5.14.2 Purchase Cosmetic Service](#5-14-2-purchase-cosmetic-service)
+    * [5.14.3 Equip Cosmetic Service](#5-14-3-equip-cosmetic-service)
+    * [5.14.4 Unequip Cosmetic Service](#5-14-4-unequip-cosmetic-service)
+  * [5.15 Monthly Wrapped Services](#5-15-monthly-wrapped-services)
+    * [5.15.1 Get Monthly Wrapped Summary Service](#5-15-1-get-monthly-wrapped-summary-service)
 * [6. Deployment](#6-deployment)
   * [6.1 Deployment Requirements](#6-1-deployment-requirements)
     * [6.1.1 One-time setup](#6-1-1-one-time-setup)
@@ -678,17 +702,33 @@ None.
 
 **Outputs:**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `month` | `string` | Month identifier. |
-| `totalSaved` | `number` | Total amount saved. |
-| `transactions` | `number` | Total transaction count. |
-| `topCategory` | `string` | Top spending category. |
-| `noSpendDays` | `number` | Number of no-spend days. |
+| Name                            | Type                | Description                                                        |
+| ------------------------------- | ------------------- | ------------------------------------------------------------------ |
+| `month`                         | `string`            | Month identifier in `YYYY-MM` format.                              |
+| `monthLabel`                    | `string`            | Human-readable month and year label.                               |
+| `hasData`                       | `boolean`           | Indicates whether activity exists for the returned month.          |
+| `scoreStart`                    | `number`            | Simulated credit score at the start of the month.                  |
+| `scoreEnd`                      | `number`            | Simulated credit score at the end of the available monthly period. |
+| `scoreDelta`                    | `number`            | Change in simulated credit score over the month.                   |
+| `scoreTierEnd`                  | `ScoreTier or null` | Score tier reached at the end of the available monthly period.     |
+| `onTimePayments`                | `integer`           | Number of payments completed on time during the month.             |
+| `latePayments`                  | `integer`           | Number of late payments during the month.                          |
+| `missedPayments`                | `integer`           | Number of missed payments during the month.                        |
+| `onTimePaymentRate`             | `number`            | Proportion of applicable payments completed on time.               |
+| `longestPaymentStreakThisMonth` | `integer`           | Longest on-time payment streak reached during the month.           |
+| `badgesEarned`                  | `List`              | List of badges earned during the month.                            |
+| `coinsEarned`                   | `integer`           | Total SpendSense coins earned during the month.                    |
+| `quizzesCompleted`              | `integer`           | Number of quizzes completed during the month.                      |
+| `knowledgeStreakEnd`            | `integer`           | Knowledge streak at the end of the available monthly period.       |
 
 **Usage / Interaction Rules:**
 
-- Clients must send a `GET` request to `/api/v1/wrapped/latest`.
+* Clients must send a `GET` request to `/api/v1/wrapped/latest`.
+* If the current month contains qualifying activity, the service returns the current month even when the month is still in progress.
+* If the current month contains no qualifying activity, the service returns the most recent previous month containing activity.
+* If the user has no qualifying activity in any month, the service returns the current month with `hasData` set to `false`.
+* When `hasData` is `false`, the numeric values are returned using their defined empty-state values and `badgesEarned` is returned as an empty list.
+* Clients must use `hasData` to determine whether the returned month contains activity rather than inferring this from individual payment or score values.
 
 ---
 
@@ -710,15 +750,21 @@ None.
 
 **Outputs:**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| `data` | `object` | Gamification profile details. |
+| Name                       | Type                  | Description                                                                                                                                           |
+| -------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data`                     | `object`              | Gamification profile details.                                                                                                                         |
+| `data.mascotLevelProgress` | `MascotLevelProgress` | Progress towards the user's next mascot level, including XP earned within the current level, XP required for the next level, and percentage progress. |
+| `data.moodReason`          | `string or null`      | Explanation associated with the mascot's current mood when available.                                                                                 |
+| `data.equippedCosmetics`   | `List`                | List of cosmetic items currently equipped by the user, including their slot, cosmetic code, and icon key.                                             |
 
 **Usage / Interaction Rules:**
 
-- Clients must send a `GET` request to `/api/v1/gamification/profile`.
-- Profile updates occur automatically on the server after relevant actions, such as logging a payment.
-- Coins do not alter credit scores or remove financial penalties.
+* Clients must send a `GET` request to `/api/v1/gamification/profile`.
+* Profile updates occur automatically on the server after relevant actions, such as logging a payment.
+* Coins do not alter credit scores or remove financial penalties.
+* `mascotLevelProgress` represents the user's progress within their current mascot level.
+* `moodReason` may be `null` when no mood explanation is available.
+* `equippedCosmetics` contains the cosmetic items currently equipped by the user and is empty when no cosmetics are equipped.
 
 ---
 
@@ -1383,6 +1429,647 @@ None.
 - The supplied `UpdateObligationDto` defines the update body but does not itself define the controller's HTTP route.
 - Only the supported optional fields should be sent in the JSON request body.
 - The service must verify that the obligation belongs to the authenticated caller before applying changes.
+
+---
+<a id="5-13-friends-social-competition-services"></a>
+
+### 5.13 Friends & Social Competition Services
+
+<a id="5-13-1-search-users-service"></a>
+
+#### 5.13.1 Search Users Service
+
+**Service Name:** Search Users Service
+
+**Description:** Searches for other SpendSense users who may be added as friends.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `query` | `string` | Yes | Search query supplied as a query parameter. Must contain at least `2` characters. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `List` | List of matching user summaries containing the user identifier, display name, and avatar URL. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `GET` request to `/api/v1/friends/search?query={query}`.
+- Search may match against a user's display name or email address, but email addresses must never be returned in the response.
+- The caller, existing friends, and users with an existing pending friend request in either direction are excluded.
+- A maximum of `20` results may be returned.
+
+---
+
+<a id="5-13-2-send-friend-request-service"></a>
+
+#### 5.13.2 Send Friend Request Service
+
+**Service Name:** Send Friend Request Service
+
+**Description:** Sends a friend request from the authenticated user to another SpendSense user.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `receiverId` | `string` | Yes | Identifier of the user who will receive the friend request. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `object` | Newly created pending friend request. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `POST` request to `/api/v1/friends/requests`.
+- The request body must contain `receiverId` in JSON format.
+- The users identifier is obtained from the authentication token and must not be included in the request body.
+- A user may not send a friend request to themselves.
+- A new request may not be created when a pending or accepted relationship already exists between the two users.
+
+---
+
+<a id="5-13-3-get-friend-requests-service"></a>
+
+#### 5.13.3 Get Friend Requests Service
+
+**Service Name:** Get Friend Requests Service
+
+**Description:** Retrieves pending incoming or outgoing friend requests for the authenticated user.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `direction` | `string` | No | Query parameter accepting `incoming` or `outgoing`; defaults to `incoming`. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `List` | List of pending friend-request summaries. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `GET` request to `/api/v1/friends/requests?direction={direction}`.
+- Only requests with a `PENDING` status are returned.
+- Both the sender and receiver display names are included so the frontend does not require an additional user lookup.
+
+---
+
+<a id="5-13-4-accept-friend-request-service"></a>
+
+#### 5.13.4 Accept Friend Request Service
+
+**Service Name:** Accept Friend Request Service
+
+**Description:** Accepts an incoming pending friend request and creates the resulting friendship.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Path parameter identifying the friend request. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data.request` | `object` | Updated friend request with an `ACCEPTED` status and response timestamp. |
+| `data.friendship` | `FriendSummary` | Summary of the newly created friend relationship. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `PATCH` request to `/api/v1/friends/requests/{id}/accept`.
+- No request body is required.
+- Only the receiver of the request may accept it.
+- The request must currently have a `PENDING` status.
+
+---
+
+<a id="5-13-5-decline-friend-request-service"></a>
+
+#### 5.13.5 Decline Friend Request Service
+
+**Service Name:** Decline Friend Request Service
+
+**Description:** Declines an incoming pending friend request.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Path parameter identifying the friend request. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `object` | Updated friend request with a `DECLINED` status and response timestamp. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `PATCH` request to `/api/v1/friends/requests/{id}/decline`.
+- No request body is required.
+- Only the receiver of the request may decline it.
+- The request must currently have a `PENDING` status.
+
+---
+
+<a id="5-13-6-cancel-friend-request-service"></a>
+
+#### 5.13.6 Cancel Friend Request Service
+
+**Service Name:** Cancel Friend Request Service
+
+**Description:** Cancels an outgoing pending friend request created by the authenticated user.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Path parameter identifying the friend request. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `object` | Updated friend request with a `CANCELLED` status. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `DELETE` request to `/api/v1/friends/requests/{id}`.
+- Only the sender of the request may cancel it.
+- The request must currently have a `PENDING` status.
+
+---
+
+<a id="5-13-7-get-friends-service"></a>
+
+#### 5.13.7 Get Friends Service
+
+**Service Name:** Get Friends Service
+
+**Description:** Retrieves the authenticated user's current friends.
+
+**Inputs:**
+
+None.
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `List` | List of friend summaries containing public social and gamification information. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `GET` request to `/api/v1/friends`.
+- The friend summary contains the friendship ID, friend ID, display name, avatar, score tier, current payment streak, and badge count.
+- Email addresses, obligations, payment records, and other private financial information must not be returned.
+- A user with no friends receives an empty list rather than an error.
+
+---
+
+<a id="5-13-8-get-friend-detail-service"></a>
+
+#### 5.13.8 Get Friend Detail Service
+
+**Service Name:** Get Friend Detail Service
+
+**Description:** Retrieves the public social and gamification summary of a specific current friend.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `friendId` | `string` | Yes | Path parameter identifying the friend. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `FriendSummary` | Public friend summary. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `GET` request to `/api/v1/friends/{friendId}`.
+- The specified user must currently be a friend of the authenticated caller.
+- Private financial information must not be exposed through the friend summary.
+
+---
+
+<a id="5-13-9-remove-friend-service"></a>
+
+#### 5.13.9 Remove Friend Service
+
+**Service Name:** Remove Friend Service
+
+**Description:** Removes an existing friendship for the authenticated user.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `friendId` | `string` | Yes | Path parameter identifying the friend to remove. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data.friendId` | `string` | Identifier of the removed friend. |
+| `data.removed` | `boolean` | Indicates that the friendship was removed. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `DELETE` request to `/api/v1/friends/{friendId}`.
+- The specified user must currently be a friend of the authenticated caller.
+
+---
+
+<a id="5-13-10-get-friends-leaderboard-service"></a>
+
+#### 5.13.10 Get Friends Leaderboard Service
+
+**Service Name:** Get Friends Leaderboard Service
+
+**Description:** Retrieves a leaderboard containing the authenticated user and their friends.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `metric` | `string` | No | Query parameter accepting `score` or `streak`; defaults to `score`. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `List` | Ranked list of leaderboard entries. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `GET` request to `/api/v1/friends/leaderboard?metric={metric}`.
+- The authenticated caller is always included in the leaderboard.
+- Each entry identifies whether it represents the caller using `isSelf`.
+- Equal values share the same rank.
+- When `metric=streak`, the ranking value represents the current payment streak.
+- When `metric=score`, the ranking value represents the user's score-tier ranking.
+
+---
+
+<a id="5-13-11-create-wager-service"></a>
+
+#### 5.13.11 Create Wager Service
+
+**Service Name:** Create Wager Service
+
+**Description:** Creates a pending social wager between the authenticated user and one of their friends.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `opponentId` | `string` | Yes | Identifier of the friend being challenged. |
+| `taskType` | `WagerTaskType` | Yes | Must be `ALL_PAYMENTS_ON_TIME`, `NO_MISSED_PAYMENTS`, or `MAINTAIN_PAYMENT_STREAK`. |
+| `stakeAmount` | `number` | Yes | Number of coins placed as the wager stake. The creator must have sufficient coins when the wager is created. |
+| `durationDays` | `integer` | Yes | Number of days for which the wager will run once accepted. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `WagerSummary` | Newly created wager with a `PENDING` status. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `POST` request to `/api/v1/wagers`.
+- The wager details must be sent in JSON format.
+- The opponent must be a current friend of the caller.
+- A user may not create a wager against themselves.
+- Creating the wager performs a balance check but does not deduct coins.
+
+---
+
+<a id="5-13-12-get-wagers-service"></a>
+
+#### 5.13.12 Get Wagers Service
+
+**Service Name:** Get Wagers Service
+
+**Description:** Retrieves wagers involving the authenticated user.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `status` | `WagerStatus` | No | Optional query parameter filtering wagers by `PENDING`, `ACTIVE`, `COMPLETED`, `DECLINED`, `CANCELLED`, or `EXPIRED`. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `List` | List of wagers involving the authenticated caller. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `GET` request to `/api/v1/wagers`.
+- When supplied, the `status` value is used as a query parameter.
+- Only wagers in which the caller is the creator or opponent may be returned.
+
+---
+
+<a id="5-13-13-get-wager-detail-service"></a>
+
+#### 5.13.13 Get Wager Detail Service
+
+**Service Name:** Get Wager Detail Service
+
+**Description:** Retrieves the details and current state of a specific wager.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Path parameter identifying the wager. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `WagerSummary` | Current wager details, status, participants, dates, stake, and outcomes where applicable. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `GET` request to `/api/v1/wagers/{id}`.
+- The authenticated caller must be either the creator or opponent of the wager.
+- Wager outcomes are empty until the wager is completed.
+
+---
+
+<a id="5-13-14-accept-wager-service"></a>
+
+#### 5.13.14 Accept Wager Service
+
+**Service Name:** Accept Wager Service
+
+**Description:** Accepts a pending wager and activates the wager period.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Path parameter identifying the wager. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `object` | Activated wager details and the user's updated coin balance. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `PATCH` request to `/api/v1/wagers/{id}/accept`.
+- No request body is required.
+- Only the invited opponent may accept the wager.
+- The wager must currently have a `PENDING` status.
+- Both participants must have sufficient coins when the wager is accepted.
+- Until the Reward Service required for safe coin spending and escrow is available, the endpoint returns `501` and does not activate the wager.
+
+---
+
+<a id="5-13-15-decline-wager-service"></a>
+
+#### 5.13.15 Decline Wager Service
+
+**Service Name:** Decline Wager Service
+
+**Description:** Declines a pending wager invitation.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Path parameter identifying the wager. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `object` | Updated wager with a `DECLINED` status. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `PATCH` request to `/api/v1/wagers/{id}/decline`.
+- Only the invited opponent may decline the wager.
+- Declining a wager does not move or deduct coins.
+
+---
+
+<a id="5-13-16-cancel-wager-service"></a>
+
+#### 5.13.16 Cancel Wager Service
+
+**Service Name:** Cancel Wager Service
+
+**Description:** Cancels a pending wager created by the authenticated user.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Path parameter identifying the wager. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `object` | Updated wager with a `CANCELLED` status. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `DELETE` request to `/api/v1/wagers/{id}`.
+- Only the creator of the wager may cancel it.
+- Only a wager with a `PENDING` status may be cancelled.
+- Cancelling a pending wager does not move or deduct coins.
+
+---
+
+<a id="5-14-mascot-home-customisation-services"></a>
+
+### 5.14 Mascot Home & Customisation Services
+
+<a id="5-14-1-get-cosmetics-service"></a>
+
+#### 5.14.1 Get Cosmetics Service
+
+**Service Name:** Get Cosmetics Service
+
+**Description:** Retrieves the cosmetic catalogue and shows whether each item is owned or equipped by the user.
+
+**Inputs:**
+
+None.
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data` | `List` | List of cosmetic catalogue items including their identifier, code, name, slot, cost, icon, ownership state, and equipped state. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `GET` request to `/api/v1/cosmetics`.
+- The catalogue contains cosmetic items for the `HAT` and `ACCESSORY` slots.
+- All active catalogue items are returned regardless of whether the caller owns them.
+- The `owned` and `equipped` values are calculated for the authenticated caller.
+
+---
+
+<a id="5-14-2-purchase-cosmetic-service"></a>
+
+#### 5.14.2 Purchase Cosmetic Service
+
+**Service Name:** Purchase Cosmetic Service
+
+**Description:** Purchases a cosmetic item using the authenticated user's SpendSense coins.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Path parameter identifying an active cosmetic item. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data.id` | `string` | Identifier of the purchased cosmetic item. |
+| `data.code` | `string` | Cosmetic item code. |
+| `data.owned` | `boolean` | Indicates that the item is now owned. |
+| `data.coinBalance` | `number` | User's remaining coin balance after the purchase. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `POST` request to `/api/v1/cosmetics/{id}/purchase`.
+- The specified cosmetic item must exist and be active.
+- The user may not purchase an item that they already own.
+- The user must have enough coins to cover the item's cost.
+- Until the Reward Service required for concurrency-safe coin spending is available, the endpoint returns `501` and no coins or ownership records are changed.
+
+---
+
+<a id="5-14-3-equip-cosmetic-service"></a>
+
+#### 5.14.3 Equip Cosmetic Service
+
+**Service Name:** Equip Cosmetic Service
+
+**Description:** Equips a cosmetic item currently owned by the authenticated user.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Path parameter identifying the cosmetic item to equip. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data.id` | `string` | Identifier of the equipped cosmetic item. |
+| `data.slot` | `CosmeticSlot` | Cosmetic slot occupied by the item. |
+| `data.equipped` | `boolean` | Indicates that the item is equipped. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `PATCH` request to `/api/v1/cosmetics/{id}/equip`.
+- The authenticated user must own the selected cosmetic item.
+- Equipping an item automatically unequips any other cosmetic currently equipped in the same slot. 
+
+---
+
+<a id="5-14-4-unequip-cosmetic-service"></a>
+
+#### 5.14.4 Unequip Cosmetic Service
+
+**Service Name:** Unequip Cosmetic Service
+
+**Description:** Unequips a cosmetic item currently equipped by the authenticated user.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `id` | `string` | Yes | Path parameter identifying the cosmetic item to unequip. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data.id` | `string` | Identifier of the cosmetic item. |
+| `data.slot` | `CosmeticSlot` | Cosmetic slot previously occupied by the item. |
+| `data.equipped` | `boolean` | Indicates that the item is no longer equipped. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `PATCH` request to `/api/v1/cosmetics/{id}/unequip`.
+- The selected cosmetic item must currently be equipped by the authenticated user.
+
+---
+
+<a id="5-15-monthly-wrapped-services"></a>
+
+### 5.15 Monthly Wrapped Services
+
+<a id="5-15-1-get-monthly-wrapped-summary-service"></a>
+
+#### 5.15.1 Get Monthly Wrapped Summary Service
+
+**Service Name:** Get Monthly Wrapped Summary Service
+
+**Description:** Retrieves the authenticated user's Monthly Wrapped summary for a specified calendar month.
+
+**Inputs:**
+
+| Name | Type | Required | Validation and description |
+| --- | --- | --- | --- |
+| `yearMonth` | `string` | Yes | Path parameter identifying the requested month in `YYYY-MM` format. The requested month may not be in the future. |
+
+**Outputs:**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `data.month` | `string` | Month identifier in `YYYY-MM` format. |
+| `data.monthLabel` | `string` | Human-readable month and year label. |
+| `data.hasData` | `boolean` | Indicates whether activity exists for the requested month. |
+| `data.scoreStart` | `number` | Simulated credit score at the start of the month. |
+| `data.scoreEnd` | `number` | Simulated credit score at the end of the available monthly period. |
+| `data.scoreDelta` | `number` | Change in simulated credit score over the month. |
+| `data.scoreTierEnd` | `ScoreTier or null` | Score tier reached at the end of the available monthly period. |
+| `data.onTimePayments` | `integer` | Number of payments completed on time. |
+| `data.latePayments` | `integer` | Number of late payments. |
+| `data.missedPayments` | `integer` | Number of missed payments. |
+| `data.onTimePaymentRate` | `number` | Proportion of applicable payments completed on time. |
+| `data.longestPaymentStreakThisMonth` | `integer` | Longest on-time payment streak reached during the month. |
+| `data.badgesEarned` | `List` | Badges earned during the month. |
+| `data.coinsEarned` | `integer` | Total SpendSense coins earned during the month. |
+| `data.quizzesCompleted` | `integer` | Number of quizzes completed during the month. |
+| `data.knowledgeStreakEnd` | `integer` | Knowledge streak at the end of the available monthly period. |
+
+**Usage / Interaction Rules:**
+
+- Clients must send a `GET` request to `/api/v1/wrapped/{yearMonth}`.
+- The caller must be authenticated.
+- The requested month must use valid `YYYY-MM` formatting and may not refer to a future month.
+- If the month has no recorded activity, the service returns `hasData=false` and the empty-state values.
+- The `hasData` field is used to determine whether the month contains activity.
+- Monthly Wrapped data is calculated from existing financial and gamification records and does not require a separate monthly snapshot record.
 
 ---
 
