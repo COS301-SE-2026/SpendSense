@@ -76,6 +76,15 @@ type SettleActionResult = {
   streak?: AdvanceStreakResult;
 };
 
+export type CoinLedgerReconciliation = {
+  profileBalance: number;
+  earned: number;
+  spent: number;
+  adjusted: number;
+  ledgerBalance: number;
+  balanced: boolean;
+};
+
 @Injectable()
 export class RewardService {
   constructor(private readonly notificationsService: NotificationsService) {}
@@ -163,6 +172,51 @@ export class RewardService {
       },
     });
     return { coinBalance: profile.coinBalance };
+  }
+
+  /**
+   * Reconciles the append-only coin ledger with the current profile balance.
+   * This is an internal acceptance/diagnostic check, not a user-facing endpoint.
+   */
+  async reconcileCoinLedger(
+    tx: Prisma.TransactionClient,
+    userId: string,
+  ): Promise<CoinLedgerReconciliation> {
+    const [profile, transactionsByType] = await Promise.all([
+      tx.gamificationProfile.findUniqueOrThrow({
+        where: { userId },
+        select: { coinBalance: true },
+      }),
+      tx.rewardTransaction.groupBy({
+        by: ['type'],
+        where: { userId },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const totals = {
+      earned: 0,
+      spent: 0,
+      adjusted: 0,
+    };
+    for (const transaction of transactionsByType) {
+      const amount = transaction._sum.amount ?? 0;
+      if (transaction.type === RewardTransactionType.EARNED) {
+        totals.earned = amount;
+      } else if (transaction.type === RewardTransactionType.SPENT) {
+        totals.spent = amount;
+      } else if (transaction.type === RewardTransactionType.ADJUSTED) {
+        totals.adjusted = amount;
+      }
+    }
+
+    const ledgerBalance = totals.earned + totals.spent + totals.adjusted;
+    return {
+      profileBalance: profile.coinBalance,
+      ...totals,
+      ledgerBalance,
+      balanced: ledgerBalance === profile.coinBalance,
+    };
   }
 
   async grantXp(

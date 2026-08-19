@@ -19,6 +19,7 @@ type RewardPrismaMock = {
   };
   rewardTransaction: {
     create: PrismaMockMethod;
+    groupBy: PrismaMockMethod;
   };
 };
 
@@ -51,6 +52,7 @@ describe('RewardService', () => {
       },
       rewardTransaction: {
         create: jest.fn<Promise<unknown>, [unknown]>(),
+        groupBy: jest.fn<Promise<unknown>, [unknown]>(),
       },
     };
   });
@@ -246,6 +248,52 @@ describe('RewardService', () => {
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(tx.gamificationProfile.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reconcileCoinLedger', () => {
+    it('reports a balanced ledger with totals separated by transaction type', async () => {
+      tx.gamificationProfile.findUniqueOrThrow.mockResolvedValue({
+        coinBalance: 35,
+      });
+      tx.rewardTransaction.groupBy.mockResolvedValue([
+        { type: RewardTransactionType.EARNED, _sum: { amount: 50 } },
+        { type: RewardTransactionType.SPENT, _sum: { amount: -20 } },
+        { type: RewardTransactionType.ADJUSTED, _sum: { amount: 5 } },
+      ]);
+
+      const result = await service.reconcileCoinLedger(tx as never, userId);
+
+      expect(result).toEqual({
+        profileBalance: 35,
+        earned: 50,
+        spent: -20,
+        adjusted: 5,
+        ledgerBalance: 35,
+        balanced: true,
+      });
+      expect(tx.rewardTransaction.groupBy).toHaveBeenCalledWith({
+        by: ['type'],
+        where: { userId },
+        _sum: { amount: true },
+      });
+    });
+
+    it('reports an imbalanced ledger when the profile balance differs', async () => {
+      tx.gamificationProfile.findUniqueOrThrow.mockResolvedValue({
+        coinBalance: 40,
+      });
+      tx.rewardTransaction.groupBy.mockResolvedValue([
+        { type: RewardTransactionType.EARNED, _sum: { amount: 35 } },
+      ]);
+
+      await expect(
+        service.reconcileCoinLedger(tx as never, userId),
+      ).resolves.toMatchObject({
+        profileBalance: 40,
+        ledgerBalance: 35,
+        balanced: false,
+      });
     });
   });
 
