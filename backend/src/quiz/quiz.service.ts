@@ -275,6 +275,7 @@ export class QuizService {
     authUser: AuthUser,
     sessionId: string,
     dto: SubmitQuizAnswerDto,
+    now = new Date(),
   ) {
     const user = await this.usersService.findOrCreateUser(authUser);
 
@@ -342,7 +343,7 @@ export class QuizService {
       const attemptNumber =
         session.answers.filter((answer) => answer.questionId === question.id)
           .length + 1;
-      const answeredAt = new Date();
+      const answeredAt = now;
 
       await tx.quizSessionAnswer.create({
         data: {
@@ -394,6 +395,8 @@ export class QuizService {
           answersAfter.length,
           user.gamificationProfile?.currentKnowledgeStreak ?? 0,
           user.gamificationProfile?.longestKnowledgeStreak ?? 0,
+          user.gamificationProfile?.lastKnowledgeStreakDate ?? null,
+          now,
         );
       }
 
@@ -449,6 +452,8 @@ export class QuizService {
     answeredAttempts: number,
     previousKnowledgeStreak: number,
     previousLongestKnowledgeStreak: number,
+    lastKnowledgeStreakDate: Date | null,
+    now: Date,
   ) {
     const reward =
       session.type === QuizSessionType.DAILY
@@ -468,12 +473,21 @@ export class QuizService {
       },
     });
     const advancesStreak = session.type === QuizSessionType.DAILY;
+    const today = this.getJohannesburgDateRange(now).start;
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const streakIsCurrent =
+      lastKnowledgeStreakDate?.getTime() === today.getTime();
+    const streakIsConsecutive =
+      lastKnowledgeStreakDate?.getTime() === yesterday.getTime();
+    const streakNeedsReset =
+      advancesStreak && !streakIsCurrent && !streakIsConsecutive;
     const settlement = await this.rewardService.settleAction(tx, {
       userId,
       sourceEventId: event.id,
       coins: { amount: reward.coins, reason: 'Quiz completion reward' },
       xp: { amount: reward.xp },
-      ...(advancesStreak
+      ...(advancesStreak && !streakIsCurrent && !streakNeedsReset
         ? {
             streak: { field: 'currentKnowledgeStreak' as const, advance: true },
           }
@@ -483,10 +497,28 @@ export class QuizService {
         reason: 'Quiz completed',
       },
     });
-    const currentKnowledgeStreak =
-      settlement.streak?.current ?? previousKnowledgeStreak;
+    let streak = settlement.streak;
+    if (streakNeedsReset) {
+      await this.rewardService.advanceStreak(tx, {
+        userId,
+        field: 'currentKnowledgeStreak',
+        advance: false,
+      });
+      streak = await this.rewardService.advanceStreak(tx, {
+        userId,
+        field: 'currentKnowledgeStreak',
+        advance: true,
+      });
+    }
+    if (advancesStreak && !streakIsCurrent) {
+      await tx.gamificationProfile.update({
+        where: { userId },
+        data: { lastKnowledgeStreakDate: today },
+      });
+    }
+    const currentKnowledgeStreak = streak?.current ?? previousKnowledgeStreak;
     const longestKnowledgeStreak =
-      settlement.streak?.longest ?? previousLongestKnowledgeStreak;
+      streak?.longest ?? previousLongestKnowledgeStreak;
     await tx.quizSession.update({
       where: { id: session.id },
       data: {
@@ -506,7 +538,7 @@ export class QuizService {
         previous: previousKnowledgeStreak,
         current: currentKnowledgeStreak,
         longest: longestKnowledgeStreak,
-        advanced: advancesStreak,
+        advanced: advancesStreak && !streakIsCurrent,
       },
     };
   }

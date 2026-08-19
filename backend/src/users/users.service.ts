@@ -59,6 +59,7 @@ const userProfileInclude = {
       longestPaymentStreak: true,
       currentKnowledgeStreak: true,
       longestKnowledgeStreak: true,
+      lastKnowledgeStreakDate: true,
     },
   },
 } satisfies Prisma.UserInclude;
@@ -119,6 +120,7 @@ const userExportSelect = {
       longestPaymentStreak: true,
       currentKnowledgeStreak: true,
       longestKnowledgeStreak: true,
+      lastKnowledgeStreakDate: true,
       createdAt: true,
       updatedAt: true,
     },

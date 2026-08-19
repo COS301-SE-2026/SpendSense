@@ -12,6 +12,7 @@ type MockUser = {
   gamificationProfile: {
     currentKnowledgeStreak: number;
     longestKnowledgeStreak: number;
+    lastKnowledgeStreakDate?: Date | null;
   };
 };
 
@@ -51,6 +52,50 @@ const authUser: AuthUser = {
   email: 'user@example.com',
 };
 
+const completionQuestion = {
+  id: '00000000-0000-4000-8000-000000000001',
+  topic: QuizTopic.CREDIT_SCORE,
+  prompt: 'Credit question',
+  options: [{ key: 'A', text: 'Pay on time' }],
+  correctOptionKey: 'A',
+  explanation: 'Paying on time supports financial health.',
+};
+
+const createCompletionTransaction = (
+  type: QuizSessionType,
+  eventId: string,
+): QuizTransactionMock => ({
+  quizSession: {
+    findFirst: transactionMockMethod().mockResolvedValue({
+      id: 'session-streak',
+      type,
+      topic: type === QuizSessionType.TOPIC ? QuizTopic.CREDIT_SCORE : null,
+      status: QuizSessionStatus.IN_PROGRESS,
+      startedAt: new Date('2026-07-13T08:00:00.000Z'),
+      completedAt: null,
+      score: 0,
+      totalQuestions: 1,
+      coinsAwarded: 0,
+      xpAwarded: 0,
+      answers: [],
+    }),
+    update: transactionMockMethod(),
+  },
+  quizQuestion: {
+    findMany: transactionMockMethod().mockResolvedValue([completionQuestion]),
+    findUnique: transactionMockMethod().mockResolvedValue(completionQuestion),
+  },
+  quizSessionAnswer: { create: transactionMockMethod() },
+  userEvent: {
+    create: transactionMockMethod().mockResolvedValue({ id: eventId }),
+  },
+  gamificationProfile: {
+    upsert: transactionMockMethod(),
+    update: transactionMockMethod(),
+  },
+  rewardTransaction: { create: transactionMockMethod() },
+});
+
 describe('QuizService', () => {
   let service: QuizService;
   let prisma: {
@@ -72,6 +117,7 @@ describe('QuizService', () => {
   };
   let rewardService: {
     settleAction: jest.Mock;
+    advanceStreak: jest.Mock;
   };
 
   beforeEach(() => {
@@ -105,11 +151,13 @@ describe('QuizService', () => {
           gamificationProfile: {
             currentKnowledgeStreak: 3,
             longestKnowledgeStreak: 7,
+            lastKnowledgeStreakDate: new Date('2026-07-12T00:00:00+02:00'),
           },
         }),
     };
     rewardService = {
       settleAction: jest.fn(),
+      advanceStreak: jest.fn(),
     };
 
     service = new QuizService(
@@ -635,10 +683,15 @@ describe('QuizService', () => {
       streak: { current: 4, longest: 7 },
     });
 
-    const result = await service.submitAnswer(authUser, 'session-123', {
-      questionId: question.id,
-      selectedOptionKey: 'A',
-    });
+    const result = await service.submitAnswer(
+      authUser,
+      'session-123',
+      {
+        questionId: question.id,
+        selectedOptionKey: 'A',
+      },
+      new Date('2026-07-13T10:00:00.000Z'),
+    );
 
     expect(result).toMatchObject({
       sessionId: 'session-123',
@@ -780,5 +833,101 @@ describe('QuizService', () => {
       | [unknown, Record<string, unknown>]
       | undefined;
     expect(settleCall?.[1]).not.toHaveProperty('streak');
+  });
+
+  it('does not advance the knowledge streak twice on the same Johannesburg day', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-123',
+      gamificationProfile: {
+        currentKnowledgeStreak: 3,
+        longestKnowledgeStreak: 7,
+        lastKnowledgeStreakDate: new Date('2026-07-13T00:00:00+02:00'),
+      },
+    });
+    const tx = createCompletionTransaction(
+      QuizSessionType.DAILY,
+      'event-same-day',
+    );
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+    rewardService.settleAction.mockResolvedValue({
+      coinBalance: 35,
+      xp: 70,
+      mascotLevel: 1,
+      leveledUp: false,
+    });
+
+    const result = await service.submitAnswer(
+      authUser,
+      'session-streak',
+      { questionId: completionQuestion.id, selectedOptionKey: 'A' },
+      new Date('2026-07-13T18:00:00.000Z'),
+    );
+
+    expect(result.result?.knowledgeStreak).toEqual({
+      previous: 3,
+      current: 3,
+      longest: 7,
+      advanced: false,
+    });
+    expect(rewardService.advanceStreak).not.toHaveBeenCalled();
+    expect(tx.gamificationProfile.update).not.toHaveBeenCalled();
+    const settleCall = rewardService.settleAction.mock.calls[0] as
+      | [unknown, Record<string, unknown>]
+      | undefined;
+    expect(settleCall?.[0]).toBe(tx);
+    expect(settleCall?.[1]).not.toHaveProperty('streak');
+  });
+
+  it('resets the knowledge streak to one after a missed day', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-123',
+      gamificationProfile: {
+        currentKnowledgeStreak: 3,
+        longestKnowledgeStreak: 7,
+        lastKnowledgeStreakDate: new Date('2026-07-10T00:00:00+02:00'),
+      },
+    });
+    const tx = createCompletionTransaction(
+      QuizSessionType.DAILY,
+      'event-gap-day',
+    );
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+    rewardService.settleAction.mockResolvedValue({
+      coinBalance: 35,
+      xp: 70,
+      mascotLevel: 1,
+      leveledUp: false,
+    });
+    rewardService.advanceStreak
+      .mockResolvedValueOnce({ current: 0, longest: 7 })
+      .mockResolvedValueOnce({ current: 1, longest: 7 });
+
+    const result = await service.submitAnswer(
+      authUser,
+      'session-streak',
+      { questionId: completionQuestion.id, selectedOptionKey: 'A' },
+      new Date('2026-07-13T10:00:00.000Z'),
+    );
+
+    expect(result.result?.knowledgeStreak).toEqual({
+      previous: 3,
+      current: 1,
+      longest: 7,
+      advanced: true,
+    });
+    expect(rewardService.advanceStreak).toHaveBeenNthCalledWith(1, tx, {
+      userId: 'user-123',
+      field: 'currentKnowledgeStreak',
+      advance: false,
+    });
+    expect(rewardService.advanceStreak).toHaveBeenNthCalledWith(2, tx, {
+      userId: 'user-123',
+      field: 'currentKnowledgeStreak',
+      advance: true,
+    });
+    expect(tx.gamificationProfile.update).toHaveBeenCalledWith({
+      where: { userId: 'user-123' },
+      data: { lastKnowledgeStreakDate: new Date('2026-07-13T00:00:00+02:00') },
+    });
   });
 });
