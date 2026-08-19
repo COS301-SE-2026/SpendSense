@@ -2,7 +2,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -209,6 +208,7 @@ model User {
   rewardTransactions     RewardTransaction[]
   badges                 UserBadge[]
   quizSessions           QuizSession[]
+  inventoryItems         UserInventoryItem[]
 
   @@index([email])
   @@index([deletedAt])
@@ -448,36 +448,36 @@ model ScoreEvent {
 }
 
 model QuizQuestion {
-  id                String              @id @default(uuid())
-  topic             QuizTopic
-  prompt            String
-  options           Json
-  correctOptionKey  String
-  explanation       String
-  difficulty        Int                 @default(1)
-  isActive          Boolean             @default(true)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  sessionAnswers    QuizSessionAnswer[]
+  id               String              @id @default(uuid())
+  topic            QuizTopic
+  prompt           String
+  options          Json
+  correctOptionKey String
+  explanation      String
+  difficulty       Int                 @default(1)
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  sessionAnswers   QuizSessionAnswer[]
 
   @@index([topic, isActive])
 }
 
 model QuizSession {
-  id                String              @id @default(uuid())
-  userId            String
-  type              QuizSessionType
-  topic             QuizTopic?
-  quizDate          DateTime?
-  status            QuizSessionStatus   @default(IN_PROGRESS)
-  startedAt         DateTime            @default(now())
-  completedAt       DateTime?
-  score             Int                 @default(0)
-  totalQuestions    Int
-  coinsAwarded      Int                 @default(0)
-  xpAwarded         Int                 @default(0)
-  user              User                @relation(fields: [userId], references: [id], onDelete: Restrict)
-  answers           QuizSessionAnswer[]
+  id             String              @id @default(uuid())
+  userId         String
+  type           QuizSessionType
+  topic          QuizTopic?
+  quizDate       DateTime?
+  status         QuizSessionStatus   @default(IN_PROGRESS)
+  startedAt      DateTime            @default(now())
+  completedAt    DateTime?
+  score          Int                 @default(0)
+  totalQuestions Int
+  coinsAwarded   Int                 @default(0)
+  xpAwarded      Int                 @default(0)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  answers        QuizSessionAnswer[]
 
   @@unique([userId, type, quizDate])
   @@index([userId, status])
@@ -485,15 +485,15 @@ model QuizSession {
 }
 
 model QuizSessionAnswer {
-  id                 String        @id @default(uuid())
-  sessionId          String
-  questionId         String
-  selectedOptionKey  String
-  isCorrect          Boolean
-  attemptNumber      Int
-  answeredAt         DateTime      @default(now())
-  session            QuizSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  question           QuizQuestion  @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  id                String       @id @default(uuid())
+  sessionId         String
+  questionId        String
+  selectedOptionKey String
+  isCorrect         Boolean
+  attemptNumber     Int
+  answeredAt        DateTime     @default(now())
+  session           QuizSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question          QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
 
   @@index([sessionId, answeredAt])
   @@index([questionId])
@@ -584,4 +584,36 @@ model UserBadge {
   @@unique([userId, badgeDefinitionId])
   @@index([userId, earnedAt])
   @@index([badgeDefinitionId])
+}
+
+enum CosmeticSlot {
+  HAT
+  ACCESSORY
+}
+
+model CosmeticItem {
+  id             String              @id @default(uuid())
+  code           String              @unique
+  name           String
+  slot           CosmeticSlot
+  cost           Int
+  iconKey        String?
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  inventoryItems UserInventoryItem[]
+
+  @@index([slot, isActive])
+}
+
+model UserInventoryItem {
+  id             String       @id @default(uuid())
+  userId         String
+  cosmeticItemId String
+  purchasedAt    DateTime     @default(now())
+  equipped       Boolean      @default(false)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cosmeticItem   CosmeticItem @relation(fields: [cosmeticItemId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, cosmeticItemId])
+  @@index([userId, equipped])
 }
