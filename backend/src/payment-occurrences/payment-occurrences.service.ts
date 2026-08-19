@@ -3,15 +3,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaymentOccurrenceStatus } from '@prisma/client';
 import { UpcomingOccurrencesDto } from './dto/upcoming-occurrences.dto';
 import {
+  MascotMood,
   Prisma,
   NotificationType,
   PaymentOccurrence,
   UserEventSourceType,
 } from '@prisma/client';
+import { RewardService } from '../rewards/reward.service';
 
 @Injectable()
 export class PaymentOccurrencesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rewardService: RewardService,
+  ) {}
 
   // upcomming list
   async upcoming(userId: string, query: UpcomingOccurrencesDto) {
@@ -255,6 +260,17 @@ export class PaymentOccurrencesService {
           'Payment missed',
           'Your payment was not made, and has been missed.',
         );
+
+        await this.rewardService.advanceStreak(transaction, {
+          userId: occurrence.userId,
+          field: 'currentPaymentStreak',
+          advance: false,
+        });
+        await this.rewardService.setMascotMood(transaction, {
+          userId: occurrence.userId,
+          mood: MascotMood.SAD,
+          reason: 'Payment occurrence missed',
+        });
       });
 
       transitionedCount++;
