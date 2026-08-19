@@ -10,13 +10,14 @@ import {
   QuizSessionStatus,
   QuizSessionType,
   QuizTopic,
-  RewardTransactionType,
   UserEventSourceType,
   UserEventType,
 } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { RewardService } from '../rewards/reward.service';
+import { BadgeEngineService } from '../gamification/badge-engine.service';
 import type { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
 import type { SubmitQuizAnswerDto } from './dto/submit-quiz-answer.dto';
 import {
@@ -38,6 +39,8 @@ export class QuizService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly rewardService: RewardService,
+    private readonly badgeEngineService: BadgeEngineService,
   ) {}
 
   async listTopics() {
@@ -274,6 +277,7 @@ export class QuizService {
     authUser: AuthUser,
     sessionId: string,
     dto: SubmitQuizAnswerDto,
+    now = new Date(),
   ) {
     const user = await this.usersService.findOrCreateUser(authUser);
 
@@ -382,6 +386,7 @@ export class QuizService {
           longest: number;
           advanced: boolean;
         };
+        badgesEarned: string[];
       } | null = null;
 
       if (completed) {
@@ -391,6 +396,7 @@ export class QuizService {
           user.id,
           score,
           answersAfter.length,
+          now,
         );
       }
 
@@ -444,6 +450,7 @@ export class QuizService {
     userId: string,
     score: number,
     answeredAttempts: number,
+    now: Date,
   ) {
     const reward =
       session.type === QuizSessionType.DAILY
@@ -462,52 +469,81 @@ export class QuizService {
         },
       },
     });
+
     const profile = await tx.gamificationProfile.upsert({
       where: { userId },
       update: {},
       create: { userId },
     });
-    const advancesStreak = session.type === QuizSessionType.DAILY;
-    const previousKnowledgeStreak = profile.currentKnowledgeStreak;
-    const currentKnowledgeStreak = advancesStreak
-      ? previousKnowledgeStreak + 1
-      : previousKnowledgeStreak;
-    const longestKnowledgeStreak = Math.max(
-      profile.longestKnowledgeStreak,
-      currentKnowledgeStreak,
-    );
-    const coinBalance = profile.coinBalance + reward.coins;
-    const xp = profile.xp + reward.xp;
 
-    await tx.gamificationProfile.update({
-      where: { id: profile.id },
-      data: {
-        coinBalance,
-        xp,
-        ...(advancesStreak
-          ? { currentKnowledgeStreak, longestKnowledgeStreak }
-          : {}),
-        mascotMood: MascotMood.CELEBRATING,
-      },
+    const isDaily = session.type === QuizSessionType.DAILY;
+    const previousKnowledgeStreak = profile.currentKnowledgeStreak;
+    let currentKnowledgeStreak = previousKnowledgeStreak;
+    let longestKnowledgeStreak = profile.longestKnowledgeStreak;
+    let advancesStreak = false;
+
+    if (isDaily) {
+      const today = this.getJohannesburgDateRange(now).date;
+      const lastStreakDate: Date | null = profile.lastKnowledgeStreakDate;
+      const lastAdvanceDate = lastStreakDate
+        ? this.getJohannesburgDateRange(lastStreakDate).date
+        : null;
+
+      if (lastAdvanceDate !== today) {
+        const daysSinceLastAdvance = lastAdvanceDate
+          ? this.daysBetweenJohannesburgDates(lastAdvanceDate, today)
+          : null;
+        const streakBroken =
+          daysSinceLastAdvance === null || daysSinceLastAdvance > 1;
+
+        if (streakBroken && previousKnowledgeStreak > 0) {
+          await this.rewardService.advanceStreak(tx, {
+            userId,
+            field: 'currentKnowledgeStreak',
+            advance: false,
+          });
+        }
+
+        const streakResult = await this.rewardService.advanceStreak(tx, {
+          userId,
+          field: 'currentKnowledgeStreak',
+          advance: true,
+        });
+        currentKnowledgeStreak = streakResult.current;
+        longestKnowledgeStreak = streakResult.longest;
+        advancesStreak = true;
+
+        await tx.gamificationProfile.update({
+          where: { userId },
+          data: { lastKnowledgeStreakDate: new Date(`${today}T00:00:00.000Z`) },
+        });
+      }
+      // else: same Johannesburg calendar day as the last advance - idempotent, no
+      // change. Defence-in-depth; the daily-quiz unique constraint already prevents
+      // a second daily session the same day in practice.
+    }
+
+    await this.rewardService.settleAction(tx, {
+      userId,
+      sourceEventId: event.id,
+      coins: { amount: reward.coins, reason: 'Quiz completion reward' },
+      xp: { amount: reward.xp },
+      mood: { value: MascotMood.HAPPY, reason: 'Quiz completed' },
     });
+
+    const badgesEarned = await this.badgeEngineService.evaluateQuizBadges(
+      { userId, sourceEventId: event.id },
+      tx,
+    );
+
     await tx.quizSession.update({
       where: { id: session.id },
       data: {
         status: QuizSessionStatus.COMPLETED,
-        completedAt: new Date(),
+        completedAt: now,
         score,
         coinsAwarded: reward.coins,
         xpAwarded: reward.xp,
-      },
-    });
-    await tx.rewardTransaction.create({
-      data: {
-        userId,
-        sourceEventId: event.id,
-        type: RewardTransactionType.EARNED,
-        amount: reward.coins,
-        balanceAfter: coinBalance,
-        reason: 'Quiz completion reward',
       },
     });
 
@@ -522,7 +558,16 @@ export class QuizService {
         longest: longestKnowledgeStreak,
         advanced: advancesStreak,
       },
+      badgesEarned,
     };
+  }
+
+  private daysBetweenJohannesburgDates(earlier: string, later: string): number {
+    const earlierDate = new Date(`${earlier}T00:00:00.000Z`);
+    const laterDate = new Date(`${later}T00:00:00.000Z`);
+    return Math.round(
+      (laterDate.getTime() - earlierDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
   }
 
   private readonly sessionSelect = {

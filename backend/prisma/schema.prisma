@@ -511,6 +511,7 @@ model GamificationProfile {
   longestPaymentStreak   Int        @default(0)
   currentKnowledgeStreak Int        @default(0)
   longestKnowledgeStreak Int        @default(0)
+  lastKnowledgeStreakDate DateTime?
   createdAt              DateTime   @default(now())
   updatedAt              DateTime   @updatedAt
   deletedAt              DateTime?

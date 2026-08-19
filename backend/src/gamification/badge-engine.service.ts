@@ -21,6 +21,10 @@ type ObligationBadgeInput = {
   userId: string;
   sourceEventId: string;
 };
+type QuizBadgeInput = {
+  userId: string;
+  sourceEventId: string;
+};
 type BadgeDefinitionCandidate = {
   id: string;
   code: string;
@@ -105,6 +109,33 @@ export class BadgeEngineService {
       input.userId,
       input.sourceEventId,
       qualifiedBadges,
+      client,
+    );
+  }
+
+  async evaluateQuizBadges(
+    input: QuizBadgeInput,
+    client: Prisma.TransactionClient,
+  ): Promise<string[]> {
+    const badgeDefinitions = await client.badgeDefinition.findMany({
+      where: {
+        isActive: true,
+        NOT: { category: BadgeCategory.DEMO },
+        criteriaType: { in: [] },
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        criteriaType: true,
+        criteriaValue: true,
+        bonusCoins: true,
+      },
+    });
+    return this.awardBadges(
+      input.userId,
+      input.sourceEventId,
+      badgeDefinitions,
       client,
     );
   }
