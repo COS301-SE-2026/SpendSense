@@ -211,6 +211,7 @@ model User {
   rewardTransactions     RewardTransaction[]
   badges                 UserBadge[]
   quizSessions           QuizSession[]
+  inventoryItems         UserInventoryItem[]
 
   @@index([email])
   @@index([deletedAt])
@@ -590,4 +591,36 @@ model UserBadge {
   @@unique([userId, badgeDefinitionId])
   @@index([userId, earnedAt])
   @@index([badgeDefinitionId])
+}
+
+enum CosmeticSlot {
+  HAT
+  ACCESSORY
+}
+
+model CosmeticItem {
+  id             String              @id @default(uuid())
+  code           String              @unique
+  name           String
+  slot           CosmeticSlot
+  cost           Int
+  iconKey        String?
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  inventoryItems UserInventoryItem[]
+
+  @@index([slot, isActive])
+}
+
+model UserInventoryItem {
+  id             String       @id @default(uuid())
+  userId         String
+  cosmeticItemId String
+  purchasedAt    DateTime     @default(now())
+  equipped       Boolean      @default(false)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cosmeticItem   CosmeticItem @relation(fields: [cosmeticItemId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, cosmeticItemId])
+  @@index([userId, equipped])
 }

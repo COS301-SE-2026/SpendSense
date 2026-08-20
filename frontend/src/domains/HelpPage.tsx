@@ -149,12 +149,12 @@ export default function HelpPage(){
 			<SectionLabel>Getting Started</SectionLabel>
 
 			{walkThrough.map((step) => (
-				<CustomCard key={step.title} variant="navyBorder" size="sm" className="flex items-start gap-3">
+				<CustomCard key={step.title} variant="navyBorder" size="sm" className="flex items-start gap-3 dark:border-[#574146] dark:bg-[#171f33]">
 					<HelpIcon tone={step.tone}>{step.icon}</HelpIcon>
 
 					<div className="min-w-0 flex-1">
-						<p className="text-sm font-bold text-[#091828]">{step.title}</p>
-						<p className ="mt-0.5 text-xs text-[#6B6375]">{step.body}</p>
+						<p className="text-sm font-bold text-[#091828] dark:text-[#dae2fd]">{step.title}</p>
+						<p className ="mt-0.5 text-xs text-[#6B6375] dark:text-[#ddbfc5]">{step.body}</p>
 					</div>
 				</CustomCard>
 			))}
@@ -166,7 +166,7 @@ export default function HelpPage(){
 			<SectionLabel className="mt-3">Frequently asked questions</SectionLabel>
 
 			<div className="relative">
-				<Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#6B6375]"/>
+				<Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#6B6375] dark:text-[#a58a90]"/>
 				<CustomInput 
 					value={query}
 					onChange={(e)=> setQuery(e.target.value)}
@@ -177,31 +177,31 @@ export default function HelpPage(){
 			</div>
 
 			{visibleFaqs.length === 0 &&(
-				<p className="text-sm text-[#6B6375]">
+				<p className="text-sm text-[#6B6375] dark:text-[#ddbfc5]">
 					Seems like no questions match your search. Try different words or browse the full list by clearing the search bar.
 				</p>
 			)}
 
-			<CustomCard variant="navyBorder" size="sm" className="p-2">
+			<CustomCard variant="navyBorder" size="sm" className="p-2 dark:border-[#574146] dark:bg-[#171f33]">
 				{visibleFaqs.map((faq)=> {
 					const actualIndex =faqs.indexOf(faq)
 					const isOpen =openIndex === actualIndex
 
 					return(
-						<div key={faq.question} className="border-b border-[#E8E4F4] last:border-b-0">
+						<div key={faq.question} className="border-b border-[#E8E4F4] last:border-b-0 dark:border-[#574146]">
 							<button
 								type="button"
 								onClick={() => setOpenIndex(isOpen ? null: actualIndex)}
 								aria-expanded={isOpen}
 								className="flex w-full items-center gap-3 px-3 py-3 text-left">
 								
-								<span className="flex-1 text-sm font-bold text-[#091828]">{faq.question}</span>
-								<ChevronDown className={`size-4 shrink-0 text-[#6B6375] transition-transform ${isOpen ? "rotate-180" : ""}`}/>
+								<span className="flex-1 text-sm font-bold text-[#091828] dark:text-[#dae2fd]">{faq.question}</span>
+								<ChevronDown className={`size-4 shrink-0 text-[#6B6375] transition-transform dark:text-[#a58a90] ${isOpen ? "rotate-180" : ""}`}/>
 
 							</button>
 
 							{isOpen && (
-								<p className="px-3 pb-3 text-xs leading-relaxed text-[#6B6375]">{faq.answer}</p>
+								<p className="px-3 pb-3 text-xs leading-relaxed text-[#6B6375] dark:text-[#ddbfc5]">{faq.answer}</p>
 							)}
 
 						</div>
@@ -210,8 +210,8 @@ export default function HelpPage(){
 			</CustomCard>
 
 			{/*Score disclaimer*/}
-			<CustomCard variant="navyBorder" size="sm" className="bg-[#FFE9B5]">
-				<p className ="text-xs leading-relaxed text-[#7A5A00]">
+			<CustomCard variant="navyBorder" size="sm" className="bg-[#FFE9B5] dark:border-[#574146] dark:bg-[#3f2e00]">
+				<p className ="text-xs leading-relaxed text-[#7A5A00] dark:text-[#ffdf9b]">
 					<span className="font-bold">A note on the credit score:</span> real credit bureau algorithms are proprietary. SpendSense uses educational approximations based on published consumer guidance, great for learning how scoring behaves, but not the exact formulas any bureau runs. 
 				</p>
 			</CustomCard>
@@ -230,7 +230,7 @@ function SectionLabel({
 	className?: string
 }>) {
 	return(
-		<h2 className={`text-sm font-bold uppercase tracking-wide text-[#6B6375] ${className ?? ""}`}>
+		<h2 className={`text-sm font-bold uppercase tracking-wide text-[#6B6375] dark:text-[#ddbfc5] ${className ?? ""}`}>
 			{children}
 		</h2>
 	)
@@ -245,10 +245,10 @@ function HelpIcon({
 	children: React.ReactNode
 }>) {
 	const toneClass: Record<typeof tone, string> = {
-		pink: "bg-[#FFD8E6] text-[#ac2a5d]",
-		mint:"bg-[#DCEFE8] text-[#091828]",
-		yellow: "bg-[#FFE9B5] text-[#7a5a00]",
-		lilac: "bg-[#E8E4F4] text-[#5b4d8b]",
+		pink: "bg-[#FFD8E6] text-[#ac2a5d] dark:bg-[#ff6b9d]/20 dark:text-[#ff6b9d]",
+		mint:"bg-[#DCEFE8] text-[#091828] dark:bg-[#2d3449] dark:text-[#dae2fd]",
+		yellow: "bg-[#FFE9B5] text-[#7a5a00] dark:bg-[#edc157]/20 dark:text-[#edc157]",
+		lilac: "bg-[#E8E4F4] text-[#5b4d8b] dark:bg-[#9B7EDE]/20 dark:text-[#c5b3f0]",
 	}
 
 	return(

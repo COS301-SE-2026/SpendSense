@@ -29,7 +29,7 @@ export function LongButton({
         primaryMint: "bg-[#72cdbc] text-[#08060d] border-transparent hover:bg-[#65c4b2]",
         primaryYellow: "bg-[#ffdc8a] text-[#08060d] border-transparent hover:bg-[#ffd372]",
         outline: "bg-white text-[#08060d] border-[#0a1929] hover:bg-[#f4f3ec] shadow-[3px_4px_0_#0a1929]",
-        form:"bg-white text-[#787A80] shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none",
+        form:"bg-white text-[#787A80] shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none dark:bg-[#131b2e] dark:text-[#a0aec0] dark:shadow-none",
     }
     const sizeStyles: Record<LongButtoneSize,string> ={
         sm: "h-9 px-5 text-xs",
