@@ -1,140 +1,204 @@
-import { Link, useParams } from "react-router-dom"
-import { MessageCircle, Swords } from "lucide-react"
- 
+import * as React from "react"
+import { Link, useNavigate, useParams } from "react-router-dom"
+import { Award, Flame, Swords, UserMinus } from "lucide-react"
+
 import { CustomCard } from "@/components/ui/CustomCard"
 import { LongButton } from "@/components/common/LongButton"
-import { CustomBadge } from "@/components/common/CustomBadges"
 import { FriendsPageShell } from "@/components/common/FriendsPageShell"
 import { FriendAvatar } from "@/components/common/FriendAvatar"
-import { ActivityRow, type ActivityItem } from "@/components/common/ActivityRow"
-import type { Friend } from "@/components/common/FriendRow"
+import { ScoreTierPill } from "@/components/common/ScoreTierPill"
+import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
+import { useFriendProfile } from "@/hooks/useFriends"
+import { removeFriend } from "@/features/friends/friendsApi"
+import { SCORE_TIER_LABELS } from "@/features/friends/friendsTypes"
 
-//TO DO: replace with a fetch of the friend profile by id.
-//currently not all friends have profiles
-const mockProfiles: Record<string, Friend> = {
-	"alex-r": { id: "alex-r", name: "Alex R.", initials: "AR", tone: "mint", online: true, nearby: true, lastSeen: "Online", score: 742, streakDays: 28, coins: 1250 },
-	"sam-k": { id: "sam-k", name: "Sam K.", initials: "SK", tone: "yellow", online: true, nearby: false, lastSeen: "Online", score: 615, streakDays: 19, coins: 870 },
-	"jordan-l": { id: "jordan-l", name: "Jordan L.", initials: "JL", tone: "blue", online: false, nearby: true, lastSeen: "2m ago", score: 598, streakDays: 12, coins: 980 },
-	"taylor-l": { id: "taylor-l", name: "Taylor L.", initials: "TL", tone: "pink", online: false, nearby: false, lastSeen: "5m ago", score: 520, streakDays: 9, coins: 705 },
-	"casey-p": { id: "casey-p", name: "Casey P.", initials: "CP", tone: "hotpink", online: false, nearby: false, lastSeen: "1h ago", score: 430, streakDays: 4, coins: 610 },
-}
-
-//TODO: replace with that friend's recent activity from the backend.
-const mockRecentActivity: ActivityItem[] = [
-	{ id: "prof-act-1", friendId: "alex-r", name: "Alex", initials: "AR", tone: "mint", action: "Completed quest", detail: "Log an Expense", reward: "+10 XP", rewardTone: "xp", timeAgo: "2m ago", scope: "friends" },
-	{ id: "prof-act-2", friendId: "alex-r", name: "Alex", initials: "AR", tone: "mint", action: "Paid on time", detail: "Water Bill", reward: "+50 coins", rewardTone: "coins", timeAgo: "1h ago", scope: "friends" },
-	{ id: "prof-act-3", friendId: "alex-r", name: "Alex", initials: "AR", tone: "mint", action: "Unlocked badge", detail: "Budget Boss", reward: "+1 badge", rewardTone: "badge", timeAgo: "3h ago", scope: "friends" },
-]
+//GET /friends/:friendId + DELETE /friends/:friendId.
+//public summary only, never their obligations, payments or email.
 
 export default function FriendProfilePage() {
-    const { friendId } = useParams()
-    const friend = friendId ? mockProfiles[friendId] : undefined
-    const activity = mockRecentActivity
+	const { friendId } = useParams()
+	const navigate = useNavigate()
+	const { friend, isLoading, error, notFound, reload } = useFriendProfile(friendId)
 
-    if(!friend){
-        return (
-            <FriendsPageShell title ="Friend Profile">
-                <CustomCard variant="navyBorder" size="md" className="text-center">
-					<p className="text-sm font-bold text-[#091828]">Friend not found</p>
-					<p className="mt-1 text-xs text-[#6B6375]">
-						This profile is not in your friends list yet.
-					</p>
-				</CustomCard>
- 
+	const [confirmingRemove, setConfirmingRemove] = React.useState(false)
+	const [removing, setRemoving] = React.useState(false)
+	const [removeError, setRemoveError] = React.useState<string | null>(null)
+
+	const handleRemove = async () => {
+		if (!friendId) {
+			return
+		}
+		setRemoving(true)
+		setRemoveError(null)
+		try {
+			await removeFriend(friendId)
+			navigate("/friends/list")
+		} catch (err) {
+			setRemoveError(
+				err instanceof Error ? err.message : "Could not remove this friend.",
+			)
+			setRemoving(false)
+		}
+	}
+
+	if (isLoading) {
+		return (
+			<FriendsPageShell title="Friend Profile">
+				<LoadingCard label="Loading profile" />
+			</FriendsPageShell>
+		)
+	}
+
+	if (notFound || !friend) {
+		return (
+			<FriendsPageShell title="Friend Profile">
+				<EmptyCard
+					icon={<UserMinus className="size-5" />}
+					title="Profile not available"
+					description="This person is not on your friends list, so their profile is private."
+				/>
+
 				<LongButton LongVariant="primaryDark" LongSize="md" showArrow={false} asChild>
 					<Link to="/friends/list">Back to friends</Link>
 				</LongButton>
-            </FriendsPageShell>
-        )
-    }
+			</FriendsPageShell>
+		)
+	}
 
-    return (
-		<FriendsPageShell title={friend.name}>
-			<CustomCard variant="navyBorder" size="md" className="bg-[#E8E4F4]">
+	if (error) {
+		return (
+			<FriendsPageShell title="Friend Profile">
+				<ErrorCard message={error} onRetry={reload} />
+			</FriendsPageShell>
+		)
+	}
+
+	return (
+		<FriendsPageShell title={friend.displayName}>
+			<CustomCard
+				variant="navyBorder"
+				size="md"
+				className="bg-[#E8E4F4] dark:bg-[#2d1b2e] dark:border-[#2d3449]"
+			>
 				<div className="flex items-start justify-between gap-3">
 					<FriendAvatar
-						initials={friend.initials}
-						tone={friend.tone}
+						displayName={friend.displayName}
+						avatarUrl={friend.avatarUrl}
 						size="xl"
-						online={friend.online}
 					/>
- 
-					<CustomBadge variant="tier" size="sm">
-						Top 1%
-					</CustomBadge>
+
+					<ScoreTierPill tier={friend.scoreTier} />
 				</div>
- 
-				<p className="mt-3 text-lg font-extrabold text-[#091828]">{friend.name}</p>
-				<p className="text-xs text-[#6B6375]">
-					{friend.online ? "Online now" : `Last seen ${friend.lastSeen}`}
+
+				<p className="mt-3 text-lg font-extrabold text-[#091828] dark:text-white">
+					{friend.displayName}
 				</p>
- 
+				<p className="text-xs text-[#6B6375] dark:text-[#a0aec0]">
+					Public profile - only their tier, streak and badges are shared.
+				</p>
+
 				<div className="mt-4 grid grid-cols-3 gap-2">
-					<ProfileStat label="Score" value={friend.score} />
-					<ProfileStat label="Day Streak" value={friend.streakDays} />
-					<ProfileStat label="Coins" value={friend.coins} />
+					<ProfileStat
+						label="Tier"
+						value={SCORE_TIER_LABELS[friend.scoreTier]}
+					/>
+					<ProfileStat
+						label="Day Streak"
+						value={friend.currentPaymentStreak}
+						icon={<Flame className="size-3.5 text-[#FF6B9D]" />}
+					/>
+					<ProfileStat
+						label="Badges"
+						value={friend.badgeCount}
+						icon={<Award className="size-3.5 text-[#5B4D8B] dark:text-[#ff6b9d]" />}
+					/>
 				</div>
 			</CustomCard>
- 
-			<div className="flex gap-2">
+
+			<LongButton LongVariant="primaryDark" LongSize="md" showArrow={false} asChild>
+				<Link to={`/wagers/new?opponentId=${encodeURIComponent(friend.friendId)}`}>
+					<Swords className="mr-2 size-4" />
+					Challenge {friend.displayName}
+				</Link>
+			</LongButton>
+
+			{removeError && (
+				<p className="text-xs font-semibold text-[#AC2A5D] dark:text-[#ff6b9d]">
+					{removeError}
+				</p>
+			)}
+
+			{confirmingRemove ? (
+				<CustomCard
+					variant="navyBorder"
+					size="sm"
+					className="dark:bg-[#131b2e] dark:border-[#2d3449]"
+				>
+					<p className="text-sm font-bold text-[#091828] dark:text-white">
+						Remove {friend.displayName}?
+					</p>
+					<p className="mt-1 text-xs text-[#6B6375] dark:text-[#a0aec0]">
+						You will both lose access to each other's stats. You can send a new
+						request later.
+					</p>
+
+					<div className="mt-3 flex gap-2">
+						<LongButton
+							LongVariant="outline"
+							LongSize="sm"
+							showArrow={false}
+							fullWidth={false}
+							className="flex-1"
+							disabled={removing}
+							onClick={() => setConfirmingRemove(false)}
+						>
+							Cancel
+						</LongButton>
+
+						<LongButton
+							LongVariant="primaryPinkBorder"
+							LongSize="sm"
+							showArrow={false}
+							fullWidth={false}
+							className="flex-1"
+							disabled={removing}
+							onClick={() => void handleRemove()}
+						>
+							{removing ? "Removing..." : "Remove"}
+						</LongButton>
+					</div>
+				</CustomCard>
+			) : (
 				<LongButton
 					LongVariant="outline"
-					LongSize="sm"
+					LongSize="md"
 					showArrow={false}
-					fullWidth={false}
-					className="flex-1"
+					onClick={() => setConfirmingRemove(true)}
 				>
-                    {/*messaging not necessary but could be cool*/}
-					<MessageCircle className="mr-1 size-4" />
-					Message
+					<UserMinus className="mr-2 size-4" />
+					Remove Friend
 				</LongButton>
- 
-				<LongButton
-					LongVariant="primaryDark"
-					LongSize="sm"
-					showArrow={false}
-					fullWidth={false}
-					className="flex-1"
-					asChild
-				>
-					<Link to="/quests">
-						<Swords className="mr-1 size-4" />
-						Challenge
-					</Link>
-				</LongButton>
-			</div>
- 
-			<CustomCard variant="navyBorder" size="sm">
-				<h2 className="text-base font-extrabold text-[#091828]">Recent Activity</h2>
- 
-				<div className="mt-2 divide-y divide-[#E8EFEC]">
-					{activity.map((item) => (
-						<ActivityRow key={item.id} item={item} showName={false} />
-					))}
-				</div>
-			</CustomCard>
- 
-			<LongButton LongVariant="primaryYellow" LongSize="md" showArrow={false} asChild>
-				<Link to="/friends/activity">View Full Activity</Link>
-			</LongButton>
+			)}
 		</FriendsPageShell>
 	)
 }
- 
+
 function ProfileStat({
 	label,
 	value,
+	icon,
 }: Readonly<{
 	label: string
-	value: number
+	value: string | number
+	icon?: React.ReactNode
 }>) {
 	return (
 		<div className="rounded-xl border-2 border-[#091828] bg-white px-2 py-3 text-center">
-			<p className="text-lg font-extrabold text-[#091828]">{value}</p>
-			<p className="text-[11px] text-[#6B6375]">{label}</p>
+			<p className="flex items-center justify-center gap-1 text-base font-extrabold text-[#091828] dark:text-white">
+				{icon}
+				{value}
+			</p>
+			<p className="text-[11px] text-[#6B6375] dark:text-[#a0aec0]">{label}</p>
 		</div>
 	)
 }
- 
-
-
