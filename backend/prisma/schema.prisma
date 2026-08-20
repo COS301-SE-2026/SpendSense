@@ -173,6 +173,7 @@ enum BadgeCategory {
   STREAK
   OBLIGATION
   SCORE
+  QUIZ
   DEMO
 }
 
@@ -181,6 +182,8 @@ enum BadgeCriteriaType {
   FIRST_ON_TIME_PAYMENT
   PAYMENT_STREAK_COUNT
   SCORE_REACHED
+  QUIZ_COMPLETED_COUNT
+  KNOWLEDGE_STREAK_COUNT
 }
 
 model User {

@@ -4,6 +4,7 @@ import {
   BadgeCriteriaType,
   NotificationType,
   Prisma,
+  QuizSessionStatus,
   UserEventSourceType,
   UserEventType,
 } from '@prisma/client';
@@ -24,6 +25,7 @@ type ObligationBadgeInput = {
 type QuizBadgeInput = {
   userId: string;
   sourceEventId: string;
+  currentKnowledgeStreak: number;
 };
 type BadgeDefinitionCandidate = {
   id: string;
@@ -117,11 +119,22 @@ export class BadgeEngineService {
     input: QuizBadgeInput,
     client: Prisma.TransactionClient,
   ): Promise<string[]> {
+    const completedQuizCount = await client.quizSession.count({
+      where: {
+        userId: input.userId,
+        status: QuizSessionStatus.COMPLETED,
+      },
+    });
     const badgeDefinitions = await client.badgeDefinition.findMany({
       where: {
         isActive: true,
         NOT: { category: BadgeCategory.DEMO },
-        criteriaType: { in: [] },
+        criteriaType: {
+          in: [
+            BadgeCriteriaType.QUIZ_COMPLETED_COUNT,
+            BadgeCriteriaType.KNOWLEDGE_STREAK_COUNT,
+          ],
+        },
       },
       select: {
         id: true,
@@ -132,10 +145,17 @@ export class BadgeEngineService {
         bonusCoins: true,
       },
     });
+    const qualifiedBadges = badgeDefinitions.filter((badge) => {
+      const progress =
+        badge.criteriaType === BadgeCriteriaType.QUIZ_COMPLETED_COUNT
+          ? completedQuizCount
+          : input.currentKnowledgeStreak;
+      return progress >= badge.criteriaValue;
+    });
     return this.awardBadges(
       input.userId,
       input.sourceEventId,
-      badgeDefinitions,
+      qualifiedBadges,
       client,
     );
   }

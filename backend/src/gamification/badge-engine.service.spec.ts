@@ -25,6 +25,9 @@ describe('BadgeEngineService', () => {
     financialObligation: {
       count: jest.Mock;
     };
+    quizSession: {
+      count: jest.Mock;
+    };
     userBadge: {
       findUnique: jest.Mock;
       create: jest.Mock;
@@ -50,6 +53,22 @@ describe('BadgeEngineService', () => {
     criteriaValue: 1,
     bonusCoins: 20,
   };
+  const firstQuizBadge = {
+    id: 'badge-definition-4',
+    code: 'FIRST_QUIZ_COMPLETION',
+    name: 'Quiz Starter',
+    criteriaType: BadgeCriteriaType.QUIZ_COMPLETED_COUNT,
+    criteriaValue: 1,
+    bonusCoins: 15,
+  };
+  const knowledgeStreakBadge = {
+    id: 'badge-definition-5',
+    code: 'THREE_DAY_KNOWLEDGE_STREAK',
+    name: 'Knowledge Builder',
+    criteriaType: BadgeCriteriaType.KNOWLEDGE_STREAK_COUNT,
+    criteriaValue: 3,
+    bonusCoins: 50,
+  };
   beforeEach(() => {
     notificationsService = {
       create: jest.fn().mockResolvedValue({ id: 'notification-1' }),
@@ -62,6 +81,9 @@ describe('BadgeEngineService', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
       financialObligation: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+      quizSession: {
         count: jest.fn().mockResolvedValue(0),
       },
       userBadge: {
@@ -329,5 +351,70 @@ describe('BadgeEngineService', () => {
       transaction,
     );
     expect(result).toEqual(['First Obligation']);
+  });
+  it('awards quiz completion and knowledge streak badges', async () => {
+    transaction.quizSession.count.mockResolvedValue(1);
+    transaction.badgeDefinition.findMany.mockResolvedValue([
+      firstQuizBadge,
+      knowledgeStreakBadge,
+    ]);
+
+    const result = await service.evaluateQuizBadges(
+      {
+        userId: 'user-1',
+        sourceEventId: 'quiz-event-1',
+        currentKnowledgeStreak: 3,
+      },
+      transaction as unknown as Prisma.TransactionClient,
+    );
+
+    expect(transaction.quizSession.count).toHaveBeenCalledWith({
+      where: { userId: 'user-1', status: 'COMPLETED' },
+    });
+    expect(transaction.badgeDefinition.findMany).toHaveBeenCalledWith({
+      where: {
+        isActive: true,
+        NOT: { category: BadgeCategory.DEMO },
+        criteriaType: {
+          in: [
+            BadgeCriteriaType.QUIZ_COMPLETED_COUNT,
+            BadgeCriteriaType.KNOWLEDGE_STREAK_COUNT,
+          ],
+        },
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        criteriaType: true,
+        criteriaValue: true,
+        bonusCoins: true,
+      },
+    });
+    expect(transaction.userBadge.create).toHaveBeenCalledTimes(2);
+    expect(rewardService.grantCoins).toHaveBeenCalledTimes(2);
+    expect(notificationsService.create).toHaveBeenCalledTimes(2);
+    expect(result).toEqual(['Quiz Starter', 'Knowledge Builder']);
+  });
+  it('does not award quiz badges below either threshold', async () => {
+    transaction.quizSession.count.mockResolvedValue(0);
+    transaction.badgeDefinition.findMany.mockResolvedValue([
+      firstQuizBadge,
+      knowledgeStreakBadge,
+    ]);
+
+    const result = await service.evaluateQuizBadges(
+      {
+        userId: 'user-1',
+        sourceEventId: 'quiz-event-1',
+        currentKnowledgeStreak: 2,
+      },
+      transaction as unknown as Prisma.TransactionClient,
+    );
+
+    expect(transaction.userBadge.findUnique).not.toHaveBeenCalled();
+    expect(rewardService.grantCoins).not.toHaveBeenCalled();
+    expect(notificationsService.create).not.toHaveBeenCalled();
+    expect(result).toEqual([]);
   });
 });

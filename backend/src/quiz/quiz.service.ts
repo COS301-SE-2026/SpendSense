@@ -534,10 +534,6 @@ export class QuizService {
     const currentKnowledgeStreak = streak?.current ?? previousKnowledgeStreak;
     const longestKnowledgeStreak =
       streak?.longest ?? previousLongestKnowledgeStreak;
-    const badgesEarned = await this.badgeEngineService.evaluateQuizBadges(
-      { userId, sourceEventId: event.id },
-      tx,
-    );
     await tx.quizSession.update({
       where: { id: session.id },
       data: {
@@ -548,6 +544,10 @@ export class QuizService {
         xpAwarded: reward.xp,
       },
     });
+    const badgesEarned = await this.badgeEngineService.evaluateQuizBadges(
+      { userId, sourceEventId: event.id, currentKnowledgeStreak },
+      tx,
+    );
     return {
       score,
       totalQuestions: session.totalQuestions,
