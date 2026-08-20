@@ -39,9 +39,7 @@ import {
 
 type HubTab = "friends" | "leaderboard" | "wagers"
 
-//friends hub is reachable from the dashboard and from the profile menu; the
-//linking page tags its Link with state so we know where "back" should go and
-//which bottom nav tab to keep highlighted while we're here
+
 type FriendsOrigin = "dashboard" | "profile"
 
 function resolveOrigin(state: unknown): FriendsOrigin {
