@@ -1,62 +1,59 @@
 import { cn } from "@/lib/utils"
+import { initialsFromName } from "@/features/friends/friendsTypes"
 
-export type AvatarTone =
-    | "pink"
-    | "blue"
-    | "yellow"
-    | "slate"
-    | "mint"
-    | "maroon"
-    | "hotpink"
+//friend avatar bubble
 
 type AvatarSize = "sm" | "md" | "lg" | "xl"
 
-const toneStyles: Record<AvatarTone, string> = {
-    pink: "bg-[#FCE0E8] text-[#AC2A5D]",
-    blue: "bg-[#DCE8F7] text-[#1E4FAE]",
-    yellow: "bg-[#FFE7AE] text-[#7A4A00]",
-	slate: "bg-[#D7DEE4] text-[#3E4A55]",
-	mint: "bg-[#DCEFE8] text-[#16635A]",
-    maroon: "bg-[#6E0034] text-[#FFFFFF]",
-	hotpink: "bg-[#FF6B9D] text-[#700034]",
-}
+const tones = [
+	"bg-[#FCE0E8] text-[#AC2A5D] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]",
+	"bg-[#FFE7AE] text-[#7A4A00] dark:bg-[#3f2e00] dark:text-[#ffd166]",
+	"bg-[#D7DEE4] text-[#3E4A55] dark:bg-[#1c263c] dark:text-[#dae2fd]",
+	"bg-[#DCEFE8] text-[#16635A] dark:bg-[#0f4f42] dark:text-[#5eead4]",
+	"bg-[#DCE8F7] text-[#1E4FAE] dark:bg-[#1e293b] dark:text-[#dae2fd]",
+	"bg-[#E8E4F4] text-[#5B4D8B] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]",
+]
 
 const sizeStyles: Record<AvatarSize, string> = {
-    sm: "size-9 text-[11px]",
-    md: "size-11 text-xs",
-    lg: "size-14 text-sm",
-    xl: "size-20 text-xl",
+	sm: "size-9 text-[11px]",
+	md: "size-11 text-xs",
+	lg: "size-14 text-sm",
+	xl: "size-20 text-xl",
 }
 
-const dotStyles: Record<AvatarSize, string>={
-    sm: "size-2.5",
-    md: "size-3",
-    lg: "size-3.5",
-    xl: "size-4",
+//one tone per person, so a friend is the same colour on every page
+function toneForName(displayName: string) {
+	let hash = 0
+	for (let i = 0; i < displayName.length; i += 1) {
+		hash = (hash * 31 + displayName.charCodeAt(i)) % 997
+	}
+	return tones[hash % tones.length]
 }
 
 export function FriendAvatar({
-    initials,
-    tone= "pink",
-    size= "md",
-    online =false,
-    className,
-}: Readonly <{
-    initials: string
-    tone?: AvatarTone
-    size?: AvatarSize
-    online?: boolean
-    className?: string
+	displayName,
+	avatarUrl,
+	size = "md",
+	className,
+}: Readonly<{
+	displayName: string
+	avatarUrl?: string | null
+	size?: AvatarSize
+	className?: string
 }>) {
-    return(
-        <div className={cn("relative shrink-0", className)}>
-            <div className={cn("flex items-center justify-center rounded-full border-2 border-[#091828] font-bold", toneStyles[tone], sizeStyles[size])}>
-                {initials}
-            </div>
+	const base = cn(
+		"flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#091828] font-bold dark:border-[#2d3449]",
+		sizeStyles[size],
+		className,
+	)
 
-            {online && (
-                <span aria-label="Online" className={cn("absolute bottom-0 right-0 rounded-full border-2 border-white bg-[#6FC9B0]", dotStyles[size])}/>
-            )}
-        </div>
-    )
+	if (avatarUrl) {
+		return <img src={avatarUrl} alt={displayName} className={cn(base, "object-cover")} />
+	}
+
+	return (
+		<div className={cn(base, toneForName(displayName))} aria-hidden="true">
+			{initialsFromName(displayName)}
+		</div>
+	)
 }
