@@ -1,159 +1,100 @@
 import * as React from "react"
-import { Link } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import {
+	Users,
 	UserPlus,
 	Trophy,
 	Swords,
-	Activity,
-	Search,
+	ArrowLeft,
 	Medal,
-	Coins,
 	Check,
 	X,
+	Coins,
+	Lock,
 } from "lucide-react"
 
 import { CustomCard } from "@/components/ui/CustomCard"
 import { LongButton } from "@/components/common/LongButton"
-import { FriendAvatar, type AvatarTone } from "@/components/common/FriendAvatar"
-import { ActivityRow, type ActivityItem } from "@/components/common/ActivityRow"
-import { cn } from "@/lib/utils"
 import { BottomNav } from "@/components/common/BottomNav"
+import { FriendAvatar } from "@/components/common/FriendAvatar"
+import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
+import { cn } from "@/lib/utils"
+import { useFriendRequests, useFriends, useFriendsLeaderboard } from "@/hooks/useFriends"
+import { useWagers } from "@/hooks/useWagers"
+import {
+	acceptFriendRequest,
+	declineFriendRequest,
+} from "@/features/friends/friendsApi"
+import {
+	WAGER_TASK_LABELS,
+	type FriendRequestSummary,
+	type FriendSummary,
+	type LeaderboardEntry,
+	type WagerSummary,
+} from "@/features/friends/friendsTypes"
 
-type HubTab = "feed" | "friends" | "leaderboard"
+//UC-A Friends Hub. tabs are Friends | Leaderboard | Wagers per use case -
+//the old "Feed" tab is gone, the activity feed stays reachable at
+///friends/activity but is out of scope for the committed tier
 
-//everything below is mock data for the hub.
-//TO DO: replace each of these with the matching backend call. the shapes are
-//what the cards already expect, so only these consts should need to change.
+type HubTab = "friends" | "leaderboard" | "wagers"
 
-type HubFriend = {
-	id: string
-	name: string
-	initials: string
-	tone: AvatarTone
-	online: boolean
+//friends hub is reachable from the dashboard and from the profile menu; the
+//linking page tags its Link with state so we know where "back" should go and
+//which bottom nav tab to keep highlighted while we're here
+type FriendsOrigin = "dashboard" | "profile"
+
+function resolveOrigin(state: unknown): FriendsOrigin {
+	if (state && typeof state === "object" && (state as { from?: unknown }).from === "profile") {
+		return "profile"
+	}
+	return "dashboard"
 }
-
-type FriendRequest = {
-	id: string
-	name: string
-	initials: string
-	tone: AvatarTone
-	mutualFriends: number
-}
-
-type LeaderboardEntry = {
-	rank: number
-	friendId: string
-	name: string
-	initials: string
-	tone: AvatarTone
-	coins: number
-	isCurrentUser: boolean
-}
-
-type Duel = {
-	id: string
-	opponentId: string
-	opponentName: string
-	initials: string
-	tone: AvatarTone
-	title: string
-	tagline: string
-	prizeCoins: number
-	daysLeft: number
-}
-
-const totalFriends = 23
-const onlineFriends = 12
-
-const mockPreviewFriends: HubFriend[] = [
-	{ id: "alex-r", name: "Alex R.", initials: "AR", tone: "mint", online: true },
-	{ id: "sam-k", name: "Sam K.", initials: "SK", tone: "yellow", online: true },
-	{ id: "jordan-l", name: "Jordan L.", initials: "JL", tone: "blue", online: false },
-	{ id: "taylor-l", name: "Taylor L.", initials: "TL", tone: "pink", online: false },
-]
-
-const mockFriendRequests: FriendRequest[] = [
-	{ id: "req-jamie", name: "Jamie D.", initials: "JD", tone: "blue", mutualFriends: 5 },
-	{ id: "req-morgan", name: "Morgan B.", initials: "MB", tone: "slate", mutualFriends: 3 },
-]
-
-const mockLeaderboard: LeaderboardEntry[] = [
-	{ rank: 1, friendId: "alex-r", name: "Alex R.", initials: "AR", tone: "mint", coins: 1250, isCurrentUser: false },
-	{ rank: 2, friendId: "jordan-l", name: "Jordan L.", initials: "JL", tone: "blue", coins: 980, isCurrentUser: false },
-	{ rank: 3, friendId: "sam-k", name: "Sam K.", initials: "SK", tone: "yellow", coins: 870, isCurrentUser: false },
-	{ rank: 4, friendId: "taylor-l", name: "Taylor L.", initials: "TL", tone: "pink", coins: 705, isCurrentUser: false },
-	{ rank: 5, friendId: "me", name: "You", initials: "RC", tone: "hotpink", coins: 640, isCurrentUser: true },
-]
-
-const mockFeaturedDuel: Duel = {
-	id: "duel-1",
-	opponentId: "sam-k",
-	opponentName: "Sam K.",
-	initials: "SK",
-	tone: "yellow",
-	title: "Challenge Sam",
-	tagline: "Spend less, save more!",
-	prizeCoins: 200,
-	daysLeft: 7,
-}
-
-const mockActivityFeed: ActivityItem[] = [
-	{ id: "act-1", friendId: "alex-r", name: "Alex", initials: "AR", tone: "mint", action: "completed a quest", detail: "Log an Expense", reward: "+10 XP", rewardTone: "xp", timeAgo: "2m ago", scope: "friends" },
-	{ id: "act-2", friendId: "jordan-l", name: "Jordan", initials: "JL", tone: "blue", action: "paid on time", detail: "Electricity Bill", reward: "+50 coins", rewardTone: "coins", timeAgo: "1h ago", scope: "friends" },
-	{ id: "act-3", friendId: "sam-k", name: "Sam", initials: "SK", tone: "yellow", action: "unlocked a badge", detail: "Budget Boss", reward: "+1 badge", rewardTone: "badge", timeAgo: "3h ago", scope: "friends" },
-	{ id: "act-4", friendId: "taylor-l", name: "Taylor", initials: "TL", tone: "pink", action: "completed a challenge", detail: "No Late Payments", reward: "+25 coins", rewardTone: "coins", timeAgo: "5h ago", scope: "friends" },
-	{ id: "act-5", friendId: "casey-p", name: "Casey", initials: "CP", tone: "hotpink", action: "started a challenge", detail: "Save 100", reward: "+0 XP", rewardTone: "xp", timeAgo: "6h ago", scope: "following" },
-	{ id: "act-6", friendId: "morgan-b", name: "Morgan", initials: "MB", tone: "slate", action: "hit a 7 day streak", detail: "Knowledge Streak", reward: "+15 XP", rewardTone: "xp", timeAgo: "8h ago", scope: "following" },
-]
 
 export default function FriendsPage() {
 	const [tab, setTab] = React.useState<HubTab>("friends")
+	const location = useLocation()
+	const navigate = useNavigate()
+	const origin = resolveOrigin(location.state)
+	const backTo = origin === "profile" ? "/profile" : "/domains/dashboard"
 
-	//requests are local state for now so accept / ignore actually does something.
-	//TO DO: swap for a POST to the backend once the endpoint exists.
-	const [requests, setRequests] = React.useState<FriendRequest[]>(mockFriendRequests)
-
-	const respondToRequest = (id: string) => {
-		setRequests((current) => current.filter((r) => r.id !== id))
-	}
-
-	const previewFriends = mockPreviewFriends
-	const remainingFriends = totalFriends - previewFriends.length
-	const podium = mockLeaderboard.slice(0, 3)
-	const featuredDuel = mockFeaturedDuel
+	const { friends, isLoading: friendsLoading, error: friendsError, reload: reloadFriends } =
+		useFriends()
 
 	return (
-		<div className="min-h-screen bg-[#F4FBF7] pb-24">
+		<div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
 			<div className="mx-auto w-full max-w-md px-5 pt-6">
 				<header className="flex items-center gap-3">
-					<Link
-						to="/friends/list"
-						aria-label="Search friends"
-						className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#E3EAE6] shadow-[4px_4px_0_#091828]"
+					<button
+						type="button"
+						aria-label="Back"
+						onClick={() => navigate(backTo)}
+						className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#ff6b9d] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#2d3449] dark:shadow-[4px_4px_0_#060e20]"
 					>
-						<Search className="size-5 text-[#091828]" />
-					</Link>
+						<ArrowLeft className="size-5 text-[#091828] dark:text-[#dae2fd]" />
+					</button>
 
 					<div className="flex flex-1 items-center justify-center">
 						<div
-							className="rounded-full border-2 border-[#091828] bg-white px-6 py-2.5 shadow-[4px_4px_0_#091828]"
+							className="rounded-full border-2 border-[#091828] bg-white px-6 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
 							style={{ transform: "rotate(-3deg)" }}
 						>
-							<h1 className="text-base font-bold text-[#091828]">Friends Hub</h1>
+							<h1 className="text-base font-bold text-[#091828] dark:text-[#091828]">
+								Friends Hub
+							</h1>
 						</div>
 					</div>
 
 					<Link
 						to="/friends/add"
 						aria-label="Add friend"
-						className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828]"
+						className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]"
 					>
-						<UserPlus className="size-5 text-[#6E0034]" />
+						<UserPlus className="size-5 text-[#6E0034] dark:text-[#650030]" />
 					</Link>
 				</header>
 
-				<p className="mt-4 text-center text-sm text-[#6B6375]">
+				<p className="mt-4 text-center text-sm text-[#6B6375] dark:text-[#ddbfc5]">
 					Connect, compete and celebrate together.
 				</p>
 
@@ -161,92 +102,23 @@ export default function FriendsPage() {
 
 				<div className="mt-6 flex flex-col gap-4">
 					{tab === "friends" && (
-						<>
-							<FriendsPreviewCard
-								previewFriends={previewFriends}
-								remaining={remainingFriends}
-							/>
-
-							{requests.length > 0 && (
-								<FriendRequestsCard
-									requests={requests}
-									onRespond={respondToRequest}
-								/>
-							)}
-
-							<LeaderboardPreviewCard podium={podium} />
-
-							<DuelCard duel={featuredDuel} />
-
-							<ActivityPreviewCard />
-						</>
+						<FriendsTab
+							friends={friends}
+							isLoading={friendsLoading}
+							error={friendsError}
+							onRetry={reloadFriends}
+						/>
 					)}
 
-					{tab === "feed" && (
-						<>
-							<ActivityPreviewCard limit={6} />
+					{tab === "leaderboard" && <LeaderboardTab />}
 
-							<LongButton LongVariant="outline" LongSize="md" showArrow={false} asChild>
-								<Link to="/friends/activity">View all activity</Link>
-							</LongButton>
-						</>
-					)}
-
-					{tab === "leaderboard" && (
-						<>
-							<LeaderboardPreviewCard podium={podium} />
-
-							<CustomCard variant="navyBorder" size="sm">
-								<SectionHead
-									title="Friends ranking"
-									to="/friends/leaderboard"
-								/>
-
-								<div className="mt-2 divide-y divide-[#E8EFEC]">
-									{mockLeaderboard.slice(0, 5).map((entry) => (
-										<div
-											key={entry.friendId}
-											className="flex items-center gap-3 py-2.5"
-										>
-											<span className="w-5 shrink-0 text-sm font-extrabold text-[#6B6375]">
-												{entry.rank}
-											</span>
-
-											<FriendAvatar
-												initials={entry.initials}
-												tone={entry.tone}
-												size="sm"
-											/>
-
-											<p
-												className={cn(
-													"min-w-0 flex-1 truncate text-sm font-bold",
-													entry.isCurrentUser
-														? "text-[#AC2A5D]"
-														: "text-[#091828]"
-												)}
-											>
-												{entry.name}
-											</p>
-
-											<span className="flex shrink-0 items-center gap-1 text-sm font-bold text-[#091828]">
-												<Coins className="size-4 text-[#F2BF3C]" />
-												{entry.coins}
-											</span>
-										</div>
-									))}
-								</div>
-							</CustomCard>
-
-							<DuelCard duel={featuredDuel} />
-						</>
-					)}
+					{tab === "wagers" && <WagersTab />}
 
 					<QuickLinksCard />
 				</div>
 			</div>
 
-			<BottomNav active="home" />
+			<BottomNav active={origin === "profile" ? "profile" : "home"} />
 		</div>
 	)
 }
@@ -259,9 +131,9 @@ function HubTabs({
 	onChange: (tab: HubTab) => void
 }>) {
 	const tabs: { key: HubTab; label: string }[] = [
-		{ key: "feed", label: "Feed" },
 		{ key: "friends", label: "Friends" },
 		{ key: "leaderboard", label: "Leaderboard" },
+		{ key: "wagers", label: "Wagers" },
 	]
 
 	return (
@@ -275,7 +147,7 @@ function HubTabs({
 						"flex-1 rounded-full px-3 py-1.5 text-xs font-bold transition",
 						active === t.key
 							? "bg-[#FF6B9D] text-[#6E0034]"
-							: "text-[#6B6375] hover:text-[#091828]"
+							: "text-[#6B6375] hover:text-[#091828] dark:text-[#a0aec0] dark:hover:text-[#dae2fd]",
 					)}
 					aria-pressed={active === t.key}
 				>
@@ -286,118 +158,192 @@ function HubTabs({
 	)
 }
 
-//small heading with a "View all" link, used inside each hub card
-
 function SectionHead({
 	title,
 	meta,
 	to,
+	linkLabel = "View all",
 }: Readonly<{
 	title: string
 	meta?: string
 	to: string
+	linkLabel?: string
 }>) {
 	return (
 		<div className="flex items-baseline justify-between gap-3">
-			<h2 className="text-base font-extrabold text-[#091828]">
+			<h2 className="text-base font-extrabold text-[#091828] dark:text-white">
 				{title}
-				{meta && <span className="ml-1 text-sm font-bold text-[#6B6375]">{meta}</span>}
+				{meta && (
+					<span className="ml-1 text-sm font-bold text-[#6B6375] dark:text-[#a0aec0]">
+						{meta}
+					</span>
+				)}
 			</h2>
 
-			<Link to={to} className="text-xs font-bold text-[#AC2A5D] underline">
-				View all
+			<Link
+				to={to}
+				className="text-xs font-bold text-[#AC2A5D] underline dark:text-[#ff6b9d]"
+			>
+				{linkLabel}
 			</Link>
 		</div>
 	)
 }
 
-function FriendsPreviewCard({
-	previewFriends,
-	remaining,
+
+
+function FriendsTab({
+	friends,
+	isLoading,
+	error,
+	onRetry,
 }: Readonly<{
-	previewFriends: HubFriend[]
-	remaining: number
+	friends: FriendSummary[] | null
+	isLoading: boolean
+	error: string | null
+	onRetry: () => void
 }>) {
+	if (isLoading) {
+		return <LoadingCard label="Loading your friends" />
+	}
+
+	if (error) {
+		return <ErrorCard message={error} onRetry={onRetry} />
+	}
+
+	const list = friends ?? []
+
 	return (
-		<CustomCard variant="navyBorder" size="sm">
-			<SectionHead title="Friends" meta={`(${totalFriends})`} to="/friends/list" />
+		<>
+			{list.length === 0 ? (
+				<EmptyCard
+					icon={<Users className="size-5" />}
+					title="No friends yet"
+					description="Search for someone you know and send them a friend request to get started."
+					action={
+						<LongButton
+							LongVariant="primaryPinkBorder"
+							LongSize="sm"
+							showArrow={false}
+							fullWidth={false}
+							asChild
+						>
+							<Link to="/friends/add">Find friends</Link>
+						</LongButton>
+					}
+				/>
+			) : (
+				<CustomCard variant="navyBorder" size="sm">
+					<SectionHead title="Friends" meta={`(${list.length})`} to="/friends/list" />
 
-			<div className="mt-4 flex items-start justify-between gap-2">
-				{previewFriends.map((friend) => (
-					<Link
-						key={friend.id}
-						to={`/friends/${friend.id}`}
-						className="flex w-14 flex-col items-center gap-1.5"
-					>
-						<FriendAvatar
-							initials={friend.initials}
-							tone={friend.tone}
-							size="lg"
-							online={friend.online}
-						/>
-						<span className="truncate text-[11px] font-semibold text-[#091828]">
-							{friend.name}
-						</span>
-					</Link>
-				))}
+					<div className="mt-4 flex items-start gap-3 overflow-x-auto pb-1">
+						{list.slice(0, 4).map((friend) => (
+							<Link
+								key={friend.friendId}
+								to={`/friends/${friend.friendId}`}
+								className="flex w-14 shrink-0 flex-col items-center gap-1.5"
+							>
+								<FriendAvatar
+									displayName={friend.displayName}
+									avatarUrl={friend.avatarUrl}
+									size="lg"
+								/>
+								<span className="w-full truncate text-center text-[11px] font-semibold text-[#091828] dark:text-white">
+									{friend.displayName}
+								</span>
+							</Link>
+						))}
 
-				{remaining > 0 && (
-					<Link
-						to="/friends/list"
-						className="flex w-14 flex-col items-center gap-1.5"
-					>
-						<div className="flex size-14 items-center justify-center rounded-full border-2 border-dashed border-[#A8B4AE] text-sm font-bold text-[#6B6375]">
-							+{remaining}
-						</div>
-						<span className="text-[11px] font-semibold text-[#6B6375]">More</span>
-					</Link>
-				)}
-			</div>
+						{list.length > 4 && (
+							<Link to="/friends/list" className="flex w-14 shrink-0 flex-col items-center gap-1.5">
+								<div className="flex size-14 items-center justify-center rounded-full border-2 border-dashed border-[#A8B4AE] text-sm font-bold text-[#6B6375] dark:border-[#a0aec0]/40 dark:text-[#a0aec0]">
+									+{list.length - 4}
+								</div>
+								<span className="text-[11px] font-semibold text-[#6B6375] dark:text-[#a0aec0]">
+									More
+								</span>
+							</Link>
+						)}
+					</div>
+				</CustomCard>
+			)}
 
-			<p className="mt-4 text-xs text-[#6B6375]">
-				{onlineFriends} friends online right now.
-			</p>
-		</CustomCard>
+			<FriendRequestsCard />
+		</>
 	)
 }
 
-function FriendRequestsCard({
-	requests,
-	onRespond,
-}: Readonly<{
-	requests: FriendRequest[]
-	onRespond: (id: string) => void
-}>) {
+function FriendRequestsCard() {
+	const { requests, isLoading, error, reload, removeLocally } = useFriendRequests("incoming")
+	const [busyId, setBusyId] = React.useState<string | null>(null)
+	const [actionError, setActionError] = React.useState<string | null>(null)
+
+	const respond = async (request: FriendRequestSummary, accept: boolean) => {
+		setBusyId(request.id)
+		setActionError(null)
+		try {
+			if (accept) {
+				await acceptFriendRequest(request.id)
+			} else {
+				await declineFriendRequest(request.id)
+			}
+			removeLocally(request.id)
+		} catch (err) {
+			setActionError(
+				err instanceof Error ? err.message : "Could not respond to that request.",
+			)
+		} finally {
+			setBusyId(null)
+		}
+	}
+
+	if (isLoading) {
+		return <LoadingCard label="Loading friend requests" />
+	}
+
+	if (error) {
+		return <ErrorCard message={error} onRetry={reload} />
+	}
+
+	const list = requests ?? []
+	if (list.length === 0) {
+		return null
+	}
+
 	return (
 		<CustomCard variant="navyBorder" size="sm">
 			<SectionHead
 				title="Friend Requests"
-				meta={`(${requests.length})`}
+				meta={`(${list.length})`}
 				to="/friends/add"
+				linkLabel="Manage"
 			/>
 
-			<div className="mt-2 divide-y divide-[#E8EFEC]">
-				{requests.map((request) => (
+			{actionError && (
+				<p className="mt-2 text-xs font-semibold text-[#AC2A5D] dark:text-[#ff6b9d]">
+					{actionError}
+				</p>
+			)}
+
+			<div className="mt-2 divide-y divide-[#E8EFEC] dark:divide-[#2d3449]">
+				{list.map((request) => (
 					<div key={request.id} className="flex items-center gap-3 py-3">
-						<FriendAvatar
-							initials={request.initials}
-							tone={request.tone}
-							size="md"
-						/>
+						<FriendAvatar displayName={request.senderDisplayName} size="md" />
 
 						<div className="min-w-0 flex-1">
-							<p className="truncate text-sm font-bold text-[#091828]">
-								{request.name}
+							<p className="truncate text-sm font-bold text-[#091828] dark:text-white">
+								{request.senderDisplayName}
 							</p>
-							<p className="truncate text-xs text-[#6B6375]">
-								{request.mutualFriends} mutual friends
+							<p className="truncate text-xs text-[#6B6375] dark:text-[#a0aec0]">
+								Wants to be friends
 							</p>
 						</div>
 
 						<button
 							type="button"
-							onClick={() => onRespond(request.id)}
-							className="flex shrink-0 items-center gap-1 rounded-full border-2 border-[#091828] bg-[#FF6B9D] px-3 py-1.5 text-xs font-bold text-[#6E0034] shadow-[2px_3px_0_#091828] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+							disabled={busyId === request.id}
+							onClick={() => void respond(request, true)}
+							className="flex shrink-0 items-center gap-1 rounded-full border-2 border-[#091828] bg-[#FF6B9D] px-3 py-1.5 text-xs font-bold text-[#6E0034] shadow-[2px_3px_0_#091828] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50 dark:border-[#2d3449] dark:shadow-[2px_3px_0_#060e20]"
 						>
 							<Check className="size-3.5" />
 							Accept
@@ -405,9 +351,10 @@ function FriendRequestsCard({
 
 						<button
 							type="button"
-							onClick={() => onRespond(request.id)}
-							aria-label={`Ignore request from ${request.name}`}
-							className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-white text-[#6B6375] transition active:translate-x-[2px] active:translate-y-[2px]"
+							disabled={busyId === request.id}
+							onClick={() => void respond(request, false)}
+							aria-label={`Decline request from ${request.senderDisplayName}`}
+							className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-white text-[#6B6375] transition active:translate-x-[2px] active:translate-y-[2px] disabled:opacity-50 dark:border-[#2d3449] dark:bg-[#1c263c] dark:text-[#a0aec0]"
 						>
 							<X className="size-3.5" />
 						</button>
@@ -418,115 +365,173 @@ function FriendRequestsCard({
 	)
 }
 
-function LeaderboardPreviewCard({
-	podium,
-}: Readonly<{
-	podium: LeaderboardEntry[]
-}>) {
-	const podiumStyles = [
-		{ bg: "bg-[#FFE9B5]", icon: "text-[#7A5A00]" },
-		{ bg: "bg-[#E3EAE6]", icon: "text-[#3E4A55]" },
-		{ bg: "bg-[#FCE0E8]", icon: "text-[#AC2A5D]" },
-	]
+
+function LeaderboardTab() {
+	const { entries, isLoading, error, reload } = useFriendsLeaderboard("score")
+
+	if (isLoading) {
+		return <LoadingCard label="Loading the leaderboard" />
+	}
+
+	if (error) {
+		return <ErrorCard message={error} onRetry={reload} />
+	}
+
+	const list = entries ?? []
+	if (list.length === 0) {
+		return (
+			<EmptyCard
+				icon={<Trophy className="size-5" />}
+				title="No leaderboard yet"
+				description="Add a few friends and you will all show up here, ranked side by side."
+			/>
+		)
+	}
 
 	return (
 		<CustomCard variant="navyBorder" size="sm">
-			<SectionHead title="Leaderboards" to="/friends/leaderboard" />
+			<SectionHead title="Friends ranking" to="/friends/leaderboard" />
 
-			<div className="mt-3 rounded-xl border-2 border-[#091828] bg-[#E8E4F4] px-4 py-3">
-				<div className="flex items-center gap-3">
-					<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white">
-						<Trophy className="size-5 text-[#5B4D8B]" />
-					</div>
-					<div className="min-w-0">
-						<p className="text-sm font-bold text-[#5B4D8B]">Global Leaderboard</p>
-						<p className="text-xs text-[#6B6375]">Top savers this month</p>
-					</div>
-				</div>
-			</div>
-
-			<div className="mt-3 grid grid-cols-3 gap-2">
-				{podium.map((entry, index) => (
-					<Link
-						key={entry.friendId}
-						to="/friends/leaderboard"
-						className={cn(
-							"flex flex-col items-center gap-1 rounded-xl border-2 border-[#091828] px-2 py-3",
-							podiumStyles[index].bg
-						)}
-					>
-						<Medal className={cn("size-5", podiumStyles[index].icon)} />
-						<span className="text-xs font-extrabold text-[#091828]">
-							{entry.rank}
-						</span>
-						<span className="truncate text-[11px] font-bold text-[#091828]">
-							{entry.name}
-						</span>
-						<span className="text-[11px] text-[#6B6375]">{entry.coins}</span>
-					</Link>
+			<div className="mt-2 divide-y divide-[#E8EFEC] dark:divide-[#2d3449]">
+				{list.slice(0, 5).map((entry) => (
+					<LeaderboardRow key={entry.userId} entry={entry} />
 				))}
 			</div>
 		</CustomCard>
 	)
 }
 
-function DuelCard({ duel }: Readonly<{ duel: Duel }>) {
+function LeaderboardRow({ entry }: Readonly<{ entry: LeaderboardEntry }>) {
 	return (
-		<CustomCard variant="navyBorder" size="sm">
-			<SectionHead title="Challenges / Duels" to="/quests" />
+		<div
+			className={cn(
+				"flex items-center gap-3 py-2.5",
+				entry.isSelf && "rounded-lg bg-[#FFF1F4] px-2 dark:bg-[#2d1b2e]",
+			)}
+		>
+			<span className="w-5 shrink-0 text-sm font-extrabold text-[#6B6375] dark:text-[#a0aec0]">
+				{entry.rank}
+			</span>
 
-			<div className="mt-3 rounded-xl border-2 border-[#091828] bg-[#FFE9B5] px-4 py-3">
-				<div className="flex items-start gap-3">
-					<FriendAvatar initials={duel.initials} tone={duel.tone} size="md" />
+			<FriendAvatar
+				displayName={entry.displayName}
+				avatarUrl={entry.avatarUrl}
+				size="sm"
+			/>
 
-					<div className="min-w-0 flex-1">
-						<p className="truncate text-sm font-bold text-[#7A5A00]">
-							{duel.title}
-						</p>
-						<p className="truncate text-xs text-[#6B6375]">{duel.tagline}</p>
-					</div>
+			<p
+				className={cn(
+					"min-w-0 flex-1 truncate text-sm font-bold",
+					entry.isSelf
+						? "text-[#AC2A5D] dark:text-[#ff6b9d]"
+						: "text-[#091828] dark:text-white",
+				)}
+			>
+				{entry.isSelf ? "You" : entry.displayName}
+			</p>
 
-					<span className="shrink-0 text-[11px] font-semibold text-[#6B6375]">
-						{duel.daysLeft} days left
-					</span>
-				</div>
+			<span className="shrink-0 text-sm font-bold text-[#091828] dark:text-white">
+				{entry.value}
+			</span>
+		</div>
+	)
+}
 
-				<div className="mt-3 flex items-center gap-3">
-					<span className="flex items-center gap-1 text-sm font-bold text-[#091828]">
-						<Coins className="size-4 text-[#F2BF3C]" />
-						Win {duel.prizeCoins} coins
-					</span>
 
+function WagersTab() {
+	const { wagers, isLoading, error, reload } = useWagers()
+
+	if (isLoading) {
+		return <LoadingCard label="Loading your challenges" />
+	}
+
+	if (error) {
+		return <ErrorCard message={error} onRetry={reload} />
+	}
+
+	const list = wagers ?? []
+	const pending = list.filter((w) => w.status === "PENDING")
+	const active = list.filter((w) => w.status === "ACTIVE")
+
+	if (list.length === 0) {
+		return (
+			<EmptyCard
+				icon={<Swords className="size-5" />}
+				title="No challenges yet"
+				description="Challenge a friend to stake coins on a money habit and see who holds out."
+				action={
 					<LongButton
-						LongVariant="primaryDark"
+						LongVariant="primaryPinkBorder"
 						LongSize="sm"
 						showArrow={false}
 						fullWidth={false}
-						className="ml-auto"
 						asChild
 					>
-						<Link to="/quests">
-							<Swords className="mr-1 size-4" />
-							Start Challenge
-						</Link>
+						<Link to="/wagers/new">Start a challenge</Link>
 					</LongButton>
-				</div>
-			</div>
-		</CustomCard>
+				}
+			/>
+		)
+	}
+
+	return (
+		<>
+			{pending.length > 0 && (
+				<CustomCard variant="navyBorder" size="sm">
+					<SectionHead title="Invites" meta={`(${pending.length})`} to="/wagers" />
+					<div className="mt-2 flex flex-col gap-2">
+						{pending.slice(0, 3).map((wager) => (
+							<WagerMiniRow key={wager.id} wager={wager} />
+						))}
+					</div>
+				</CustomCard>
+			)}
+
+			{active.length > 0 && (
+				<CustomCard variant="navyBorder" size="sm">
+					<SectionHead title="Active" meta={`(${active.length})`} to="/wagers" />
+					<div className="mt-2 flex flex-col gap-2">
+						{active.slice(0, 3).map((wager) => (
+							<WagerMiniRow key={wager.id} wager={wager} />
+						))}
+					</div>
+				</CustomCard>
+			)}
+
+			<LongButton LongVariant="primaryDark" LongSize="md" showArrow={false} asChild>
+				<Link to="/wagers">
+					<Swords className="mr-2 size-4" />
+					View all challenges
+				</Link>
+			</LongButton>
+		</>
 	)
 }
 
-function ActivityPreviewCard({ limit = 3 }: Readonly<{ limit?: number }>) {
-	return (
-		<CustomCard variant="navyBorder" size="sm">
-			<SectionHead title="Activity Feed" to="/friends/activity" />
+function WagerMiniRow({ wager }: Readonly<{ wager: WagerSummary }>) {
+	const opponentName = wager.isCreator ? wager.opponentDisplayName : wager.creatorDisplayName
 
-			<div className="mt-2 divide-y divide-[#E8EFEC]">
-				{mockActivityFeed.slice(0, limit).map((item) => (
-					<ActivityRow key={item.id} item={item} />
-				))}
+	return (
+		<Link
+			to={`/wagers/${wager.id}`}
+			className="flex items-center gap-3 rounded-xl border-2 border-[#091828] bg-[#FFE9B5] px-3 py-2.5 dark:border-[#2d3449] dark:bg-[#3f2e00]"
+		>
+			<FriendAvatar displayName={opponentName} size="sm" />
+
+			<div className="min-w-0 flex-1">
+				<p className="truncate text-sm font-bold text-[#091828] dark:text-[#ffd166]">
+					vs {opponentName}
+				</p>
+				<p className="truncate text-xs text-[#6B6375] dark:text-[#ffdf9b]">
+					{WAGER_TASK_LABELS[wager.taskType]}
+				</p>
 			</div>
-		</CustomCard>
+
+			<span className="flex shrink-0 items-center gap-1 text-sm font-bold text-[#091828] dark:text-[#ffd166]">
+				<Coins className="size-4 text-[#F2BF3C]" />
+				{wager.stakeAmount}
+			</span>
+		</Link>
 	)
 }
 
@@ -537,36 +542,46 @@ function QuickLinksCard() {
 			to: "/friends/leaderboard",
 			icon: <Trophy className="size-4" />,
 			title: "View leaderboard",
-			description: "See global and friends rankings",
-			tone: "bg-[#FFE9B5] text-[#7A5A00]",
+			description: "See how you rank against your friends",
+			tone: "bg-[#FFE9B5] text-[#7A5A00] dark:bg-[#3f2e00] dark:text-[#ffd166]",
 		},
 		{
 			to: "/friends/add",
 			icon: <UserPlus className="size-4" />,
-			title: "Open friend requests",
-			description: "Accept or ignore requests",
-			tone: "bg-[#FCE0E8] text-[#AC2A5D]",
+			title: "Add a friend",
+			description: "Search and send friend requests",
+			tone: "bg-[#FCE0E8] text-[#AC2A5D] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]",
 		},
 		{
-			to: "/quests",
+			to: "/wagers/new",
 			icon: <Swords className="size-4" />,
 			title: "Start a challenge",
-			description: "Compete and earn rewards",
-			tone: "bg-[#DCEFE8] text-[#16635A]",
+			description: "Stake coins on a money habit",
+			tone: "bg-[#DCEFE8] text-[#16635A] dark:bg-[#0f4f42] dark:text-[#5eead4]",
 		},
 		{
-			to: "/friends/activity",
-			icon: <Activity className="size-4" />,
-			title: "View friends activity",
-			description: "See active duels and results",
-			tone: "bg-[#E8E4F4] text-[#5B4D8B]",
+			to: "/wagers",
+			icon: <Medal className="size-4" />,
+			title: "View challenges",
+			description: "Invites, active wagers and results",
+			tone: "bg-[#E8E4F4] text-[#5B4D8B] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]",
 		},
-		
+		{
+			to: "/settings/preferences",
+			icon: <Lock className="size-4" />,
+			title: "Manage privacy",
+			description: "Friends only ever see your public stats",
+			tone: "bg-[#D7DEE4] text-[#3E4A55] dark:bg-[#1c263c] dark:text-[#dae2fd]",
+		},
 	]
 
 	return (
-		<CustomCard variant="navyBorder" size="sm" className="border-dashed">
-			<h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[#AC2A5D]">
+		<CustomCard
+			variant="navyBorder"
+			size="sm"
+			className={"border-dashed"}
+		>
+			<h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[#AC2A5D] dark:text-[#ff6b9d]">
 				From the hub you can also
 			</h2>
 
@@ -576,17 +591,17 @@ function QuickLinksCard() {
 						<div
 							className={cn(
 								"flex size-8 shrink-0 items-center justify-center rounded-full",
-								link.tone
+								link.tone,
 							)}
 						>
 							{link.icon}
 						</div>
 
 						<div className="min-w-0 flex-1">
-							<p className="truncate text-sm font-bold text-[#091828]">
+							<p className="truncate text-sm font-bold text-[#091828] dark:text-white">
 								{link.title}
 							</p>
-							<p className="truncate text-xs text-[#6B6375]">
+							<p className="truncate text-xs text-[#6B6375] dark:text-[#a0aec0]">
 								{link.description}
 							</p>
 						</div>
