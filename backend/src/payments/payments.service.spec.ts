@@ -17,6 +17,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LogPaymentDto } from './dto/log-payment.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BadgeEngineService } from '../gamification/badge-engine.service';
+import { RewardService } from '../rewards/reward.service';
 
 // to run the tests in this file by itself: npm test -- payments.service.spec.ts
 type PrismaMockMethod = jest.Mock<Promise<unknown>, [unknown]>;
@@ -224,6 +225,7 @@ describe('PaymentsService', () => {
           provide: BadgeEngineService,
           useValue: mockBadgeEngineService,
         },
+        RewardService,
       ],
     }).compile();
 
