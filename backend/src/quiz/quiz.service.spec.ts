@@ -145,6 +145,7 @@ describe('QuizService', () => {
     quizSession: {
       findFirst: jest.Mock<Promise<unknown>, [Prisma.QuizSessionFindFirstArgs]>;
       create: jest.Mock<Promise<unknown>, [Prisma.QuizSessionCreateArgs]>;
+      update: jest.Mock<Promise<unknown>, [Prisma.QuizSessionUpdateArgs]>;
     };
     $transaction: jest.Mock<Promise<unknown>, [QuizTransactionCallback]>;
   };
@@ -175,6 +176,9 @@ describe('QuizService', () => {
           .mockResolvedValue(null),
         create: jest
           .fn<Promise<unknown>, [Prisma.QuizSessionCreateArgs]>()
+          .mockResolvedValue(null),
+        update: jest
+          .fn<Promise<unknown>, [Prisma.QuizSessionUpdateArgs]>()
           .mockResolvedValue(null),
       },
       $transaction: jest
@@ -441,13 +445,22 @@ describe('QuizService', () => {
         remainingQueue: 5,
       },
       currentQuestion: {
-        id: 'budgeting-1',
-        topic: QuizTopic.BUDGETING,
+        id: expect.any(String) as string,
+        topic: expect.any(String) as QuizTopic,
       },
       rewardPreview: { xp: 50, coins: 25 },
     });
     expect(result.currentQuestion).not.toHaveProperty('correctOptionKey');
-    expect(prisma.quizSession.create).toHaveBeenCalled();
+    const createArgs = prisma.quizSession.create.mock.calls[0]?.[0] as
+      | { data: { questionIds?: string[] } }
+      | undefined;
+    const createdQuestionIds = createArgs?.data.questionIds;
+    expect(createdQuestionIds).toEqual(expect.any(Array));
+    if (!createdQuestionIds) {
+      throw new Error('Expected the created session to persist question IDs');
+    }
+    expect(createdQuestionIds).toHaveLength(5);
+    expect(new Set(createdQuestionIds).size).toBe(5);
   });
 
   it('resumes an existing active topic session instead of creating another', async () => {
@@ -480,6 +493,96 @@ describe('QuizService', () => {
 
     expect(result.id).toBe('topic-session-123');
     expect(prisma.quizSession.create).not.toHaveBeenCalled();
+  });
+
+  it('changes the selected pool when random ordering changes', async () => {
+    prisma.quizQuestion.findMany.mockResolvedValue(
+      Array.from({ length: 6 }, (_, index) => ({
+        id: `question-${index + 1}`,
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: `Question ${index + 1}`,
+        options: [{ key: 'A', text: 'Answer' }],
+      })),
+    );
+    const randomSpy = jest.spyOn(Math, 'random');
+    const selectQuestionPool = async (
+      dto: CreateQuizSessionDto,
+    ): Promise<{ id: string }[]> =>
+      await (
+        service as unknown as {
+          selectQuestionPool: (
+            input: CreateQuizSessionDto,
+          ) => Promise<{ id: string }[]>;
+        }
+      ).selectQuestionPool(dto);
+
+    try {
+      randomSpy.mockReturnValue(0);
+      const firstPool = await selectQuestionPool({
+        type: QuizSessionType.TOPIC,
+        topic: QuizTopic.CREDIT_SCORE,
+      });
+      randomSpy.mockReturnValue(0.999);
+      const secondPool = await selectQuestionPool({
+        type: QuizSessionType.TOPIC,
+        topic: QuizTopic.CREDIT_SCORE,
+      });
+
+      expect(firstPool).toHaveLength(5);
+      expect(new Set(firstPool.map((question) => question.id)).size).toBe(5);
+      expect(secondPool.map((question) => question.id)).not.toEqual(
+        firstPool.map((question) => question.id),
+      );
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
+  it('resumes an existing session from its persisted question order', async () => {
+    prisma.quizSession.findFirst.mockResolvedValue({
+      id: 'persisted-session',
+      type: QuizSessionType.TOPIC,
+      topic: QuizTopic.CREDIT_SCORE,
+      status: QuizSessionStatus.IN_PROGRESS,
+      questionIds: ['credit-2', 'credit-1'],
+      startedAt: new Date('2026-07-13T08:00:00.000Z'),
+      completedAt: null,
+      score: 0,
+      totalQuestions: 2,
+      coinsAwarded: 0,
+      xpAwarded: 0,
+      answers: [],
+    });
+    prisma.quizQuestion.findMany.mockResolvedValue([
+      {
+        id: 'credit-1',
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: 'First credit question',
+        options: [{ key: 'A', text: 'Pay on time' }],
+      },
+      {
+        id: 'credit-2',
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: 'Second credit question',
+        options: [{ key: 'A', text: 'Check reports' }],
+      },
+    ]);
+
+    const result = await service.createOrResumeSession(authUser, {
+      type: QuizSessionType.TOPIC,
+      topic: QuizTopic.CREDIT_SCORE,
+    });
+
+    expect(result.currentQuestion?.id).toBe('credit-2');
+    expect(prisma.quizQuestion.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['credit-2', 'credit-1'] } },
+      select: {
+        id: true,
+        topic: true,
+        prompt: true,
+        options: true,
+      },
+    });
   });
 
   it('rejects a completed daily session for the current date', async () => {

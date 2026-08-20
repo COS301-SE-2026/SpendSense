@@ -473,6 +473,7 @@ model QuizSession {
   completedAt    DateTime?
   score          Int                 @default(0)
   totalQuestions Int
+  questionIds    String[]           @default([])
   coinsAwarded   Int                 @default(0)
   xpAwarded      Int                 @default(0)
   user           User                @relation(fields: [userId], references: [id], onDelete: Restrict)

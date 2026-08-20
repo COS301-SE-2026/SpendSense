@@ -215,7 +215,13 @@ export class QuizService {
     );
 
     if (existingSession?.status === QuizSessionStatus.IN_PROGRESS) {
-      const questions = await this.selectQuestionPool(dto);
+      const questions = await this.getSessionQuestions(existingSession, dto);
+      if ((existingSession.questionIds ?? []).length === 0) {
+        await this.prisma.quizSession.update({
+          where: { id: existingSession.id },
+          data: { questionIds: questions.map((question) => question.id) },
+        });
+      }
       return this.toSessionResponse(existingSession, questions);
     }
 
@@ -226,7 +232,11 @@ export class QuizService {
       throw new ConflictException('The daily quiz is already completed today');
     }
 
-    const questions = await this.selectQuestionPool(dto);
+    const questions = await this.selectQuestionPool(
+      dto,
+      this.prisma,
+      dto.type === QuizSessionType.DAILY ? dateRange.date : undefined,
+    );
 
     if (questions.length === 0) {
       throw new NotFoundException('No active questions are available');
@@ -241,6 +251,7 @@ export class QuizService {
           ? { quizDate: dateRange.start }
           : {}),
         totalQuestions: questions.length,
+        questionIds: questions.map((question) => question.id),
       },
       select: this.sessionSelect,
     });
@@ -262,7 +273,7 @@ export class QuizService {
       throw new NotFoundException('Quiz session not found');
     }
 
-    const questions = await this.selectQuestionPool({
+    const questions = await this.getSessionQuestions(session, {
       type: session.type,
       ...(session.topic ? { topic: session.topic } : {}),
     });
@@ -298,7 +309,8 @@ export class QuizService {
         throw new ConflictException('Quiz session is already completed');
       }
 
-      const questions = await this.selectQuestionPool(
+      const questions = await this.getSessionQuestions(
+        session,
         {
           type: session.type,
           ...(session.topic ? { topic: session.topic } : {}),
@@ -563,11 +575,13 @@ export class QuizService {
     id: true,
     type: true,
     topic: true,
+    quizDate: true,
     status: true,
     startedAt: true,
     completedAt: true,
     score: true,
     totalQuestions: true,
+    questionIds: true,
     coinsAwarded: true,
     xpAwarded: true,
     answers: {
@@ -605,6 +619,7 @@ export class QuizService {
   private async selectQuestionPool(
     dto: CreateQuizSessionDto,
     client: PrismaService | Prisma.TransactionClient = this.prisma,
+    seed?: string,
   ) {
     const questions = await client.quizQuestion.findMany({
       where: {
@@ -620,39 +635,67 @@ export class QuizService {
       },
     });
 
-    if (dto.type === QuizSessionType.TOPIC) {
-      return questions.slice(0, 5);
+    return this.shuffleQuestions(questions, seed).slice(0, 5);
+  }
+
+  private async getSessionQuestions(
+    session: { questionIds?: string[]; quizDate?: Date | null },
+    dto: CreateQuizSessionDto,
+    client: PrismaService | Prisma.TransactionClient = this.prisma,
+  ) {
+    const questionIds = session.questionIds ?? [];
+    if (questionIds.length > 0) {
+      const questions = await client.quizQuestion.findMany({
+        where: { id: { in: questionIds } },
+        select: {
+          id: true,
+          topic: true,
+          prompt: true,
+          options: true,
+        },
+      });
+      const questionsById = new Map(
+        questions.map((question) => [question.id, question]),
+      );
+      return questionIds.flatMap((questionId) => {
+        const question = questionsById.get(questionId);
+        return question ? [question] : [];
+      });
     }
 
-    const questionsByTopic = new Map<QuizTopic, typeof questions>();
-    for (const question of questions) {
-      const topicQuestions = questionsByTopic.get(question.topic) ?? [];
-      topicQuestions.push(question);
-      questionsByTopic.set(question.topic, topicQuestions);
-    }
+    const dailySeed =
+      dto.type === QuizSessionType.DAILY && session.quizDate
+        ? this.getJohannesburgDateRange(session.quizDate).date
+        : undefined;
+    return this.selectQuestionPool(dto, client, dailySeed);
+  }
 
-    const selectedQuestions: typeof questions = [];
-    const topicQueues = [...questionsByTopic.values()];
-    let questionIndex = 0;
-
-    while (
-      selectedQuestions.length < 5 &&
-      topicQueues.some(
-        (topicQuestions) => questionIndex < topicQuestions.length,
-      )
-    ) {
-      for (const topicQuestions of topicQueues) {
-        const question = topicQuestions[questionIndex];
-
-        if (question && selectedQuestions.length < 5) {
-          selectedQuestions.push(question);
-        }
+  private shuffleQuestions<T>(questions: T[], seed?: string): T[] {
+    const shuffled = [...questions];
+    let random = Math.random;
+    if (seed) {
+      let hash = 2166136261;
+      for (const character of seed) {
+        hash ^= character.charCodeAt(0);
+        hash = Math.imul(hash, 16777619);
       }
-
-      questionIndex += 1;
+      random = () => {
+        hash += hash << 13;
+        hash ^= hash >>> 7;
+        hash += hash << 3;
+        hash ^= hash >>> 17;
+        hash += hash << 5;
+        return (hash >>> 0) / 4294967296;
+      };
     }
-
-    return selectedQuestions;
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(random() * (index + 1));
+      [shuffled[index], shuffled[randomIndex]] = [
+        shuffled[randomIndex],
+        shuffled[index],
+      ];
+    }
+    return shuffled;
   }
 
   private toSessionResponse(
