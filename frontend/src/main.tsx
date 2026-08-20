@@ -19,6 +19,9 @@ import FriendsListPage from './domains/FriendsListPage'
 import AddFriendPage from './domains/AddFriendPage'
 import FriendProfilePage from './domains/FriendProfilePage'
 import FriendActivityPage from './domains/FriendActivityPage'
+import WagersPage from './domains/WagersPage'
+import NewWagerPage from './domains/NewWagerPage'
+import WagerDetailPage from './domains/WagerDetailPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import InsightsPage from './domains/InsightsPage.tsx'
 import ProfilePage from './domains/ProfilePage.tsx'
@@ -79,6 +82,9 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
           <Route path="/friends/activity" element={<FriendActivityPage/>}/>
           <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
+          <Route path="/wagers" element={<WagersPage/>}/>
+          <Route path="/wagers/new" element={<NewWagerPage/>}/>
+          <Route path="/wagers/:wagerId" element={<WagerDetailPage/>}/>
           <Route path="/mascot" element={<MascotPage/>}/>
           <Route path="/wrapped" element={<WrappedPage/>}/>
           <Route path="/settings" element={<SettingsPage/>}/>
