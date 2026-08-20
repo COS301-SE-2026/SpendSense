@@ -28,14 +28,14 @@ export function CreditStatsSection({
 
     return (
 
-        <CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
+        <CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#131b2e] dark:shadow-lg dark:shadow-black/20">
 
             <div className="text-center">
-                <p className="text-xs font-bold uppercase tracking-wide text-[#6b6375]">
+                <p className="text-xs font-bold uppercase tracking-wide text-[#6b6375] dark:text-[#a0aec0]">
                     Score Tier
                 </p>
 
-                <h2 className="mt-1 text-2xl font-extrabold text-[#091828]">
+                <h2 className="mt-1 text-2xl font-extrabold text-[#091828] dark:text-white">
                     {scoreTier}
                 </h2>
 
@@ -52,12 +52,12 @@ export function CreditStatsSection({
 
 function CredtiStatsBox({ label, value }: { label: string, value: string | number }) {
     return (
-        <div className="rounded-2xl bg-[#F4FBF7] px-3 py-4 text-center ">
-            <p className="text-lg font-extrabold text-[#091828]">
+        <div className="rounded-2xl bg-[#F4FBF7] px-3 py-4 text-center dark:bg-[#1c263c]">
+            <p className="text-lg font-extrabold text-[#091828] dark:text-white">
                 {value}
             </p>
 
-            <p className="mt-1 text-[11px] font-semibold text-[#6b6375]">
+            <p className="mt-1 text-[11px] font-semibold text-[#6b6375] dark:text-[#a0aec0]">
                 {label}
             </p>
         </div>

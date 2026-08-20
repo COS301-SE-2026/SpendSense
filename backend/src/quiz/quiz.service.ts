@@ -10,12 +10,13 @@ import {
   QuizSessionStatus,
   QuizSessionType,
   QuizTopic,
-  RewardTransactionType,
   UserEventSourceType,
   UserEventType,
 } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
+import { BadgeEngineService } from '../gamification/badge-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RewardService } from '../rewards/reward.service';
 import { UsersService } from '../users/users.service';
 import type { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
 import type { SubmitQuizAnswerDto } from './dto/submit-quiz-answer.dto';
@@ -38,6 +39,8 @@ export class QuizService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly rewardService: RewardService,
+    private readonly badgeEngineService: BadgeEngineService,
   ) {}
 
   async listTopics() {
@@ -212,7 +215,13 @@ export class QuizService {
     );
 
     if (existingSession?.status === QuizSessionStatus.IN_PROGRESS) {
-      const questions = await this.selectQuestionPool(dto);
+      const questions = await this.getSessionQuestions(existingSession, dto);
+      if ((existingSession.questionIds ?? []).length === 0) {
+        await this.prisma.quizSession.update({
+          where: { id: existingSession.id },
+          data: { questionIds: questions.map((question) => question.id) },
+        });
+      }
       return this.toSessionResponse(existingSession, questions);
     }
 
@@ -223,7 +232,11 @@ export class QuizService {
       throw new ConflictException('The daily quiz is already completed today');
     }
 
-    const questions = await this.selectQuestionPool(dto);
+    const questions = await this.selectQuestionPool(
+      dto,
+      this.prisma,
+      dto.type === QuizSessionType.DAILY ? dateRange.date : undefined,
+    );
 
     if (questions.length === 0) {
       throw new NotFoundException('No active questions are available');
@@ -238,6 +251,7 @@ export class QuizService {
           ? { quizDate: dateRange.start }
           : {}),
         totalQuestions: questions.length,
+        questionIds: questions.map((question) => question.id),
       },
       select: this.sessionSelect,
     });
@@ -259,7 +273,7 @@ export class QuizService {
       throw new NotFoundException('Quiz session not found');
     }
 
-    const questions = await this.selectQuestionPool({
+    const questions = await this.getSessionQuestions(session, {
       type: session.type,
       ...(session.topic ? { topic: session.topic } : {}),
     });
@@ -274,6 +288,7 @@ export class QuizService {
     authUser: AuthUser,
     sessionId: string,
     dto: SubmitQuizAnswerDto,
+    now = new Date(),
   ) {
     const user = await this.usersService.findOrCreateUser(authUser);
 
@@ -294,7 +309,8 @@ export class QuizService {
         throw new ConflictException('Quiz session is already completed');
       }
 
-      const questions = await this.selectQuestionPool(
+      const questions = await this.getSessionQuestions(
+        session,
         {
           type: session.type,
           ...(session.topic ? { topic: session.topic } : {}),
@@ -341,7 +357,7 @@ export class QuizService {
       const attemptNumber =
         session.answers.filter((answer) => answer.questionId === question.id)
           .length + 1;
-      const answeredAt = new Date();
+      const answeredAt = now;
 
       await tx.quizSessionAnswer.create({
         data: {
@@ -382,6 +398,7 @@ export class QuizService {
           longest: number;
           advanced: boolean;
         };
+        badgesEarned: string[];
       } | null = null;
 
       if (completed) {
@@ -391,6 +408,10 @@ export class QuizService {
           user.id,
           score,
           answersAfter.length,
+          user.gamificationProfile?.currentKnowledgeStreak ?? 0,
+          user.gamificationProfile?.longestKnowledgeStreak ?? 0,
+          user.gamificationProfile?.lastKnowledgeStreakDate ?? null,
+          now,
         );
       }
 
@@ -444,6 +465,10 @@ export class QuizService {
     userId: string,
     score: number,
     answeredAttempts: number,
+    previousKnowledgeStreak: number,
+    previousLongestKnowledgeStreak: number,
+    lastKnowledgeStreakDate: Date | null,
+    now: Date,
   ) {
     const reward =
       session.type === QuizSessionType.DAILY
@@ -462,55 +487,67 @@ export class QuizService {
         },
       },
     });
-    const profile = await tx.gamificationProfile.upsert({
-      where: { userId },
-      update: {},
-      create: { userId },
-    });
     const advancesStreak = session.type === QuizSessionType.DAILY;
-    const previousKnowledgeStreak = profile.currentKnowledgeStreak;
-    const currentKnowledgeStreak = advancesStreak
-      ? previousKnowledgeStreak + 1
-      : previousKnowledgeStreak;
-    const longestKnowledgeStreak = Math.max(
-      profile.longestKnowledgeStreak,
-      currentKnowledgeStreak,
-    );
-    const coinBalance = profile.coinBalance + reward.coins;
-    const xp = profile.xp + reward.xp;
-
-    await tx.gamificationProfile.update({
-      where: { id: profile.id },
-      data: {
-        coinBalance,
-        xp,
-        ...(advancesStreak
-          ? { currentKnowledgeStreak, longestKnowledgeStreak }
-          : {}),
-        mascotMood: MascotMood.CELEBRATING,
+    const today = this.getJohannesburgDateRange(now).start;
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const streakIsCurrent =
+      lastKnowledgeStreakDate?.getTime() === today.getTime();
+    const streakIsConsecutive =
+      lastKnowledgeStreakDate?.getTime() === yesterday.getTime();
+    const streakNeedsReset =
+      advancesStreak && !streakIsCurrent && !streakIsConsecutive;
+    const settlement = await this.rewardService.settleAction(tx, {
+      userId,
+      sourceEventId: event.id,
+      coins: { amount: reward.coins, reason: 'Quiz completion reward' },
+      xp: { amount: reward.xp },
+      ...(advancesStreak && !streakIsCurrent && !streakNeedsReset
+        ? {
+            streak: { field: 'currentKnowledgeStreak' as const, advance: true },
+          }
+        : {}),
+      mood: {
+        value: MascotMood.HAPPY,
+        reason: 'Quiz completed',
       },
     });
+    let streak = settlement.streak;
+    if (streakNeedsReset) {
+      await this.rewardService.advanceStreak(tx, {
+        userId,
+        field: 'currentKnowledgeStreak',
+        advance: false,
+      });
+      streak = await this.rewardService.advanceStreak(tx, {
+        userId,
+        field: 'currentKnowledgeStreak',
+        advance: true,
+      });
+    }
+    if (advancesStreak && !streakIsCurrent) {
+      await tx.gamificationProfile.update({
+        where: { userId },
+        data: { lastKnowledgeStreakDate: today },
+      });
+    }
+    const currentKnowledgeStreak = streak?.current ?? previousKnowledgeStreak;
+    const longestKnowledgeStreak =
+      streak?.longest ?? previousLongestKnowledgeStreak;
     await tx.quizSession.update({
       where: { id: session.id },
       data: {
         status: QuizSessionStatus.COMPLETED,
-        completedAt: new Date(),
+        completedAt: now,
         score,
         coinsAwarded: reward.coins,
         xpAwarded: reward.xp,
       },
     });
-    await tx.rewardTransaction.create({
-      data: {
-        userId,
-        sourceEventId: event.id,
-        type: RewardTransactionType.EARNED,
-        amount: reward.coins,
-        balanceAfter: coinBalance,
-        reason: 'Quiz completion reward',
-      },
-    });
-
+    const badgesEarned = await this.badgeEngineService.evaluateQuizBadges(
+      { userId, sourceEventId: event.id, currentKnowledgeStreak },
+      tx,
+    );
     return {
       score,
       totalQuestions: session.totalQuestions,
@@ -520,20 +557,31 @@ export class QuizService {
         previous: previousKnowledgeStreak,
         current: currentKnowledgeStreak,
         longest: longestKnowledgeStreak,
-        advanced: advancesStreak,
+        advanced: advancesStreak && !streakIsCurrent,
       },
+      badgesEarned,
     };
+  }
+
+  private daysBetweenJohannesburgDates(earlier: string, later: string): number {
+    const earlierDate = new Date(`${earlier}T00:00:00.000Z`);
+    const laterDate = new Date(`${later}T00:00:00.000Z`);
+    return Math.round(
+      (laterDate.getTime() - earlierDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
   }
 
   private readonly sessionSelect = {
     id: true,
     type: true,
     topic: true,
+    quizDate: true,
     status: true,
     startedAt: true,
     completedAt: true,
     score: true,
     totalQuestions: true,
+    questionIds: true,
     coinsAwarded: true,
     xpAwarded: true,
     answers: {
@@ -571,6 +619,7 @@ export class QuizService {
   private async selectQuestionPool(
     dto: CreateQuizSessionDto,
     client: PrismaService | Prisma.TransactionClient = this.prisma,
+    seed?: string,
   ) {
     const questions = await client.quizQuestion.findMany({
       where: {
@@ -586,39 +635,67 @@ export class QuizService {
       },
     });
 
-    if (dto.type === QuizSessionType.TOPIC) {
-      return questions.slice(0, 5);
+    return this.shuffleQuestions(questions, seed).slice(0, 5);
+  }
+
+  private async getSessionQuestions(
+    session: { questionIds?: string[]; quizDate?: Date | null },
+    dto: CreateQuizSessionDto,
+    client: PrismaService | Prisma.TransactionClient = this.prisma,
+  ) {
+    const questionIds = session.questionIds ?? [];
+    if (questionIds.length > 0) {
+      const questions = await client.quizQuestion.findMany({
+        where: { id: { in: questionIds } },
+        select: {
+          id: true,
+          topic: true,
+          prompt: true,
+          options: true,
+        },
+      });
+      const questionsById = new Map(
+        questions.map((question) => [question.id, question]),
+      );
+      return questionIds.flatMap((questionId) => {
+        const question = questionsById.get(questionId);
+        return question ? [question] : [];
+      });
     }
 
-    const questionsByTopic = new Map<QuizTopic, typeof questions>();
-    for (const question of questions) {
-      const topicQuestions = questionsByTopic.get(question.topic) ?? [];
-      topicQuestions.push(question);
-      questionsByTopic.set(question.topic, topicQuestions);
-    }
+    const dailySeed =
+      dto.type === QuizSessionType.DAILY && session.quizDate
+        ? this.getJohannesburgDateRange(session.quizDate).date
+        : undefined;
+    return this.selectQuestionPool(dto, client, dailySeed);
+  }
 
-    const selectedQuestions: typeof questions = [];
-    const topicQueues = [...questionsByTopic.values()];
-    let questionIndex = 0;
-
-    while (
-      selectedQuestions.length < 5 &&
-      topicQueues.some(
-        (topicQuestions) => questionIndex < topicQuestions.length,
-      )
-    ) {
-      for (const topicQuestions of topicQueues) {
-        const question = topicQuestions[questionIndex];
-
-        if (question && selectedQuestions.length < 5) {
-          selectedQuestions.push(question);
-        }
+  private shuffleQuestions<T>(questions: T[], seed?: string): T[] {
+    const shuffled = [...questions];
+    let random = Math.random;
+    if (seed) {
+      let hash = 2166136261;
+      for (const character of seed) {
+        hash ^= character.charCodeAt(0);
+        hash = Math.imul(hash, 16777619);
       }
-
-      questionIndex += 1;
+      random = () => {
+        hash += hash << 13;
+        hash ^= hash >>> 7;
+        hash += hash << 3;
+        hash ^= hash >>> 17;
+        hash += hash << 5;
+        return (hash >>> 0) / 4294967296;
+      };
     }
-
-    return selectedQuestions;
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(random() * (index + 1));
+      [shuffled[index], shuffled[randomIndex]] = [
+        shuffled[randomIndex],
+        shuffled[index],
+      ];
+    }
+    return shuffled;
   }
 
   private toSessionResponse(
