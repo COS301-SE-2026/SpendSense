@@ -1,14 +1,13 @@
 import { cn } from "@/lib/utils"
-import { FriendAvatar, type AvatarTone } from "@/components/common/FriendAvatar"
+import { FriendAvatar } from "@/components/common/FriendAvatar"
 
 export type ActivityScope = "friends" | "following"
- 
+
 export type ActivityItem = {
 	id: string
 	friendId: string
 	name: string
-	initials: string
-	tone: AvatarTone
+	avatarUrl?: string | null
 	action: string
 	detail: string
 	reward: string
@@ -34,7 +33,7 @@ export function ActivityRow({
 }>) {
 	return (
 		<div className={cn("flex items-center gap-3 py-2.5", className)}>
-			<FriendAvatar initials={item.initials} tone={item.tone} size="sm" />
+			<FriendAvatar displayName={item.name} avatarUrl={item.avatarUrl} size="sm" />
  
 			<div className="min-w-0 flex-1">
 				<p className="truncate text-sm font-bold text-[#091828]">
