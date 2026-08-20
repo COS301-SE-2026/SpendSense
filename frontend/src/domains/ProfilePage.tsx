@@ -26,13 +26,14 @@ type MenuItem={
     icon: React.ReactNode
     to: string
     enabled: boolean
+    state?: Record<string, unknown>
 }
 
 
 const menuItems: MenuItem[]=[
     {label: "Edit Profile", icon: <User className="size-5"/>, to: "/edit-profile", enabled: true},
     {label: "Settings", icon: <Settings className="size-5"/>, to: "/settings", enabled: true},
-    {label: "Friends & Social", icon: <Users className="size-5"/>, to: "/friends", enabled: true},
+    {label: "Friends & Social", icon: <Users className="size-5"/>, to: "/friends", enabled: true, state: {from: "profile"}},
     {label: "Sticker Album", icon: <Star className="size-5"/>, to: "/stickers", enabled: true},
     {label: "Wrapped", icon: <Gift className="size-5"/>, to: "/insights", enabled: true},
     {label: "Mascot Home", icon: <Smile className="size-5"/>, to: "/mascot", enabled: true},
@@ -127,7 +128,7 @@ export default function ProfilePage(){
                 </div>
                 
                 <CustomCard className="mt-6 rounded-3xl bg-white p-2 shadow-sm">
-                    {menuItems.map((item)=>(<ProfileMenuRow key = {item.label}{...item}/>))}
+                    {menuItems.map((item)=>(<ProfileMenuRow key={item.label} {...item}/>))}
                 </CustomCard>
 
             </div>
@@ -152,10 +153,11 @@ function StatChip({
     )
 }
 
-function ProfileMenuRow({label, icon, to, enabled}: MenuItem){
+function ProfileMenuRow({label, icon, to, enabled, state}: MenuItem){
     return(
-        <Link 
+        <Link
             to={to}
+            state={state}
             aria-disabled={!enabled}
             onClick={(e)=>{if(!enabled) e.preventDefault()}}
             className={cn("flex items-center gap-3 px-3 py-3 border-b border-[#e8e4f4] last:border-b-0 transition", enabled? "hover:bg-[#f4fbf7]" : "opacity-40 pointer-events-none cursor-not-allowed")}

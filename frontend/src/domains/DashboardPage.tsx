@@ -230,7 +230,7 @@ export default function DashboardPage() {
 					showArrow={false}
 					asChild
 				>
-					<Link to="/friends">View Friends</Link>
+					<Link to="/friends" state={{ from: "dashboard" }}>View Friends</Link>
 				</LongButton>
 			</CustomCard>
  
