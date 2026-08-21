@@ -16,21 +16,21 @@ export function SubPageShell({
     
     const navigate =useNavigate()
     return(
-        <div className ="min-h-screen bg-[#F4FBF7] pb-24">
+        <div className ="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
             <div className ="mx-auto w-full max-w-md px-5 pt-6">
                 <header className ="flex items-center gap-3">
                     <button 
                         type ="button" 
                         aria-label="Back"
                         onClick={() => navigate(-1)}
-                        className = "flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828]">
+                        className = "flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
 
-                            <ChevronLeft className="size-5 text-[#6E0034]" />
+                            <ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]" />
                         </button>
 
                         <div className= "flex flex-1 items-center justify-center">
-                            <div className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828]" style={{transform: "rotate(-3deg)"}}>
-                                <span className="text-base font-bold text-[#091828]">{title}</span>
+                            <div className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]" style={{transform: "rotate(-3deg)"}}>
+                                <span className="text-base font-bold text-[#091828] dark:text-[#091828]">{title}</span>
                             </div>
                         </div>
 
@@ -39,7 +39,7 @@ export function SubPageShell({
                 </header>
 
                 {subtitle &&(
-                    <p className="mt-3 text-center text-sm text-[#6B6375]">{subtitle}</p>
+                    <p className="mt-3 text-center text-sm text-[#6B6375] dark:text-[#ddbfc5]">{subtitle}</p>
                 )}
 
                 <div className="mt-6 flex flex-col gap-3">{children}</div>

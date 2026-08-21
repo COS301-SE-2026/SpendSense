@@ -113,8 +113,8 @@ export default function QuizPage(){
     }
     if(loading){
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center">
-                <p className="max-w-xs text-sm text-[#6b6375]">
+            <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center dark:bg-[#0b1326]">
+                <p className="max-w-xs text-sm text-[#6b6375] dark:text-[#a0aec0]">
                     Loading {quizType==="DAILY"?"today's quiz":"topic quiz"}...
                 </p>
             </div>
@@ -122,14 +122,14 @@ export default function QuizPage(){
     }
     if(error){
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center">
-                <p className="max-w-xs text-sm text-[#6b6375]">
+            <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center dark:bg-[#0b1326]">
+                <p className="max-w-xs text-sm text-[#6b6375] dark:text-[#a0aec0]">
                     {error}
                 </p>
-                <LongButton  LongVariant="primaryPinkBorder"  LongSize="md"  showArrow={false} onClick={reload}>
+                <LongButton  LongVariant="primaryPinkBorder"  LongSize="md"  showArrow={false} onClick={reload} className="dark:shadow-[3px_4px_0_#060e20]">
                     Retry
                 </LongButton>
-                <LongButton LongVariant="outline" LongSize="md" showArrow={false} asChild>
+                <LongButton LongVariant="outline" LongSize="md" showArrow={false} asChild className="dark:border-[#060e20] dark:bg-[#1c263c] dark:text-white dark:shadow-[3px_4px_0_#060e20] dark:hover:bg-[#2d3449]">
                     <Link to="/quests">Back to Quests</Link>
                 </LongButton>
             </div>
@@ -142,13 +142,13 @@ export default function QuizPage(){
         const topicData=data.value
         const rewardPreview=data.rewardPreview
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center">
-                <h1 className="text-2xl font-extrabold text-[#091828]">
+            <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center dark:bg-[#0b1326]">
+                <h1 className="text-2xl font-extrabold text-[#091828] dark:text-white">
                     {topicData.name}
                 </h1>
-                <p className="text-sm font-medium text-[#091828]"> Quiz type: Topic</p>
-                <p className="max-w-xs text-sm text-[#6b6375]">{topicData.description}</p>
-                <p className="text-sm text-[#6b6375]">
+                <p className="text-sm font-medium text-[#091828] dark:text-white"> Quiz type: Topic</p>
+                <p className="max-w-xs text-sm text-[#6b6375] dark:text-[#a0aec0]">{topicData.description}</p>
+                <p className="text-sm text-[#6b6375] dark:text-[#a0aec0]">
                     {topicData.questionCount} questions
                     {rewardPreview && (
                         <>
@@ -158,15 +158,15 @@ export default function QuizPage(){
                     )}
                 </p>
                 {!topicData.available && (
-                    <p className="text-sm text-[#6b6375]">This topic quiz is not available yet.</p>
+                    <p className="text-sm text-[#6b6375] dark:text-[#a0aec0]">This topic quiz is not available yet.</p>
                 )}
                 {startError && (
-                    <p className="text-sm text-red-500">{startError}</p>
+                    <p className="text-sm text-red-500 dark:text-[#ffb4ab]">{startError}</p>
                 )}
-                <LongButton LongVariant="primaryPinkBorder" LongSize="md" showArrow={false} onClick={handleStartOrResume} disabled={starting||!topicData.available}>
+                <LongButton LongVariant="primaryPinkBorder" LongSize="md" showArrow={false} className="dark:shadow-[3px_4px_0_#060e20]" onClick={handleStartOrResume} disabled={starting||!topicData.available}>
                     {starting?"Starting...":"Start topic quiz"}
                 </LongButton>
-                <LongButton LongVariant="outline" LongSize="md" showArrow={false} asChild>
+                <LongButton LongVariant="outline" LongSize="md" showArrow={false} asChild className="dark:border-[#060e20] dark:bg-[#1c263c] dark:text-white dark:shadow-[3px_4px_0_#060e20] dark:hover:bg-[#2d3449]">
                     <Link to="/quests">Back to Quests</Link>
                 </LongButton>
             </div>
@@ -175,14 +175,14 @@ export default function QuizPage(){
     const dailyData=data.value
     if(dailyData.status==="COMPLETED"){
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center">
-                <h1 className="text-2xl font-extrabold text-[#091828]">
+            <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center dark:bg-[#0b1326]">
+                <h1 className="text-2xl font-extrabold text-[#091828] dark:text-white">
                     Financial Quiz
                 </h1>
-                <p className="text-sm font-medium text-[#091828]">Quiz type: Daily</p>
-                <p className="max-w-xs text-sm text-[#6b6375]">You have already completed today's quiz. Come back tomorrow!</p>
-                <p className="text-sm text-[#6b6375]">You earned {dailyData.reward.xp} XP and {dailyData.reward.coins} coins.</p>
-                <LongButton LongVariant="outline" LongSize="md" showArrow={false} asChild>
+                <p className="text-sm font-medium text-[#091828] dark:text-white">Quiz type: Daily</p>
+                <p className="max-w-xs text-sm text-[#6b6375] dark:text-[#a0aec0]">You have already completed today's quiz. Come back tomorrow!</p>
+                <p className="text-sm text-[#6b6375] dark:text-[#a0aec0]">You earned {dailyData.reward.xp} XP and {dailyData.reward.coins} coins.</p>
+                <LongButton LongVariant="outline" LongSize="md" showArrow={false} asChild className="dark:border-[#060e20] dark:bg-[#1c263c] dark:text-white dark:shadow-[3px_4px_0_#060e20] dark:hover:bg-[#2d3449]">
                     <Link to="/quests">Back to Quests</Link>
                 </LongButton>
             </div>
@@ -192,36 +192,36 @@ export default function QuizPage(){
     const questionCount=dailyData.status==="IN_PROGRESS"?dailyData.session.progress.initialQuestions:5
     const rewardPreview=dailyData.rewardPreview
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center">
-            <h1 className="text-2xl font-extrabold text-[#091828]">
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#F4FBF7] px-6 text-center dark:bg-[#0b1326]">
+            <h1 className="text-2xl font-extrabold text-[#091828] dark:text-white">
                 Financial Quiz
             </h1>
-            <p className="max-w-xs text-sm text-[#6b6375]">Test your money smarts and earn coins!</p>
-            <p className="text-sm font-medium text-[#091828]"> Quiz type: Daily</p>
-            <p className="text-sm text-[#6b6375]">
+            <p className="max-w-xs text-sm text-[#6b6375] dark:text-[#a0aec0]">Test your money smarts and earn coins!</p>
+            <p className="text-sm font-medium text-[#091828] dark:text-white"> Quiz type: Daily</p>
+            <p className="text-sm text-[#6b6375] dark:text-[#a0aec0]">
                 {questionCount} questions
                 {" • +"}{rewardPreview.xp} XP
                 {" • +"}{rewardPreview.coins} coins
             </p>
             {dailyData.status==="AVAILABLE" && (
-                <p className="text-sm text-[#6b6375]">
+                <p className="text-sm text-[#6b6375] dark:text-[#a0aec0]">
                     Knowledge streak: {dailyData.knowledgeStreak.current}
                     {" "}(best {dailyData.knowledgeStreak.longest})
                 </p>
             )}
             {dailyData.status==="IN_PROGRESS" && (
-                <p className="text-sm text-[#6b6375]">
+                <p className="text-sm text-[#6b6375] dark:text-[#a0aec0]">
                     In progress - {dailyData.session.progress.answeredAttempts} of{" "}
                     {dailyData.session.progress.initialQuestions} answered so far.
                 </p>
             )}
             {startError && (
-                <p className="text-sm text-red-500">{startError}</p>
+                <p className="text-sm text-red-500 dark:text-[#ffb4ab]">{startError}</p>
             )}
-            <LongButton LongVariant="primaryPinkBorder" LongSize="md" showArrow={false} onClick={handleStartOrResume} disabled={starting}>
+            <LongButton LongVariant="primaryPinkBorder" LongSize="md" showArrow={false} className="dark:shadow-[3px_4px_0_#060e20]" onClick={handleStartOrResume} disabled={starting}>
                 {starting?inProgress?"Resuming...":"Starting...":inProgress?"Resume daily quiz":"Start daily quiz"}
             </LongButton>
-            <LongButton LongVariant="outline" LongSize="md" showArrow={false} asChild>
+            <LongButton LongVariant="outline" LongSize="md" showArrow={false} asChild className="dark:border-[#060e20] dark:bg-[#1c263c] dark:text-white dark:shadow-[3px_4px_0_#060e20] dark:hover:bg-[#2d3449]">
                 <Link to="/quests">Back to Quests</Link>
             </LongButton>
         </div>

@@ -159,7 +159,7 @@ export type StickerToastVariants = VariantProps<typeof stickerToastVariants>
 //CVA fo progress feedback components
 
 export const progressTrackVariants = cva(
-  "relative w-full overflow-hidden rounded-full bg-[#E8EFEC]",
+  "relative w-full overflow-hidden rounded-full bg-[#E8EFEC] dark:bg-[#131b2e]",
   {
     variants: {
       size: {
@@ -179,7 +179,7 @@ export const progressIndicatorVariants = cva(
   {
     variants: {
       tone: {
-        pink:"bg-[#AC2A5D]",
+        pink:"bg-[#AC2A5D] dark:bg-[#ff6b9d]",
         mint:"bg-[#6FC9B0]",
         yellow:"bg-[#F2BF3C]",
         slate:"bg-[#091828]",
@@ -219,9 +219,9 @@ export const streakTickVariants = cva(
   {
     variants: {
       state: {
-        complete:"bg-[#F2BF3C] border-[#091828] text-[#091828]",
-        current:"bg-[#E8EFEC] border-[#C4C6CC] text-transparent",
-        upcoming:"bg-[#E8EFEC] border-[#C4C6CC] text-transparent",
+        complete:"bg-[#F2BF3C] border-[#091828] text-[#091828] dark:bg-[#ffd166] dark:border-[#0b1326] dark:text-[#0b1326]",
+        current:"bg-[#E8EFEC] border-[#C4C6CC] text-transparent dark:bg-[#131b2e] dark:border-[#a0aec0]/30",
+        upcoming:"bg-[#E8EFEC] border-[#C4C6CC] text-transparent dark:bg-[#131b2e] dark:border-[#a0aec0]/30",
       },
       size: {
         sm:"size-6 [&_svg]:size-3",
@@ -238,7 +238,7 @@ export type StreakTickVariants = VariantProps<typeof streakTickVariants>
 export const gaugeIndicatorVariants = cva("transition-[stroke-dashoffset] duration-700 ease-out", {
   variants: {
     tone: {
-      pink:"stroke-[#AC2A5D]",
+      pink:"stroke-[#AC2A5D] dark:stroke-[#ff6b9d]",
       mint:"stroke-[#6FC9B0]",
       yellow:"stroke-[#F2BF3C]",
       red:"stroke-[#BA1A1A]",
@@ -248,4 +248,3 @@ export const gaugeIndicatorVariants = cva("transition-[stroke-dashoffset] durati
   defaultVariants: { tone: "pink" },
 })
 export type GaugeIndicatorVariants = VariantProps<typeof gaugeIndicatorVariants>
- 

@@ -21,9 +21,9 @@ export function CustomCard({
     className
 }:CustomCardProps){
     const variantStyles:Record<CardVariant,string>={
-        greenShaddow: "bg-white shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none",
-        navyShaddow: "bg-white shadow-[3px_4px_0_#1F2D3D] border border-[#1F2D3D]",
-        navyBorder:"bg-white border border-[#1F2D3D]",
+        greenShaddow: "bg-white shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none dark:bg-[#131b2e]",
+        navyShaddow: "bg-white shadow-[3px_4px_0_#1F2D3D] border border-[#1F2D3D] dark:bg-[#131b2e] dark:border-[#2d3449]",
+        navyBorder:"bg-white border border-[#1F2D3D] dark:bg-[#131b2e] dark:border-[#2d3449]",
     }
     const sizeStyles: Record<CardSize,string>={
         sm: "p-4 min-h-[80px]",

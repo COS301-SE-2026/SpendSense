@@ -45,9 +45,9 @@ type ObligationFormData = z.infer<typeof obligationSchema>;
 
 const TYPE_OPTIONS = [
     {id: "subscription", value: "SUBSCRIPTION" as const, label: "Subs", icon: <Tv className="size-6" />,bg: "bg-[#FF6B9D]", textColor: "text-[#091828]"},
-    {id: "rent", value: "RENT" as const, label: "Rent", icon: <Home className="size-6" />, bg: "bg-[#2C4A6B]", textColor: "text-white"},
+    {id: "rent", value: "RENT" as const, label: "Rent", icon: <Home className="size-6" />, bg: "bg-[#2C4A6B] dark:bg-[#4a7099]", textColor: "text-white"},
     {id: "utility",value: "UTILITY" as const, label: "Utilities", icon: <Zap className="size-6" />, bg: "bg-[#9B7EDE]", textColor: "text-white"},
-    {id: "bnpl", value: "BNPL" as const, label: "BNPL", icon: <CreditCard className="size-6" />, bg: "bg-[#091828]", textColor: "text-white"},
+    {id: "bnpl", value: "BNPL" as const, label: "BNPL", icon: <CreditCard className="size-6" />, bg: "bg-[#091828] dark:bg-[#3D5A80]", textColor: "text-white"},
     {id: "iou", value: "IOU" as const, label: "IOU", icon: <Users className="size-6" />, bg: "bg-[#72cdbc]", textColor: "text-[#091828]"},
     {id: "food",value: "CUSTOM" as const, label: "Food", icon: <Utensils className="size-6" />, bg: "bg-[#FF9F43]", textColor: "text-white"},
     {id: "coffee",value: "CUSTOM" as const, label: "Coffee", icon: <Coffee className="size-6" />, bg: "bg-[#6C5CE7]", textColor: "text-white"},
@@ -151,7 +151,7 @@ export default function ObligationForm() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F4FBF7] pb-24">
+        <div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
 
                 {/* Header */}
@@ -160,16 +160,16 @@ export default function ObligationForm() {
                         type="button"
                         aria-label="Cancel"
                         onClick={() => navigate("/")}
-                        className="size-11 rounded-full bg-[#FF6B9D] flex items-center justify-center text-[#091828] flex-shrink-0 border-none"
+                        className="size-11 rounded-full bg-[#FF6B9D] flex items-center justify-center text-[#091828] flex-shrink-0 border-none dark:bg-[#ffb1c5] dark:text-[#650030]"
                     >
                         <X className="size-5" />
                     </button>
-                    <h1 className="flex-1 text-center text-xl font-medium text-[#091828]">New obligation</h1>
+                    <h1 className="flex-1 text-center text-xl font-medium text-[#091828] dark:text-white">New obligation</h1>
                     {/* No aria-label intentionally - accessible name "" is what the reset test looks for */}
                     <button
                         type="button"
                         onClick={() => reset()}
-                        className="size-11 rounded-full bg-[#72cdbc] flex items-center justify-center text-[#091828] flex-shrink-0 border-none"
+                        className="size-11 rounded-full bg-[#72cdbc] flex items-center justify-center text-[#091828] flex-shrink-0 border-none dark:bg-[#5eead4] dark:text-[#134e4a]"
                     >
                         <RefreshCw className="size-4" />
                     </button>
@@ -178,17 +178,17 @@ export default function ObligationForm() {
                 {/* Amount display */}
                 <div className="text-center py-6">
                     <div className="flex items-baseline justify-center gap-1">
-                        <span className="text-4xl font-medium text-[#ac2a5d] leading-none">R</span>
+                        <span className="text-4xl font-medium text-[#ac2a5d] leading-none dark:text-[#ff6b9d]">R</span>
                         <input
                             aria-label="Amount"
                             id="amount"
                             {...register("amount")}
                             placeholder="0.00"
-                            className="text-5xl font-medium text-[#091828] bg-transparent text-center outline-none w-48 leading-none"
+                            className="text-5xl font-medium text-[#091828] bg-transparent text-center outline-none w-48 leading-none dark:text-white dark:placeholder:text-[#a0aec0]"
                         />
                     </div>
-                    {errors.amount && <p className="text-xs text-red-500 mt-1">{errors.amount.message}</p>}
-                    <p className="text-sm font-medium text-[#72cdbc] mt-2">How much is this for?</p>
+                    {errors.amount && <p className="text-xs text-red-500 mt-1 dark:text-[#ffb4ab]">{errors.amount.message}</p>}
+                    <p className="text-sm font-medium text-[#72cdbc] mt-2 dark:text-[#5eead4]">How much is this for?</p>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
@@ -199,7 +199,7 @@ export default function ObligationForm() {
                         name="type"
                         render={({field}) => (
                             <div>
-                                <p className="text-sm font-medium text-[#091828] mb-3 ml-1">Pick a type</p>
+                                <p className="text-sm font-medium text-[#091828] mb-3 ml-1 dark:text-white">Pick a type</p>
                                 <div className="flex gap-4 overflow-x-auto pb-4">
                                     {TYPE_OPTIONS.map(opt => (
                                         <button
@@ -212,23 +212,23 @@ export default function ObligationForm() {
                                             <div className={cn(
                                                 "size-16 rounded-full flex items-center justify-center transition",
                                                 opt.bg, opt.textColor,
-                                                activeIconId === opt.id && "ring-[3px] ring-[#091828]",
+                                                activeIconId === opt.id && "ring-[3px] ring-[#091828] dark:ring-white",
                                             )}>
                                                 {opt.icon}
                                             </div>
                                             <span className={cn(
                                                 "text-xs font-medium",
-                                                activeIconId === opt.id ? "text-[#ac2a5d]" : "text-[#091828]",
+                                                activeIconId === opt.id ? "text-[#ac2a5d] dark:text-[#ff6b9d]" : "text-[#091828] dark:text-white",
                                             )}>{opt.label}</span>
                                         </button>
                                     ))}
                                 </div>
-                                <label htmlFor="type" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1">Type</label>
-                                <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 relative">
-                                    <span className="flex-1 text-sm text-[#091828]">
+                                <label htmlFor="type" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Type</label>
+                                <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 relative dark:bg-[#131b2e]">
+                                    <span className="flex-1 text-sm text-[#091828] dark:text-white">
                                         {TYPE_OPTIONS.find(t => t.value === field.value)?.label ?? "Subscription"}
                                     </span>
-                                    <ChevronDown className="size-4 text-[#6b6375]" />
+                                    <ChevronDown className="size-4 text-[#6b6375] dark:text-[#a0aec0]" />
                                     <select
                                         id="type"
                                         value={field.value}
@@ -246,34 +246,34 @@ export default function ObligationForm() {
 
                     {/* Name */}
                     <div>
-                        <label htmlFor="name" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1">What is this for?</label>
-                        <div className="bg-white rounded-2xl px-4 py-3.5">
+                        <label htmlFor="name" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">What is this for?</label>
+                        <div className="bg-white rounded-2xl px-4 py-3.5 dark:bg-[#131b2e]">
                             <input
                                 id="name"
                                 {...register("name")}
                                 placeholder="e.g. Netflix Subscription"
-                                className="w-full bg-transparent outline-none text-sm text-[#091828] placeholder:text-[#9b96a8]"
+                                className="w-full bg-transparent outline-none text-sm text-[#091828] placeholder:text-[#9b96a8] dark:text-white dark:placeholder:text-[#a0aec0]"
                             />
                         </div>
-                        {errors.name && <p className="text-xs text-red-500 mt-1 ml-1">{errors.name.message}</p>}
+                        {errors.name && <p className="text-xs text-red-500 mt-1 ml-1 dark:text-[#ffb4ab]">{errors.name.message}</p>}
                     </div>
 
 
                     {/* Priority */}
                     <div>
-                        <label htmlFor="priority" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1">Priority</label>
+                        <label htmlFor="priority" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Priority</label>
                         <Controller
                             control={control}
                             name="priority"
                             render={({field}) => {
                                 const opt = PRIORITY_OPTIONS.find(p => p.value === field.value) ?? PRIORITY_OPTIONS[1];
                                 return (
-                                    <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 relative">
+                                    <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 relative dark:bg-[#131b2e]">
                                         <div className={cn("size-9 rounded-full flex items-center justify-center flex-shrink-0", opt.iconBg)}>
                                             <Flag className="size-4 text-[#091828]" />
                                         </div>
-                                        <span className="flex-1 text-sm text-[#091828]">{opt.label}</span>
-                                        <ChevronDown className="size-4 text-[#6b6375]" />
+                                        <span className="flex-1 text-sm text-[#091828] dark:text-white">{opt.label}</span>
+                                        <ChevronDown className="size-4 text-[#6b6375] dark:text-[#a0aec0]" />
                                         <select
                                             id="priority"
                                             value={field.value}
@@ -293,7 +293,7 @@ export default function ObligationForm() {
                     {/* Due date / End date */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="block text-xs font-medium text-[#091828] mb-1.5 ml-1">Due date</label>
+                            <label className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Due date</label>
                             <Controller
                                 control={control}
                                 name="startDate"
@@ -303,29 +303,29 @@ export default function ObligationForm() {
                                             <button
                                                 type="button"
                                                 aria-label="Select due date"
-                                                className="w-full bg-white rounded-2xl px-3 py-2.5 flex items-center gap-2"
+                                                className="w-full bg-white rounded-2xl px-3 py-2.5 flex items-center gap-2 dark:bg-[#131b2e]"
                                             >
                                                 <div className="size-8 rounded-full bg-[#9B7EDE] flex items-center justify-center flex-shrink-0">
                                                     <CalendarIcon className="size-4 text-white" />
                                                 </div>
-                                                <span className="text-xs font-medium text-[#091828]">
+                                                <span className="text-xs font-medium text-[#091828] dark:text-white">
                                                     {field.value
                                                         ? new Intl.DateTimeFormat("en-GB", {day: "numeric", month: "short"}).format(new Date(field.value))
                                                         : "Pick"}
                                                 </span>
                                             </button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0 bg-white border rounded-md shadow-md" align="start">
+                                        <PopoverContent className="w-auto p-0 bg-white border rounded-md shadow-md dark:border-[#2d3449] dark:bg-[#131b2e]" align="start">
                                             <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
                                         </PopoverContent>
                                     </Popover>
                                 )}
                             />
-                            {errors.startDate && <p className="text-xs text-red-500 mt-1 ml-1">{errors.startDate.message}</p>}
+                            {errors.startDate && <p className="text-xs text-red-500 mt-1 ml-1 dark:text-[#ffb4ab]">{errors.startDate.message}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-xs font-medium text-[#091828] mb-1.5 ml-1">End date</label>
+                            <label className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">End date</label>
                             <Controller
                                 control={control}
                                 name="endDate"
@@ -335,19 +335,19 @@ export default function ObligationForm() {
                                             <button
                                                 type="button"
                                                 aria-label="Select end date"
-                                                className="w-full bg-white rounded-2xl px-3 py-2.5 flex items-center gap-2"
+                                                className="w-full bg-white rounded-2xl px-3 py-2.5 flex items-center gap-2 dark:bg-[#131b2e]"
                                             >
                                                 <div className="size-8 rounded-full bg-[#DCEFE8] flex items-center justify-center flex-shrink-0">
                                                     <CalendarIcon className="size-4 text-[#091828]" />
                                                 </div>
-                                                <span className="text-xs font-medium text-[#9b96a8]">
+                                                <span className="text-xs font-medium text-[#9b96a8] dark:text-[#a0aec0]">
                                                     {field.value
                                                         ? new Intl.DateTimeFormat("en-GB", {day: "numeric", month: "short"}).format(new Date(field.value))
                                                         : "Optional"}
                                                 </span>
                                             </button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0 bg-white border rounded-md shadow-md" align="start">
+                                        <PopoverContent className="w-auto p-0 bg-white border rounded-md shadow-md dark:border-[#2d3449] dark:bg-[#131b2e]" align="start">
                                             <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
                                         </PopoverContent>
                                     </Popover>
@@ -358,19 +358,19 @@ export default function ObligationForm() {
 
                     {/* Frequency */}
                     <div>
-                        <label htmlFor="frequency" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1">Frequency</label>
+                        <label htmlFor="frequency" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Frequency</label>
                         <Controller
                             control={control}
                             name="schedule.frequency"
                             render={({field}) => {
                                 const label = FREQUENCY_OPTIONS.find(f => f.value === field.value)?.label ?? "Monthly";
                                 return (
-                                    <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 relative">
+                                    <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 relative dark:bg-[#131b2e]">
                                         <div className="size-9 rounded-full bg-[#72cdbc] flex items-center justify-center flex-shrink-0">
                                             <Repeat className="size-4 text-[#091828]" />
                                         </div>
-                                        <span className="flex-1 text-sm text-[#091828]">{label}</span>
-                                        <ChevronDown className="size-4 text-[#6b6375]" />
+                                        <span className="flex-1 text-sm text-[#091828] dark:text-white">{label}</span>
+                                        <ChevronDown className="size-4 text-[#6b6375] dark:text-[#a0aec0]" />
                                         <select
                                             id="frequency"
                                             value={field.value}
@@ -389,8 +389,8 @@ export default function ObligationForm() {
 
                     {/* Total occurrences - label preserves the typo the test asserts against */}
                     <div>
-                        <label htmlFor="totalOccurrences" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1">Total occurences</label>
-                        <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3">
+                        <label htmlFor="totalOccurrences" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Total occurences</label>
+                        <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 dark:bg-[#131b2e]">
                             <div className="size-9 rounded-full bg-[#FFE9B5] flex items-center justify-center flex-shrink-0">
                                 <Hash className="size-4 text-[#7a5a00]" />
                             </div>
@@ -398,33 +398,33 @@ export default function ObligationForm() {
                                 id="totalOccurrences"
                                 {...register("schedule.totalOccurrences")}
                                 placeholder="e.g. 12"
-                                className="flex-1 text-sm text-[#091828] bg-transparent outline-none placeholder:text-[#9b96a8]"
+                                className="flex-1 text-sm text-[#091828] bg-transparent outline-none placeholder:text-[#9b96a8] dark:text-white dark:placeholder:text-[#a0aec0]"
                             />
                         </div>
                     </div>
 
                     {/* Description */}
                     <div>
-                        <label htmlFor="description" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1">Description</label>
-                        <div className="bg-white rounded-2xl px-4 py-3.5">
+                        <label htmlFor="description" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Description</label>
+                        <div className="bg-white rounded-2xl px-4 py-3.5 dark:bg-[#131b2e]">
                             <textarea
                                 id="description"
                                 {...register("description")}
                                 placeholder="Add some notes..."
                                 rows={2}
-                                className="w-full text-sm text-[#091828] bg-transparent outline-none resize-none placeholder:text-[#9b96a8]"
+                                className="w-full text-sm text-[#091828] bg-transparent outline-none resize-none placeholder:text-[#9b96a8] dark:text-white dark:placeholder:text-[#a0aec0]"
                             />
                         </div>
                     </div>
 
                     {/* Reminders toggle */}
-                    <div className="bg-white rounded-2xl px-3 py-3 flex items-center gap-3">
-                        <div className="size-9 rounded-full bg-[#ac2a5d] flex items-center justify-center flex-shrink-0">
-                            <Bell className="size-4 text-white" />
+                    <div className="bg-white rounded-2xl px-3 py-3 flex items-center gap-3 dark:bg-[#131b2e]">
+                        <div className="size-9 rounded-full bg-[#ac2a5d] flex items-center justify-center flex-shrink-0 dark:bg-[#ff6b9d]">
+                            <Bell className="size-4 text-white dark:text-[#6e0035]" />
                         </div>
                         <div className="flex-1">
-                            <p className="text-sm font-medium text-[#091828]">Reminders</p>
-                            <p className="text-[11px] text-[#6b6375]">Get notified before this payment is due</p>
+                            <p className="text-sm font-medium text-[#091828] dark:text-white">Reminders</p>
+                            <p className="text-[11px] text-[#6b6375] dark:text-[#a0aec0]">Get notified before this payment is due</p>
                         </div>
                         <Controller
                             control={control}
@@ -434,7 +434,7 @@ export default function ObligationForm() {
                                     onClick={() => field.onChange(!field.value)}
                                     className={cn(
                                         "relative w-11 h-6 rounded-full cursor-pointer transition-colors duration-200",
-                                        field.value ? "bg-[#ac2a5d]" : "bg-[#DDE4E0]",
+                                        field.value ? "bg-[#ac2a5d] dark:bg-[#ff6b9d]" : "bg-[#DDE4E0] dark:bg-[#2d3449]",
                                     )}
                                 >
                                     <div className={cn(
@@ -448,21 +448,21 @@ export default function ObligationForm() {
 
                     {/* Notification channels */}
                     {remindersEnabled ? (
-                        <div className="bg-white rounded-2xl px-3 py-3 flex items-center gap-3">
-                            <div className="size-9 rounded-full bg-[#DCEFE8] flex items-center justify-center flex-shrink-0">
-                                <Smartphone className="size-4 text-[#091828]" />
+                        <div className="bg-white rounded-2xl px-3 py-3 flex items-center gap-3 dark:bg-[#131b2e]">
+                            <div className="size-9 rounded-full bg-[#DCEFE8] flex items-center justify-center flex-shrink-0 dark:bg-[#0f4f42]">
+                                <Smartphone className="size-4 text-[#091828] dark:text-[#5eead4]" />
                             </div>
-                            <span className="flex-1 text-sm text-[#091828]">Notification channels:</span>
-                            <span className="bg-[#DCEFE8] text-[#08060d] text-[10px] font-medium px-3 py-1 rounded-full tracking-wide">IN_APP</span>
+                            <span className="flex-1 text-sm text-[#091828] dark:text-white">Notification channels:</span>
+                            <span className="bg-[#DCEFE8] text-[#08060d] text-[10px] font-medium px-3 py-1 rounded-full tracking-wide dark:bg-[#0f4f42] dark:text-[#5eead4]">IN_APP</span>
                         </div>
                     ) : null}
 
                     {/* Motivational stickers */}
                     <div className="relative h-24 mt-2">
-                        <div className="absolute left-4 top-0 bg-[#FFE9B5] border-2 border-[#091828] rounded-full px-4 py-2 text-xs font-medium text-[#091828] -rotate-3 shadow-[3px_3px_0_#091828]">
+                        <div className="absolute left-4 top-0 bg-[#FFE9B5] border-2 border-[#091828] rounded-full px-4 py-2 text-xs font-medium text-[#091828] -rotate-3 shadow-[3px_3px_0_#091828] dark:border-[#060e20] dark:bg-[#ffd166] dark:shadow-[3px_3px_0_#060e20]">
                             +15 XP for logging
                         </div>
-                        <div className="absolute left-9 top-9 bg-[#FFD8E6] border-2 border-[#091828] rounded-full px-4 py-2 text-xs font-medium text-[#091828] rotate-3 shadow-[3px_3px_0_#091828]">
+                        <div className="absolute left-9 top-9 bg-[#FFD8E6] border-2 border-[#091828] rounded-full px-4 py-2 text-xs font-medium text-[#091828] rotate-3 shadow-[3px_3px_0_#091828] dark:border-[#060e20] dark:bg-[#ff6b9d] dark:shadow-[3px_3px_0_#060e20]">
                             Plan ahead, stress less
                         </div>
                     </div>
@@ -472,7 +472,7 @@ export default function ObligationForm() {
                         type="submit"
                         aria-label="Log obligation"
                         disabled={isSubmitting}
-                        className="w-full bg-[#091828] text-white rounded-full py-4 text-base font-medium flex items-center justify-center gap-2.5 disabled:opacity-50 border-none"
+                        className="w-full bg-[#091828] text-white rounded-full py-4 text-base font-medium flex items-center justify-center gap-2.5 disabled:opacity-50 border-none dark:bg-[#ff6b9d]  dark:hover:bg-[#6e0035]"
                     >
                         {isSubmitting ? "Saving..." : "Log it"}
                         {!isSubmitting && <Rocket className="size-4" />}
@@ -481,7 +481,7 @@ export default function ObligationForm() {
             </div>
 
             {showPopup && (
-                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-[#FF6B9D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-[#091828]">
+                <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-[#FF6B9D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-[#091828] dark:border-[#060e20] dark:bg-[#ff6b9d] dark:text-[#6e0035]">
                     <div className="flex flex-col">
                         <span className="text-sm font-bold">Added new obligation!</span>
                         <CustomBadge variant="xp">+10 xp</CustomBadge>

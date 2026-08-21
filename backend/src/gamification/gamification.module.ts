@@ -5,15 +5,15 @@ import { GamificationController } from './gamification.controller';
 import { GamificationService } from './gamification.service';
 import { BadgeEngineService } from './badge-engine.service';
 import { NotificationsModule } from 'src/notifications/notifications.module';
+import { RewardModule } from '../rewards/reward.module';
 // GamificationModule: streaks, coins, badges, mascots state
-// TODO: implement RewardEngineService when payment rewards are wired.
 
 // planned endpoints:
 // GET /api/v1/gamification/profile
 // GET /api/v1/gamification/badges
 
 @Module({
-  imports: [AuthModule, UsersModule, NotificationsModule],
+  imports: [AuthModule, UsersModule, NotificationsModule, RewardModule],
   controllers: [GamificationController],
   providers: [GamificationService, BadgeEngineService],
   exports: [GamificationService, BadgeEngineService],

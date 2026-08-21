@@ -18,6 +18,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
 import { QuizModule } from './quiz/quiz.module';
 import { InsightsModule } from './insights/insights.module';
 import { CreditScoreModule } from './credit-score/credit-score.module';
+import { RewardModule } from './rewards/reward.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { CreditScoreModule } from './credit-score/credit-score.module';
     QuizModule,
     InsightsModule,
     CreditScoreModule,
+    RewardModule,
   ],
   controllers: [AppController],
   providers: [AppService],
