@@ -1,16 +1,13 @@
 import * as React from "react"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import {
 	Users,
 	UserPlus,
 	Trophy,
 	Swords,
-	ArrowLeft,
+	Search,
 	Medal,
-	Check,
-	X,
 	Coins,
-	Lock,
 } from "lucide-react"
 
 import { CustomCard } from "@/components/ui/CustomCard"
@@ -18,43 +15,23 @@ import { LongButton } from "@/components/common/LongButton"
 import { BottomNav } from "@/components/common/BottomNav"
 import { FriendAvatar } from "@/components/common/FriendAvatar"
 import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
+import { FriendRequestsCard } from "@/components/common/FriendRequestsCard"
+import { LeaderboardRow } from "@/components/common/LeaderboardRow"
 import { cn } from "@/lib/utils"
-import { useFriendRequests, useFriends, useFriendsLeaderboard } from "@/hooks/useFriends"
+import { useFriends, useFriendsLeaderboard } from "@/hooks/useFriends"
 import { useWagers } from "@/hooks/useWagers"
 import {
-	acceptFriendRequest,
-	declineFriendRequest,
-} from "@/features/friends/friendsApi"
-import {
 	WAGER_TASK_LABELS,
-	type FriendRequestSummary,
 	type FriendSummary,
-	type LeaderboardEntry,
 	type WagerSummary,
 } from "@/features/friends/friendsTypes"
 
-//UC-A Friends Hub. tabs are Friends | Leaderboard | Wagers per use case -
-//the old "Feed" tab is gone, the activity feed stays reachable at
-///friends/activity but is out of scope for the committed tier
+//UC-A Friends Hub. tabs are Friends | Leaderboard | Wagers per use case
 
 type HubTab = "friends" | "leaderboard" | "wagers"
 
-
-type FriendsOrigin = "dashboard" | "profile"
-
-function resolveOrigin(state: unknown): FriendsOrigin {
-	if (state && typeof state === "object" && (state as { from?: unknown }).from === "profile") {
-		return "profile"
-	}
-	return "dashboard"
-}
-
 export default function FriendsPage() {
 	const [tab, setTab] = React.useState<HubTab>("friends")
-	const location = useLocation()
-	const navigate = useNavigate()
-	const origin = resolveOrigin(location.state)
-	const backTo = origin === "profile" ? "/profile" : "/domains/dashboard"
 
 	const { friends, isLoading: friendsLoading, error: friendsError, reload: reloadFriends } =
 		useFriends()
@@ -63,14 +40,13 @@ export default function FriendsPage() {
 		<div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
 			<div className="mx-auto w-full max-w-md px-5 pt-6">
 				<header className="flex items-center gap-3">
-					<button
-						type="button"
-						aria-label="Back"
-						onClick={() => navigate(backTo)}
-						className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#ff6b9d] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#2d3449] dark:shadow-[4px_4px_0_#060e20]"
+					<Link
+						to="/friends/list"
+						aria-label="Search friends"
+						className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#E3EAE6] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#2d3449] dark:shadow-[4px_4px_0_#060e20]"
 					>
-						<ArrowLeft className="size-5 text-[#091828] dark:text-[#dae2fd]" />
-					</button>
+						<Search className="size-5 text-[#091828] dark:text-[#dae2fd]" />
+					</Link>
 
 					<div className="flex flex-1 items-center justify-center">
 						<div
@@ -105,6 +81,7 @@ export default function FriendsPage() {
 							isLoading={friendsLoading}
 							error={friendsError}
 							onRetry={reloadFriends}
+							onFriendAdded={reloadFriends}
 						/>
 					)}
 
@@ -116,7 +93,8 @@ export default function FriendsPage() {
 				</div>
 			</div>
 
-			<BottomNav active={origin === "profile" ? "profile" : "home"} />
+			{/* Friends sits under Profile in the nav map, so Profile stays lit */}
+			<BottomNav active="profile" />
 		</div>
 	)
 }
@@ -195,11 +173,14 @@ function FriendsTab({
 	isLoading,
 	error,
 	onRetry,
+	onFriendAdded,
 }: Readonly<{
 	friends: FriendSummary[] | null
 	isLoading: boolean
 	error: string | null
 	onRetry: () => void
+	//accepting a request creates a friendship, so the list above needs a refresh
+	onFriendAdded: () => void
 }>) {
 	if (isLoading) {
 		return <LoadingCard label="Loading your friends" />
@@ -266,100 +247,14 @@ function FriendsTab({
 				</CustomCard>
 			)}
 
-			<FriendRequestsCard />
-		</>
-	)
-}
-
-function FriendRequestsCard() {
-	const { requests, isLoading, error, reload, removeLocally } = useFriendRequests("incoming")
-	const [busyId, setBusyId] = React.useState<string | null>(null)
-	const [actionError, setActionError] = React.useState<string | null>(null)
-
-	const respond = async (request: FriendRequestSummary, accept: boolean) => {
-		setBusyId(request.id)
-		setActionError(null)
-		try {
-			if (accept) {
-				await acceptFriendRequest(request.id)
-			} else {
-				await declineFriendRequest(request.id)
-			}
-			removeLocally(request.id)
-		} catch (err) {
-			setActionError(
-				err instanceof Error ? err.message : "Could not respond to that request.",
-			)
-		} finally {
-			setBusyId(null)
-		}
-	}
-
-	if (isLoading) {
-		return <LoadingCard label="Loading friend requests" />
-	}
-
-	if (error) {
-		return <ErrorCard message={error} onRetry={reload} />
-	}
-
-	const list = requests ?? []
-	if (list.length === 0) {
-		return null
-	}
-
-	return (
-		<CustomCard variant="navyBorder" size="sm">
-			<SectionHead
+			<FriendRequestsCard
 				title="Friend Requests"
-				meta={`(${list.length})`}
-				to="/friends/add"
-				linkLabel="Manage"
+				rowSubtitle="Wants to be friends"
+				viewAllTo="/friends/add"
+				viewAllLabel="Manage"
+				onAccepted={onFriendAdded}
 			/>
-
-			{actionError && (
-				<p className="mt-2 text-xs font-semibold text-[#AC2A5D] dark:text-[#ff6b9d]">
-					{actionError}
-				</p>
-			)}
-
-			<div className="mt-2 divide-y divide-[#E8EFEC] dark:divide-[#2d3449]">
-				{list.map((request) => (
-					<div key={request.id} className="flex items-center gap-3 py-3">
-						<FriendAvatar displayName={request.senderDisplayName} size="md" />
-
-						<div className="min-w-0 flex-1">
-							<p className="truncate text-sm font-bold text-[#091828] dark:text-white">
-								{request.senderDisplayName}
-							</p>
-							<p className="truncate text-xs text-[#6B6375] dark:text-[#a0aec0]">
-								Wants to be friends
-							</p>
-						</div>
-
-						<button
-							type="button"
-							disabled={busyId === request.id}
-							onClick={() => void respond(request, true)}
-							className="flex shrink-0 items-center gap-1 rounded-full border-2 border-[#091828] bg-[#FF6B9D] px-3 py-1.5 text-xs font-bold text-[#6E0034] shadow-[2px_3px_0_#091828] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50 dark:border-[#2d3449] dark:shadow-[2px_3px_0_#060e20]"
-						>
-							<Check className="size-3.5" />
-							Accept
-						</button>
-
-						<button
-							type="button"
-							disabled={busyId === request.id}
-							onClick={() => void respond(request, false)}
-							aria-label={`Decline request from ${request.senderDisplayName}`}
-							className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-white text-[#6B6375] transition active:translate-x-[2px] active:translate-y-[2px] disabled:opacity-50 dark:border-[#2d3449] dark:bg-[#1c263c] dark:text-[#a0aec0]"
-						>
-							<X className="size-3.5" />
-						</button>
-					</div>
-				))}
-			</div>
-		</CustomCard>
+		</>
 	)
 }
 
@@ -396,42 +291,6 @@ function LeaderboardTab() {
 				))}
 			</div>
 		</CustomCard>
-	)
-}
-
-function LeaderboardRow({ entry }: Readonly<{ entry: LeaderboardEntry }>) {
-	return (
-		<div
-			className={cn(
-				"flex items-center gap-3 py-2.5",
-				entry.isSelf && "rounded-lg bg-[#FFF1F4] px-2 dark:bg-[#2d1b2e]",
-			)}
-		>
-			<span className="w-5 shrink-0 text-sm font-extrabold text-[#6B6375] dark:text-[#a0aec0]">
-				{entry.rank}
-			</span>
-
-			<FriendAvatar
-				displayName={entry.displayName}
-				avatarUrl={entry.avatarUrl}
-				size="sm"
-			/>
-
-			<p
-				className={cn(
-					"min-w-0 flex-1 truncate text-sm font-bold",
-					entry.isSelf
-						? "text-[#AC2A5D] dark:text-[#ff6b9d]"
-						: "text-[#091828] dark:text-white",
-				)}
-			>
-				{entry.isSelf ? "You" : entry.displayName}
-			</p>
-
-			<span className="shrink-0 text-sm font-bold text-[#091828] dark:text-white">
-				{entry.value}
-			</span>
-		</div>
 	)
 }
 
@@ -563,13 +422,6 @@ function QuickLinksCard() {
 			title: "View challenges",
 			description: "Invites, active wagers and results",
 			tone: "bg-[#E8E4F4] text-[#5B4D8B] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]",
-		},
-		{
-			to: "/settings/preferences",
-			icon: <Lock className="size-4" />,
-			title: "Manage privacy",
-			description: "Friends only ever see your public stats",
-			tone: "bg-[#D7DEE4] text-[#3E4A55] dark:bg-[#1c263c] dark:text-[#dae2fd]",
 		},
 	]
 
