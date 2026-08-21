@@ -1,4 +1,4 @@
-import { Get, Controller, UseGuards } from '@nestjs/common';
+import { Get, Controller, UseGuards, Param, Patch } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiTags,
@@ -49,5 +49,19 @@ export class CosmeticsController {
   @Get()
   async getCatalogue(@CurrentAuthUser() authUser: AuthUser) {
     return this.cosmeticsService.getCatalogue(authUser);
+  }
+  @Patch(':id/equip')
+  async equip(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.cosmeticsService.equip(authUser, id);
+  }
+  @Patch(':/id/unequip')
+  async unequip(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.cosmeticsService.unequip(authUser, id);
   }
 }
