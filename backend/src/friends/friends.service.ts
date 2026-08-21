@@ -273,6 +273,24 @@ export class FriendsService {
     return this.toFriendSummary(friendship.id, friendship.friend);
   }
 
+  async removeFriend(userId: string, friendId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const removed = await tx.friendship.deleteMany({
+        where: { userId, friendId },
+      });
+
+      if (removed.count !== 1) {
+        throw new NotFoundException('Friend not found');
+      }
+
+      await tx.friendship.deleteMany({
+        where: { userId: friendId, friendId: userId },
+      });
+
+      return { friendId, removed: true };
+    });
+  }
+
   private async getRequestForAction(
     requestId: string,
     userId: string,

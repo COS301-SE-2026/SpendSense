@@ -185,4 +185,16 @@ export class FriendsController {
     const user = await this.usersService.findOrCreateUser(authUser);
     return this.friendsService.getFriend(user.id, friendId);
   }
+
+  @ApiOperation({ summary: 'Remove a current friend' })
+  @ApiOkResponse({ description: 'Both friendship directions were removed.' })
+  @ApiNotFoundResponse({ description: 'User is not a current friend.' })
+  @Delete(':friendId')
+  async removeFriend(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('friendId') friendId: string,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.friendsService.removeFriend(user.id, friendId);
+  }
 }

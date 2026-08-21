@@ -10,6 +10,7 @@ describe('FriendsService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
       findUnique: jest.fn(),
+      deleteMany: jest.fn(),
     },
     friendRequest: {
       findMany: jest.fn(),
@@ -263,5 +264,49 @@ describe('FriendsService', () => {
     await expect(
       service.getFriend('user-id', 'not-a-friend-id'),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('removes both directions of an existing friendship', async () => {
+    const transactionClient = {
+      friendship: {
+        deleteMany: jest
+          .fn()
+          .mockResolvedValueOnce({ count: 1 })
+          .mockResolvedValueOnce({ count: 1 }),
+      },
+    };
+    prisma.$transaction.mockImplementation((operation: unknown) => {
+      const callback = operation as (
+        tx: typeof transactionClient,
+      ) => Promise<unknown>;
+      return callback(transactionClient);
+    });
+
+    await expect(service.removeFriend('user-id', 'friend-id')).resolves.toEqual(
+      { friendId: 'friend-id', removed: true },
+    );
+    expect(transactionClient.friendship.deleteMany).toHaveBeenNthCalledWith(1, {
+      where: { userId: 'user-id', friendId: 'friend-id' },
+    });
+    expect(transactionClient.friendship.deleteMany).toHaveBeenNthCalledWith(2, {
+      where: { userId: 'friend-id', friendId: 'user-id' },
+    });
+  });
+
+  it('does not reveal or remove a non-friend', async () => {
+    const transactionClient = {
+      friendship: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    };
+    prisma.$transaction.mockImplementation((operation: unknown) => {
+      const callback = operation as (
+        tx: typeof transactionClient,
+      ) => Promise<unknown>;
+      return callback(transactionClient);
+    });
+
+    await expect(
+      service.removeFriend('user-id', 'not-a-friend-id'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(transactionClient.friendship.deleteMany).toHaveBeenCalledTimes(1);
   });
 });
