@@ -1,8 +1,19 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBadRequestResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -15,6 +26,7 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import { UsersService } from '../users/users.service';
 import { CreateFriendRequestDto } from './dto/create-friend-request.dto';
+import { ListFriendRequestsQueryDto } from './dto/list-friend-requests-query.dto';
 import { SearchFriendsQueryDto } from './dto/search-friends-query.dto';
 import { FriendsService } from './friends.service';
 
@@ -85,5 +97,68 @@ export class FriendsController {
   ) {
     const user = await this.usersService.findOrCreateUser(authUser);
     return this.friendsService.createRequest(user.id, body.receiverId);
+  }
+
+  @ApiOperation({ summary: 'List pending friend requests' })
+  @ApiQuery({
+    name: 'direction',
+    required: false,
+    enum: ['incoming', 'outgoing'],
+  })
+  @Get('requests')
+  async listRequests(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Query() query: ListFriendRequestsQueryDto,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.friendsService.listRequests(
+      user.id,
+      query.direction ?? 'incoming',
+    );
+  }
+
+  @ApiOperation({ summary: 'Accept an incoming friend request' })
+  @ApiBadRequestResponse({
+    description: 'Friend request is no longer pending.',
+  })
+  @ApiForbiddenResponse({ description: 'Only the receiver may accept.' })
+  @ApiNotFoundResponse({ description: 'Friend request does not exist.' })
+  @Patch('requests/:id/accept')
+  async acceptRequest(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('id') requestId: string,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.friendsService.acceptRequest(user.id, requestId);
+  }
+
+  @ApiOperation({ summary: 'Decline an incoming friend request' })
+  @ApiBadRequestResponse({
+    description: 'Friend request is no longer pending.',
+  })
+  @ApiForbiddenResponse({ description: 'Only the receiver may decline.' })
+  @ApiNotFoundResponse({ description: 'Friend request does not exist.' })
+  @Patch('requests/:id/decline')
+  async declineRequest(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('id') requestId: string,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.friendsService.declineRequest(user.id, requestId);
+  }
+
+  @ApiOperation({ summary: 'Cancel an outgoing friend request' })
+  @ApiBadRequestResponse({
+    description: 'Friend request is no longer pending.',
+  })
+  @ApiForbiddenResponse({ description: 'Only the sender may cancel.' })
+  @ApiNotFoundResponse({ description: 'Friend request does not exist.' })
+  @Delete('requests/:id')
+  async cancelRequest(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('id') requestId: string,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.friendsService.cancelRequest(user.id, requestId);
   }
 }
