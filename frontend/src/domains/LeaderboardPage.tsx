@@ -8,9 +8,10 @@ import { FriendsPageShell } from "@/components/common/FriendsPageShell"
 import { FilterChips } from "@/components/common/FilterChips"
 import { FriendAvatar } from "@/components/common/FriendAvatar"
 import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
+import { LeaderboardRow } from "@/components/common/LeaderboardRow"
 import { cn } from "@/lib/utils"
 import { useFriendsLeaderboard } from "@/hooks/useFriends"
-import type { LeaderboardEntry, LeaderboardMetric } from "@/features/friends/friendsTypes"
+import type { LeaderboardMetric } from "@/features/friends/friendsTypes"
 
 //GET /friends/leaderboard?metric=score|streak.
 //friend scoped only, a global leaderboard needs a privacy decision nobody has
@@ -122,7 +123,11 @@ export default function LeaderboardPage() {
 						<CustomCard variant="navyBorder" size="sm">
 							<div className="divide-y divide-[#E8EFEC] dark:divide-[#2d3449]">
 								{rest.map((entry) => (
-									<LeaderboardRow key={entry.userId} entry={entry} metric={metric} />
+									<LeaderboardRow
+										key={entry.userId}
+										entry={entry}
+										showStreakIcon={metric === "streak"}
+									/>
 								))}
 							</div>
 						</CustomCard>
@@ -156,48 +161,5 @@ export default function LeaderboardPage() {
 				</Link>
 			</LongButton>
 		</FriendsPageShell>
-	)
-}
-
-function LeaderboardRow({
-	entry,
-	metric,
-}: Readonly<{
-	entry: LeaderboardEntry
-	metric: LeaderboardMetric
-}>) {
-	return (
-		<div
-			className={cn(
-				"flex items-center gap-3 py-2.5",
-				entry.isSelf && "rounded-lg bg-[#FFF1F4] px-2 dark:bg-[#2d1b2e]",
-			)}
-		>
-			<span className="w-5 shrink-0 text-sm font-extrabold text-[#6B6375] dark:text-[#a0aec0]">
-				{entry.rank}
-			</span>
-
-			<FriendAvatar
-				displayName={entry.displayName}
-				avatarUrl={entry.avatarUrl}
-				size="sm"
-			/>
-
-			<p
-				className={cn(
-					"min-w-0 flex-1 truncate text-sm font-bold",
-					entry.isSelf
-						? "text-[#AC2A5D] dark:text-[#ff6b9d]"
-						: "text-[#091828] dark:text-white",
-				)}
-			>
-				{entry.isSelf ? "You" : entry.displayName}
-			</p>
-
-			<span className="flex shrink-0 items-center gap-1 text-sm font-bold text-[#091828] dark:text-white">
-				{metric === "streak" && <Flame className="size-4 text-[#FF6B9D]" />}
-				{entry.value}
-			</span>
-		</div>
 	)
 }
