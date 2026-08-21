@@ -55,7 +55,7 @@ describe('CosmeticsController', () => {
 
       expect(result).toEqual(catalogue);
     });
-    
+
     it('will call the cosmetics service with a user that has been authenticated', async () => {
       cosmeticsService.getCatalogue.mockResolvedValue([]);
 

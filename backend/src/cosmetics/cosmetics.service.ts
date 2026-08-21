@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import type { AuthUser } from '../auth/types/auth-user.type';
@@ -48,5 +48,93 @@ export class CosmeticsService {
         owned: Boolean(ownedRow),
       };
     });
+  }
+
+  async equip(authUser: AuthUser, cosmeticId: string) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+
+    const ownedItem = await this.prisma.userInventoryItem.findFirst({
+      where: {
+        userId: user.id,
+        cosmeticItemId: cosmeticId,
+        cosmeticItem: {
+          isActive: true,
+        },
+      },
+      include: {
+        cosmeticItem: true,
+      },
+    });
+
+    if (!ownedItem) {
+      throw new BadRequestException('Cosmetic item is not owned');
+    }
+
+    return this.prisma.$transaction(async (transaction) => {
+      await transaction.userInventoryItem.updateMany({
+        where: {
+          userId: user.id,
+          equipped: true,
+          cosmeticItem: {
+            slot: ownedItem.cosmeticItem.slot,
+          },
+        },
+        data: {
+          equipped: false,
+        },
+      });
+
+      await transaction.userInventoryItem.update({
+        where: {
+          id: ownedItem.id,
+        },
+        data: {
+          equipped: true,
+        },
+      });
+
+      return {
+        id: cosmeticId,
+        slot: ownedItem.cosmeticItem.slot,
+        equipped: true,
+      };
+    });
+  }
+
+  async unequip(authUser: AuthUser, cosmeticId: string) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+
+    const ownedItem = await this.prisma.userInventoryItem.findFirst({
+      where: {
+        userId: user.id,
+        cosmeticItemId: cosmeticId,
+        equipped: true,
+        cosmeticItem: {
+          isActive: true,
+        },
+      },
+      include: {
+        cosmeticItem: true,
+      },
+    });
+
+    if (!ownedItem) {
+      throw new BadRequestException('Cosmetic item is not equipped');
+    }
+
+    await this.prisma.userInventoryItem.update({
+      where: {
+        id: ownedItem.id,
+      },
+      data: {
+        equipped: false,
+      },
+    });
+
+    return {
+      id: cosmeticId,
+      slot: ownedItem.cosmeticItem.slot,
+      equipped: false,
+    };
   }
 }

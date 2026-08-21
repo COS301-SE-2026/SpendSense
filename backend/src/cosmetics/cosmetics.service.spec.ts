@@ -123,7 +123,7 @@ describe('CosmeticsService', () => {
         owned: true,
       });
     });
-    
+
     it('will fetch the active cosmetic items with the users inventory status for those items', async () => {
       usersService.findOrCreateUser.mockResolvedValue(user);
       prisma.cosmeticItem.findMany.mockResolvedValue([]);
