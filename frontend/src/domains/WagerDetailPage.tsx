@@ -6,6 +6,7 @@ import { CustomCard } from "@/components/ui/CustomCard"
 import { LongButton } from "@/components/common/LongButton"
 import { FriendsPageShell } from "@/components/common/FriendsPageShell"
 import { FriendAvatar } from "@/components/common/FriendAvatar"
+import { StatTile } from "@/components/common/StatTile"
 import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
 import { WagerStatusPill } from "@/components/common/WagerStatusPill"
 import { acceptWager, cancelWager, declineWager } from "@/features/friends/wagersApi"
@@ -125,17 +126,17 @@ export default function WagerDetailPage() {
 				</p>
 
 				<div className="mt-4 grid grid-cols-3 gap-2">
-					<DetailStat
+					<StatTile
 						label="Stake each"
 						value={wager.stakeAmount}
 						icon={<Coins className="size-3.5 text-[#F2BF3C]" />}
 					/>
-					<DetailStat
+					<StatTile
 						label="Pot"
 						value={wager.stakeAmount * 2}
 						icon={<Trophy className="size-3.5 text-[#7A5A00] dark:text-[#ffd166]" />}
 					/>
-					<DetailStat
+					<StatTile
 						label={wager.status === "ACTIVE" ? "Days left" : "Duration"}
 						value={
 							wager.status === "ACTIVE" && left !== null
@@ -251,25 +252,5 @@ export default function WagerDetailPage() {
 				<Link to="/wagers">All challenges</Link>
 			</LongButton>
 		</FriendsPageShell>
-	)
-}
-
-function DetailStat({
-	label,
-	value,
-	icon,
-}: Readonly<{
-	label: string
-	value: string | number
-	icon?: React.ReactNode
-}>) {
-	return (
-		<div className="rounded-xl border-2 border-[#091828] bg-white px-2 py-3 text-center">
-			<p className="flex items-center justify-center gap-1 text-base font-extrabold text-[#091828] dark:text-white">
-				{icon}
-				{value}
-			</p>
-			<p className="text-[11px] text-[#6B6375] dark:text-[#a0aec0]">{label}</p>
-		</div>
 	)
 }
