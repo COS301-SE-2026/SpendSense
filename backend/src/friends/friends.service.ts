@@ -135,8 +135,8 @@ export class FriendsService {
 
     return requests.map(({ sender, receiver, ...request }) => ({
       ...request,
-      senderDisplayName: sender.displayName,
-      receiverDisplayName: receiver.displayName,
+      senderDisplayName: sender.displayName ?? 'Unknown user',
+      receiverDisplayName: receiver.displayName ?? 'Unknown user',
     }));
   }
 

@@ -130,6 +130,30 @@ describe('FriendsService', () => {
     ]);
   });
 
+  it('uses a safe display name when a request user has no profile name', async () => {
+    prisma.friendRequest.findMany.mockResolvedValue([
+      {
+        id: 'request-id',
+        senderId: 'sender-id',
+        receiverId: 'receiver-id',
+        status: FriendRequestStatus.PENDING,
+        createdAt: new Date('2026-08-21T10:00:00.000Z'),
+        respondedAt: null,
+        sender: { displayName: null },
+        receiver: { displayName: null },
+      },
+    ]);
+
+    await expect(
+      service.listRequests('receiver-id', 'incoming'),
+    ).resolves.toMatchObject([
+      {
+        senderDisplayName: 'Unknown user',
+        receiverDisplayName: 'Unknown user',
+      },
+    ]);
+  });
+
   it('accepts a pending incoming request and creates both friendship directions', async () => {
     const transactionClient = {
       friendRequest: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
