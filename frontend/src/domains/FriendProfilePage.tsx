@@ -6,6 +6,7 @@ import { CustomCard } from "@/components/ui/CustomCard"
 import { LongButton } from "@/components/common/LongButton"
 import { FriendsPageShell } from "@/components/common/FriendsPageShell"
 import { FriendAvatar } from "@/components/common/FriendAvatar"
+import { StatTile } from "@/components/common/StatTile"
 import { ScoreTierPill } from "@/components/common/ScoreTierPill"
 import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
 import { useFriendProfile } from "@/hooks/useFriends"
@@ -13,7 +14,6 @@ import { removeFriend } from "@/features/friends/friendsApi"
 import { SCORE_TIER_LABELS } from "@/features/friends/friendsTypes"
 
 //GET /friends/:friendId + DELETE /friends/:friendId.
-//public summary only, never their obligations, payments or email.
 
 export default function FriendProfilePage() {
 	const { friendId } = useParams()
@@ -98,16 +98,16 @@ export default function FriendProfilePage() {
 				</p>
 
 				<div className="mt-4 grid grid-cols-3 gap-2">
-					<ProfileStat
+					<StatTile
 						label="Tier"
 						value={SCORE_TIER_LABELS[friend.scoreTier]}
 					/>
-					<ProfileStat
+					<StatTile
 						label="Day Streak"
 						value={friend.currentPaymentStreak}
 						icon={<Flame className="size-3.5 text-[#FF6B9D]" />}
 					/>
-					<ProfileStat
+					<StatTile
 						label="Badges"
 						value={friend.badgeCount}
 						icon={<Award className="size-3.5 text-[#5B4D8B] dark:text-[#ff6b9d]" />}
@@ -180,25 +180,5 @@ export default function FriendProfilePage() {
 				</LongButton>
 			)}
 		</FriendsPageShell>
-	)
-}
-
-function ProfileStat({
-	label,
-	value,
-	icon,
-}: Readonly<{
-	label: string
-	value: string | number
-	icon?: React.ReactNode
-}>) {
-	return (
-		<div className="rounded-xl border-2 border-[#091828] bg-white px-2 py-3 text-center">
-			<p className="flex items-center justify-center gap-1 text-base font-extrabold text-[#091828] dark:text-white">
-				{icon}
-				{value}
-			</p>
-			<p className="text-[11px] text-[#6B6375] dark:text-[#a0aec0]">{label}</p>
-		</div>
 	)
 }
