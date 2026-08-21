@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { FriendRequestStatus } from '@prisma/client';
+import { FriendRequestStatus, ScoreTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { FriendRequestDirection } from './dto/list-friend-requests-query.dto';
 
@@ -242,6 +242,37 @@ export class FriendsService {
     return { id: request.id, status: FriendRequestStatus.CANCELLED };
   }
 
+  async listFriends(userId: string) {
+    const friendships = await this.prisma.friendship.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        friend: { select: friendSummarySelect },
+      },
+    });
+
+    return friendships.map(({ id, friend }) =>
+      this.toFriendSummary(id, friend),
+    );
+  }
+
+  async getFriend(userId: string, friendId: string) {
+    const friendship = await this.prisma.friendship.findUnique({
+      where: { userId_friendId: { userId, friendId } },
+      select: {
+        id: true,
+        friend: { select: friendSummarySelect },
+      },
+    });
+
+    if (!friendship) {
+      throw new NotFoundException('Friend not found');
+    }
+
+    return this.toFriendSummary(friendship.id, friendship.friend);
+  }
+
   private async getRequestForAction(
     requestId: string,
     userId: string,
@@ -281,4 +312,35 @@ export class FriendsService {
 
     return { id: requestId, status, ...(respondedAt ? { respondedAt } : {}) };
   }
+
+  private toFriendSummary(friendshipId: string, friend: FriendSummaryUser) {
+    return {
+      friendshipId,
+      friendId: friend.id,
+      displayName: friend.displayName ?? 'SpendSense user',
+      avatarUrl: friend.avatarUrl,
+      scoreTier: friend.creditProfile?.scoreTier ?? ScoreTier.GOOD,
+      currentPaymentStreak:
+        friend.gamificationProfile?.currentPaymentStreak ?? 0,
+      badgeCount: friend.badges.length,
+    };
+  }
 }
+
+const friendSummarySelect = {
+  id: true,
+  displayName: true,
+  avatarUrl: true,
+  creditProfile: { select: { scoreTier: true } },
+  gamificationProfile: { select: { currentPaymentStreak: true } },
+  badges: { where: { earnedAt: { not: null } }, select: { id: true } },
+} as const;
+
+type FriendSummaryUser = {
+  id: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  creditProfile: { scoreTier: ScoreTier } | null;
+  gamificationProfile: { currentPaymentStreak: number } | null;
+  badges: { id: string }[];
+};

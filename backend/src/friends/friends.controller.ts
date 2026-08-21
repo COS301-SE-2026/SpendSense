@@ -161,4 +161,28 @@ export class FriendsController {
     const user = await this.usersService.findOrCreateUser(authUser);
     return this.friendsService.cancelRequest(user.id, requestId);
   }
+
+  @ApiOperation({ summary: 'List the authenticated user’s friends' })
+  @ApiOkResponse({
+    description: 'Privacy-safe summaries for every current friend.',
+  })
+  @Get()
+  async listFriends(@CurrentAuthUser() authUser: AuthUser) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.friendsService.listFriends(user.id);
+  }
+
+  @ApiOperation({ summary: 'Get a friend’s public summary' })
+  @ApiOkResponse({
+    description: 'The requested friend’s privacy-safe summary.',
+  })
+  @ApiNotFoundResponse({ description: 'User is not a current friend.' })
+  @Get(':friendId')
+  async getFriend(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('friendId') friendId: string,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.friendsService.getFriend(user.id, friendId);
+  }
 }

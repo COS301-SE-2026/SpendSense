@@ -6,7 +6,11 @@ import { FriendsService } from './friends.service';
 describe('FriendsService', () => {
   const prisma = {
     $transaction: jest.fn(),
-    friendship: { findMany: jest.fn(), findFirst: jest.fn() },
+    friendship: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+    },
     friendRequest: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
@@ -203,5 +207,61 @@ describe('FriendsService', () => {
       id: 'outgoing-id',
       status: FriendRequestStatus.CANCELLED,
     });
+  });
+
+  it('lists only privacy-safe friend summaries', async () => {
+    prisma.friendship.findMany.mockResolvedValue([
+      {
+        id: 'friendship-id',
+        friend: {
+          id: 'friend-id',
+          displayName: 'Friend',
+          avatarUrl: null,
+          creditProfile: { scoreTier: 'EXCELLENT' },
+          gamificationProfile: { currentPaymentStreak: 5 },
+          badges: [{ id: 'badge-one' }, { id: 'badge-two' }],
+        },
+      },
+    ]);
+
+    await expect(service.listFriends('user-id')).resolves.toEqual([
+      {
+        friendshipId: 'friendship-id',
+        friendId: 'friend-id',
+        displayName: 'Friend',
+        avatarUrl: null,
+        scoreTier: 'EXCELLENT',
+        currentPaymentStreak: 5,
+        badgeCount: 2,
+      },
+    ]);
+  });
+
+  it('returns one current friend and hides non-friends', async () => {
+    prisma.friendship.findUnique.mockResolvedValueOnce({
+      id: 'friendship-id',
+      friend: {
+        id: 'friend-id',
+        displayName: 'Friend',
+        avatarUrl: null,
+        creditProfile: { scoreTier: 'GOOD' },
+        gamificationProfile: { currentPaymentStreak: 2 },
+        badges: [],
+      },
+    });
+
+    await expect(
+      service.getFriend('user-id', 'friend-id'),
+    ).resolves.toMatchObject({
+      friendshipId: 'friendship-id',
+      friendId: 'friend-id',
+      scoreTier: 'GOOD',
+    });
+
+    prisma.friendship.findUnique.mockResolvedValueOnce(null);
+
+    await expect(
+      service.getFriend('user-id', 'not-a-friend-id'),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
