@@ -1,10 +1,12 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { FriendRequestStatus } from '@prisma/client';
+import { FriendRequestStatus, ScoreTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import type { FriendRequestDirection } from './dto/list-friend-requests-query.dto';
 
 @Injectable()
 export class FriendsService {
@@ -109,4 +111,254 @@ export class FriendsService {
       },
     });
   }
+
+  async listRequests(userId: string, direction: FriendRequestDirection) {
+    const requests = await this.prisma.friendRequest.findMany({
+      where: {
+        status: FriendRequestStatus.PENDING,
+        ...(direction === 'incoming'
+          ? { receiverId: userId }
+          : { senderId: userId }),
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        senderId: true,
+        receiverId: true,
+        status: true,
+        createdAt: true,
+        respondedAt: true,
+        sender: { select: { displayName: true } },
+        receiver: { select: { displayName: true } },
+      },
+    });
+
+    return requests.map(({ sender, receiver, ...request }) => ({
+      ...request,
+      senderDisplayName: sender.displayName,
+      receiverDisplayName: receiver.displayName,
+    }));
+  }
+
+  async acceptRequest(userId: string, requestId: string) {
+    const request = await this.getRequestForAction(
+      requestId,
+      userId,
+      'receiverId',
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const respondedAt = new Date();
+      const updated = await tx.friendRequest.updateMany({
+        where: { id: request.id, status: FriendRequestStatus.PENDING },
+        data: { status: FriendRequestStatus.ACCEPTED, respondedAt },
+      });
+
+      if (updated.count !== 1) {
+        throw new BadRequestException('Friend request is no longer pending');
+      }
+
+      await tx.friendship.createMany({
+        data: [
+          { userId, friendId: request.senderId },
+          { userId: request.senderId, friendId: userId },
+        ],
+        skipDuplicates: true,
+      });
+
+      const [friendship, friend] = await Promise.all([
+        tx.friendship.findUnique({
+          where: { userId_friendId: { userId, friendId: request.senderId } },
+          select: { id: true },
+        }),
+        tx.user.findUnique({
+          where: { id: request.senderId },
+          select: {
+            id: true,
+            displayName: true,
+            avatarUrl: true,
+            creditProfile: { select: { scoreTier: true } },
+            gamificationProfile: { select: { currentPaymentStreak: true } },
+            badges: {
+              where: { earnedAt: { not: null } },
+              select: { id: true },
+            },
+          },
+        }),
+      ]);
+
+      if (
+        !friendship ||
+        !friend ||
+        !friend.creditProfile ||
+        !friend.gamificationProfile
+      ) {
+        throw new NotFoundException('User not found');
+      }
+
+      return {
+        request: {
+          id: request.id,
+          status: FriendRequestStatus.ACCEPTED,
+          respondedAt,
+        },
+        friendship: {
+          friendshipId: friendship.id,
+          friendId: friend.id,
+          displayName: friend.displayName,
+          avatarUrl: friend.avatarUrl,
+          scoreTier: friend.creditProfile.scoreTier,
+          currentPaymentStreak: friend.gamificationProfile.currentPaymentStreak,
+          badgeCount: friend.badges.length,
+        },
+      };
+    });
+  }
+
+  async declineRequest(userId: string, requestId: string) {
+    const request = await this.getRequestForAction(
+      requestId,
+      userId,
+      'receiverId',
+    );
+    const respondedAt = new Date();
+
+    return this.updatePendingRequest(
+      request.id,
+      FriendRequestStatus.DECLINED,
+      respondedAt,
+    );
+  }
+
+  async cancelRequest(userId: string, requestId: string) {
+    const request = await this.getRequestForAction(
+      requestId,
+      userId,
+      'senderId',
+    );
+
+    await this.updatePendingRequest(request.id, FriendRequestStatus.CANCELLED);
+
+    return { id: request.id, status: FriendRequestStatus.CANCELLED };
+  }
+
+  async listFriends(userId: string) {
+    const friendships = await this.prisma.friendship.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        friend: { select: friendSummarySelect },
+      },
+    });
+
+    return friendships.map(({ id, friend }) =>
+      this.toFriendSummary(id, friend),
+    );
+  }
+
+  async getFriend(userId: string, friendId: string) {
+    const friendship = await this.prisma.friendship.findUnique({
+      where: { userId_friendId: { userId, friendId } },
+      select: {
+        id: true,
+        friend: { select: friendSummarySelect },
+      },
+    });
+
+    if (!friendship) {
+      throw new NotFoundException('Friend not found');
+    }
+
+    return this.toFriendSummary(friendship.id, friendship.friend);
+  }
+
+  async removeFriend(userId: string, friendId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const removed = await tx.friendship.deleteMany({
+        where: { userId, friendId },
+      });
+
+      if (removed.count !== 1) {
+        throw new NotFoundException('Friend not found');
+      }
+
+      await tx.friendship.deleteMany({
+        where: { userId: friendId, friendId: userId },
+      });
+
+      return { friendId, removed: true };
+    });
+  }
+
+  private async getRequestForAction(
+    requestId: string,
+    userId: string,
+    ownerField: 'senderId' | 'receiverId',
+  ) {
+    const request = await this.prisma.friendRequest.findUnique({
+      where: { id: requestId },
+      select: { id: true, senderId: true, receiverId: true, status: true },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Friend request not found');
+    }
+    if (request[ownerField] !== userId) {
+      throw new ForbiddenException('You cannot modify this friend request');
+    }
+    if (request.status !== FriendRequestStatus.PENDING) {
+      throw new BadRequestException('Friend request is no longer pending');
+    }
+
+    return request;
+  }
+
+  private async updatePendingRequest(
+    requestId: string,
+    status: FriendRequestStatus,
+    respondedAt?: Date,
+  ) {
+    const updated = await this.prisma.friendRequest.updateMany({
+      where: { id: requestId, status: FriendRequestStatus.PENDING },
+      data: { status, ...(respondedAt ? { respondedAt } : {}) },
+    });
+
+    if (updated.count !== 1) {
+      throw new BadRequestException('Friend request is no longer pending');
+    }
+
+    return { id: requestId, status, ...(respondedAt ? { respondedAt } : {}) };
+  }
+
+  private toFriendSummary(friendshipId: string, friend: FriendSummaryUser) {
+    return {
+      friendshipId,
+      friendId: friend.id,
+      displayName: friend.displayName ?? 'SpendSense user',
+      avatarUrl: friend.avatarUrl,
+      scoreTier: friend.creditProfile?.scoreTier ?? ScoreTier.GOOD,
+      currentPaymentStreak:
+        friend.gamificationProfile?.currentPaymentStreak ?? 0,
+      badgeCount: friend.badges.length,
+    };
+  }
 }
+
+const friendSummarySelect = {
+  id: true,
+  displayName: true,
+  avatarUrl: true,
+  creditProfile: { select: { scoreTier: true } },
+  gamificationProfile: { select: { currentPaymentStreak: true } },
+  badges: { where: { earnedAt: { not: null } }, select: { id: true } },
+} as const;
+
+type FriendSummaryUser = {
+  id: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  creditProfile: { scoreTier: ScoreTier } | null;
+  gamificationProfile: { currentPaymentStreak: number } | null;
+  badges: { id: string }[];
+};
