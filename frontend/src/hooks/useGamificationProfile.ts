@@ -1,4 +1,5 @@
 import {useState, useEffect, useCallback} from 'react'
+import {subscribeToCoinBalance} from '@/features/gamification/coinBalance'
 import {getGamificationProfile} from '@/features/gamification/gamificationApi'
 
 // GET /gamification/profile
@@ -67,6 +68,14 @@ export function useGamificationProfile(): UseGamificationProfileReturn{
         // eslint-disable-next-line react-hooks/set-state-in-effect
         void fetchProfile()
     }, [fetchProfile])
+
+    //some endpoints (eg. accepting a wager) return the caller's new balance
+    //inline, so take that number instead of re-fetching the whole profile
+    useEffect(()=>{
+        return subscribeToCoinBalance((coins)=>{
+            setProfile((current)=> current ? {...current, coins} : current)
+        })
+    }, [])
 
     return{
         profile,
