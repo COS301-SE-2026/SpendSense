@@ -82,10 +82,12 @@ export class MonthlyWrappedController {
         },
     })
 
-    async getMonthlyWrapped(@CurrentAuthUser() authUser: AuthUser, @Query('year') yearQuery: string, @Query('month') monthQuery: string) {
+    async getMonthlyWrapped(@CurrentAuthUser() authUser: AuthUser, @Query('year') yearQuery?: string, @Query('month') monthQuery?: string) {
 
-        const year = Number(yearQuery);
-        const month = Number(monthQuery);
+        const currentDate = new Date() ;
+
+        const year = yearQuery ? Number(yearQuery) : currentDate.getFullYear() ;
+        const month = monthQuery ? Number(monthQuery) : currentDate.getMonth() + 1  ;
 
         if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
             throw new BadRequestException('Invalid year or month');
