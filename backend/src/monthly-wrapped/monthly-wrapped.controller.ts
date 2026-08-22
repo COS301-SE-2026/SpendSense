@@ -30,13 +30,14 @@ export class MonthlyWrappedController {
         name: 'year',
         type: Number,
         example: 2026,
-        required: true,
+        required: false,
+        description: "default to the current year",
     })
     @ApiQuery({
         name: 'month',
         type: Number,
         example: 8,
-        required: true,
+        required: false,
         description: 'Month number between 1 and upto and including 12',
     })
     @ApiResponse({
