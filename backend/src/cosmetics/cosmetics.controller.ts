@@ -51,10 +51,7 @@ export class CosmeticsController {
     return this.cosmeticsService.getCatalogue(authUser);
   }
   @Patch(':id/equip')
-  async equip(
-    @CurrentAuthUser() authUser: AuthUser,
-    @Param('id') id: string,
-  ) {
+  async equip(@CurrentAuthUser() authUser: AuthUser, @Param('id') id: string) {
     return this.cosmeticsService.equip(authUser, id);
   }
   @Patch(':/id/unequip')

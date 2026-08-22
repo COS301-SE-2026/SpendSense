@@ -1,7 +1,6 @@
 import { CosmeticsController } from './cosmetics.controller';
 import { CosmeticsService } from './cosmetics.service';
 import type { AuthUser } from '../auth/types/auth-user.type';
-import { itxClientDenyList, JsonObject } from '@prisma/client/runtime/client';
 
 describe('CosmeticsController', () => {
   let controller: CosmeticsController;
@@ -21,7 +20,7 @@ describe('CosmeticsController', () => {
     cosmeticsService = {
       getCatalogue: jest.fn(),
       equip: jest.fn(),
-      unequip: jest.fn();
+      unequip: jest.fn(),
     };
 
     controller = new CosmeticsController(
@@ -83,83 +82,81 @@ describe('CosmeticsController', () => {
 
   describe('equip', () => {
     it('will call the cosmetics service in order to equip an item', async () => {
-        cosmeticsService.equip.mockResolvedValue({
-            id: 'cosmetic-1',
-            slot: 'HAT',
-            equipped: true,
-        });
+      cosmeticsService.equip.mockResolvedValue({
+        id: 'cosmetic-1',
+        slot: 'HAT',
+        equipped: true,
+      });
 
-        await controller.equip(authUser, 'cosmetic-1');
+      await controller.equip(authUser, 'cosmetic-1');
 
-        expect(cosmeticsService.equip).toHaveBeenCalledWith(
-            authUser,
-            'cosmetic-1',
-        );
-        expect(cosmeticsService.equip).toHaveBeenCalledTimes(1);
+      expect(cosmeticsService.equip).toHaveBeenCalledWith(
+        authUser,
+        'cosmetic-1',
+      );
+      expect(cosmeticsService.equip).toHaveBeenCalledTimes(1);
     });
 
     it('will throw error when equipping fails', async () => {
-        cosmeticsService.equip.mockRejectedValue(
-            new Error('Equip has failed'),
-        );
+      cosmeticsService.equip.mockRejectedValue(new Error('Equip has failed'));
 
-        await expect(
-            controller.equip(authUser, 'cosmetic-1'),
-        ).rejects.toThrow('Equip has failed');
+      await expect(controller.equip(authUser, 'cosmetic-1')).rejects.toThrow(
+        'Equip has failed',
+      );
     });
 
     it('will return the cosmetic items that is equipped', async () => {
-        const itemEquipped = {
-            id: 'cosmetic-1',
-            slot: 'HAT',
-            equipped: true,
-        };
+      const itemEquipped = {
+        id: 'cosmetic-1',
+        slot: 'HAT',
+        equipped: true,
+      };
 
-        cosmeticsService.equip.mockResolvedValue(itemEquipped);
+      cosmeticsService.equip.mockResolvedValue(itemEquipped);
 
-        const result = await controller.equip(authUser, 'cosmetic-1');
-        expect(result).toEqual(itemEquipped);
+      const result = await controller.equip(authUser, 'cosmetic-1');
+      expect(result).toEqual(itemEquipped);
     });
   });
 
   describe('unequip', () => {
     it('will call the cosmetics service in order to unequip an item', async () => {
-        cosmeticsService.unequip.mockResolvedValue({
-            id: 'cosmetic-1',
-            slot: 'HAT',
-            equipped: false,
-        });
+      cosmeticsService.unequip.mockResolvedValue({
+        id: 'cosmetic-1',
+        slot: 'HAT',
+        equipped: false,
+      });
 
-        await controller.unequip(authUser, 'cosmetic-1');
+      await controller.unequip(authUser, 'cosmetic-1');
 
-        expect(cosmeticsService.unequip).toHaveBeenCalledWith(
-            authUser,
-            'cosmetic-1',
-        );
-        expect(cosmeticsService.unequip).toHaveBeenCalledTimes(1);
+      expect(cosmeticsService.unequip).toHaveBeenCalledWith(
+        authUser,
+        'cosmetic-1',
+      );
+      expect(cosmeticsService.unequip).toHaveBeenCalledTimes(1);
     });
 
     it('will throw error when unequipping fails', async () => {
-        cosmeticsService.unequip.mockRejectedValue(
-            new Error('Unequip has failed'),
-        );
+      cosmeticsService.unequip.mockRejectedValue(
+        new Error('Unequip has failed'),
+      );
 
-        await expect(
-            controller.unequip(authUser, 'cosmetic-1'),
-        ).rejects.toThrow('Unequip has failed');
+      await expect(controller.unequip(authUser, 'cosmetic-1')).rejects.toThrow(
+        'Unequip has failed',
+      );
     });
 
     it('will return unequipped cosmetic items', async () => {
-        const itemUnequipped = {
-            id: 'cosmetic-1',
-            slot: 'HAT',
-            equipped: false,
-        };
+      const itemUnequipped = {
+        id: 'cosmetic-1',
+        slot: 'HAT',
+        equipped: false,
+      };
 
-        cosmeticsService.unequip.mockResolvedValue(itemUnequipped);
+      cosmeticsService.unequip.mockResolvedValue(itemUnequipped);
 
-        const result = await controller.unequip(authUser, 'cosmetic-1');
-        expect(result).toEqual(itemUnequipped);
+      const result = await controller.unequip(authUser, 'cosmetic-1');
+      expect(result).toEqual(itemUnequipped);
     });
   });
 });
