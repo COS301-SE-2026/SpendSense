@@ -4,9 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { NotificationType, Prisma, WagerStatus } from '@prisma/client';
+import {NotificationType,Prisma,WagerStatus,WagerTaskType} from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RewardService } from '../rewards/reward.service';
 import { CreateWagerDto } from './dto/create-wager.dto';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class WagersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly rewardService: RewardService,
   ) {}
   async createWager(creatorId: string, dto: CreateWagerDto) {
     if (creatorId === dto.opponentId) {
@@ -137,6 +139,187 @@ export class WagersService {
       throw new ForbiddenException('You cannot access this wager');
     }
     return this.toWagerSummary(wager, userId);
+  }
+  async acceptWager(userId: string, wagerId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const wager = await tx.wager.findUnique({
+        where: {
+          id: wagerId,
+        },
+        select: {
+          id: true,
+          creatorId: true,
+          opponentId: true,
+          taskType: true,
+          stakeAmount: true,
+          status: true,
+          durationDays: true,
+        },
+      });
+      if (!wager) {
+        throw new NotFoundException('Wager not found');
+      }
+      if (wager.opponentId !== userId) {
+        throw new ForbiddenException(
+          'Only the invited opponent can accept this wager',
+        );
+      }
+      if (wager.status !== WagerStatus.PENDING) {
+        throw new BadRequestException('Only a pending wager can be accepted');
+      }
+      let taskSnapshot: Prisma.InputJsonObject | undefined;
+      if (wager.taskType === WagerTaskType.MAINTAIN_PAYMENT_STREAK) {
+        const profiles = await tx.gamificationProfile.findMany({
+          where: {
+            userId: {
+              in: [wager.creatorId, wager.opponentId],
+            },
+          },
+          select: {
+            userId: true,
+            currentPaymentStreak: true,
+          },
+        });
+        const creatorProfile = profiles.find(
+          (profile) => profile.userId === wager.creatorId,
+        );
+        const opponentProfile = profiles.find(
+          (profile) => profile.userId === wager.opponentId,
+        );
+        taskSnapshot = {
+          creatorCurrentPaymentStreak:
+            creatorProfile?.currentPaymentStreak ?? 0,
+          opponentCurrentPaymentStreak:
+            opponentProfile?.currentPaymentStreak ?? 0,
+        };
+      }
+      const respondedAt = new Date();
+      const startDate = respondedAt;
+      const endDate = new Date(
+        startDate.getTime() + wager.durationDays * 24 * 60 * 60 * 1000,
+      );
+      const activated = await tx.wager.updateMany({
+        where: {
+          id: wager.id,
+          opponentId: userId,
+          status: WagerStatus.PENDING,
+        },
+        data: {
+          status: WagerStatus.ACTIVE,
+          respondedAt,
+          startDate,
+          endDate,
+          ...(taskSnapshot ? { taskSnapshot } : {}),
+        },
+      });
+      if (activated.count === 0) {
+        throw new BadRequestException('Wager is no longer pending');
+      }
+      await this.rewardService.spendCoins(tx, {
+        userId: wager.creatorId,
+        amount: wager.stakeAmount,
+        reason: 'Wager stake',
+      });
+      const opponentSpend = await this.rewardService.spendCoins(tx, {
+        userId: wager.opponentId,
+        amount: wager.stakeAmount,
+        reason: 'Wager stake',
+      });
+      return {
+        id: wager.id,
+        status: WagerStatus.ACTIVE,
+        respondedAt,
+        startDate,
+        endDate,
+        coinBalance: opponentSpend.coinBalance,
+      };
+    });
+  }
+  async declineWager(userId: string, wagerId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const wager = await tx.wager.findUnique({
+        where: {
+          id: wagerId,
+        },
+        select: {
+          id: true,
+          opponentId: true,
+          status: true,
+        },
+      });
+      if (!wager) {
+        throw new NotFoundException('Wager not found');
+      }
+      if (wager.opponentId !== userId) {
+        throw new ForbiddenException(
+          'Only the invited opponent can decline this wager',
+        );
+      }
+      if (wager.status !== WagerStatus.PENDING) {
+        throw new BadRequestException('Only a pending wager can be declined');
+      }
+      const respondedAt = new Date();
+      const declined = await tx.wager.updateMany({
+        where: {
+          id: wager.id,
+          opponentId: userId,
+          status: WagerStatus.PENDING,
+        },
+        data: {
+          status: WagerStatus.DECLINED,
+          respondedAt,
+        },
+      });
+      if (declined.count === 0) {
+        throw new BadRequestException('Wager is no longer pending');
+      }
+      return {
+        id: wager.id,
+        status: WagerStatus.DECLINED,
+      };
+    });
+  }
+  async cancelWager(userId: string, wagerId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const wager = await tx.wager.findUnique({
+        where: {
+          id: wagerId,
+        },
+        select: {
+          id: true,
+          creatorId: true,
+          status: true,
+        },
+      });
+      if (!wager) {
+        throw new NotFoundException('Wager not found');
+      }
+      if (wager.creatorId !== userId) {
+        throw new ForbiddenException(
+          'Only the creator can cancel this wager',
+        );
+      }
+      if (wager.status !== WagerStatus.PENDING) {
+        throw new BadRequestException('Only a pending wager can be cancelled');
+      }
+      const cancelled = await tx.wager.updateMany({
+        where: {
+          id: wager.id,
+          creatorId: userId,
+          status: WagerStatus.PENDING,
+        },
+        data: {
+          status: WagerStatus.CANCELLED,
+        },
+      });
+      if (cancelled.count === 0) {
+        throw new BadRequestException('Wager is no longer pending');
+      }
+      return {
+        id: wager.id,
+        status: WagerStatus.CANCELLED,
+      };
+    });
   }
   private toWagerSummary(wager: WagerSummaryRecord, userId: string) {
     return {
