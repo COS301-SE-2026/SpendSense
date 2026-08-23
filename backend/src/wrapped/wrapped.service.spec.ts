@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MonthlyWrappedService } from './monthly-wrapped.service';
+import { MonthlyWrappedService } from './wrapped.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 describe('MonthlyWrappedService', () => {

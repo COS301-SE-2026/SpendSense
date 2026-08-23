@@ -17,19 +17,19 @@ import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import { UsersService } from '../users/users.service';
-import { MonthlyWrappedService } from './monthly-wrapped.service';
+import { MonthlyWrappedService } from './wrapped.service';
 
-@ApiTags('monthly-wrapped')
+@ApiTags('wrapped')
 @ApiBearerAuth()
 @UseGuards(SupabaseJwtGuard)
-@Controller('monthly-wrapped')
+@Controller('wrapped')
 export class MonthlyWrappedController {
   constructor(
     private readonly monthlyWrappedService: MonthlyWrappedService,
     private readonly usersService: UsersService,
   ) {}
 
-  @Get()
+  @Get('latest')
   @ApiOperation({ summary: 'Get badges earned during a specified month' })
   @ApiQuery({
     name: 'year',
@@ -87,13 +87,11 @@ export class MonthlyWrappedController {
   })
   async getMonthlyWrapped(
     @CurrentAuthUser() authUser: AuthUser,
-    @Query('year') yearQuery?: string,
-    @Query('month') monthQuery?: string,
   ) {
     const currentDate = new Date();
 
-    const year = yearQuery ? Number(yearQuery) : currentDate.getFullYear();
-    const month = monthQuery ? Number(monthQuery) : currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
 
     if (
       !Number.isInteger(year) ||

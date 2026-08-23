@@ -19,7 +19,7 @@ import { QuizModule } from './quiz/quiz.module';
 import { InsightsModule } from './insights/insights.module';
 import { CreditScoreModule } from './credit-score/credit-score.module';
 import { RewardModule } from './rewards/reward.module';
-import { MonthlyWrappedModule } from './monthly-wrapped/monthly-wrapped.module';
+import { MonthlyWrappedModule } from './wrapped/wrapped.module';
 
 @Module({
   imports: [

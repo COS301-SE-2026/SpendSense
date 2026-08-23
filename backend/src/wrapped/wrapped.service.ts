@@ -40,8 +40,6 @@ export class MonthlyWrappedService {
       badges: badges.map((badge) => ({
         badgeKey: badge.badgeDefinition.code,
         name: badge.badgeDefinition.name,
-        description: badge.badgeDefinition.description,
-        category: badge.badgeDefinition.category,
         iconKey: badge.badgeDefinition.iconKey,
         earnedAt: badge.earnedAt,
       })),

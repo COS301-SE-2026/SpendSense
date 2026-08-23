@@ -2,14 +2,12 @@ import { BadgeCategory } from '@prisma/client';
 import request from 'supertest';
 import { createApiE2eFixture } from './fixtures';
 import { createE2eAccessToken } from '../../../test-support/auth/e2e-auth';
-import { createMonthlyWrappedWithBadges } from '../../../test-support/scenarios/monthly-wrapped';
+import { createMonthlyWrappedWithBadges } from '../../../test-support/scenarios/wrapped';
 
 type MonthlyWrappedBadge = {
   badgeKey: string;
   name: string;
   description: string;
-  category: string;
-  iconKey: string | null;
   earnedAt: string;
 };
 
@@ -38,7 +36,7 @@ describe('Monthly Wrapped E2E', () => {
     });
 
     const response = await request(fixture.app.getHttpServer())
-      .get('/api/v1/monthly-wrapped')
+      .get('/api/v1/wrapped/latest')
       .query({
         year: 2026,
         month: 8,
@@ -56,15 +54,11 @@ describe('Monthly Wrapped E2E', () => {
     expect(wrapped.badges[0]).toMatchObject({
       badgeKey: scenario.badges.first.definition.code,
       name: 'Payment Starter',
-      description: 'Made your first successful payment',
-      category: BadgeCategory.PAYMENT,
       iconKey: 'payment-starter',
     });
     expect(wrapped.badges[1]).toMatchObject({
       badgeKey: scenario.badges.second.definition.code,
       name: 'Streak Builder',
-      description: 'Built a successful payment streak',
-      category: BadgeCategory.STREAK,
       iconKey: 'streak-builder',
     });
 
