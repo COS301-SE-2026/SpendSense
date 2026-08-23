@@ -2,7 +2,7 @@
  * This factory now facilitates the process of a user earning  abadge 
  */
 
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '../../backend/node_modules/@prisma/client';
 
 type CreateUserBadgeInput = {
     userId: string;

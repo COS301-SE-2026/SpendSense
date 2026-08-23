@@ -1,9 +1,9 @@
 /**
  * This factory facilitates the creation of badge "types" - aka definitions - 
  * that users could earn during e2e scenario's
-*/ 
+*/
 
-import { BadgeCategory, BadgeCriteriaType, PrismaClient } from '@prisma/client';
+import type { BadgeCategory, BadgeCriteriaType, PrismaClient } from '../../backend/node_modules/@prisma/client';
 import { randomUUID } from 'node:crypto';
 
 type CreateBadgeDefinitionOverrides = {
@@ -24,8 +24,8 @@ export async function createBadgeDefinition(prisma: PrismaClient, overrides: Cre
             code: `E2E_TEST_BADGE_${uniqueId}`, // added the unique id because badsges need to have unique code names
             name: 'E2E Test Badge',
             description: 'Badge created for E2E testing',
-            category: BadgeCategory.DEMO,
-            criteriaType: BadgeCriteriaType.FIRST_ON_TIME_PAYMENT,
+            category: 'DEMO',
+            criteriaType: 'FIRST_ON_TIME_PAYMENT',
             criteriaValue: 1,
             iconKey: 'e2e-test-badge',
             isActive: true,
