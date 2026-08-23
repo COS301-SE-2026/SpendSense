@@ -7,6 +7,6 @@ import { UsersModule } from '../users/users.module';
 @Module({
   imports: [AuthModule, UsersModule],
   controllers: [MonthlyWrappedController],
-  providers: [MonthlyWrappedService]
+  providers: [MonthlyWrappedService],
 })
 export class MonthlyWrappedModule {}

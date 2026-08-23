@@ -11,7 +11,43 @@ type MonthlyWrappedScenarioOptions = {
     month?: number;
 };
 
-export async function createMonthlyWrappedWithBadges(prisma: any, options: MonthlyWrappedScenarioOptions = {}) {
+export type MonthlyWrappedScenario = {
+    user: {
+        id: string;
+        supabaseAuthId: string;
+        email: string;
+    };
+    year: number;
+    month: number;
+    badges: {
+        first: {
+            definition: {
+                id: string;
+                code: string;
+                name: string;
+                description: string;
+            };
+            userBadge: {
+                id: string;
+                earnedAt: Date | null;
+            };
+        };
+        second: {
+            definition: {
+                id: string;
+                code: string;
+                name: string;
+                description: string;
+            };
+            userBadge: {
+                id: string;
+                earnedAt: Date | null;
+            };
+        };
+    };
+};
+
+export async function createMonthlyWrappedWithBadges(prisma: any, options: MonthlyWrappedScenarioOptions = {}) : Promise<MonthlyWrappedScenario> {
 
     const year = options.year ?? 2026;
     const month = options.month ?? 8;
