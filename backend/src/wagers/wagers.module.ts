@@ -8,7 +8,13 @@ import { WagersService } from './wagers.service';
 import { RewardModule } from '../rewards/reward.module';
 
 @Module({
-  imports: [AuthModule,NotificationsModule, PrismaModule,RewardModule,UsersModule],
+  imports: [
+    AuthModule,
+    NotificationsModule,
+    PrismaModule,
+    RewardModule,
+    UsersModule,
+  ],
   controllers: [WagersController],
   providers: [WagersService],
 })

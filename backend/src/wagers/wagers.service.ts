@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {NotificationType,Prisma,WagerStatus,WagerTaskType} from '@prisma/client';
+import {
+  NotificationType,
+  Prisma,
+  WagerStatus,
+  WagerTaskType,
+} from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RewardService } from '../rewards/reward.service';
@@ -295,9 +300,7 @@ export class WagersService {
         throw new NotFoundException('Wager not found');
       }
       if (wager.creatorId !== userId) {
-        throw new ForbiddenException(
-          'Only the creator can cancel this wager',
-        );
+        throw new ForbiddenException('Only the creator can cancel this wager');
       }
       if (wager.status !== WagerStatus.PENDING) {
         throw new BadRequestException('Only a pending wager can be cancelled');
