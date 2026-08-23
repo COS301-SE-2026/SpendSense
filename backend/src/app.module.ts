@@ -43,7 +43,7 @@ import { WagersModule } from './wagers/wagers.module';
     CreditScoreModule,
     RewardModule,
     FriendsModule,
-    WagersModule
+    WagersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
