@@ -11,6 +11,7 @@ import type {
 	FriendSummary,
 	LeaderboardEntry,
 	LeaderboardMetric,
+	LeaderboardPagination,
 	RequestDirection,
 	UserSearchResult,
 } from '@/features/friends/friendsTypes'
@@ -258,8 +259,9 @@ export function useFriendSearch(query: string, debounceMs = 350) {
 }
 
 // GET /friends/leaderboard?metric=
-export function useFriendsLeaderboard(metric: LeaderboardMetric) {
+export function useFriendsLeaderboard(metric:LeaderboardMetric='xp',page=1){
 	const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null)
+	const [pagination,setPagination]=useState<LeaderboardPagination|null>(null)
 	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 	const requestId = useRef(0)
@@ -271,11 +273,12 @@ export function useFriendsLeaderboard(metric: LeaderboardMetric) {
 			setIsLoading(true)
 			setError(null)
 			try {
-				const loaded = await getFriendsLeaderboard(metric, { signal })
+				const loaded=await getFriendsLeaderboard(metric,page,{signal})
 				if (id !== requestId.current) {
 					return
 				}
-				setEntries(loaded)
+				setEntries(loaded.entries)
+				setPagination(loaded.pagination)
 			} catch (err) {
 				if (isAbortError(err)) {
 					return
@@ -289,7 +292,7 @@ export function useFriendsLeaderboard(metric: LeaderboardMetric) {
 				}
 			}
 		},
-		[metric],
+		[metric,page],
 	)
 
 	useEffect(() => {
@@ -302,5 +305,5 @@ export function useFriendsLeaderboard(metric: LeaderboardMetric) {
 		}
 	}, [load])
 
-	return { entries, isLoading, error, reload: () => load() }
+	return {entries,pagination,isLoading,error,reload:()=>load()}
 }

@@ -1,4 +1,4 @@
-import { apiFetch } from '../../lib/api'
+import { apiDataFetch } from '../../lib/api'
 import type {
 	AcceptWagerResult,
 	CreateWagerRequest,
@@ -20,10 +20,6 @@ import type {
 // PATCH  /api/v1/wagers/:id/decline
 // DELETE /api/v1/wagers/:id
 
-interface Container<T> {
-	data: T
-}
-
 interface RequestOptions {
 	signal?: AbortSignal
 }
@@ -33,12 +29,11 @@ export async function createWager(
 	request: CreateWagerRequest,
 	options?: RequestOptions,
 ): Promise<WagerSummary> {
-	const res = await apiFetch<Container<WagerSummary>>('/wagers', {
+	return apiDataFetch<WagerSummary>('/wagers', {
 		method: 'POST',
 		body: JSON.stringify(request),
 		signal: options?.signal,
 	})
-	return res.data
 }
 
 // GET /api/v1/wagers?status=  - omit status for all of them
@@ -47,11 +42,10 @@ export async function getWagers(
 	options?: RequestOptions,
 ): Promise<WagerSummary[]> {
 	const qs = status ? `?status=${status}` : ''
-	const res = await apiFetch<Container<WagerSummary[]>>(`/wagers${qs}`, {
+	return apiDataFetch<WagerSummary[]>(`/wagers${qs}`, {
 		method: 'GET',
 		signal: options?.signal,
 	})
-	return res.data
 }
 
 // GET /api/v1/wagers/:id
@@ -59,14 +53,13 @@ export async function getWager(
 	wagerId: string,
 	options?: RequestOptions,
 ): Promise<WagerSummary> {
-	const res = await apiFetch<Container<WagerSummary>>(
+	return apiDataFetch<WagerSummary>(
 		`/wagers/${encodeURIComponent(wagerId)}`,
 		{
 			method: 'GET',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
 
 // PATCH /api/v1/wagers/:id/accept
@@ -75,14 +68,13 @@ export async function acceptWager(
 	wagerId: string,
 	options?: RequestOptions,
 ): Promise<AcceptWagerResult> {
-	const res = await apiFetch<Container<AcceptWagerResult>>(
+	return apiDataFetch<AcceptWagerResult>(
 		`/wagers/${encodeURIComponent(wagerId)}/accept`,
 		{
 			method: 'PATCH',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
 
 // PATCH /api/v1/wagers/:id/decline - no coins ever move
@@ -90,14 +82,13 @@ export async function declineWager(
 	wagerId: string,
 	options?: RequestOptions,
 ): Promise<WagerStatusResult> {
-	const res = await apiFetch<Container<WagerStatusResult>>(
+	return apiDataFetch<WagerStatusResult>(
 		`/wagers/${encodeURIComponent(wagerId)}/decline`,
 		{
 			method: 'PATCH',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
 
 // DELETE /api/v1/wagers/:id - creator cancels a still PENDING wager
@@ -105,12 +96,11 @@ export async function cancelWager(
 	wagerId: string,
 	options?: RequestOptions,
 ): Promise<WagerStatusResult> {
-	const res = await apiFetch<Container<WagerStatusResult>>(
+	return apiDataFetch<WagerStatusResult>(
 		`/wagers/${encodeURIComponent(wagerId)}`,
 		{
 			method: 'DELETE',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
