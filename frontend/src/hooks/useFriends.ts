@@ -1,20 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+	acceptFriendRequest,
+	cancelFriendRequest,
+	declineFriendRequest,
 	getFriend,
 	getFriendRequests,
 	getFriends,
 	getFriendsLeaderboard,
+	removeFriend,
 	searchUsers,
+	sendFriendRequest,
 } from '@/features/friends/friendsApi'
 import type {
+	AcceptFriendRequestResult,
+	FriendRequestStatusResult,
 	FriendRequestSummary,
 	FriendSummary,
 	LeaderboardEntry,
 	LeaderboardMetric,
 	LeaderboardPagination,
+	RemoveFriendResult,
 	RequestDirection,
 	UserSearchResult,
 } from '@/features/friends/friendsTypes'
+import { invalidateSocial,subscribeSocialInvalidation } from '@/features/friends/socialInvaliation'
 
 //data hooks for the friends pages. same shape as useQuizTopicDetail
 
@@ -78,6 +87,10 @@ export function useFriends() {
 			controller.abort()
 		}
 	}, [load])
+
+	useEffect(()=>{
+		return subscribeSocialInvalidation('friends',()=>void load())
+	},[load])
 
 	return { friends, isLoading, error, reload: () => load() }
 }
@@ -143,6 +156,10 @@ export function useFriendProfile(friendId: string | undefined) {
 		}
 	}, [load])
 
+	useEffect(()=>{
+		return subscribeSocialInvalidation('friends',()=>void load())
+	},[load])
+
 	return { friend, isLoading, error, notFound, reload: () => load() }
 }
 
@@ -190,6 +207,10 @@ export function useFriendRequests(direction: RequestDirection = 'incoming') {
 			controller.abort()
 		}
 	}, [load])
+
+	useEffect(()=>{
+		return subscribeSocialInvalidation('friendRequests',()=>void load())
+	},[load])
 
 
 	const removeLocally = useCallback((id: string) => {
@@ -305,5 +326,119 @@ export function useFriendsLeaderboard(metric:LeaderboardMetric='xp',page=1){
 		}
 	}, [load])
 
+	useEffect(()=>{
+		return subscribeSocialInvalidation('leaderboard',()=>void load())
+	},[load])
+
 	return {entries,pagination,isLoading,error,reload:()=>load()}
+}
+
+export function useSendFriendRequest(){
+	const [isPending,setIsPending]=useState(false)
+	const [error,setError]=useState<string|null>(null)
+
+	const send=useCallback(async(receiverId:string):Promise<FriendRequestStatusResult>=>{
+		setIsPending(true)
+		setError(null)
+		try{
+			const result=await sendFriendRequest(receiverId)
+			invalidateSocial('friendRequests')
+			return result
+		}catch(err){
+			setError(getErrorMessage(err,'Failed to send friend request.'))
+			throw err
+		}finally{
+			setIsPending(false)
+		}
+	},[])
+
+	return {send,isPending,error}
+}
+
+export function useAcceptFriendRequest(){
+	const [isPending,setIsPending]=useState(false)
+	const [error,setError]=useState<string|null>(null)
+
+	const accept=useCallback(async(requestId:string):Promise<AcceptFriendRequestResult>=>{
+		setIsPending(true)
+		setError(null)
+		try{
+			const result=await acceptFriendRequest(requestId)
+			invalidateSocial('friends','friendRequests','leaderboard')
+			return result
+		}catch(err){
+			setError(getErrorMessage(err,'Failed to accept friend request.'))
+			throw err
+		}finally{
+			setIsPending(false)
+		}
+	},[])
+
+	return {accept,isPending,error}
+}
+
+export function useDeclineFriendRequest(){
+	const [isPending,setIsPending]=useState(false)
+	const [error,setError]=useState<string|null>(null)
+
+	const decline=useCallback(async(requestId:string):Promise<FriendRequestStatusResult>=>{
+		setIsPending(true)
+		setError(null)
+		try{
+			const result=await declineFriendRequest(requestId)
+			invalidateSocial('friendRequests')
+			return result
+		}catch(err){
+			setError(getErrorMessage(err,'Failed to decline friend request.'))
+			throw err
+		}finally{
+			setIsPending(false)
+		}
+	},[])
+
+	return {decline,isPending,error}
+}
+
+export function useCancelFriendRequest(){
+	const [isPending,setIsPending]=useState(false)
+	const [error,setError]=useState<string|null>(null)
+
+	const cancel=useCallback(async(requestId:string):Promise<FriendRequestStatusResult>=>{
+		setIsPending(true)
+		setError(null)
+		try{
+			const result=await cancelFriendRequest(requestId)
+			invalidateSocial('friendRequests')
+			return result
+		}catch(err){
+			setError(getErrorMessage(err,'Failed to cancel friend request.'))
+			throw err
+		}finally{
+			setIsPending(false)
+		}
+	},[])
+
+	return {cancel,isPending,error}
+}
+
+export function useRemoveFriend(){
+	const [isPending,setIsPending]=useState(false)
+	const [error,setError]=useState<string|null>(null)
+
+	const remove=useCallback(async(friendId:string):Promise<RemoveFriendResult>=>{
+		setIsPending(true)
+		setError(null)
+		try{
+			const result=await removeFriend(friendId)
+			invalidateSocial('friends','leaderboard')
+			return result
+		}catch(err){
+			setError(getErrorMessage(err,'Failed to remove friend.'))
+			throw err
+		}finally{
+			setIsPending(false)
+		}
+	},[])
+
+	return {remove,isPending,error}
 }
