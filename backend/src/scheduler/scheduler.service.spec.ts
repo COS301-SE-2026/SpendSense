@@ -347,7 +347,7 @@ describe('SchedulerService', () => {
         {
           userId: 'creator-id',
           amount: 50,
-          reason: 'Wager draw — stake returned',
+          reason: 'Wager draw - stake returned',
         },
       );
       expect(rewardService.adjustCoins).toHaveBeenNthCalledWith(
@@ -356,7 +356,7 @@ describe('SchedulerService', () => {
         {
           userId: 'opponent-id',
           amount: 50,
-          reason: 'Wager draw — stake returned',
+          reason: 'Wager draw - stake returned',
         },
       );
       expect(rewardService.grantCoins).not.toHaveBeenCalled();

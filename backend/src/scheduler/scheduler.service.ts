@@ -190,12 +190,12 @@ export class SchedulerService {
         await this.rewardService.adjustCoins(tx, {
           userId: wager.creatorId,
           amount: wager.stakeAmount,
-          reason: 'Wager draw — stake returned',
+          reason: 'Wager draw - stake returned',
         });
         await this.rewardService.adjustCoins(tx, {
           userId: wager.opponentId,
           amount: wager.stakeAmount,
-          reason: 'Wager draw — stake returned',
+          reason: 'Wager draw - stake returned',
         });
       } else {
         const winnerId =
