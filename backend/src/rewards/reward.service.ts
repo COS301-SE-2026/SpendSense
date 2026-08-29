@@ -57,6 +57,7 @@ type SetMascotMoodInput = {
   userId: string;
   mood: MascotMood;
   reason: string;
+  sourceEventId?: string;
 };
 
 type SettleActionInput = {
@@ -262,13 +263,46 @@ export class RewardService {
 
   async setMascotMood(
     tx: Prisma.TransactionClient,
-    { userId, mood }: SetMascotMoodInput,
+    { userId, mood, reason, sourceEventId }: SetMascotMoodInput,
   ): Promise<void> {
+    const now = new Date();
+
     await tx.gamificationProfile.upsert({
       where: { userId },
-      update: { mascotMood: mood, mascotMoodUpdatedAt: new Date() },
-      create: { userId, mascotMood: mood, mascotMoodUpdatedAt: new Date() },
+      update: { mascotMood: mood, mascotMoodUpdatedAt: now },
+      create: { userId, mascotMood: mood, mascotMoodUpdatedAt: now },
     });
+
+    if (sourceEventId) {
+      const sourceEvent = await tx.userEvent.findUnique({
+        where: {
+          id: sourceEventId,
+        },
+        select: {
+          metadata: true,
+        },
+      });
+
+      const metadataExisting =
+        sourceEvent?.metadata &&
+        typeof sourceEvent.metadata === 'object' &&
+        !Array.isArray(sourceEvent.metadata)
+          ? sourceEvent.metadata
+          : {};
+
+      await tx.userEvent.update({
+        where: {
+          id: sourceEventId,
+        },
+        data: {
+          metadata: {
+            ...metadataExisting,
+            mascotMood: mood,
+            moodReason: reason,
+          },
+        },
+      });
+    }
   }
 
   // Not auto-fired by grantCoins/spendCoins/etc - not every reward mutation deserves its own
