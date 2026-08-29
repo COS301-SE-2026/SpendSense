@@ -37,6 +37,7 @@ import QuizQuestionPage from './domains/QuizQuestionPage.tsx'
 import QuizAnswerFeedbackPage from './domains/QuizAnswerFeedbackPage.tsx'
 import QuizResultsPage from './domains/QuizResultsPage.tsx'
 import MascotPage from './domains/MascotPage.tsx'
+import MascotShopPage from './domains/MascotShopPage.tsx'
 import WrappedPage from './domains/WrappedPage.tsx'
 import SettingsPage from './domains/SettingsPage.tsx'
 import SettingsPreferencesPage from './domains/SettingsPreferencesPage.tsx'
@@ -88,6 +89,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/wagers/new" element={<NewWagerPage/>}/>
           <Route path="/wagers/:wagerId" element={<WagerDetailPage/>}/>
           <Route path="/mascot" element={<MascotPage/>}/>
+          <Route path="/mascot/shop" element={<MascotShopPage/>}/>
           <Route path="/wrapped" element={<WrappedPage/>}/>
           <Route path="/settings" element={<SettingsPage/>}/>
           <Route path="/settings/preferences" element={<SettingsPreferencesPage/>}/>
