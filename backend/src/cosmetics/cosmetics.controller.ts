@@ -1,4 +1,4 @@
-import { Get, Controller, UseGuards, Param, Patch } from '@nestjs/common';
+import { Get, Controller, UseGuards, Param, Patch, Post } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiTags,
@@ -60,5 +60,12 @@ export class CosmeticsController {
     @Param('id') id: string,
   ) {
     return this.cosmeticsService.unequip(authUser, id);
+  }
+  @Post(':id/purchase')
+  async purchase(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.cosmeticsService.purchase(authUser, id);
   }
 }
