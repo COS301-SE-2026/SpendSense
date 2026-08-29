@@ -423,7 +423,7 @@ describe('CosmeticsService', () => {
 
       prisma.cosmeticItem.findFirst.mockResolvedValue({
         id: 'cosmetic-1',
-        code: 'party-hat',
+        code: 'party_hat',
         name: 'Party Hat',
         cost: 50,
         isActive: true,
@@ -447,7 +447,7 @@ describe('CosmeticsService', () => {
 
       prisma.cosmeticItem.findFirst.mockResolvedValue({
         id: 'cosmetic-1',
-        code: 'party-hat',
+        code: 'party_hat',
         name: 'Party Hat',
         cost: 50,
         isActive: true,
@@ -470,7 +470,7 @@ describe('CosmeticsService', () => {
 
       expect(result).toEqual({
         id: 'cosmetic-1',
-        code: 'party-hat',
+        code: 'party_hat',
         owned: true,
         coinBalance: 75,
       });
@@ -481,7 +481,7 @@ describe('CosmeticsService', () => {
 
       prisma.cosmeticItem.findFirst.mockResolvedValue({
         id: 'cosmetic-1',
-        code: 'party-hat',
+        code: 'party_hat',
         name: 'Party Hat',
         cost: 50,
         isActive: true,
@@ -519,7 +519,7 @@ describe('CosmeticsService', () => {
 
       prisma.cosmeticItem.findFirst.mockResolvedValue({
         id: 'cosmetic-1',
-        code: 'party-hat',
+        code: 'party_hat',
         name: 'Party Hat',
         cost: 50,
         isActive: true,
@@ -545,7 +545,7 @@ describe('CosmeticsService', () => {
 
       prisma.cosmeticItem.findFirst.mockResolvedValue({
         id: 'cosmetic-1',
-        code: 'party-hat',
+        code: 'party_hat',
         name: 'Party Hat',
         cost: 50,
         isActive: true,

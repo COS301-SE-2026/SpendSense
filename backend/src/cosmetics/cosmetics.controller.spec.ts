@@ -166,7 +166,7 @@ describe('CosmeticsController', () => {
     it('will call the cosmetics service to purchase an item', async () => {
       cosmeticsService.purchase.mockResolvedValue({
         id: 'cosmetic-1',
-        code: 'party-hat',
+        code: 'party_hat',
         owned: true,
         coinBalance: 75,
       });
@@ -184,7 +184,7 @@ describe('CosmeticsController', () => {
     it('will return the cosmetic item that was purchased', async () => {
       const purchasedItem = {
         id: 'cosmetic-1',
-        code: 'party-hat',
+        code: 'party_hat',
         owned: true,
         coinBalance: 75,
       };
