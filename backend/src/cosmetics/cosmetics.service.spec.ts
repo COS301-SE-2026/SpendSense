@@ -2,7 +2,10 @@ import { CosmeticsService } from './cosmetics.service';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../auth/types/auth-user.type';
-import { RewardService } from 'src/rewards/reward.service';
+import {
+  InsufficientCoinsException,
+  RewardService,
+} from '../rewards/reward.service';
 
 describe('CosmeticsService', () => {
   let service: CosmeticsService;
@@ -10,15 +13,12 @@ describe('CosmeticsService', () => {
   let prisma: {
     cosmeticItem: {
       findMany: jest.Mock;
+      findFirst: jest.Mock;
     };
     userInventoryItem: {
       findFirst: jest.Mock;
       update: jest.Mock;
     };
-    cosmeticItem: {
-      findMany:jest.Mock;
-      findFirst:jest.Mock;
-    }
     $transaction: jest.Mock;
   };
 
@@ -36,7 +36,7 @@ describe('CosmeticsService', () => {
 
   let rewardService: {
     spendCoins: jest.Mock;
-  }
+  };
 
   const authUser = {
     id: 'auth-user-1',
@@ -51,6 +51,7 @@ describe('CosmeticsService', () => {
     prisma = {
       cosmeticItem: {
         findMany: jest.fn(),
+        findFirst: jest.fn(),
       },
       userInventoryItem: {
         findFirst: jest.fn(),
@@ -68,6 +69,7 @@ describe('CosmeticsService', () => {
       userInventoryItem: {
         updateMany: jest.fn(),
         update: jest.fn(),
+        create: jest.fn(),
       },
     };
 
@@ -77,7 +79,7 @@ describe('CosmeticsService', () => {
 
     rewardService = {
       spendCoins: jest.fn(),
-    }
+    };
 
     service = new CosmeticsService(
       prisma as unknown as PrismaService,
@@ -412,6 +414,176 @@ describe('CosmeticsService', () => {
       await expect(service.unequip(authUser, 'cosmetic-1')).rejects.toThrow(
         'Cosmetic item is not equipped',
       );
+    });
+  });
+
+  describe('purchase', () => {
+    it('will thrown an error when the user does not have enough coins for an item', async () => {
+      usersService.findOrCreateUser.mockResolvedValue(user);
+
+      prisma.cosmeticItem.findFirst.mockResolvedValue({
+        id: 'cosmetic-1',
+        code: 'party-hat',
+        name: 'Party Hat',
+        cost: 50,
+        isActive: true,
+      });
+
+      prisma.userInventoryItem.findFirst.mockResolvedValue(null);
+
+      rewardService.spendCoins.mockRejectedValue(
+        new InsufficientCoinsException(user.id, 50),
+      );
+
+      await expect(
+        service.purchase(authUser, 'cosmetic-1'),
+      ).rejects.toBeInstanceOf(InsufficientCoinsException);
+
+      expect(transaction.userInventoryItem.create).not.toHaveBeenCalled();
+    });
+
+    it('will purchase a cosmetic and then return the new coin balance', async () => {
+      usersService.findOrCreateUser.mockResolvedValue(user);
+
+      prisma.cosmeticItem.findFirst.mockResolvedValue({
+        id: 'cosmetic-1',
+        code: 'party-hat',
+        name: 'Party Hat',
+        cost: 50,
+        isActive: true,
+      });
+
+      prisma.userInventoryItem.findFirst.mockResolvedValue(null);
+
+      rewardService.spendCoins.mockResolvedValue({
+        coinBalance: 75,
+      });
+
+      transaction.userInventoryItem.create.mockResolvedValue({
+        id: 'inventory-1',
+        userId: user.id,
+        cosmeticItemId: 'cosmetic-1',
+        equipped: false,
+      });
+
+      const result = await service.purchase(authUser, 'cosmetic-1');
+
+      expect(result).toEqual({
+        id: 'cosmetic-1',
+        code: 'party-hat',
+        owned: true,
+        coinBalance: 75,
+      });
+    });
+
+    it('will create an inventory item after coins have been spent', async () => {
+      usersService.findOrCreateUser.mockResolvedValue(user);
+
+      prisma.cosmeticItem.findFirst.mockResolvedValue({
+        id: 'cosmetic-1',
+        code: 'party-hat',
+        name: 'Party Hat',
+        cost: 50,
+        isActive: true,
+      });
+
+      prisma.userInventoryItem.findFirst.mockResolvedValue(null);
+
+      rewardService.spendCoins.mockResolvedValue({
+        coinBalance: 75,
+      });
+
+      transaction.userInventoryItem.create.mockResolvedValue({
+        id: 'inventory-1',
+        userId: user.id,
+        cosmeticItemId: 'cosmetic-1',
+        equipped: false,
+      });
+
+      await service.purchase(authUser, 'cosmetic-1');
+
+      expect(transaction.userInventoryItem.create).toHaveBeenCalledWith({
+        data: {
+          userId: user.id,
+          cosmeticItemId: 'cosmetic-1',
+        },
+      });
+
+      expect(rewardService.spendCoins.mock.invocationCallOrder[0]).toBeLessThan(
+        transaction.userInventoryItem.create.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('will throw an error when the user already owns the cosmetic item', async () => {
+      usersService.findOrCreateUser.mockResolvedValue(user);
+
+      prisma.cosmeticItem.findFirst.mockResolvedValue({
+        id: 'cosmetic-1',
+        code: 'party-hat',
+        name: 'Party Hat',
+        cost: 50,
+        isActive: true,
+      });
+
+      prisma.userInventoryItem.findFirst.mockResolvedValue({
+        id: 'inventory-1',
+        userId: user.id,
+        cosmeticItemId: 'cosmetic-1',
+        equipped: false,
+      });
+
+      await expect(service.purchase(authUser, 'cosmetic-1')).rejects.toThrow(
+        'Cosmetic item already owned',
+      );
+
+      expect(rewardService.spendCoins).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('will use the RewardService to use the coins for the cost of the cosmetic item', async () => {
+      usersService.findOrCreateUser.mockResolvedValue(user);
+
+      prisma.cosmeticItem.findFirst.mockResolvedValue({
+        id: 'cosmetic-1',
+        code: 'party-hat',
+        name: 'Party Hat',
+        cost: 50,
+        isActive: true,
+      });
+
+      prisma.userInventoryItem.findFirst.mockResolvedValue(null);
+
+      rewardService.spendCoins.mockResolvedValue({
+        coinBalance: 75,
+      });
+
+      transaction.userInventoryItem.create.mockResolvedValue({
+        id: 'inventory-1',
+      });
+
+      await service.purchase(authUser, 'cosmetic-1');
+
+      expect(rewardService.spendCoins).toHaveBeenCalledWith(transaction, {
+        userId: user.id,
+        amount: 50,
+        reason: 'Cosmetic purchase: Party Hat',
+      });
+
+      expect(rewardService.spendCoins).toHaveBeenCalledTimes(1);
+    });
+
+    it('will throw an error when the item does not actually exist', async () => {
+      usersService.findOrCreateUser.mockResolvedValue(user);
+
+      prisma.cosmeticItem.findFirst.mockResolvedValue(null);
+
+      await expect(service.purchase(authUser, 'cosmetic-1')).rejects.toThrow(
+        'Cosmetic item was not found',
+      );
+
+      expect(prisma.userInventoryItem.findFirst).not.toHaveBeenCalled();
+      expect(rewardService.spendCoins).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
   });
 });
