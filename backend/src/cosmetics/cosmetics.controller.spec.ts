@@ -9,6 +9,7 @@ describe('CosmeticsController', () => {
     getCatalogue: jest.Mock;
     equip: jest.Mock;
     unequip: jest.Mock;
+    purchase: jest.Mock;
   };
 
   const authUser = {
@@ -21,6 +22,7 @@ describe('CosmeticsController', () => {
       getCatalogue: jest.fn(),
       equip: jest.fn(),
       unequip: jest.fn(),
+      purchase: jest.fn(),
     };
 
     controller = new CosmeticsController(
@@ -157,6 +159,49 @@ describe('CosmeticsController', () => {
 
       const result = await controller.unequip(authUser, 'cosmetic-1');
       expect(result).toEqual(itemUnequipped);
+    });
+  });
+
+  describe('purchase', () => {
+    it('will call the cosmetics service to purchase an item', async () => {
+      cosmeticsService.purchase.mockResolvedValue({
+        id: 'cosmetic-1',
+        code: 'party-hat',
+        owned: true,
+        coinBalance: 75,
+      });
+
+      await controller.purchase(authUser, 'cosmetic-1');
+
+      expect(cosmeticsService.purchase).toHaveBeenCalledWith(
+        authUser,
+        'cosmetic-1',
+      );
+
+      expect(cosmeticsService.purchase).toHaveBeenCalledTimes(1);
+    });
+
+    it('will return the cosmetic item that was purchased', async () => {
+      const purchasedItem = {
+        id: 'cosmetic-1',
+        code: 'party-hat',
+        owned: true,
+        coinBalance: 75,
+      };
+
+      cosmeticsService.purchase.mockResolvedValue(purchasedItem);
+
+      const result = await controller.purchase(authUser, 'cosmetic-1');
+
+      expect(result).toEqual(purchasedItem);
+    });
+
+    it('will throw an error when purchasing a cosmetic item fails', async () => {
+      cosmeticsService.purchase.mockRejectedValue(new Error('Purchase failed'));
+
+      await expect(controller.purchase(authUser, 'cosmetic-1')).rejects.toThrow(
+        'Purchase failed',
+      );
     });
   });
 });
