@@ -300,6 +300,11 @@ describe('CosmeticsService', () => {
     it('will equip item that the user owns', async () => {
       usersService.findOrCreateUser.mockResolvedValue(user);
 
+      prisma.cosmeticItem.findFirst.mockResolvedValue({
+        id: 'cosmetic-1',
+        isActive: true,
+      });
+
       prisma.userInventoryItem.findFirst.mockResolvedValue({
         id: 'inventory-1',
         userId: user.id,
@@ -333,6 +338,11 @@ describe('CosmeticsService', () => {
     it('will throw error when the user does not own the item', async () => {
       usersService.findOrCreateUser.mockResolvedValue(user);
 
+      prisma.cosmeticItem.findFirst.mockResolvedValue({
+        id: 'cosmetic-1',
+        isActive: true,
+      });
+
       prisma.userInventoryItem.findFirst.mockResolvedValue(null);
 
       await expect(service.equip(authUser, 'cosmetic-1')).rejects.toThrow(
@@ -342,6 +352,11 @@ describe('CosmeticsService', () => {
 
     it('will unequip the current item before equipping the new one', async () => {
       usersService.findOrCreateUser.mockResolvedValue(user);
+
+      prisma.cosmeticItem.findFirst.mockResolvedValue({
+        id: 'cosmetic-2',
+        isActive: true,
+      });
 
       prisma.userInventoryItem.findFirst.mockResolvedValue({
         id: 'inventory-2',
@@ -361,6 +376,9 @@ describe('CosmeticsService', () => {
         where: {
           userId: user.id,
           equipped: true,
+          cosmeticItemId: {
+            not: 'cosmetic-2',
+          },
           cosmeticItem: {
             slot: 'HAT',
           },
@@ -370,11 +388,29 @@ describe('CosmeticsService', () => {
         },
       });
     });
+
+    it('will throw an error when the item does not exist', async () => {
+      usersService.findOrCreateUser.mockResolvedValue(user);
+
+      prisma.cosmeticItem.findFirst.mockResolvedValue(null);
+
+      await expect(service.equip(authUser, 'cosmetic-1')).rejects.toThrow(
+        'Cosmetic item was not found',
+      );
+
+      expect(prisma.userInventoryItem.findFirst).not.toHaveBeenCalled();
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
   });
 
   describe('unequip', () => {
     it('will unequip the currently equipped item', async () => {
       usersService.findOrCreateUser.mockResolvedValue(user);
+
+      prisma.cosmeticItem.findFirst.mockResolvedValue({
+        id: 'cosmetic-1',
+        isActive: true,
+      });
 
       prisma.userInventoryItem.findFirst.mockResolvedValue({
         id: 'inventory-1',
@@ -409,11 +445,28 @@ describe('CosmeticsService', () => {
     it('will throw error when the item is not equipped currently', async () => {
       usersService.findOrCreateUser.mockResolvedValue(user);
 
+      prisma.cosmeticItem.findFirst.mockResolvedValue({
+        id: 'cosmetic-1',
+        isActive: true,
+      });
+
       prisma.userInventoryItem.findFirst.mockResolvedValue(null);
 
       await expect(service.unequip(authUser, 'cosmetic-1')).rejects.toThrow(
         'Cosmetic item is not equipped',
       );
+    });
+
+    it('will throw an error when the item does not exist', async () => {
+      usersService.findOrCreateUser.mockResolvedValue(user);
+
+      prisma.cosmeticItem.findFirst.mockResolvedValue(null);
+
+      await expect(service.unequip(authUser, 'cosmetic-1')).rejects.toThrow(
+        'Cosmetic item was not found',
+      );
+
+      expect(prisma.userInventoryItem.findFirst).not.toHaveBeenCalled();
     });
   });
 

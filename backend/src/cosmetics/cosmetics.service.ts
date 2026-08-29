@@ -59,13 +59,21 @@ export class CosmeticsService {
   async equip(authUser: AuthUser, cosmeticId: string) {
     const user = await this.usersService.findOrCreateUser(authUser);
 
+    const cosmetic = await this.prisma.cosmeticItem.findFirst({
+      where: {
+        id: cosmeticId,
+        isActive: true,
+      },
+    });
+
+    if (!cosmetic) {
+      throw new NotFoundException('Cosmetic item was not found');
+    }
+
     const ownedItem = await this.prisma.userInventoryItem.findFirst({
       where: {
         userId: user.id,
         cosmeticItemId: cosmeticId,
-        cosmeticItem: {
-          isActive: true,
-        },
       },
       include: {
         cosmeticItem: true,
@@ -81,6 +89,9 @@ export class CosmeticsService {
         where: {
           userId: user.id,
           equipped: true,
+          cosmeticItemId: {
+            not: cosmeticId,
+          },
           cosmeticItem: {
             slot: ownedItem.cosmeticItem.slot,
           },
@@ -110,14 +121,22 @@ export class CosmeticsService {
   async unequip(authUser: AuthUser, cosmeticId: string) {
     const user = await this.usersService.findOrCreateUser(authUser);
 
+    const cosmetic = await this.prisma.cosmeticItem.findFirst({
+      where: {
+        id: cosmeticId,
+        isActive: true,
+      },
+    });
+
+    if (!cosmetic) {
+      throw new NotFoundException('Cosmetic item was not found');
+    }
+
     const ownedItem = await this.prisma.userInventoryItem.findFirst({
       where: {
         userId: user.id,
         cosmeticItemId: cosmeticId,
         equipped: true,
-        cosmeticItem: {
-          isActive: true,
-        },
       },
       include: {
         cosmeticItem: true,
