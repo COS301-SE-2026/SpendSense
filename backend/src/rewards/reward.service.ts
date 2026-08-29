@@ -353,6 +353,15 @@ export class RewardService {
         userId: input.userId,
         mood: input.mood.value,
         reason: input.mood.reason,
+        sourceEventId: input.sourceEventId,
+      });
+    }
+    if (result.leveledUp) {
+      await this.setMascotMood(tx, {
+        userId: input.userId,
+        mood: MascotMood.CELEBRATING,
+        reason: 'Leveled up',
+        sourceEventId: input.sourceEventId,
       });
     }
     return result;
