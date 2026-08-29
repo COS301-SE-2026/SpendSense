@@ -20,6 +20,7 @@ import { InsightsModule } from './insights/insights.module';
 import { CreditScoreModule } from './credit-score/credit-score.module';
 import { RewardModule } from './rewards/reward.module';
 import { FriendsModule } from './friends/friends.module';
+import { WagersModule } from './wagers/wagers.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { FriendsModule } from './friends/friends.module';
     CreditScoreModule,
     RewardModule,
     FriendsModule,
+    WagersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

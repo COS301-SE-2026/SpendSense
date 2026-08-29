@@ -260,7 +260,7 @@ function FriendsTab({
 
 
 function LeaderboardTab() {
-	const { entries, isLoading, error, reload } = useFriendsLeaderboard("score")
+	const { entries, isLoading, error, reload } = useFriendsLeaderboard("xp")
 
 	if (isLoading) {
 		return <LoadingCard label="Loading the leaderboard" />

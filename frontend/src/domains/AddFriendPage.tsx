@@ -8,8 +8,7 @@ import { SearchBox } from "@/components/common/SearchBox"
 import { FriendAvatar } from "@/components/common/FriendAvatar"
 import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
 import { FriendRequestsCard } from "@/components/common/FriendRequestsCard"
-import { useFriendSearch } from "@/hooks/useFriends"
-import { sendFriendRequest } from "@/features/friends/friendsApi"
+import { useFriendSearch, useSendFriendRequest } from "@/hooks/useFriends"
 
 //GET /friends/search, POST /friends/requests, plus the incoming requests
 //section with accept/decline
@@ -17,6 +16,7 @@ import { sendFriendRequest } from "@/features/friends/friendsApi"
 export default function AddFriendPage() {
 	const [query, setQuery] = React.useState("")
 	const { results, isLoading, error, tooShort } = useFriendSearch(query)
+	const { send: sendRequest } = useSendFriendRequest()
 
 	//ids we have already sent a request to in this session, so the button can
 	//flip to "Sent" without a refetch (search excludes pending requests, but
@@ -29,7 +29,7 @@ export default function AddFriendPage() {
 		setBusyId(userId)
 		setSendError(null)
 		try {
-			await sendFriendRequest(userId)
+			await sendRequest(userId)
 			setSentTo((current) => [...current, userId])
 		} catch (err) {
 			setSendError(err instanceof Error ? err.message : "Could not send that request.")

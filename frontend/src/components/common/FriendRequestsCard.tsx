@@ -5,11 +5,11 @@ import { Check, X } from "lucide-react"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { FriendAvatar } from "@/components/common/FriendAvatar"
 import { ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
-import { useFriendRequests } from "@/hooks/useFriends"
 import {
-	acceptFriendRequest,
-	declineFriendRequest,
-} from "@/features/friends/friendsApi"
+	useAcceptFriendRequest,
+	useDeclineFriendRequest,
+	useFriendRequests,
+} from "@/hooks/useFriends"
 import type { FriendRequestSummary } from "@/features/friends/friendsTypes"
 
 //incoming friend requests with accept / decline.
@@ -33,6 +33,8 @@ export function FriendRequestsCard({
 }>) {
 	const { requests, isLoading, error, reload, removeLocally } =
 		useFriendRequests("incoming")
+	const { accept: acceptRequest } = useAcceptFriendRequest()
+	const { decline: declineRequest } = useDeclineFriendRequest()
 	const [busyId, setBusyId] = React.useState<string | null>(null)
 	const [actionError, setActionError] = React.useState<string | null>(null)
 
@@ -41,9 +43,9 @@ export function FriendRequestsCard({
 		setActionError(null)
 		try {
 			if (accept) {
-				await acceptFriendRequest(request.id)
+				await acceptRequest(request.id)
 			} else {
-				await declineFriendRequest(request.id)
+				await declineRequest(request.id)
 			}
 			removeLocally(request.id)
 			if (accept) {

@@ -9,9 +9,12 @@ import { FriendAvatar } from "@/components/common/FriendAvatar"
 import { StatTile } from "@/components/common/StatTile"
 import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
 import { WagerStatusPill } from "@/components/common/WagerStatusPill"
-import { acceptWager, cancelWager, declineWager } from "@/features/friends/wagersApi"
-import { publishCoinBalance } from "@/features/gamification/coinBalance"
-import { useWager } from "@/hooks/useWagers"
+import {
+	useAcceptWager,
+	useCancelWager,
+	useDeclineWager,
+	useWager,
+} from "@/hooks/useWagers"
 import {
 	WAGER_TASK_DESCRIPTIONS,
 	WAGER_TASK_LABELS,
@@ -27,6 +30,9 @@ export default function WagerDetailPage() {
 	//the hook polls on its own while the settlement job is pending
 	const { wager, isLoading, error, notFound, awaitingSettlement, reload } =
 		useWager(wagerId)
+	const { accept: acceptRequest } = useAcceptWager()
+	const { decline: declineRequest } = useDeclineWager()
+	const { cancel: cancelRequest } = useCancelWager()
 
 	const left = daysRemaining(wager?.endDate ?? null)
 
@@ -42,17 +48,12 @@ export default function WagerDetailPage() {
 		setActionError(null)
 		try {
 			if (action === "accept") {
-				const result = await acceptWager(wagerId)
+				const result = await acceptRequest(wagerId)
 				setNewBalance(result.coinBalance)
-				//the response carries the authoritative post-escrow balance, so
-				//hand it to anything else on screen showing coins
-				publishCoinBalance(result.coinBalance)
-				reload()
 			} else if (action === "decline") {
-				await declineWager(wagerId)
-				reload()
+				await declineRequest(wagerId)
 			} else {
-				await cancelWager(wagerId)
+				await cancelRequest(wagerId)
 				navigate("/wagers")
 			}
 		} catch (err) {

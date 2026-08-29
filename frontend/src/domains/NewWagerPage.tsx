@@ -9,8 +9,8 @@ import { FriendAvatar } from "@/components/common/FriendAvatar"
 import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
 import { cn } from "@/lib/utils"
 import { useFriends } from "@/hooks/useFriends"
+import { useCreateWager } from "@/hooks/useWagers"
 import { useGamificationProfile } from "@/hooks/useGamificationProfile"
-import { createWager } from "@/features/friends/wagersApi"
 import {
 	WAGER_TASK_DESCRIPTIONS,
 	WAGER_TASK_LABELS,
@@ -33,6 +33,7 @@ export default function NewWagerPage() {
 	const [searchParams] = useSearchParams()
 	const navigate = useNavigate()
 	const { friends, isLoading, error, reload } = useFriends()
+	const { create, isPending: submitting, error: submitError } = useCreateWager()
 	
 	const { profile } = useGamificationProfile()
 	const coinBalance = profile?.coins ?? null
@@ -43,34 +44,24 @@ export default function NewWagerPage() {
 	const [taskType, setTaskType] = React.useState<WagerTaskType>("ALL_PAYMENTS_ON_TIME")
 	const [stakeAmount, setStakeAmount] = React.useState(50)
 	const [durationDays, setDurationDays] = React.useState(7)
-	const [submitting, setSubmitting] = React.useState(false)
-	const [submitError, setSubmitError] = React.useState<string | null>(null)
 
 	const list = friends ?? []
 	const opponent = list.find((f) => f.friendId === opponentId)
 
 	const submit = async () => {
 		if (!opponentId) {
-			setSubmitError("Pick a friend to challenge first.")
 			return
 		}
-		setSubmitting(true)
-		setSubmitError(null)
 		try {
-			const wager = await createWager({
+			const wager = await create({
 				opponentId,
 				taskType,
 				stakeAmount,
 				durationDays,
 			})
 			navigate(`/wagers/${wager.id}`)
-		} catch (err) {
-			//400 covers "not a friend" and "stake exceeds your balance"
-			
-			setSubmitError(
-				err instanceof Error ? err.message : "Could not create that challenge.",
-			)
-			setSubmitting(false)
+		} catch {
+			//error is handled by useCreateWager
 		}
 	}
 

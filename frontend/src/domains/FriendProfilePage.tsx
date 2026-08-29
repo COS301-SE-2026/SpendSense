@@ -9,8 +9,7 @@ import { FriendAvatar } from "@/components/common/FriendAvatar"
 import { StatTile } from "@/components/common/StatTile"
 import { ScoreTierPill } from "@/components/common/ScoreTierPill"
 import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
-import { useFriendProfile } from "@/hooks/useFriends"
-import { removeFriend } from "@/features/friends/friendsApi"
+import { useFriendProfile, useRemoveFriend } from "@/hooks/useFriends"
 import { SCORE_TIER_LABELS } from "@/features/friends/friendsTypes"
 
 //GET /friends/:friendId + DELETE /friends/:friendId.
@@ -19,6 +18,7 @@ export default function FriendProfilePage() {
 	const { friendId } = useParams()
 	const navigate = useNavigate()
 	const { friend, isLoading, error, notFound, reload } = useFriendProfile(friendId)
+	const { remove } = useRemoveFriend()
 
 	const [confirmingRemove, setConfirmingRemove] = React.useState(false)
 	const [removing, setRemoving] = React.useState(false)
@@ -31,7 +31,7 @@ export default function FriendProfilePage() {
 		setRemoving(true)
 		setRemoveError(null)
 		try {
-			await removeFriend(friendId)
+			await remove(friendId)
 			navigate("/friends/list")
 		} catch (err) {
 			setRemoveError(

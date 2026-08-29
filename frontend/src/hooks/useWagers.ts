@@ -1,7 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getWager, getWagers } from '@/features/friends/wagersApi'
+import {
+	acceptWager,
+	cancelWager,
+	createWager,
+	declineWager,
+	getWager,
+	getWagers,
+} from '@/features/friends/wagersApi'
 import { daysRemaining } from '@/features/friends/friendsTypes'
-import type { WagerStatus, WagerSummary } from '@/features/friends/friendsTypes'
+import type {
+	AcceptWagerResult,
+	CreateWagerRequest,
+	WagerStatus,
+	WagerStatusResult,
+	WagerSummary,
+} from '@/features/friends/friendsTypes'
+import { invalidateSocial,subscribeSocialInvalidation } from '@/features/friends/socialInvaliation'
+import { publishCoinBalance } from '@/features/gamification/coinBalance'
 import { getErrorMessage, getStatusCode, isAbortError } from '@/hooks/useFriends'
 
 // GET /wagers?status=
@@ -48,6 +63,10 @@ export function useWagers(status?: WagerStatus) {
 			controller.abort()
 		}
 	}, [load])
+
+	useEffect(()=>{
+		return subscribeSocialInvalidation('wagers',()=>void load())
+	},[load])
 
 	return { wagers, isLoading, error, reload: () => load() }
 }
@@ -112,6 +131,10 @@ export function useWager(wagerId: string | undefined, settlingPollMs = 30000) {
 		}
 	}, [load])
 
+	useEffect(()=>{
+		return subscribeSocialInvalidation('wagers',()=>void load())
+	},[load])
+
 	//an ACTIVE wager whose window has closed is waiting on the settlement job,
 	//so poll until the backend flips it to COMPLETED
 	const awaitingSettlement =
@@ -132,4 +155,93 @@ export function useWager(wagerId: string | undefined, settlingPollMs = 30000) {
 	}, [load, awaitingSettlement, settlingPollMs])
 
 	return { wager, isLoading, error, notFound, awaitingSettlement, reload: () => load() }
+}
+
+export function useCreateWager(){
+	const [isPending,setIsPending]=useState(false)
+	const [error,setError]=useState<string|null>(null)
+
+	const create=useCallback(async(request:CreateWagerRequest):Promise<WagerSummary>=>{
+		setIsPending(true)
+		setError(null)
+		try{
+			const result=await createWager(request)
+			invalidateSocial('wagers')
+			return result
+		}catch(err){
+			setError(getErrorMessage(err,'Failed to create challenge.'))
+			throw err
+		}finally{
+			setIsPending(false)
+		}
+	},[])
+
+	return {create,isPending,error}
+}
+
+export function useAcceptWager(){
+	const [isPending,setIsPending]=useState(false)
+	const [error,setError]=useState<string|null>(null)
+
+	const accept=useCallback(async(wagerId:string):Promise<AcceptWagerResult>=>{
+		setIsPending(true)
+		setError(null)
+		try{
+			const result=await acceptWager(wagerId)
+			publishCoinBalance(result.coinBalance)
+			invalidateSocial('wagers','leaderboard')
+			return result
+		}catch(err){
+			setError(getErrorMessage(err,'Failed to accept challenge.'))
+			throw err
+		}finally{
+			setIsPending(false)
+		}
+	},[])
+
+	return {accept,isPending,error}
+}
+
+export function useDeclineWager(){
+	const [isPending,setIsPending]=useState(false)
+	const [error,setError]=useState<string|null>(null)
+
+	const decline=useCallback(async(wagerId:string):Promise<WagerStatusResult>=>{
+		setIsPending(true)
+		setError(null)
+		try{
+			const result=await declineWager(wagerId)
+			invalidateSocial('wagers')
+			return result
+		}catch(err){
+			setError(getErrorMessage(err,'Failed to decline challenge.'))
+			throw err
+		}finally{
+			setIsPending(false)
+		}
+	},[])
+
+	return {decline,isPending,error}
+}
+
+export function useCancelWager(){
+	const [isPending,setIsPending]=useState(false)
+	const [error,setError]=useState<string|null>(null)
+
+	const cancel=useCallback(async(wagerId:string):Promise<WagerStatusResult>=>{
+		setIsPending(true)
+		setError(null)
+		try{
+			const result=await cancelWager(wagerId)
+			invalidateSocial('wagers')
+			return result
+		}catch(err){
+			setError(getErrorMessage(err,'Failed to cancel challenge.'))
+			throw err
+		}finally{
+			setIsPending(false)
+		}
+	},[])
+
+	return {cancel,isPending,error}
 }
