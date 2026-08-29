@@ -1,11 +1,13 @@
 type FriendshipStore={
     friendship:{
-        create:(args:{data:Record<string,unknown>})=>Promise<unknown>;
         createMany:(args:{
             data:Record<string,unknown>[];
             skipDuplicates?:boolean;
         })=>Promise<unknown>;
     };
+};
+
+type FriendRequestStore={
     friendRequest:{
         create:(args:{data:Record<string,unknown>})=>Promise<unknown>;
     };
@@ -19,7 +21,7 @@ export type FriendRequestInput={
 };
 
 export async function createFriendRequest(
-    prisma:FriendshipStore,
+    prisma:FriendRequestStore,
     input:FriendRequestInput,
     ){
         return prisma.friendRequest.create({
@@ -30,7 +32,7 @@ export async function createFriendRequest(
                 respondedAt:input.respondedAt ?? null,
             },
         });
-        }
+    }
 
 export async function createMutualFriendship(
     prisma:FriendshipStore,
@@ -44,8 +46,7 @@ export async function createMutualFriendship(
             },{
                 userId:friendId,
                 friendId:userId,
-            },
-            ],
+            }],
             skipDuplicates:true,
         });
         return{
