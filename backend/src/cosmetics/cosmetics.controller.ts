@@ -54,7 +54,7 @@ export class CosmeticsController {
   async equip(@CurrentAuthUser() authUser: AuthUser, @Param('id') id: string) {
     return this.cosmeticsService.equip(authUser, id);
   }
-  @Patch(':/id/unequip')
+  @Patch(':id/unequip')
   async unequip(
     @CurrentAuthUser() authUser: AuthUser,
     @Param('id') id: string,
