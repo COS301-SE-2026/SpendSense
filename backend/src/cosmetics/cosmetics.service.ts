@@ -1,6 +1,11 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { RewardService } from '../rewards/reward.service';
 import type { AuthUser } from '../auth/types/auth-user.type';
 
 export interface CosmeticCatalogueItem {
@@ -19,6 +24,7 @@ export class CosmeticsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly rewardService: RewardService,
   ) {}
 
   async getCatalogue(authUser: AuthUser): Promise<CosmeticCatalogueItem[]> {
@@ -136,5 +142,53 @@ export class CosmeticsService {
       slot: ownedItem.cosmeticItem.slot,
       equipped: false,
     };
+  }
+
+  async purchase(authUser: AuthUser, cosmeticId: string) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+
+    const cosmetic = await this.prisma.cosmeticItem.findFirst({
+      where: {
+        id: cosmeticId,
+        isActive: true,
+      },
+    });
+
+    if (!cosmetic) {
+      throw new NotFoundException('Cosmetic item was not found');
+    }
+
+    const itemOwned = await this.prisma.userInventoryItem.findFirst({
+      where: {
+        userId: user.id,
+        cosmeticItemId: cosmetic.id,
+      },
+    });
+
+    if (itemOwned) {
+      throw new BadRequestException('Cosmetic item already owned');
+    }
+
+    return this.prisma.$transaction(async (transaction) => {
+      const { coinBalance } = await this.rewardService.spendCoins(transaction, {
+        userId: user.id,
+        amount: cosmetic.cost,
+        reason: `Cosmetic purchase: ${cosmetic.name}`,
+      });
+
+      await transaction.userInventoryItem.create({
+        data: {
+          userId: user.id,
+          cosmeticItemId: cosmetic.id,
+        },
+      });
+
+      return {
+        id: cosmetic.id,
+        code: cosmetic.code,
+        owned: true,
+        coinBalance,
+      };
+    });
   }
 }
