@@ -2,6 +2,7 @@ import { CosmeticsService } from './cosmetics.service';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from '../auth/types/auth-user.type';
+import { RewardService } from 'src/rewards/reward.service';
 
 describe('CosmeticsService', () => {
   let service: CosmeticsService;
@@ -14,6 +15,10 @@ describe('CosmeticsService', () => {
       findFirst: jest.Mock;
       update: jest.Mock;
     };
+    cosmeticItem: {
+      findMany:jest.Mock;
+      findFirst:jest.Mock;
+    }
     $transaction: jest.Mock;
   };
 
@@ -25,8 +30,13 @@ describe('CosmeticsService', () => {
     userInventoryItem: {
       updateMany: jest.Mock;
       update: jest.Mock;
+      create: jest.Mock;
     };
   };
+
+  let rewardService: {
+    spendCoins: jest.Mock;
+  }
 
   const authUser = {
     id: 'auth-user-1',
@@ -65,9 +75,14 @@ describe('CosmeticsService', () => {
       findOrCreateUser: jest.fn(),
     };
 
+    rewardService = {
+      spendCoins: jest.fn(),
+    }
+
     service = new CosmeticsService(
       prisma as unknown as PrismaService,
       usersService as unknown as UsersService,
+      rewardService as unknown as RewardService,
     );
   });
 
