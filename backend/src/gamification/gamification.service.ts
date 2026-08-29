@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MascotMood } from '@prisma/client';
+import { MascotMood, UserEventType } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
@@ -33,6 +33,43 @@ export class GamificationService {
         select: this.gamificationProfileSelect,
       }));
 
+    const equippedInventory = await this.prisma.userInventoryItem.findMany({
+      where: {
+        userId: user.id,
+        equipped: true,
+        cosmeticItem: {
+          isActive: true,
+        },
+      },
+      include: {
+        cosmeticItem: {
+          select: {
+            slot: true,
+            code: true,
+            iconKey: true,
+          },
+        },
+      },
+    });
+
+    const latestMoodEvent = await this.prisma.userEvent.findFirst({
+      where: {
+        userId: user.id,
+        eventType: {
+          in: [
+            UserEventType.PAYMENT_LATE,
+            UserEventType.PAYMENT_ON_TIME,
+            UserEventType.PAYMENT_OVERDUE,
+            UserEventType.QUIZ_COMPLETED,
+            UserEventType.BADGE_EARNED,
+          ],
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
     const badges = await this.prisma.userBadge.findMany({
       where: {
         userId: user.id,
@@ -56,6 +93,28 @@ export class GamificationService {
       },
     });
 
+    const mascotLevelProgress = this.getMascotLevelProgress(
+      gamificationProfile.xp,
+    );
+
+    const moodReason =
+      gamificationProfile.mascotMood === MascotMood.NEUTRAL
+        ? null
+        : this.getMoodReason(latestMoodEvent?.eventType);
+
+    const equippedCosmetics = Array.from(
+      new Map(
+        equippedInventory.map((inventoryItem) => [
+          inventoryItem.cosmeticItem.slot,
+          {
+            slot: inventoryItem.cosmeticItem.slot,
+            code: inventoryItem.cosmeticItem.code,
+            iconKey: inventoryItem.cosmeticItem.iconKey,
+          },
+        ]),
+      ).values(),
+    );
+
     return {
       ...this.toGamificationProfileResponse(gamificationProfile),
       badges: badges.map((badge) => ({
@@ -66,6 +125,12 @@ export class GamificationService {
         iconKey: badge.badgeDefinition.iconKey,
         earnedAt: badge.earnedAt,
       })),
+
+      moodReason,
+
+      mascotLevelProgress,
+
+      equippedCosmetics,
     };
   }
 
@@ -90,6 +155,42 @@ export class GamificationService {
       longestStreak: profile.longestPaymentStreak,
       knowledgeStreak: profile.currentKnowledgeStreak,
       longestKnowledgeStreak: profile.longestKnowledgeStreak,
+    };
+  }
+
+  private getMoodReason(eventType?: UserEventType): string | null {
+    switch (eventType) {
+      case UserEventType.PAYMENT_LATE:
+        return 'Made a payment late';
+
+      case UserEventType.PAYMENT_ON_TIME:
+        return 'Made a payment on time';
+
+      case UserEventType.PAYMENT_OVERDUE:
+        return 'A payment became overdue';
+
+      case UserEventType.QUIZ_COMPLETED:
+        return 'Completed a quiz';
+
+      case UserEventType.BADGE_EARNED:
+        return 'Earned a badge';
+
+      default:
+        return null;
+    }
+  }
+
+  private getMascotLevelProgress(xp: number) {
+    const xpForNextLevel = 100;
+    const currentLevelXp = xp % xpForNextLevel;
+    const percentToNextLevel = Math.round(
+      (currentLevelXp / xpForNextLevel) * 100,
+    );
+
+    return {
+      currentLevelXp,
+      xpForNextLevel,
+      percentToNextLevel,
     };
   }
 }
