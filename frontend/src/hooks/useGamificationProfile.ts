@@ -1,6 +1,8 @@
 import {useState, useEffect, useCallback} from 'react'
 import {subscribeToCoinBalance} from '@/features/gamification/coinBalance'
 import {getGamificationProfile} from '@/features/gamification/gamificationApi'
+import type {EquippedCosmetic} from '@/features/cosmetics/cosmeticsTypes'
+import type {MascotLevelProgress} from '@/lib/mascot'
 
 // GET /gamification/profile
 
@@ -23,6 +25,9 @@ export interface GamificationProfile{
     knowledgeStreak: number
     longestKnowledgeStreak: number
     badges: GamificationBadge[]
+    mascotLevelProgress?: MascotLevelProgress
+    moodReason?: string | null
+    equippedCosmetics?: EquippedCosmetic[]
 }
 
 interface UseGamificationProfileReturn{
