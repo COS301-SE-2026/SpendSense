@@ -1,6 +1,6 @@
-import {createUser,type E2eUser,type E2eUserInput} from '../factories/user';
-import { createMutualFriendship } from '../factories/friends';
-import { createActiveWager } from '../factories/wagers';
+import {createUser,type E2eUser} from '../factories/user';
+import {createMutualFriendship} from '../factories/friends';
+import {createActiveWager} from '../factories/wagers';
 
 type FriendsWagersScenarioStore={
     user:{
@@ -15,10 +15,44 @@ type FriendsWagersScenarioStore={
     wager:{
         create:(args:{data:Record<string,unknown>})=>Promise<unknown>;
     };
+    creditProfile:{
+        upsert:(args:{
+            where:{userId:string};
+            update:Record<string,unknown>;
+            create:Record<string,unknown>;
+        })=>Promise<unknown>;
+    };
     gamificationProfile:{
-        upsert:(args:{where:{userId:string};update:Record<string,unknown>;create:Record<string,unknown>})=>Promise<unknown>;
+        upsert:(args:{
+            where:{userId:string};
+            update:Record<string,unknown>;
+            create:Record<string,unknown>;
+        })=>Promise<unknown>;
     };
 };
+
+async function createSocialProfiles(
+    prisma:FriendsWagersScenarioStore,
+    userId:string,
+    ){
+        await prisma.creditProfile.upsert({
+            where:{userId},
+            update:{},
+            create:{
+                userId,
+                currentScore:600,
+                previousScore:600,
+                scoreTier:'GOOD',
+            },
+        });
+        await prisma.gamificationProfile.upsert({
+            where:{userId},
+            update:{},
+            create:{
+                userId,
+            },
+        });
+    }
 
 export async function createTwoUsersForFriendFlow(
     prisma:FriendsWagersScenarioStore,
@@ -29,6 +63,8 @@ export async function createTwoUsersForFriendFlow(
         const userB=await createUser(prisma,{
             displayName:'E2E Friend User B',
         });
+        await createSocialProfiles(prisma,userA.id);
+        await createSocialProfiles(prisma,userB.id);
         return{
             userA,
             userB,
@@ -47,6 +83,9 @@ export async function createThreeUsersForPrivacyFlow(
         const userC=await createUser(prisma,{
             displayName:'E2E Friend User C',
         });
+        await createSocialProfiles(prisma,userA.id);
+        await createSocialProfiles(prisma,userB.id);
+        await createSocialProfiles(prisma,userC.id);
         return{
             userA,
             userB,
