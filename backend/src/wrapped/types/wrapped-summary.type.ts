@@ -8,7 +8,7 @@ export type WrappedBadge = {
 };
 
 export type WrappedSummary = {
-    month: string;
+    month: number;
     monthLabel: string;
 
     scoreStart: number;

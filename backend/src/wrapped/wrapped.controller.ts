@@ -1,7 +1,6 @@
 import {
   Controller,
   Get,
-  Query,
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
@@ -85,9 +84,7 @@ export class MonthlyWrappedController {
       },
     },
   })
-  async getMonthlyWrapped(
-    @CurrentAuthUser() authUser: AuthUser,
-  ) {
+  async getMonthlyWrapped(@CurrentAuthUser() authUser: AuthUser) {
     const currentDate = new Date();
 
     const year = currentDate.getFullYear();
