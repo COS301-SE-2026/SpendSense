@@ -159,7 +159,7 @@ export default function ObligationForm() {
                     <button
                         type="button"
                         aria-label="Cancel"
-                        onClick={() => navigate("/")}
+                        onClick={() => navigate(-1)}
                         className="size-11 rounded-full bg-[#FF6B9D] flex items-center justify-center text-[#091828] flex-shrink-0 border-none dark:bg-[#ffb1c5] dark:text-[#650030]"
                     >
                         <X className="size-5" />
@@ -193,14 +193,14 @@ export default function ObligationForm() {
 
                 <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
 
-                    {/* Type - icon picker + labeled overlay select for test accessibility */}
+                    {/* Type - icon picker */}
                     <Controller
                         control={control}
                         name="type"
                         render={({field}) => (
                             <div>
                                 <p className="text-sm font-medium text-[#091828] mb-3 ml-1 dark:text-white">Pick a type</p>
-                                <div className="flex gap-4 overflow-x-auto pb-4">
+                                <div className="flex gap-4 overflow-x-auto pt-1.5 pl-1.5 pr-1.5 pb-4 -mt-1.5 -ml-1.5 -mr-1.5">
                                     {TYPE_OPTIONS.map(opt => (
                                         <button
                                             key={opt.id}
@@ -222,23 +222,6 @@ export default function ObligationForm() {
                                             )}>{opt.label}</span>
                                         </button>
                                     ))}
-                                </div>
-                                <label htmlFor="type" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Type</label>
-                                <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 relative dark:bg-[#131b2e]">
-                                    <span className="flex-1 text-sm text-[#091828] dark:text-white">
-                                        {TYPE_OPTIONS.find(t => t.value === field.value)?.label ?? "Subscription"}
-                                    </span>
-                                    <ChevronDown className="size-4 text-[#6b6375] dark:text-[#a0aec0]" />
-                                    <select
-                                        id="type"
-                                        value={field.value}
-                                        onChange={e => field.onChange(e.target.value)}
-                                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                                    >
-                                        {TYPE_OPTIONS.map(opt => (
-                                            <option key={opt.id} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
                                 </div>
                             </div>
                         )}

@@ -110,10 +110,10 @@ export default function ObligationForm(){
                 {/* header -> cancel button(IconVariant="iconCancel"),heading*/}
                 <div className="flex items-center justify-between gap-3 mb-2">
                     <div className="flex-shrink-0">
-                        <IconButton 
+                        <IconButton
                             type="button" IconVariant="iconCancel"
                             aria-label="Clear form"
-                            onClick={()=>navigate("/")}/>    
+                            onClick={()=>navigate(-1)}/>
                     </div>   
                     <h1 className="text-center text-[#091828] text-3xl font-bold dark:text-white">Add Payment</h1>
                     <div className="size-10 flex-shrink-0" aria-hidden="true"/>

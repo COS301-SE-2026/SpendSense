@@ -47,7 +47,7 @@ describe("ObligationForm Component", () => {
 		expect(screen.getByRole("heading", {name: /new obligation/i})).toBeInTheDocument();
 		expect(screen.getByLabelText(/what is this for\?/i)).toBeInTheDocument();
 		expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
-		expect(screen.getByLabelText(/type/i)).toBeInTheDocument();
+		expect(screen.getByRole("button", {name: /subs/i})).toBeInTheDocument();
 		expect(screen.getByLabelText(/amount/i)).toBeInTheDocument();
 		expect(screen.getByLabelText(/priority/i)).toBeInTheDocument();
 		expect(screen.getByLabelText(/frequency/i)).toBeInTheDocument();
@@ -70,7 +70,7 @@ describe("ObligationForm Component", () => {
 		renderComponent();
 		await userEvent.type(screen.getByLabelText(/what is this for\?/i), "Gym Membership");
 		await userEvent.type(screen.getByLabelText(/description/i), "Monthly debit order fitness center");
-		await userEvent.selectOptions(screen.getByLabelText(/type/i), "SUBSCRIPTION");
+		await userEvent.click(screen.getByRole("button", {name: /subs/i}));
 		await userEvent.type(screen.getByLabelText(/amount/i), "450");
 		await userEvent.selectOptions(screen.getByLabelText(/priority/i), "MEDIUM");
 		await userEvent.selectOptions(screen.getByLabelText(/frequency/i), "MONTHLY");
