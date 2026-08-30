@@ -59,14 +59,10 @@ describe('RewardService', () => {
         groupBy: jest.fn<Promise<unknown>, [unknown]>(),
       },
       userEvent: {
-        findUnique: jest
-          .fn<Promise<unknown>, [unknown]>()
-          .mockResolvedValue({
-            metadata: {},
-          }),
-        update: jest
-          .fn<Promise<unknown>, [unknown]>()
-          .mockResolvedValue({}),
+        findUnique: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({
+          metadata: {},
+        }),
+        update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
       },
     };
   });
