@@ -8,5 +8,6 @@ import { UsersModule } from '../users/users.module';
   imports: [PrismaModule, UsersModule],
   controllers: [CreditScoreController],
   providers: [CreditScoreService],
+  exports: [CreditScoreService]
 })
 export class CreditScoreModule {}

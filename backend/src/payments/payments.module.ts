@@ -6,6 +6,7 @@ import { UsersModule } from '../users/users.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
 import { GamificationModule } from 'src/gamification/gamification.module';
 import { RewardModule } from 'src/rewards/reward.module';
+import { CreditScoreModule } from '../credit-score/credit-score.module';
 // PaymentsModule: payment logging and occurrence management
 // TODO: implemetn PaymentsController and PaymentsService
 
@@ -20,6 +21,7 @@ import { RewardModule } from 'src/rewards/reward.module';
     NotificationsModule,
     GamificationModule,
     RewardModule,
+    CreditScoreModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],
