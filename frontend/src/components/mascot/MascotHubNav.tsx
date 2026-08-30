@@ -26,7 +26,7 @@ interface HubItem {
     label: string
     icon: React.ReactNode
     to?: string
-    enabled: Boolean
+    enabled: boolean
 }
 
 const HUB_ITEMS: HubItem[] = [

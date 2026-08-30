@@ -26,10 +26,21 @@ const FILTERS: {key: CatalogFilter; label: string}[] = [
 	{key: "OWNED", label: "Owned"},
 ]
 
+const FILTER_BY_VIEW: Record<string, CatalogFilter> = {
+    hat: "HAT",
+    accessory: "ACCESSORY",
+    owned: "OWNED",
+}
+
+function parseFilter(view: string | null): CatalogFilter{
+    if(!view) return "ALL"
+    return FILTER_BY_VIEW[view.toLowerCase()] ?? "ALL"
+}
+
 type SheetStage = "detail" | "confirm" | "purchased"
 
 export default function MascotShopPage(){
-    const [searchParams] = useSearchParams()
+    const [searchParams, setSearchParams] = useSearchParams()
 
     const {profile} = useGamificationProfile()
     const {
@@ -45,9 +56,10 @@ export default function MascotShopPage(){
 		unequip,
 	} = useCosmetics()
 
-    const [filter, setFilter] = React.useState<CatalogFilter>(
-        searchParams.get("view") === "owned" ? "OWNED" : "ALL",
-    )
+    const filter = parseFilter(searchParams.get("view"))
+    const setFilter = (next: CatalogFilter) => {
+        setSearchParams(next === "ALL" ? {} : {view: next.toLowerCase()}, {replace: true})
+    }
 
     const [sheetItemId, setSheetItemId] = React.useState<string | null>(null)
 	const [sheetStage, setSheetStage] = React.useState<SheetStage>("detail")
@@ -92,7 +104,7 @@ export default function MascotShopPage(){
 	}
 
     return(
-        <SubPageShell title="Shop" subtitle="SPend the coins you have earned or wear something you own.">
+        <SubPageShell title="Shop" subtitle="Spend the coins you have earned or wear something you own.">
             <div className="flex items-center justify-between gap-3">
 				<FilterChips
 					options={FILTERS.map((entry) => ({
