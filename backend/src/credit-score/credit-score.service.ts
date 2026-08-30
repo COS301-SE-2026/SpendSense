@@ -29,9 +29,10 @@ export class CreditScoreService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getCreditScore(userId: string, db: CreditScoreDb = this.prisma) {
+
+    const paymentHistoryScore = await this.calculateBudgetPressureScore(userId,db) ; 
     const paymentH =
-      CREDIT_SCORE_COMPONENT_WEIGHTS.PAYMENT_HISTORY *
-      (await this.calculatePaymentHistory(userId, db));
+      CREDIT_SCORE_COMPONENT_WEIGHTS.PAYMENT_HISTORY * paymentHistoryScore;
 
     const budgetPressure =
       CREDIT_SCORE_COMPONENT_WEIGHTS.BUDGET_PRESSURE *
@@ -49,7 +50,7 @@ export class CreditScoreService {
 
     const obligationDiveristy =
       CREDIT_SCORE_COMPONENT_WEIGHTS.OBLIGATION_DIVERSITY *
-      (await this.calculateObligationDiversityScore(userId, paymentH, db));
+      (await this.calculateObligationDiversityScore(userId, paymentHistoryScore, db));
 
     const sumValues =
       paymentH +
@@ -104,6 +105,14 @@ export class CreditScoreService {
     const occurrences = await db.paymentOccurrence.findMany({
       where: {
         userId,
+        status: {
+          in: [
+            PaymentOccurrenceStatus.PAID,
+            PaymentOccurrenceStatus.PAID_LATE,
+            PaymentOccurrenceStatus.MISSED,
+            PaymentOccurrenceStatus.OVERDUE,
+          ]
+        }
       },
       select: {
         id: true,
