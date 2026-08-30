@@ -1,13 +1,12 @@
 import {apiFetch} from '../../lib/api'
 
 // profileApi: user identity, settings, and wrapped summaries
-// PLACEHOLDER - these endpoints do not exist on the backend yet.
-// The paths below are the planned contract; update if the backend names differ.
-// planned endpoints:
-// GET   /api/v1/users/me/preferences
-// PATCH /api/v1/users/me/deactivate
-// PATCH /api/v1/users/me/export
-// GET   /api/v1/wrapped/latest
+// endpoints:
+// PATCH  /users/me/preferences
+// PATCH  /users/me/deactivate
+// GET    /users/me/export
+// DELETE /users/me/data
+// GET    /wrapped/latest
 
 export interface UserPreferences{
     theme: 'SYSTEM'|'LIGHT'|'DARK'
@@ -36,6 +35,22 @@ export async function deactivateAccount(){
 
 export async function exportUserData(){
     return apiFetch('/users/me/export')
+}
+
+
+export interface DataDeletionReceipt{
+    data: {
+        deleted: boolean
+        deletedAt: string
+        recordsDeleted: Record<string, number>
+    }
+}
+
+// POPIA s24 deletion request. Destroys the account and every record attached
+// to it. Nothing is recoverable afterwards, so callers should sign the user
+// out immediately.
+export async function deleteAllUserData(){
+    return apiFetch<DataDeletionReceipt>('/users/me/data', {method: 'DELETE'})
 }
 
 
