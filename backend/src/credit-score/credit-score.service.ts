@@ -30,7 +30,7 @@ export class CreditScoreService {
 
   async getCreditScore(userId: string, db: CreditScoreDb = this.prisma) {
 
-    const paymentHistoryScore = await this.calculateBudgetPressureScore(userId,db) ; 
+    const paymentHistoryScore = await this.calculatePaymentHistory(userId,db) ; 
     const paymentH =
       CREDIT_SCORE_COMPONENT_WEIGHTS.PAYMENT_HISTORY * paymentHistoryScore;
 
@@ -85,6 +85,7 @@ export class CreditScoreService {
       monthlySavingAmount_: monthlySavingAmount,
       historyLength_: historyLength,
       obligationDiveristy_: obligationDiveristy,
+      calculateScore_: calculateScore,
     });
 
     return {
