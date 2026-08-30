@@ -19,6 +19,8 @@ import { QuizModule } from './quiz/quiz.module';
 import { InsightsModule } from './insights/insights.module';
 import { CreditScoreModule } from './credit-score/credit-score.module';
 import { RewardModule } from './rewards/reward.module';
+import { FriendsModule } from './friends/friends.module';
+import { WagersModule } from './wagers/wagers.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { RewardModule } from './rewards/reward.module';
     InsightsModule,
     CreditScoreModule,
     RewardModule,
+    FriendsModule,
+    WagersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

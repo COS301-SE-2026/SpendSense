@@ -13,17 +13,25 @@ import { cn } from "@/lib/utils"
 import { useFriendsLeaderboard } from "@/hooks/useFriends"
 import type { LeaderboardMetric } from "@/features/friends/friendsTypes"
 
-//GET /friends/leaderboard?metric=score|streak.
+//GET /friends/leaderboard?metric=xp|coins|streak&page=.
 //friend scoped only, a global leaderboard needs a privacy decision nobody has
 //made yet, so it is not here (yet?)
 
 export default function LeaderboardPage() {
-	const [metric, setMetric] = React.useState<LeaderboardMetric>("score")
-	const { entries, isLoading, error, reload } = useFriendsLeaderboard(metric)
+	const [metric, setMetric] = React.useState<LeaderboardMetric>("xp")
+	const [page, setPage] = React.useState(1)
+	const { entries, pagination, isLoading, error, reload } = useFriendsLeaderboard(metric, page)
 
 	const list = entries ?? []
-	const podium = list.slice(0, 3)
-	const rest = list.slice(3)
+	const podium = page === 1 ? list.slice(0, 3) : []
+	const rest = page === 1 ? list.slice(3) : list
+
+	let rankingDescription = "Ranked by current payment streak"
+	if (metric === "xp") {
+		rankingDescription = "Ranked by total XP"
+	} else if (metric === "coins") {
+		rankingDescription = "Ranked by current coin balance"
+	}
 
 	const podiumStyles = [
 		{ bg: "bg-[#FFE9B5] dark:bg-[#3f2e00]", icon: "text-[#7A5A00] dark:text-[#ffd166]", height: "pt-6" },
@@ -35,9 +43,13 @@ export default function LeaderboardPage() {
 		<FriendsPageShell title="Leaderboard" subtitle="How you rank among your friends">
 			<FilterChips
 				active={metric}
-				onChange={setMetric}
+				onChange={(nextMetric) => {
+					setMetric(nextMetric)
+					setPage(1)
+				}}
 				options={[
-					{ key: "score", label: "Score tier" },
+					{ key: "xp", label: "XP" },
+					{ key: "coins", label: "Coins" },
 					{ key: "streak", label: "Payment streak" },
 				]}
 			/>
@@ -67,57 +79,57 @@ export default function LeaderboardPage() {
 
 			{!isLoading && !error && list.length > 0 && (
 				<>
-					<CustomCard
-						variant="navyBorder"
-						size="sm"
-						className="bg-[#E8E4F4] dark:bg-[#2d1b2e] dark:border-[#2d3449]"
-					>
-						<div className="flex items-center gap-3">
-							<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white dark:bg-[#131b2e]">
-								<Trophy className="size-5 text-[#5B4D8B] dark:text-[#ff6b9d]" />
-							</div>
-
-							<div className="min-w-0 flex-1">
-								<p className="text-sm font-bold text-[#5B4D8B] dark:text-[#ff6b9d]">
-									Friends Leaderboard
-								</p>
-								<p className="text-xs text-[#6B6375] dark:text-[#a0aec0]">
-									{metric === "score"
-										? "Ranked by credit score tier"
-										: "Ranked by current payment streak"}
-								</p>
-							</div>
-						</div>
-
-						<div className="mt-4 grid grid-cols-3 items-end gap-2">
-							{podium.map((entry, index) => (
-								<div
-									key={entry.userId}
-									className={cn(
-										"flex flex-col items-center gap-1 rounded-xl border-2 border-[#091828] px-2 pb-3 dark:border-[#2d3449]",
-										podiumStyles[index].bg,
-										podiumStyles[index].height,
-									)}
-								>
-									<Medal className={cn("size-5", podiumStyles[index].icon)} />
-									<span className="text-sm font-extrabold text-[#091828] dark:text-white">
-										{entry.rank}
-									</span>
-									<FriendAvatar
-										displayName={entry.displayName}
-										avatarUrl={entry.avatarUrl}
-										size="sm"
-									/>
-									<span className="w-full truncate text-center text-[11px] font-bold text-[#091828] dark:text-white">
-										{entry.isSelf ? "You" : entry.displayName}
-									</span>
-									<span className="text-[11px] text-[#6B6375] dark:text-[#a0aec0]">
-										{entry.value}
-									</span>
+					{page === 1 && (
+						<CustomCard
+							variant="navyBorder"
+							size="sm"
+							className="bg-[#E8E4F4] dark:bg-[#2d1b2e] dark:border-[#2d3449]"
+						>
+							<div className="flex items-center gap-3">
+								<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white dark:bg-[#131b2e]">
+									<Trophy className="size-5 text-[#5B4D8B] dark:text-[#ff6b9d]" />
 								</div>
-							))}
-						</div>
-					</CustomCard>
+
+								<div className="min-w-0 flex-1">
+									<p className="text-sm font-bold text-[#5B4D8B] dark:text-[#ff6b9d]">
+										Friends Leaderboard
+									</p>
+									<p className="text-xs text-[#6B6375] dark:text-[#a0aec0]">
+										{rankingDescription}
+									</p>
+								</div>
+							</div>
+
+							<div className="mt-4 grid grid-cols-3 items-end gap-2">
+								{podium.map((entry, index) => (
+									<div
+										key={entry.userId}
+										className={cn(
+											"flex flex-col items-center gap-1 rounded-xl border-2 border-[#091828] px-2 pb-3 dark:border-[#2d3449]",
+											podiumStyles[index].bg,
+											podiumStyles[index].height,
+										)}
+									>
+										<Medal className={cn("size-5", podiumStyles[index].icon)} />
+										<span className="text-sm font-extrabold text-[#091828] dark:text-white">
+											{entry.rank}
+										</span>
+										<FriendAvatar
+											displayName={entry.displayName}
+											avatarUrl={entry.avatarUrl}
+											size="sm"
+										/>
+										<span className="w-full truncate text-center text-[11px] font-bold text-[#091828] dark:text-white">
+											{entry.isSelf ? "You" : entry.displayName}
+										</span>
+										<span className="text-[11px] text-[#6B6375] dark:text-[#a0aec0]">
+											{entry.value}
+										</span>
+									</div>
+								))}
+							</div>
+						</CustomCard>
+					)}
 
 					{rest.length > 0 && (
 						<CustomCard variant="navyBorder" size="sm">
@@ -131,6 +143,34 @@ export default function LeaderboardPage() {
 								))}
 							</div>
 						</CustomCard>
+					)}
+
+					{pagination && pagination.totalPages > 1 && (
+						<div className="flex gap-2">
+							<LongButton
+								LongVariant="outline"
+								LongSize="sm"
+								showArrow={false}
+								fullWidth={false}
+								className="flex-1"
+								disabled={page <= 1}
+								onClick={() => setPage((current) => Math.max(1, current - 1))}
+							>
+								Previous
+							</LongButton>
+
+							<LongButton
+								LongVariant="outline"
+								LongSize="sm"
+								showArrow={false}
+								fullWidth={false}
+								className="flex-1"
+								disabled={page >= pagination.totalPages}
+								onClick={() => setPage((current) => current + 1)}
+							>
+								Next
+							</LongButton>
+						</div>
 					)}
 				</>
 			)}
@@ -149,7 +189,7 @@ export default function LeaderboardPage() {
 						Climb the ranks
 					</p>
 					<p className="text-xs text-[#6B6375] dark:text-[#a0aec0]">
-						Pay on time to build your streak and tier.
+						Earn XP, build your streak and collect coins to climb the rankings.
 					</p>
 				</div>
 			</CustomCard>
