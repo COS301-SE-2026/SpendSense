@@ -30,20 +30,6 @@ export class MonthlyWrappedController {
 
   @Get('latest')
   @ApiOperation({ summary: 'Get badges earned during a specified month' })
-  @ApiQuery({
-    name: 'year',
-    type: Number,
-    example: 2026,
-    required: false,
-    description: 'default to the current year',
-  })
-  @ApiQuery({
-    name: 'month',
-    type: Number,
-    example: 8,
-    required: false,
-    description: 'Month number between 1 and upto and including 12',
-  })
   @ApiResponse({
     status: 200,
     description: 'Monthly Wrapped was returned successfully',
@@ -85,6 +71,7 @@ export class MonthlyWrappedController {
     },
   })
   async getMonthlyWrapped(@CurrentAuthUser() authUser: AuthUser) {
+    const user = await this.usersService.findOrCreateUser(authUser);
     const currentDate = new Date();
 
     const year = currentDate.getFullYear();
@@ -98,7 +85,6 @@ export class MonthlyWrappedController {
     ) {
       throw new BadRequestException('Invalid year or month');
     }
-    const user = await this.usersService.findOrCreateUser(authUser);
     return this.monthlyWrappedService.getBadgesForMonth(user.id, year, month);
   }
 }
