@@ -22,7 +22,7 @@ function expectErrorEnvelope(
   body: Record<string, unknown>,
   statusCode: number,
 ) {
-  expect(Object.keys(body).sort()).toEqual([
+  expect(Object.keys(body).sort((a, b) => a.localeCompare(b))).toEqual([
     'message',
     'path',
     'statusCode',
@@ -35,7 +35,7 @@ function expectErrorEnvelope(
 }
 
 function expectPrivacySafeFriend(friend: Record<string, unknown>) {
-  expect(Object.keys(friend).sort()).toEqual([
+  expect(Object.keys(friend).sort((a, b) => a.localeCompare(b))).toEqual([
     'avatarUrl',
     'badgeCount',
     'currentPaymentStreak',
@@ -110,21 +110,18 @@ describe('Friends and Wagers E2E', () => {
             avatarUrl: null,
           },
         ]);
-        expect(
-          getResponseData<Record<string, unknown>[]>(response.body)[0],
-        ).not.toHaveProperty('email');
-        expect(
-          getResponseData<Record<string, unknown>[]>(response.body)[0],
-        ).not.toHaveProperty('supabaseAuthId');
-        expect(
-          getResponseData<Record<string, unknown>[]>(response.body)[0],
-        ).not.toHaveProperty('monthlyBudget');
-        expect(
-          getResponseData<Record<string, unknown>[]>(response.body)[0],
-        ).not.toHaveProperty('obligations');
-        expect(
-          getResponseData<Record<string, unknown>[]>(response.body)[0],
-        ).not.toHaveProperty('payments');
+        const searchResult = getResponseData<Record<string, unknown>[]>(
+          response.body,
+        )[0];
+        [
+          'email',
+          'supabaseAuthId',
+          'monthlyBudget',
+          'obligations',
+          'payments',
+        ].forEach((field) => {
+          expect(searchResult).not.toHaveProperty(field);
+        });
       } finally {
         await e2e.close();
       }
