@@ -18,34 +18,36 @@ import {
   PaymentOccurrenceStatus,
   PaymentRecordStatus,
   Prisma,
+  ScoreEventType,
+  ScoreTier,
 } from '@prisma/client';
 
-type CreditScoreDb = PrismaService | Prisma.TransactionClient ;
+type CreditScoreDb = PrismaService | Prisma.TransactionClient;
 
 @Injectable()
 export class CreditScoreService {
   constructor(private readonly prisma: PrismaService) {}
-  
-  async getCreditScore(userId: string, db: CreditScoreDb = this.prisma,) {
+
+  async getCreditScore(userId: string, db: CreditScoreDb = this.prisma) {
     const paymentH =
       CREDIT_SCORE_COMPONENT_WEIGHTS.PAYMENT_HISTORY *
       (await this.calculatePaymentHistory(userId, db));
-    
-      const budgetPressure =
+
+    const budgetPressure =
       CREDIT_SCORE_COMPONENT_WEIGHTS.BUDGET_PRESSURE *
       (await this.calculateBudgetPressureScore(userId, db));
-    
-      const savingsBuffer =
+
+    const savingsBuffer =
       CREDIT_SCORE_COMPONENT_WEIGHTS.SAVINGS_BUFFER *
       (await this.calculateSavingsBuffer(userId, db));
-    
-      const monthlySavingAmount = await this.calculateSavingsBuffer(userId, db);
-    
-      const historyLength =
+
+    const monthlySavingAmount = await this.calculateSavingsBuffer(userId, db);
+
+    const historyLength =
       CREDIT_SCORE_COMPONENT_WEIGHTS.HISTORY_LENGTH *
       (await this.calculateHistoryLengthScore(userId, db));
-    
-      const obligationDiveristy =
+
+    const obligationDiveristy =
       CREDIT_SCORE_COMPONENT_WEIGHTS.OBLIGATION_DIVERSITY *
       (await this.calculateObligationDiversityScore(userId, paymentH, db));
 
@@ -95,7 +97,10 @@ export class CreditScoreService {
     };
   }
 
-  private async calculatePaymentHistory(userId: string,  db: CreditScoreDb = this.prisma): Promise<number> {
+  private async calculatePaymentHistory(
+    userId: string,
+    db: CreditScoreDb = this.prisma,
+  ): Promise<number> {
     const occurrences = await db.paymentOccurrence.findMany({
       where: {
         userId,
@@ -136,7 +141,6 @@ export class CreditScoreService {
       const historyScore = this.getWeightedHistoryScore(
         occurrence.status,
         daysLate,
-        db,
       );
       weightedHistoryScore +=
         historyScore * PRIORITY_WEIGHTS[occurrence.obligation.priority];
@@ -165,7 +169,6 @@ export class CreditScoreService {
   private getWeightedHistoryScore(
     occurrenceStatus: PaymentOccurrenceStatus,
     daysLate: number | undefined,
-    db: CreditScoreDb = this.prisma,
   ): number {
     if (
       occurrenceStatus === PaymentOccurrenceStatus.MISSED ||
@@ -201,7 +204,10 @@ export class CreditScoreService {
     return PAYMENT_HISTORY_SCORES.LATE_MORE_THAN_30_DAYS;
   }
 
-  private async calculateBudgetPressureScore(userId: string, db: CreditScoreDb = this.prisma): Promise<number> {
+  private async calculateBudgetPressureScore(
+    userId: string,
+    db: CreditScoreDb = this.prisma,
+  ): Promise<number> {
     const user = await db.user.findUnique({
       where: {
         id: userId,
@@ -242,7 +248,7 @@ export class CreditScoreService {
     const monthlyCommittedObligations = Number(result._sum.amountDue ?? 0);
     const budgetPressureRatio = monthlyCommittedObligations / monthlyBudget;
     const budgetPressureRatioScore =
-      this.getBudgetPressureScore(budgetPressureRatio, db);
+      this.getBudgetPressureScore(budgetPressureRatio);
 
     console.log('calculateBudgetPressureScore', {
       Budget: monthlyBudget,
@@ -255,7 +261,7 @@ export class CreditScoreService {
     return budgetPressureRatioScore;
   }
 
-  private getBudgetPressureScore(budgetPressureRatio: number, db: CreditScoreDb = this.prisma): number {
+  private getBudgetPressureScore(budgetPressureRatio: number): number {
     if (budgetPressureRatio <= 0.5) {
       return BUDGET_PRESSURE.LT_50;
     }
@@ -275,7 +281,10 @@ export class CreditScoreService {
     return BUDGET_PRESSURE.GT_100;
   }
 
-  private async calculateSavingsBuffer(userId: string, db: CreditScoreDb = this.prisma): Promise<number> {
+  private async calculateSavingsBuffer(
+    userId: string,
+    db: CreditScoreDb = this.prisma,
+  ): Promise<number> {
     const user = await db.user.findUnique({
       where: {
         id: userId,
@@ -317,7 +326,6 @@ export class CreditScoreService {
     const savingsBufferRatio = this.getSavingsBufferScore(
       monthlyCommittedObligations,
       monthlyBudget,
-      db,
     );
 
     console.log('calculateSavingsBiffer', {
@@ -333,7 +341,6 @@ export class CreditScoreService {
   private getSavingsBufferScore(
     commitedObligationAmount: number,
     MonthlyBudget: number,
-    db: CreditScoreDb = this.prisma,
   ): number {
     const numerator = MonthlyBudget - commitedObligationAmount;
     const savingsBufferRatio = numerator / MonthlyBudget;
@@ -356,7 +363,10 @@ export class CreditScoreService {
     return SAVINGS_BUFFER.OVER_BUDGET;
   }
 
-  private async calculateHistoryLengthScore(userId: string, db: CreditScoreDb = this.prisma): Promise<number> {
+  private async calculateHistoryLengthScore(
+    userId: string,
+    db: CreditScoreDb = this.prisma,
+  ): Promise<number> {
     const occurrences = await db.paymentOccurrence.findMany({
       where: {
         userId,
@@ -400,11 +410,10 @@ export class CreditScoreService {
     paymentHistoryScore: number,
     db: CreditScoreDb = this.prisma,
   ): Promise<number> {
-    
     const calculationDate = new Date();
-    
+
     const ninetyDaysAgo = new Date(calculationDate);
-    
+
     ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90);
 
     const occurrences = await db.paymentOccurrence.findMany({
@@ -494,17 +503,17 @@ export class CreditScoreService {
       hasRecentMissedCriticalObligation,
       isCurrentlyOverBudget,
     ] = await Promise.all([
-      this.hasNoPaymentHistory(userId,db),
-      this.hasOverduePaymentWithinPeriod(userId, ninetyDaysAgo, today,db),
-      this.hasLatePaymentWithinPeriod(userId, ninetyDaysAgo, today,db),
-      this.hasMissedPaymentWithinPeriod(userId, ninetyDaysAgo, today,db),
+      this.hasNoPaymentHistory(userId, db),
+      this.hasOverduePaymentWithinPeriod(userId, ninetyDaysAgo, today, db),
+      this.hasLatePaymentWithinPeriod(userId, ninetyDaysAgo, today, db),
+      this.hasMissedPaymentWithinPeriod(userId, ninetyDaysAgo, today, db),
       this.hasMissedCriticalObligationWithinPeriod(
         userId,
         ninetyDaysAgo,
         today,
         db,
       ),
-      this.isOverBudgetForMonth(userId, startOfMonth, startOfNextMonth,db),
+      this.isOverBudgetForMonth(userId, startOfMonth, startOfNextMonth, db),
     ]);
 
     const applicableRiskCaps: RiskCapResult[] = [];
@@ -581,7 +590,10 @@ export class CreditScoreService {
     };
   }
 
-  private async hasNoPaymentHistory(userId: string, db: CreditScoreDb = this.prisma): Promise<boolean> {
+  private async hasNoPaymentHistory(
+    userId: string,
+    db: CreditScoreDb = this.prisma,
+  ): Promise<boolean> {
     const paymentHistoryCount = await db.paymentOccurrence.count({
       where: {
         obligation: {
@@ -602,7 +614,7 @@ export class CreditScoreService {
     userId: string,
     periodStart: Date,
     periodEnd: Date,
-    db: CreditScoreDb = this.prisma
+    db: CreditScoreDb = this.prisma,
   ): Promise<boolean> {
     const overduePaymentCount = await db.paymentOccurrence.count({
       where: {
@@ -690,7 +702,6 @@ export class CreditScoreService {
     startOfMonth: Date,
     startOfNextMonth: Date,
     db: CreditScoreDb = this.prisma,
-
   ): Promise<boolean> {
     const user = await db.user.findUnique({
       where: {
@@ -725,22 +736,20 @@ export class CreditScoreService {
     return committedAmount > monthlyBudget;
   }
 
-  private determineScoreTier(finalCreditScore: number) {
+  private determineScoreTier(finalCreditScore: number): ScoreTier {
     if (finalCreditScore >= 300 && finalCreditScore <= 579) {
-      return 'BUILDING';
+      return ScoreTier.BUILDING;
     }
     if (finalCreditScore >= 580 && finalCreditScore <= 649) {
-      return 'FAIR';
+      return ScoreTier.FAIR;
     }
     if (finalCreditScore >= 650 && finalCreditScore <= 719) {
-      return 'GOOD';
+      return ScoreTier.GOOD;
     }
     if (finalCreditScore >= 720 && finalCreditScore <= 779) {
-      return 'EXCELLENT';
+      return ScoreTier.EXCELLENT;
     }
-    if (finalCreditScore >= 780 && finalCreditScore <= 850) {
-      return 'ELITE';
-    }
+    return ScoreTier.ELITE;
   }
 
   private async countPaymentStatuses(
@@ -777,6 +786,93 @@ export class CreditScoreService {
     return {
       onTimePaymentCount,
       latePaymentCount,
+    };
+  }
+
+  // add to payments.service.ts to re-calculate the users credit score after making some kind of payment - this si to track score movements
+
+  async recalculateAfterPayment(
+    tx: Prisma.TransactionClient,
+    params: {
+      userId: string;
+      occurrenceId: string;
+      paymentRecordId: string;
+      eventType: ScoreEventType;
+      explanation: string;
+    },
+  ) {
+    const { userId, occurrenceId, paymentRecordId, eventType, explanation } =
+      params;
+
+    const creditProfile = await tx.creditProfile.upsert({
+      where: { userId },
+      update: {},
+      create: {
+        userId,
+        currentScore: 600,
+        previousScore: 600,
+        scoreTier: ScoreTier.GOOD,
+      },
+    });
+
+    const scoreBefore = creditProfile.currentScore;
+    const tierBefore = creditProfile.scoreTier;
+
+    const result = await this.getCreditScore(userId, tx);
+
+    const scoreAfter = result.creditScore;
+    const tierAfter = result.creditScoreTier;
+    const scoreDelta = scoreAfter - scoreBefore;
+
+    const updatedProfile = await tx.creditProfile.update({
+      where: { id: creditProfile.id },
+      data: {
+        previousScore: scoreBefore,
+        currentScore: scoreAfter,
+        scoreTier: tierAfter,
+        lastCalculatedAt: new Date(),
+
+        onTimePaymentCount: result.onTimePaymentCount,
+        latePaymentCount: result.onLatePaymentCount,
+      },
+    });
+
+    const scoreEvent = await tx.scoreEvent.create({
+      data: {
+        userId,
+        creditProfileId: creditProfile.id,
+        occurrenceId,
+        paymentRecordId,
+        eventType,
+
+        pointsDelta: scoreDelta,
+        scoreBefore,
+        scoreAfter,
+
+        explanation,
+
+        calculationMetadata: {
+          applicableRisks: result.applicableRisks,
+          reasonForRiskCaps: result.reasonForRiskCaps,
+          modelVersion: 'v1',
+        },
+      },
+    });
+
+    return {
+      scoreEventId: scoreEvent.id,
+
+      scoreBefore,
+      scoreAfter,
+      scoreDelta,
+
+      tierBefore,
+      tierAfter,
+
+      explanation: scoreEvent.explanation,
+
+      onTimePaymentCount: updatedProfile.onTimePaymentCount,
+      latePaymentCount: updatedProfile.latePaymentCount,
     };
   }
 }
