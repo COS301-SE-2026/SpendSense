@@ -19,13 +19,10 @@ import { LogPaymentDto } from './dto/log-payment.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BadgeEngineService } from '../gamification/badge-engine.service';
 import { RewardService } from '../rewards/reward.service';
+import { CreditScoreService } from '../credit-score/credit-score.service';
 
-const ON_TIME_SCORE_DELTA = 8;
-const LATE_SCORE_DELTA = -8;
 const ON_TIME_COINS = 15;
 const ON_TIME_XP = 10;
-const MIN_SCORE = 0;
-const MAX_SCORE = 850;
 
 type LogPaymentResult = {
   message: string;
@@ -79,7 +76,8 @@ export class PaymentsService {
     private readonly notificationsService: NotificationsService,
     private readonly badgeEngineService: BadgeEngineService,
     private readonly rewardService: RewardService,
-  ) {}
+    private readonly creditScoreService: CreditScoreService,
+  ) { }
 
   async logPayment(
     dto: LogPaymentDto,
@@ -136,9 +134,9 @@ export class PaymentsService {
     const isLate = paidDate.getTime() > occurrence.dueDate.getTime();
     const daysLate = isLate
       ? Math.ceil(
-          (paidDate.getTime() - occurrence.dueDate.getTime()) /
-            (1000 * 60 * 60 * 24),
-        )
+        (paidDate.getTime() - occurrence.dueDate.getTime()) /
+        (1000 * 60 * 60 * 24),
+      )
       : 0;
     const simulatedInterestCalculation = daysLate * 2;
 
@@ -189,60 +187,19 @@ export class PaymentsService {
         },
       });
 
-      const creditProfile = await tx.creditProfile.upsert({
-        where: { userId },
-        update: {},
-        create: {
-          userId,
-          currentScore: 600,
-          previousScore: 600,
-          scoreTier: ScoreTier.GOOD,
-        },
+
+
+      const { scoreEventId, scoreBefore, scoreAfter, scoreDelta, tierBefore, tierAfter, explanation, onTimePaymentCount, } = await this.creditScoreService.recalculateAfterPayment(tx, {
+        userId,
+        occurrenceId: occurrence.id,
+        paymentRecordId: paymentRecord.id,
+        eventType: isLate ? ScoreEventType.PAYMENT_LATE : ScoreEventType.PAYMENT_ON_TIME,
+        explanation: isLate ? `Paid ${occurrence.obligation.name} ${daysLate} day${daysLate === 1 ? '' : 's'} late.` : `Paid ${occurrence.obligation.name} on time.`,
       });
 
-      const scoreBefore = creditProfile.currentScore;
-      const scoreDelta = isLate ? LATE_SCORE_DELTA : ON_TIME_SCORE_DELTA;
-      const scoreAfter = clampScore(scoreBefore + scoreDelta);
-      const tierBefore = creditProfile.scoreTier;
-      const tierAfter = resolveScoreTier(scoreAfter);
 
-      await tx.creditProfile.update({
-        where: { id: creditProfile.id },
-        data: {
-          previousScore: scoreBefore,
-          currentScore: scoreAfter,
-          scoreTier: tierAfter,
-          lastCalculatedAt: new Date(),
-          onTimePaymentCount: isLate
-            ? creditProfile.onTimePaymentCount
-            : creditProfile.onTimePaymentCount + 1,
-          latePaymentCount: isLate
-            ? creditProfile.latePaymentCount + 1
-            : creditProfile.latePaymentCount,
-        },
-      });
 
-      const scoreEvent = await tx.scoreEvent.create({
-        data: {
-          userId,
-          creditProfileId: creditProfile.id,
-          occurrenceId: occurrence.id,
-          paymentRecordId: paymentRecord.id,
-          eventType: isLate
-            ? ScoreEventType.PAYMENT_LATE
-            : ScoreEventType.PAYMENT_ON_TIME,
-          pointsDelta: scoreDelta,
-          scoreBefore,
-          scoreAfter,
-          explanation: isLate
-            ? `Paid ${occurrence.obligation.name} ${daysLate} day${daysLate === 1 ? '' : 's'} late.`
-            : `Paid ${occurrence.obligation.name} on time.`,
-          calculationMetadata: {
-            daysLate,
-            simulatedInterest: simulatedInterestCalculation,
-          },
-        },
-      });
+
       if (scoreAfter !== scoreBefore) {
         await this.notificationsService.create(
           {
@@ -291,9 +248,7 @@ export class PaymentsService {
         {
           userId,
           sourceEventId: paymentEvent.id,
-          onTimePaymentCount: isLate
-            ? creditProfile.onTimePaymentCount
-            : creditProfile.onTimePaymentCount + 1,
+          onTimePaymentCount, 
           currentPaymentStreak,
           currentScore: scoreAfter,
         },
@@ -319,13 +274,13 @@ export class PaymentsService {
           paidAt: updateOccurrence.paidAt,
         },
         scoreImpact: {
-          scoreEventId: scoreEvent.id,
+          scoreEventId: scoreEventId,
           previousScore: scoreBefore,
           currentScore: scoreAfter,
           delta: scoreDelta,
           tierBefore,
           tierAfter,
-          explanation: scoreEvent.explanation,
+          explanation: explanation,
         },
         rewards: {
           coinsAwarded,
@@ -347,9 +302,6 @@ export class PaymentsService {
   }
 }
 
-function clampScore(score: number): number {
-  return Math.max(MIN_SCORE, Math.min(MAX_SCORE, score));
-}
 
 function resolveScoreTier(score: number): ScoreTier {
   if (score >= 800) return ScoreTier.ELITE;
