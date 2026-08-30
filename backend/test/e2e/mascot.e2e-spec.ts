@@ -56,6 +56,43 @@ type ErrorResponse = {
   path: string;
 };
 
+type E2eFixture = Awaited<ReturnType<typeof createApiE2eFixture>>;
+
+async function getUserStored(e2e: E2eFixture, supabaseAuthId: string) {
+  return e2e.prisma.user.findUniqueOrThrow({
+    where: {
+      supabaseAuthId,
+    },
+  });
+}
+
+async function giveUserCoins(
+  e2e: E2eFixture,
+  userId: string,
+  coinBalance: number,
+) {
+  await e2e.prisma.gamificationProfile.upsert({
+    where: {
+      userId,
+    },
+    update: {
+      coinBalance,
+    },
+    create: {
+      userId,
+      coinBalance,
+    },
+  });
+}
+
+async function getPartyHat(e2e: E2eFixture) {
+  return e2e.prisma.cosmeticItem.findUniqueOrThrow({
+    where: {
+      code: 'party_hat',
+    },
+  });
+}
+
 describe('Mascot E2E', () => {
   it('will return the mascot profile page for a user', async () => {
     const e2e = await createApiE2eFixture();
@@ -144,30 +181,11 @@ describe('Mascot E2E', () => {
     try {
       const { api, token, user } = await e2e.user();
 
-      const userStored = await e2e.prisma.user.findUniqueOrThrow({
-        where: {
-          supabaseAuthId: user.supabaseAuthId,
-        },
-      });
+      const userStored = await getUserStored(e2e, user.supabaseAuthId);
 
-      await e2e.prisma.gamificationProfile.upsert({
-        where: {
-          userId: userStored.id,
-        },
-        update: {
-          coinBalance: 100,
-        },
-        create: {
-          userId: userStored.id,
-          coinBalance: 100,
-        },
-      });
+      await giveUserCoins(e2e, userStored.id, 100);
 
-      const cosmetic = await e2e.prisma.cosmeticItem.findUniqueOrThrow({
-        where: {
-          code: 'party_hat',
-        },
-      });
+      const cosmetic = await getPartyHat(e2e);
 
       const response = await api
         .post(`/api/v1/cosmetics/${cosmetic.id}/purchase`)
@@ -223,30 +241,11 @@ describe('Mascot E2E', () => {
     try {
       const { api, token, user } = await e2e.user();
 
-      const userStored = await e2e.prisma.user.findUniqueOrThrow({
-        where: {
-          supabaseAuthId: user.supabaseAuthId,
-        },
-      });
+      const userStored = await getUserStored(e2e, user.supabaseAuthId);
 
-      await e2e.prisma.gamificationProfile.upsert({
-        where: {
-          userId: userStored.id,
-        },
-        update: {
-          coinBalance: 100,
-        },
-        create: {
-          userId: userStored.id,
-          coinBalance: 100,
-        },
-      });
+      await giveUserCoins(e2e, userStored.id, 100);
 
-      const cosmetic = await e2e.prisma.cosmeticItem.findUniqueOrThrow({
-        where: {
-          code: 'party_hat',
-        },
-      });
+      const cosmetic = await getPartyHat(e2e);
 
       await api
         .post(`/api/v1/cosmetics/${cosmetic.id}/purchase`)
@@ -295,17 +294,9 @@ describe('Mascot E2E', () => {
     try {
       const { api, token, user } = await e2e.user();
 
-      const userStored = await e2e.prisma.user.findUniqueOrThrow({
-        where: {
-          supabaseAuthId: user.supabaseAuthId,
-        },
-      });
+      const userStored = await getUserStored(e2e, user.supabaseAuthId);
 
-      const cosmetic = await e2e.prisma.cosmeticItem.findUniqueOrThrow({
-        where: {
-          code: 'party_hat',
-        },
-      });
+      const cosmetic = await getPartyHat(e2e);
 
       await api
         .post(`/api/v1/cosmetics/${cosmetic.id}/purchase`)
@@ -339,30 +330,11 @@ describe('Mascot E2E', () => {
     try {
       const { api, token, user } = await e2e.user();
 
-      const userStored = await e2e.prisma.user.findUniqueOrThrow({
-        where: {
-          supabaseAuthId: user.supabaseAuthId,
-        },
-      });
+      const userStored = await getUserStored(e2e, user.supabaseAuthId);
 
-      await e2e.prisma.gamificationProfile.upsert({
-        where: {
-          userId: userStored.id,
-        },
-        update: {
-          coinBalance: 200,
-        },
-        create: {
-          userId: userStored.id,
-          coinBalance: 200,
-        },
-      });
+      await giveUserCoins(e2e, userStored.id, 200);
 
-      const cosmetic = await e2e.prisma.cosmeticItem.findUniqueOrThrow({
-        where: {
-          code: 'party_hat',
-        },
-      });
+      const cosmetic = await getPartyHat(e2e);
 
       await api
         .post(`/api/v1/cosmetics/${cosmetic.id}/purchase`)
@@ -394,30 +366,11 @@ describe('Mascot E2E', () => {
       const first = await e2e.user();
       const second = await e2e.user();
 
-      const firstUser = await e2e.prisma.user.findUniqueOrThrow({
-        where: {
-          supabaseAuthId: first.user.supabaseAuthId,
-        },
-      });
+      const firstUser = await getUserStored(e2e, first.user.supabaseAuthId);
 
-      await e2e.prisma.gamificationProfile.upsert({
-        where: {
-          userId: firstUser.id,
-        },
-        update: {
-          coinBalance: 100,
-        },
-        create: {
-          userId: firstUser.id,
-          coinBalance: 100,
-        },
-      });
+      await giveUserCoins(e2e, firstUser.id, 100);
 
-      const cosmetic = await e2e.prisma.cosmeticItem.findUniqueOrThrow({
-        where: {
-          code: 'party_hat',
-        },
-      });
+      const cosmetic = await getPartyHat(e2e);
 
       await first.api
         .post(`/api/v1/cosmetics/${cosmetic.id}/purchase`)
@@ -448,11 +401,7 @@ describe('Mascot E2E', () => {
     try {
       const { api, token } = await e2e.user();
 
-      const cosmetic = await e2e.prisma.cosmeticItem.findUniqueOrThrow({
-        where: {
-          code: 'party_hat',
-        },
-      });
+      const cosmetic = await getPartyHat(e2e);
 
       const response = await api
         .patch(`/api/v1/cosmetics/${cosmetic.id}/equip`)
@@ -479,11 +428,7 @@ describe('Mascot E2E', () => {
     try {
       const { token, user } = await e2e.user();
 
-      const userStored = await e2e.prisma.user.findUniqueOrThrow({
-        where: {
-          supabaseAuthId: user.supabaseAuthId,
-        },
-      });
+      const userStored = await getUserStored(e2e, user.supabaseAuthId);
 
       const now = new Date();
 
