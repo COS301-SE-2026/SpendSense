@@ -166,3 +166,65 @@
 .animate-ss-toast-in {
   animation: ss-toast-in 0.2s ease-out both;
 }
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+}
+
+.reduce-motion {
+  scroll-behavior: auto !important;
+}
+
+.reduce-motion [class*=":translate"]:hover,
+.reduce-motion [class*=":translate"]:active,
+.reduce-motion [class*=":translate"]:focus-visible,
+.reduce-motion [class*=":-translate"]:hover,
+.reduce-motion [class*=":-translate"]:active,
+.reduce-motion [class*=":-translate"]:focus-visible {
+  translate: none !important;
+}
+
+.reduce-motion [class*=":scale"]:hover,
+.reduce-motion [class*=":scale"]:active,
+.reduce-motion [class*=":scale"]:focus-visible,
+.reduce-motion [class*=":-scale"]:hover,
+.reduce-motion [class*=":-scale"]:active,
+.reduce-motion [class*=":-scale"]:focus-visible {
+  scale: none !important;
+}
+
+.reduce-motion [class*=":rotate"]:hover,
+.reduce-motion [class*=":rotate"]:active,
+.reduce-motion [class*=":rotate"]:focus-visible,
+.reduce-motion [class*=":-rotate"]:hover,
+.reduce-motion [class*=":-rotate"]:active,
+.reduce-motion [class*=":-rotate"]:focus-visible {
+  rotate: none !important;
+}
+
+.reduce-motion :where(.group):hover [class*=":translate"],
+.reduce-motion :where(.group):active [class*=":translate"],
+.reduce-motion :where(.group):hover [class*=":-translate"],
+.reduce-motion :where(.group):active [class*=":-translate"] {
+  translate: none !important;
+}
+
+.reduce-motion :where(.group):hover [class*=":scale"],
+.reduce-motion :where(.group):active [class*=":scale"],
+.reduce-motion :where(.group):hover [class*=":-scale"],
+.reduce-motion :where(.group):active [class*=":-scale"] {
+  scale: none !important;
+}
+
+.reduce-motion :where(.group):hover [class*=":rotate"],
+.reduce-motion :where(.group):active [class*=":rotate"],
+.reduce-motion :where(.group):hover [class*=":-rotate"],
+.reduce-motion :where(.group):active [class*=":-rotate"] {
+  rotate: none !important;
+}
