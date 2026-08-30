@@ -125,7 +125,7 @@ export class InsightsService {
     };
   }
 
-  private async getOnTimePaymentRate(
+  async getOnTimePaymentRate(
     userId: string,
     asOf: Date,
   ): Promise<OnTimePaymentStats> {
@@ -392,7 +392,7 @@ export class InsightsService {
     };
   }
 
-  private async getPaymentStreak(
+  async getPaymentStreak(
     userId: string,
     asOf: Date,
   ): Promise<PaymentStreakStats> {
@@ -422,6 +422,8 @@ export class InsightsService {
     let currentMonthLateCount = 0;
     let currentMonthMissedCount = 0;
     let currentMonthOverdueCount = 0;
+    let currentMonthOnTimeStreak = 0;
+    let longestCurrentMonthOnTimeStreak = 0;
 
     for (const occurrence of occurrences) {
       const isOnTime =
@@ -445,12 +447,28 @@ export class InsightsService {
         occurrence.dueDate >= currentStart && occurrence.dueDate < currentEnd;
 
       if (isCurrentMonth) {
-        if (isOnTime) currentMonthOnTimeCount += 1;
-        else if (isLate) currentMonthLateCount += 1;
-        else if (isMissed) currentMonthMissedCount += 1;
-        else if (isOverdue) currentMonthOverdueCount += 1;
+        if (isOnTime) {
+          currentMonthOnTimeCount += 1;
+          currentMonthOnTimeStreak += 1;
+          longestCurrentMonthOnTimeStreak = Math.max(
+            longestCurrentMonthOnTimeStreak,
+            currentMonthOnTimeStreak,
+          );
+        } else {
+          currentMonthOnTimeStreak = 0;
+          if (isLate) currentMonthLateCount += 1;
+          else if (isMissed) currentMonthMissedCount += 1;
+          else if (isOverdue) currentMonthOverdueCount += 1;
+        }
       }
     }
+
+    const eligiblePaymentCount =
+      currentMonthOnTimeCount + currentMonthLateCount + currentMonthMissedCount;
+    const currentMonthOnTimeRate =
+      eligiblePaymentCount === 0
+        ? 0
+        : currentMonthOnTimeCount / eligiblePaymentCount;
 
     return {
       currentOnTimeStreak,
@@ -460,6 +478,8 @@ export class InsightsService {
       currentMonthLateCount,
       currentMonthMissedCount,
       currentMonthOverdueCount,
+      longestCurrentMonthOnTimeStreak,
+      currentMonthOnTimeRate,
       hasEnoughData: occurrences.length > 0,
     };
   }
