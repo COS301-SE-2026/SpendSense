@@ -26,11 +26,11 @@ type CreditScoreDb = PrismaService | Prisma.TransactionClient;
 
 @Injectable()
 export class CreditScoreService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async getCreditScore(userId: string, db: CreditScoreDb = this.prisma) {
 
-    const paymentHistoryScore = await this.calculatePaymentHistory(userId,db) ; 
+    const paymentHistoryScore = await this.calculatePaymentHistory(userId, db);
     const paymentH =
       CREDIT_SCORE_COMPONENT_WEIGHTS.PAYMENT_HISTORY * paymentHistoryScore;
 
@@ -79,6 +79,8 @@ export class CreditScoreService {
       reason = ``;
     }
 
+    const missedPaymentCount = await this.countMissedPayments(userId, db);
+
     console.log('Returning credit score service', {
       paymentH_: paymentH,
       budgetPressure_: budgetPressure,
@@ -96,6 +98,7 @@ export class CreditScoreService {
       savingsBuffer: Math.round(savingsBuffer),
       onTimePaymentCount,
       onLatePaymentCount,
+      missedPaymentCount
     };
   }
 
@@ -841,9 +844,9 @@ export class CreditScoreService {
         currentScore: scoreAfter,
         scoreTier: tierAfter,
         lastCalculatedAt: new Date(),
-
         onTimePaymentCount: result.onTimePaymentCount,
         latePaymentCount: result.onLatePaymentCount,
+        missedPaymentCount: result.missedPaymentCount,
       },
     });
 
@@ -854,13 +857,10 @@ export class CreditScoreService {
         occurrenceId,
         paymentRecordId,
         eventType,
-
         pointsDelta: scoreDelta,
         scoreBefore,
         scoreAfter,
-
         explanation,
-
         calculationMetadata: {
           applicableRisks: result.applicableRisks,
           reasonForRiskCaps: result.reasonForRiskCaps,
@@ -885,4 +885,99 @@ export class CreditScoreService {
       latePaymentCount: updatedProfile.latePaymentCount,
     };
   }
+
+
+  // the following functionality is for MISSED and OVERDUE payment effects on the credit-score
+
+  private async countMissedPayments(userId: string, db: CreditScoreDb = this.prisma): Promise<number> {
+    return db.paymentOccurrence.count({
+      where: {
+        userId,
+        status: PaymentOccurrenceStatus.MISSED,
+        deletedAt: null,
+      },
+    });
+  }
+
+  async recalculateAfterOccurrenceStatusChange(
+    tx: Prisma.TransactionClient,
+    params: {
+      userId: string;
+      occurrenceId: string;
+      eventType: ScoreEventType;
+      explanation: string;
+    },
+  ) {
+    const { userId, occurrenceId, eventType, explanation, } = params;
+
+    const creditProfile = await tx.creditProfile.upsert({
+      where: { userId },
+      update: {},
+      create: {
+        userId,
+        currentScore: 600,
+        previousScore: 600,
+        scoreTier: ScoreTier.GOOD,
+      },
+    });
+
+    const scoreBefore = creditProfile.currentScore;
+    const tierBefore = creditProfile.scoreTier;
+
+    const result = await this.getCreditScore(userId, tx);
+    const scoreAfter = result.creditScore;
+    const tierAfter = result.creditScoreTier;
+    const scoreDelta = scoreAfter - scoreBefore;
+
+    const updatedProfile = await tx.creditProfile.update({
+      where: {
+        id: creditProfile.id,
+      },
+      data: {
+        previousScore: scoreBefore,
+        currentScore: scoreAfter,
+        scoreTier: tierAfter,
+        lastCalculatedAt: new Date(),// when this functions runs
+        onTimePaymentCount: result.onTimePaymentCount,
+        latePaymentCount: result.onLatePaymentCount,
+        missedPaymentCount: result.missedPaymentCount,
+
+      },
+    });
+
+    const scoreEvent = await tx.scoreEvent.create({
+      data: {
+        userId,
+        creditProfileId: creditProfile.id,
+        occurrenceId,
+        paymentRecordId: null, // ther is no payment method for missed / overdue 
+        eventType,
+        pointsDelta: scoreDelta,
+        scoreBefore,
+        scoreAfter,
+        explanation,
+        calculationMetadata: {
+          applicableRisks: result.applicableRisks,
+          reasonForRiskCaps: result.reasonForRiskCaps,
+          modelVersion: 'v1',
+        },
+      },
+    });
+
+    return {
+      scoreEventId: scoreEvent.id,
+      scoreBefore,
+      scoreAfter,
+      scoreDelta,
+      tierBefore,
+      tierAfter,
+      explanation: scoreEvent.explanation,
+      onTimePaymentCount: updatedProfile.onTimePaymentCount,
+      latePaymentCount: updatedProfile.latePaymentCount,
+      missedPaymentCount: updatedProfile.missedPaymentCount,
+    };
+  }
+
+
+
 }
