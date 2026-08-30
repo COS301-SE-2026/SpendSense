@@ -6,7 +6,19 @@ services:
     env_file:
       - .env.production
     depends_on:
-      - ai
+      ai:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/v1/health/ready').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - spendsense
 
@@ -14,6 +26,17 @@ services:
     image: ghcr.io/${GHCR_OWNER}/spendsense-ai:${IMAGE_TAG:-latest}
     container_name: spendsense_ai
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - spendsense
 
@@ -31,7 +54,13 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - spendsense
 
