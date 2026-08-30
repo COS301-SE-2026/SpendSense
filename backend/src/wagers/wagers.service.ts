@@ -72,7 +72,7 @@ export class WagersService {
         'You can only create wagers with current friends',
       );
     }
-    if (!creator || !creator.gamificationProfile) {
+    if (!creator?.gamificationProfile) {
       throw new NotFoundException('Creator profile not found');
     }
     if (dto.stakeAmount > creator.gamificationProfile.coinBalance) {

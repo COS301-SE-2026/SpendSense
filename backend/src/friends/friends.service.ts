@@ -192,9 +192,8 @@ export class FriendsService {
 
       if (
         !friendship ||
-        !friend ||
-        !friend.creditProfile ||
-        !friend.gamificationProfile
+        !friend?.creditProfile ||
+        !friend?.gamificationProfile
       ) {
         throw new NotFoundException('User not found');
       }

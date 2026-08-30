@@ -26,6 +26,13 @@ export default function LeaderboardPage() {
 	const podium = page === 1 ? list.slice(0, 3) : []
 	const rest = page === 1 ? list.slice(3) : list
 
+	let rankingDescription = "Ranked by current payment streak"
+	if (metric === "xp") {
+		rankingDescription = "Ranked by total XP"
+	} else if (metric === "coins") {
+		rankingDescription = "Ranked by current coin balance"
+	}
+
 	const podiumStyles = [
 		{ bg: "bg-[#FFE9B5] dark:bg-[#3f2e00]", icon: "text-[#7A5A00] dark:text-[#ffd166]", height: "pt-6" },
 		{ bg: "bg-[#E3EAE6] dark:bg-[#1c263c]", icon: "text-[#3E4A55] dark:text-[#dae2fd]", height: "pt-9" },
@@ -88,11 +95,7 @@ export default function LeaderboardPage() {
 										Friends Leaderboard
 									</p>
 									<p className="text-xs text-[#6B6375] dark:text-[#a0aec0]">
-										{metric === "xp"
-											? "Ranked by total XP"
-											: metric === "coins"
-												? "Ranked by current coin balance"
-												: "Ranked by current payment streak"}
+										{rankingDescription}
 									</p>
 								</div>
 							</div>

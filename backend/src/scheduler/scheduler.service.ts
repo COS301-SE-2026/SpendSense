@@ -143,49 +143,16 @@ export class SchedulerService {
       if (claimed.count === 0) {
         return false;
       }
-      let creatorSuccess: boolean;
-      let opponentSuccess: boolean;
-      if (wager.creator.deletedAt && wager.opponent.deletedAt) {
-        creatorSuccess = false;
-        opponentSuccess = false;
-      } else if (wager.creator.deletedAt) {
-        creatorSuccess = false;
-        opponentSuccess = true;
-      } else if (wager.opponent.deletedAt) {
-        creatorSuccess = true;
-        opponentSuccess = false;
-      } else {
-        creatorSuccess = await this.evaluateWagerTask(
-          tx,
-          wager.creatorId,
-          wager.taskType,
-          wager.startDate,
-          wager.endDate,
-          wager.taskSnapshot,
-          'creatorCurrentPaymentStreak',
-        );
-        opponentSuccess = await this.evaluateWagerTask(
-          tx,
-          wager.opponentId,
-          wager.taskType,
-          wager.startDate,
-          wager.endDate,
-          wager.taskSnapshot,
-          'opponentCurrentPaymentStreak',
-        );
-      }
-      const creatorOutcome =
-        creatorSuccess === opponentSuccess
-          ? WagerOutcome.DRAW
-          : creatorSuccess
-            ? WagerOutcome.WON
-            : WagerOutcome.LOST;
-      const opponentOutcome =
-        creatorSuccess === opponentSuccess
-          ? WagerOutcome.DRAW
-          : opponentSuccess
-            ? WagerOutcome.WON
-            : WagerOutcome.LOST;
+      const { creatorSuccess, opponentSuccess } =
+        await this.getWagerTaskResults(tx, wager);
+      const creatorOutcome = this.getWagerOutcome(
+        creatorSuccess,
+        opponentSuccess,
+      );
+      const opponentOutcome = this.getWagerOutcome(
+        opponentSuccess,
+        creatorSuccess,
+      );
       if (creatorOutcome === WagerOutcome.DRAW) {
         await this.rewardService.adjustCoins(tx, {
           userId: wager.creatorId,
@@ -244,6 +211,58 @@ export class SchedulerService {
       return true;
     });
   }
+  private async getWagerTaskResults(
+    tx: Prisma.TransactionClient,
+    wager: {
+      creatorId: string;
+      opponentId: string;
+      taskType: WagerTaskType;
+      startDate: Date;
+      endDate: Date;
+      taskSnapshot: Prisma.JsonValue | null;
+      creator: { deletedAt: Date | null };
+      opponent: { deletedAt: Date | null };
+    },
+  ) {
+    if (wager.creator.deletedAt && wager.opponent.deletedAt) {
+      return { creatorSuccess: false, opponentSuccess: false };
+    }
+    if (wager.creator.deletedAt) {
+      return { creatorSuccess: false, opponentSuccess: true };
+    }
+    if (wager.opponent.deletedAt) {
+      return { creatorSuccess: true, opponentSuccess: false };
+    }
+    const creatorSuccess = await this.evaluateWagerTask(
+      tx,
+      wager.creatorId,
+      wager.taskType,
+      wager.startDate,
+      wager.endDate,
+      wager.taskSnapshot,
+      'creatorCurrentPaymentStreak',
+    );
+    const opponentSuccess = await this.evaluateWagerTask(
+      tx,
+      wager.opponentId,
+      wager.taskType,
+      wager.startDate,
+      wager.endDate,
+      wager.taskSnapshot,
+      'opponentCurrentPaymentStreak',
+    );
+    return { creatorSuccess, opponentSuccess };
+  }
+  private getWagerOutcome(success: boolean, opponentSuccess: boolean) {
+    if (success === opponentSuccess) {
+      return WagerOutcome.DRAW;
+    }
+    if (success) {
+      return WagerOutcome.WON;
+    }
+    return WagerOutcome.LOST;
+  }
+
   private async evaluateWagerTask(
     tx: Prisma.TransactionClient,
     userId: string,
