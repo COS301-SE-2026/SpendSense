@@ -17,6 +17,7 @@ describe('BadgeEngineService', () => {
   };
   let rewardService: {
     grantCoins: jest.Mock;
+    setMascotMood: jest.Mock;
   };
   let transaction: {
     badgeDefinition: {
@@ -75,6 +76,7 @@ describe('BadgeEngineService', () => {
     };
     rewardService = {
       grantCoins: jest.fn().mockResolvedValue({ coinBalance: 0 }),
+      setMascotMood: jest.fn().mockResolvedValue(undefined),
     };
     transaction = {
       badgeDefinition: {

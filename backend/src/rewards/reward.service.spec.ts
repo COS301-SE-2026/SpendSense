@@ -21,6 +21,10 @@ type RewardPrismaMock = {
     create: PrismaMockMethod;
     groupBy: PrismaMockMethod;
   };
+  userEvent: {
+    findUnique: PrismaMockMethod;
+    update: PrismaMockMethod;
+  };
 };
 
 describe('RewardService', () => {
@@ -53,6 +57,16 @@ describe('RewardService', () => {
       rewardTransaction: {
         create: jest.fn<Promise<unknown>, [unknown]>(),
         groupBy: jest.fn<Promise<unknown>, [unknown]>(),
+      },
+      userEvent: {
+        findUnique: jest
+          .fn<Promise<unknown>, [unknown]>()
+          .mockResolvedValue({
+            metadata: {},
+          }),
+        update: jest
+          .fn<Promise<unknown>, [unknown]>()
+          .mockResolvedValue({}),
       },
     };
   });

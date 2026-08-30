@@ -1,6 +1,7 @@
 import { SchedulerService } from './scheduler.service';
 import type { RemindersService } from '../reminders/reminders.service';
 import type { PaymentOccurrencesService } from '../payment-occurrences/payment-occurrences.service';
+import type { PrismaService } from '../prisma/prisma.service';
 
 describe('SchedulerService', () => {
   let remindersService: jest.Mocked<
@@ -13,6 +14,12 @@ describe('SchedulerService', () => {
       'transitionOverdueOccurrences' | 'transitionMissedOccurrence'
     >
   >;
+  let prisma: {
+    gamificationProfile: {
+      findMany: jest.Mock;
+      updateMany: jest.Mock;
+    };
+  };
 
   beforeEach(() => {
     remindersService = {
@@ -24,9 +31,17 @@ describe('SchedulerService', () => {
       transitionMissedOccurrence: jest.fn(),
     };
 
+    prisma = {
+      gamificationProfile: {
+        findMany: jest.fn().mockResolvedValue([]),
+        updateMany: jest.fn(),
+      },
+    };
+
     service = new SchedulerService(
       remindersService as unknown as RemindersService,
       paymentOccurrencesService as unknown as PaymentOccurrencesService,
+      prisma as unknown as PrismaService,
     );
   });
 
@@ -69,7 +84,7 @@ describe('SchedulerService', () => {
   });
 
   describe('runAll', () => {
-    it('run all three methods and then combine the counts', async () => {
+    it('run all scheduled methods and combine the counts', async () => {
       paymentOccurrencesService.transitionOverdueOccurrences.mockResolvedValue({
         transitionedCount: 2,
       });
@@ -94,6 +109,7 @@ describe('SchedulerService', () => {
         overdueTransitionedCount: 2,
         missedTransitionedCount: 1,
         processedCount: 3,
+        mascotMoodsDecayedCount: 0,
       });
     });
 
@@ -114,6 +130,7 @@ describe('SchedulerService', () => {
         overdueTransitionedCount: 0,
         missedTransitionedCount: 0,
         processedCount: 0,
+        mascotMoodsDecayedCount: 0,
       });
     });
   });

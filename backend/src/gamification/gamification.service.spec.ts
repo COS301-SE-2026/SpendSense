@@ -12,6 +12,12 @@ describe('GamificationService', () => {
     userBadge: {
       findMany: jest.Mock;
     };
+    userInventoryItem: {
+      findMany: jest.Mock;
+    };
+    userEvent: {
+      findMany: jest.Mock;
+    };
   };
   let usersService: jest.Mocked<Pick<UsersService, 'findOrCreateUser'>>;
 
@@ -26,6 +32,12 @@ describe('GamificationService', () => {
         create: jest.fn(),
       },
       userBadge: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      userInventoryItem: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      userEvent: {
         findMany: jest.fn().mockResolvedValue([]),
       },
     };
@@ -77,6 +89,13 @@ describe('GamificationService', () => {
       longestStreak: 6,
       knowledgeStreak: 1,
       longestKnowledgeStreak: 3,
+      mascotLevelProgress: {
+        currentLevelXp: 20,
+        xpForNextLevel: 100,
+        percentToNextLevel: 20,
+      },
+      moodReason: null,
+      equippedCosmetics: [],
       badges: [
         {
           badgeKey: 'FIRST_ON_TIME_PAYMENT',
@@ -140,6 +159,13 @@ describe('GamificationService', () => {
       longestStreak: 0,
       knowledgeStreak: 0,
       longestKnowledgeStreak: 0,
+      mascotLevelProgress: {
+        currentLevelXp: 0,
+        xpForNextLevel: 100,
+        percentToNextLevel: 0,
+      },
+      moodReason: null,
+      equippedCosmetics: [],
       badges: [],
     });
     expect(prisma.gamificationProfile.create).toHaveBeenCalledWith({
