@@ -1,5 +1,5 @@
 import * as React from "react"
-import {Link, useNavigate} from "react-router-dom"
+import {Link} from "react-router-dom"
 import {
     Coins,
     Flame,
@@ -159,18 +159,21 @@ export default function MascotPage(){
                 
                 <div className="grid grid-cols-3 gap-2">
                     <StatTile
+                        tone="pink"
                         icon={<Flame className="size-4"/>}
                         value={loading ? "-" : String(profile?.paymentStreak ?? 0)}
                         label="Day streak"
                     />
 
                     <StatTile
+                        tone="mint"
                         icon={<Sparkles className="size-4"/>}
                         value={loading ? "-" : String(profile?.knowledgeStreak ?? 0)}
                         label="Quiz streak"
                     />
 
                     <StatTile
+                        tone="yellow"
                         icon={<Star className="size-4"/>}
                         value={loading ? "-" : String(profile?.badges.length ?? 0)}
                         label="Stickers"
