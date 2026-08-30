@@ -6,6 +6,7 @@ import { FriendsService } from './friends.service';
 describe('FriendsService', () => {
   const prisma = {
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
     friendship: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
@@ -19,7 +20,7 @@ describe('FriendsService', () => {
       findUnique: jest.fn(),
       updateMany: jest.fn(),
     },
-    user: { findMany: jest.fn(), findFirst: jest.fn() },
+    user: { findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn() },
   };
   const service = new FriendsService(prisma as unknown as PrismaService);
 
@@ -332,5 +333,67 @@ describe('FriendsService', () => {
       service.removeFriend('user-id', 'not-a-friend-id'),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(transactionClient.friendship.deleteMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a leaderboard page with global ranks and pagination metadata', async () => {
+    prisma.user.count.mockResolvedValue(43);
+    prisma.$queryRaw.mockResolvedValue([
+      {
+        rank: BigInt(21),
+        userId: 'friend-id',
+        displayName: 'Friend',
+        avatarUrl: null,
+        value: BigInt(150),
+      },
+      {
+        rank: BigInt(21),
+        userId: 'user-id',
+        displayName: 'Current user',
+        avatarUrl: null,
+        value: BigInt(150),
+      },
+    ]);
+
+    await expect(service.listLeaderboard('user-id', 'xp', 2)).resolves.toEqual({
+      entries: [
+        {
+          rank: 21,
+          userId: 'friend-id',
+          displayName: 'Friend',
+          avatarUrl: null,
+          isSelf: false,
+          value: 150,
+        },
+        {
+          rank: 21,
+          userId: 'user-id',
+          displayName: 'Current user',
+          avatarUrl: null,
+          isSelf: true,
+          value: 150,
+        },
+      ],
+      pagination: { page: 2, pageSize: 20, totalEntries: 43, totalPages: 3 },
+    });
+  });
+
+  it('returns only the caller when the leaderboard has no friends', async () => {
+    prisma.user.count.mockResolvedValue(1);
+    prisma.$queryRaw.mockResolvedValue([
+      {
+        rank: BigInt(1),
+        userId: 'user-id',
+        displayName: 'Current user',
+        avatarUrl: null,
+        value: BigInt(8),
+      },
+    ]);
+
+    await expect(
+      service.listLeaderboard('user-id', 'streak', 1),
+    ).resolves.toMatchObject({
+      entries: [{ rank: 1, isSelf: true, value: 8 }],
+      pagination: { page: 1, pageSize: 20, totalEntries: 1, totalPages: 1 },
+    });
   });
 });
