@@ -52,7 +52,7 @@ export class GamificationService {
       },
     });
 
-    const latestMoodEvent = await this.prisma.userEvent.findFirst({
+    const latestMoodEvent = await this.prisma.userEvent.findMany({
       where: {
         userId: user.id,
         eventType: {
@@ -68,6 +68,10 @@ export class GamificationService {
       orderBy: {
         createdAt: 'desc',
       },
+      select: {
+        metadata: true,
+      },
+      take: 20,
     });
 
     const badges = await this.prisma.userBadge.findMany({
@@ -100,7 +104,7 @@ export class GamificationService {
     const moodReason =
       gamificationProfile.mascotMood === MascotMood.NEUTRAL
         ? null
-        : this.getMoodReason(latestMoodEvent?.eventType);
+        : this.getMoodReasonFromEvents(latestMoodEvent);
 
     const equippedCosmetics = Array.from(
       new Map(
@@ -158,26 +162,23 @@ export class GamificationService {
     };
   }
 
-  private getMoodReason(eventType?: UserEventType): string | null {
-    switch (eventType) {
-      case UserEventType.PAYMENT_LATE:
-        return 'Made a payment late';
+  private getMoodReasonFromEvents(
+    events: { metadata: unknown }[],
+  ): string | null {
+    for (const event of events) {
+      const metadata = event.metadata;
 
-      case UserEventType.PAYMENT_ON_TIME:
-        return 'Made a payment on time';
-
-      case UserEventType.PAYMENT_OVERDUE:
-        return 'A payment became overdue';
-
-      case UserEventType.QUIZ_COMPLETED:
-        return 'Completed a quiz';
-
-      case UserEventType.BADGE_EARNED:
-        return 'Earned a badge';
-
-      default:
-        return null;
+      if (
+        metadata &&
+        typeof metadata === 'object' &&
+        !Array.isArray(metadata) &&
+        'moodReason' in metadata &&
+        typeof metadata.moodReason === 'string'
+      ) {
+        return metadata.moodReason;
+      }
     }
+    return null;
   }
 
   private getMascotLevelProgress(xp: number) {
