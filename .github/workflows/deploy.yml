@@ -126,6 +126,7 @@ jobs:
       IMAGE_TAG: ${{ github.sha }}
     steps:
       - name: SSH in, pull new images, restart
+        id: deploy
         uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -133,23 +134,82 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: GHCR_OWNER,GHCR_READ_TOKEN,GITHUB_ACTOR,IMAGE_TAG
           script: |
-            echo "$GHCR_READ_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
             cd /app/spendsense
-            git pull
-            GHCR_OWNER="$GHCR_OWNER" IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml pull
-            GHCR_OWNER="$GHCR_OWNER" IMAGE_TAG="$IMAGE_TAG" docker compose -f docker-compose.prod.yml up --detach
+            git fetch origin main --tags
+            git checkout --detach "$IMAGE_TAG"
+            bash scripts/production-deploy.sh
 
-      - name: Poll health check
+      - name: Poll public readiness check
+        id: readiness
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
           for i in $(seq 1 10); do
-            if curl -sf "$BACKEND_URL/api/v1/health"; then
-              echo "Health check passed"
+            if curl -fsS "$BACKEND_URL/api/v1/health/ready" | jq -e '.data.status == "healthy" or .data.status == "degraded"' >/dev/null; then
+              echo "Readiness check passed"
               exit 0
             fi
             echo "Attempt $i failed, retrying in 10s..."
             sleep 10
           done
-          echo "Health check never passed after 10 attempts"
+          echo "Readiness check never passed after 10 attempts"
           exit 1
+
+      - name: Roll back failed candidate
+        id: rollback
+        if: ${{ always() && steps.readiness.outcome == 'failure' }}
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GHCR_OWNER,GHCR_READ_TOKEN,GITHUB_ACTOR
+          script: |
+            cd /app/spendsense
+            bash scripts/production-rollback.sh
+
+      - name: Verify public readiness after rollback
+        id: rollback-readiness
+        if: ${{ always() && steps.rollback.outcome == 'success' }}
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS "$BACKEND_URL/api/v1/health/ready" | jq -e '.data.status == "healthy" or .data.status == "degraded"' >/dev/null; then
+              echo "Rollback readiness check passed"
+              exit 0
+            fi
+            echo "Rollback attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "Rollback readiness check never passed after 10 attempts"
+          exit 1
+
+      - name: Record successful candidate and prune previous local images
+        if: ${{ steps.readiness.outcome == 'success' }}
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GHCR_OWNER,IMAGE_TAG
+          script: |
+            cd /app/spendsense
+            bash .deploy-state/production-mark-success.sh "$IMAGE_TAG"
+
+      - name: Record successful rollback and prune failed candidate images
+        if: ${{ always() && steps.rollback-readiness.outcome == 'success' }}
+        uses: appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GHCR_OWNER
+          script: |
+            cd /app/spendsense
+            rollback_sha="$(cat .deploy-state/current-successful-sha 2>/dev/null || true)"
+            if [ -z "$rollback_sha" ]; then
+              echo 'Rollback release SHA was not recorded.' >&2
+              exit 1
+            fi
+            bash .deploy-state/production-mark-success.sh "$rollback_sha"

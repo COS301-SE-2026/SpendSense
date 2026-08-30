@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
+    environment:
+      APP_VERSION: ${IMAGE_TAG:-latest}
     depends_on:
       ai:
         condition: service_started
