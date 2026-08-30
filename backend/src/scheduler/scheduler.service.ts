@@ -70,6 +70,7 @@ export class SchedulerService {
     });
     return expired.count;
   }
+
   private async resolveDueWagers(now: Date) {
     const dueWagers = await this.prisma.wager.findMany({
       where: {
@@ -91,6 +92,7 @@ export class SchedulerService {
     }
     return resolvedWagerCount;
   }
+
   private async resolveWager(wagerId: string, now: Date) {
     return this.prisma.$transaction(async (tx) => {
       const wager = await tx.wager.findUnique({
@@ -211,19 +213,23 @@ export class SchedulerService {
       return true;
     });
   }
+
   private async getWagerTaskResults(
     tx: Prisma.TransactionClient,
     wager: {
       creatorId: string;
       opponentId: string;
       taskType: WagerTaskType;
-      startDate: Date;
-      endDate: Date;
+      startDate: Date | null;
+      endDate: Date | null;
       taskSnapshot: Prisma.JsonValue | null;
       creator: { deletedAt: Date | null };
       opponent: { deletedAt: Date | null };
     },
   ) {
+    if (!wager.startDate || !wager.endDate) {
+      return { creatorSuccess: false, opponentSuccess: false };
+    }
     if (wager.creator.deletedAt && wager.opponent.deletedAt) {
       return { creatorSuccess: false, opponentSuccess: false };
     }
@@ -253,6 +259,7 @@ export class SchedulerService {
     );
     return { creatorSuccess, opponentSuccess };
   }
+
   private getWagerOutcome(success: boolean, opponentSuccess: boolean) {
     if (success === opponentSuccess) {
       return WagerOutcome.DRAW;
@@ -324,6 +331,7 @@ export class SchedulerService {
     }
     return false;
   }
+
   private getSnapshotNumber(
     taskSnapshot: Prisma.JsonValue | null,
     key: string,
