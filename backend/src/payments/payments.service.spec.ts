@@ -33,6 +33,8 @@ type PaymentsPrismaMock = {
   };
   userEvent: {
     create: PrismaMockMethod;
+    findUnique: PrismaMockMethod;
+    update: PrismaMockMethod;
   };
   creditProfile: {
     upsert: PrismaMockMethod;
@@ -131,6 +133,12 @@ describe('PaymentsService', () => {
       },
       userEvent: {
         create: jest.fn<Promise<unknown>, [unknown]>(),
+
+        findUnique: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({
+          metadata: {},
+        }),
+
+        update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
       },
       creditProfile: {
         upsert: jest.fn<Promise<unknown>, [unknown]>(),
