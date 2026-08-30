@@ -418,24 +418,32 @@ describe('Friends and Wagers E2E', () => {
           .expect(200);
 
         expectDataEnvelope(response.body as Record<string, unknown>);
-        expect(getResponseData(response.body)).toEqual([
-          {
-            rank: 1,
-            userId: userA.id,
-            displayName: 'E2E Friend User A',
-            avatarUrl: null,
-            isSelf: true,
-            value: 5,
+        expect(getResponseData(response.body)).toEqual({
+          entries: [
+            {
+              rank: 1,
+              userId: userA.id,
+              displayName: 'E2E Friend User A',
+              avatarUrl: null,
+              isSelf: true,
+              value: 5,
+            },
+            {
+              rank: 2,
+              userId: userB.id,
+              displayName: 'E2E Friend User B',
+              avatarUrl: null,
+              isSelf: false,
+              value: 3,
+            },
+          ],
+          pagination: {
+            page: 1,
+            pageSize: 20,
+            totalEntries: 2,
+            totalPages: 1,
           },
-          {
-            rank: 2,
-            userId: userB.id,
-            displayName: 'E2E Friend User B',
-            avatarUrl: null,
-            isSelf: false,
-            value: 3,
-          },
-        ]);
+        });
       } finally {
         await e2e.close();
       }
