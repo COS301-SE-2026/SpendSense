@@ -11,7 +11,6 @@ import {
   RewardService,
 } from '../rewards/reward.service';
 import { WagersService } from './wagers.service';
-
 describe('WagersService', () => {
   const prisma = {
     $transaction: jest.fn(),
@@ -30,6 +29,36 @@ describe('WagersService', () => {
   };
   const notificationsService = { create: jest.fn() };
   const rewardService = { spendCoins: jest.fn() };
+  const createPendingWager = (overrides: Record<string, unknown> = {}) => ({
+    id: 'wager-id',
+    creatorId: 'creator-id',
+    opponentId: 'opponent-id',
+    taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
+    stakeAmount: 50,
+    status: WagerStatus.PENDING,
+    durationDays: 7,
+    ...overrides,
+  });
+  const createWagerTransactionClient = (
+    wagerOverrides: Record<string, unknown> = {},
+    updateCount = 1,
+  ) => ({
+    wager: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue(createPendingWager(wagerOverrides)),
+      updateMany: jest.fn().mockResolvedValue({ count: updateCount }),
+    },
+    gamificationProfile: {
+      findMany: jest.fn(),
+    },
+  });
+  const useTransactionClient = <T>(transactionClient: T) => {
+    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
+      const callback = operation as (tx: T) => Promise<unknown>;
+      return callback(transactionClient);
+    });
+  };
   const service = new WagersService(
     prisma as unknown as PrismaService,
     notificationsService as unknown as NotificationsService,
@@ -386,28 +415,8 @@ describe('WagersService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
   it('accepts a pending wager and spends both stakes', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          creatorId: 'creator-id',
-          opponentId: 'opponent-id',
-          taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
-          stakeAmount: 50,
-          status: WagerStatus.PENDING,
-          durationDays: 7,
-        }),
-        updateMany: jest.fn().mockResolvedValue({
-          count: 1,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
-    });
+    const transactionClient = createWagerTransactionClient();
+    useTransactionClient(transactionClient);
     rewardService.spendCoins
       .mockResolvedValueOnce({
         coinBalance: 100,
@@ -457,40 +466,21 @@ describe('WagersService', () => {
     );
   });
   it('snapshots both payment streaks when accepting a streak wager', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          creatorId: 'creator-id',
-          opponentId: 'opponent-id',
-          taskType: WagerTaskType.MAINTAIN_PAYMENT_STREAK,
-          stakeAmount: 25,
-          status: WagerStatus.PENDING,
-          durationDays: 7,
-        }),
-        updateMany: jest.fn().mockResolvedValue({
-          count: 1,
-        }),
-      },
-      gamificationProfile: {
-        findMany: jest.fn().mockResolvedValue([
-          {
-            userId: 'creator-id',
-            currentPaymentStreak: 4,
-          },
-          {
-            userId: 'opponent-id',
-            currentPaymentStreak: 7,
-          },
-        ]),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
+    const transactionClient = createWagerTransactionClient({
+      taskType: WagerTaskType.MAINTAIN_PAYMENT_STREAK,
+      stakeAmount: 25,
     });
+    transactionClient.gamificationProfile.findMany.mockResolvedValue([
+      {
+        userId: 'creator-id',
+        currentPaymentStreak: 4,
+      },
+      {
+        userId: 'opponent-id',
+        currentPaymentStreak: 7,
+      },
+    ]);
+    useTransactionClient(transactionClient);
     rewardService.spendCoins
       .mockResolvedValueOnce({
         coinBalance: 75,
@@ -531,106 +521,34 @@ describe('WagersService', () => {
     });
   });
   it('forbids the creator from accepting their own wager', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          creatorId: 'creator-id',
-          opponentId: 'opponent-id',
-          taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
-          stakeAmount: 50,
-          status: WagerStatus.PENDING,
-          durationDays: 7,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
-    });
+    const transactionClient = createWagerTransactionClient();
+    useTransactionClient(transactionClient);
     await expect(
       service.acceptWager('creator-id', 'wager-id'),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(rewardService.spendCoins).not.toHaveBeenCalled();
   });
   it('rejects acceptance when the wager is not pending', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          creatorId: 'creator-id',
-          opponentId: 'opponent-id',
-          taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
-          stakeAmount: 50,
-          status: WagerStatus.ACTIVE,
-          durationDays: 7,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
+    const transactionClient = createWagerTransactionClient({
+      status: WagerStatus.ACTIVE,
     });
+    useTransactionClient(transactionClient);
     await expect(
       service.acceptWager('opponent-id', 'wager-id'),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(rewardService.spendCoins).not.toHaveBeenCalled();
   });
   it('rejects a concurrent second acceptance before spending coins', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          creatorId: 'creator-id',
-          opponentId: 'opponent-id',
-          taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
-          stakeAmount: 50,
-          status: WagerStatus.PENDING,
-          durationDays: 7,
-        }),
-        updateMany: jest.fn().mockResolvedValue({
-          count: 0,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
-    });
+    const transactionClient = createWagerTransactionClient({}, 0);
+    useTransactionClient(transactionClient);
     await expect(
       service.acceptWager('opponent-id', 'wager-id'),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(rewardService.spendCoins).not.toHaveBeenCalled();
   });
   it('rejects acceptance when a participant has insufficient coins', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          creatorId: 'creator-id',
-          opponentId: 'opponent-id',
-          taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
-          stakeAmount: 50,
-          status: WagerStatus.PENDING,
-          durationDays: 7,
-        }),
-        updateMany: jest.fn().mockResolvedValue({
-          count: 1,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
-    });
+    const transactionClient = createWagerTransactionClient();
+    useTransactionClient(transactionClient);
     rewardService.spendCoins
       .mockResolvedValueOnce({
         coinBalance: 50,
@@ -642,24 +560,8 @@ describe('WagersService', () => {
     expect(rewardService.spendCoins).toHaveBeenCalledTimes(2);
   });
   it('allows the opponent to decline a pending wager without moving coins', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          opponentId: 'opponent-id',
-          status: WagerStatus.PENDING,
-        }),
-        updateMany: jest.fn().mockResolvedValue({
-          count: 1,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
-    });
+    const transactionClient = createWagerTransactionClient();
+    useTransactionClient(transactionClient);
     await expect(
       service.declineWager('opponent-id', 'wager-id'),
     ).resolves.toEqual({
@@ -680,66 +582,26 @@ describe('WagersService', () => {
     expect(rewardService.spendCoins).not.toHaveBeenCalled();
   });
   it('forbids anyone except the opponent from declining a wager', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          opponentId: 'opponent-id',
-          status: WagerStatus.PENDING,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
-    });
+    const transactionClient = createWagerTransactionClient();
+    useTransactionClient(transactionClient);
     await expect(
       service.declineWager('creator-id', 'wager-id'),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(rewardService.spendCoins).not.toHaveBeenCalled();
   });
   it('rejects declining a wager that is no longer pending', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          opponentId: 'opponent-id',
-          status: WagerStatus.ACTIVE,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
+    const transactionClient = createWagerTransactionClient({
+      status: WagerStatus.ACTIVE,
     });
+    useTransactionClient(transactionClient);
     await expect(
       service.declineWager('opponent-id', 'wager-id'),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(rewardService.spendCoins).not.toHaveBeenCalled();
   });
   it('allows the creator to cancel a pending wager without moving coins', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          creatorId: 'creator-id',
-          status: WagerStatus.PENDING,
-        }),
-        updateMany: jest.fn().mockResolvedValue({
-          count: 1,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
-    });
+    const transactionClient = createWagerTransactionClient();
+    useTransactionClient(transactionClient);
     await expect(
       service.cancelWager('creator-id', 'wager-id'),
     ).resolves.toEqual({
@@ -759,42 +621,18 @@ describe('WagersService', () => {
     expect(rewardService.spendCoins).not.toHaveBeenCalled();
   });
   it('forbids anyone except the creator from cancelling a wager', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          creatorId: 'creator-id',
-          status: WagerStatus.PENDING,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
-    });
+    const transactionClient = createWagerTransactionClient();
+    useTransactionClient(transactionClient);
     await expect(
       service.cancelWager('opponent-id', 'wager-id'),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(rewardService.spendCoins).not.toHaveBeenCalled();
   });
   it('rejects cancelling a wager that is no longer pending', async () => {
-    const transactionClient = {
-      wager: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'wager-id',
-          creatorId: 'creator-id',
-          status: WagerStatus.ACTIVE,
-        }),
-      },
-    };
-    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-      const callback = operation as (
-        tx: typeof transactionClient,
-      ) => Promise<unknown>;
-      return callback(transactionClient);
+    const transactionClient = createWagerTransactionClient({
+      status: WagerStatus.ACTIVE,
     });
+    useTransactionClient(transactionClient);
     await expect(
       service.cancelWager('creator-id', 'wager-id'),
     ).rejects.toBeInstanceOf(BadRequestException);

@@ -38,6 +38,50 @@ describe('SchedulerService', () => {
   const notificationsService = {
     create: jest.fn(),
   };
+  const createActiveWager = (overrides: Record<string, unknown> = {}) => ({
+    id: 'wager-id',
+    creatorId: 'creator-id',
+    opponentId: 'opponent-id',
+    taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
+    stakeAmount: 50,
+    status: WagerStatus.ACTIVE,
+    startDate: new Date('2026-08-01T00:00:00.000Z'),
+    endDate: new Date('2026-08-08T00:00:00.000Z'),
+    taskSnapshot: null,
+    creator: {
+      displayName: 'Creator',
+      deletedAt: null,
+    },
+    opponent: {
+      displayName: 'Opponent',
+      deletedAt: null,
+    },
+    ...overrides,
+  });
+  const createSettlementClient = (
+    wagerOverrides: Record<string, unknown> = {},
+    claimCount = 1,
+  ) => ({
+    wager: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue(createActiveWager(wagerOverrides)),
+      updateMany: jest.fn().mockResolvedValue({ count: claimCount }),
+      update: jest.fn().mockResolvedValue({}),
+    },
+    paymentOccurrence: {
+      findMany: jest.fn(),
+    },
+    gamificationProfile: {
+      findUnique: jest.fn(),
+    },
+  });
+  const useTransactionClient = <T>(transactionClient: T) => {
+    prisma.$transaction.mockImplementationOnce((operation: unknown) => {
+      const callback = operation as (tx: T) => Promise<unknown>;
+      return callback(transactionClient);
+    });
+  };
 
   beforeEach(() => {
     remindersService = {
@@ -72,16 +116,6 @@ describe('SchedulerService', () => {
 
   describe('runScheduledJob', () => {
     it('will not throw when no reminders due to be processed', async () => {
-      paymentOccurrencesService.transitionOverdueOccurrences.mockResolvedValue({
-        transitionedCount: 0,
-      });
-      paymentOccurrencesService.transitionMissedOccurrence.mockResolvedValue({
-        transitionedCount: 0,
-      });
-      remindersService.processDueReminders.mockResolvedValue({
-        processedCount: 0,
-      });
-
       await expect(service.runScheduledJob()).resolves.not.toThrow();
     });
 
@@ -140,16 +174,6 @@ describe('SchedulerService', () => {
     });
 
     it('returns all the 0 counts when there is not anything to process', async () => {
-      paymentOccurrencesService.transitionOverdueOccurrences.mockResolvedValue({
-        transitionedCount: 0,
-      });
-      paymentOccurrencesService.transitionMissedOccurrence.mockResolvedValue({
-        transitionedCount: 0,
-      });
-      remindersService.processDueReminders.mockResolvedValue({
-        processedCount: 0,
-      });
-
       const rslt = await service.runAll();
 
       expect(rslt).toEqual({
@@ -182,65 +206,28 @@ describe('SchedulerService', () => {
       jest.useRealTimers();
     });
     it('resolves an all payments on time wager with one winner', async () => {
-      const startDate = new Date('2026-08-01T00:00:00.000Z');
-      const endDate = new Date('2026-08-08T00:00:00.000Z');
-      const transactionClient = {
-        wager: {
-          findUnique: jest.fn().mockResolvedValue({
-            id: 'wager-id',
-            creatorId: 'creator-id',
-            opponentId: 'opponent-id',
-            taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
-            stakeAmount: 50,
-            status: WagerStatus.ACTIVE,
-            startDate,
-            endDate,
-            taskSnapshot: null,
-            creator: {
-              displayName: 'Creator',
+      const transactionClient = createSettlementClient();
+      transactionClient.paymentOccurrence.findMany
+        .mockResolvedValueOnce([
+          {
+            status: PaymentOccurrenceStatus.PAID,
+            payment: {
+              paymentStatus: PaymentRecordStatus.ON_TIME,
               deletedAt: null,
             },
-            opponent: {
-              displayName: 'Opponent',
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            status: PaymentOccurrenceStatus.PAID_LATE,
+            payment: {
+              paymentStatus: PaymentRecordStatus.LATE,
               deletedAt: null,
             },
-          }),
-          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-          update: jest.fn().mockResolvedValue({}),
-        },
-        paymentOccurrence: {
-          findMany: jest
-            .fn()
-            .mockResolvedValueOnce([
-              {
-                status: PaymentOccurrenceStatus.PAID,
-                payment: {
-                  paymentStatus: PaymentRecordStatus.ON_TIME,
-                  deletedAt: null,
-                },
-              },
-            ])
-            .mockResolvedValueOnce([
-              {
-                status: PaymentOccurrenceStatus.PAID_LATE,
-                payment: {
-                  paymentStatus: PaymentRecordStatus.LATE,
-                  deletedAt: null,
-                },
-              },
-            ]),
-        },
-        gamificationProfile: {
-          findUnique: jest.fn(),
-        },
-      };
+          },
+        ]);
       prisma.wager.findMany.mockResolvedValue([{ id: 'wager-id' }]);
-      prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-        const callback = operation as (
-          tx: typeof transactionClient,
-        ) => Promise<unknown>;
-        return callback(transactionClient);
-      });
+      useTransactionClient(transactionClient);
       rewardService.grantCoins.mockResolvedValue({ coinBalance: 200 });
       notificationsService.create.mockResolvedValue(undefined);
       const rslt = await service.runAll();
@@ -285,59 +272,24 @@ describe('SchedulerService', () => {
       expect(rslt.resolvedWagerCount).toBe(1);
     });
     it('allows late payments for no missed payments and draws when both succeed', async () => {
-      const startDate = new Date('2026-08-01T00:00:00.000Z');
-      const endDate = new Date('2026-08-08T00:00:00.000Z');
-      const transactionClient = {
-        wager: {
-          findUnique: jest.fn().mockResolvedValue({
-            id: 'wager-id',
-            creatorId: 'creator-id',
-            opponentId: 'opponent-id',
-            taskType: WagerTaskType.NO_MISSED_PAYMENTS,
-            stakeAmount: 50,
-            status: WagerStatus.ACTIVE,
-            startDate,
-            endDate,
-            taskSnapshot: null,
-            creator: {
-              displayName: 'Creator',
-              deletedAt: null,
-            },
-            opponent: {
-              displayName: 'Opponent',
-              deletedAt: null,
-            },
-          }),
-          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-          update: jest.fn().mockResolvedValue({}),
-        },
-        paymentOccurrence: {
-          findMany: jest
-            .fn()
-            .mockResolvedValueOnce([
-              {
-                status: PaymentOccurrenceStatus.PAID_LATE,
-                payment: null,
-              },
-            ])
-            .mockResolvedValueOnce([
-              {
-                status: PaymentOccurrenceStatus.PAID,
-                payment: null,
-              },
-            ]),
-        },
-        gamificationProfile: {
-          findUnique: jest.fn(),
-        },
-      };
-      prisma.wager.findMany.mockResolvedValue([{ id: 'wager-id' }]);
-      prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-        const callback = operation as (
-          tx: typeof transactionClient,
-        ) => Promise<unknown>;
-        return callback(transactionClient);
+      const transactionClient = createSettlementClient({
+        taskType: WagerTaskType.NO_MISSED_PAYMENTS,
       });
+      transactionClient.paymentOccurrence.findMany
+        .mockResolvedValueOnce([
+          {
+            status: PaymentOccurrenceStatus.PAID_LATE,
+            payment: null,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            status: PaymentOccurrenceStatus.PAID,
+            payment: null,
+          },
+        ]);
+      prisma.wager.findMany.mockResolvedValue([{ id: 'wager-id' }]);
+      useTransactionClient(transactionClient);
       rewardService.adjustCoins.mockResolvedValue({ coinBalance: 100 });
       notificationsService.create.mockResolvedValue(undefined);
       const rslt = await service.runAll();
@@ -372,56 +324,23 @@ describe('SchedulerService', () => {
       expect(rslt.resolvedWagerCount).toBe(1);
     });
     it('draws when both participants fail a maintain payment streak wager', async () => {
-      const startDate = new Date('2026-08-01T00:00:00.000Z');
-      const endDate = new Date('2026-08-08T00:00:00.000Z');
-      const transactionClient = {
-        wager: {
-          findUnique: jest.fn().mockResolvedValue({
-            id: 'wager-id',
-            creatorId: 'creator-id',
-            opponentId: 'opponent-id',
-            taskType: WagerTaskType.MAINTAIN_PAYMENT_STREAK,
-            stakeAmount: 25,
-            status: WagerStatus.ACTIVE,
-            startDate,
-            endDate,
-            taskSnapshot: {
-              creatorCurrentPaymentStreak: 4,
-              opponentCurrentPaymentStreak: 7,
-            },
-            creator: {
-              displayName: 'Creator',
-              deletedAt: null,
-            },
-            opponent: {
-              displayName: 'Opponent',
-              deletedAt: null,
-            },
-          }),
-          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-          update: jest.fn().mockResolvedValue({}),
+      const transactionClient = createSettlementClient({
+        taskType: WagerTaskType.MAINTAIN_PAYMENT_STREAK,
+        stakeAmount: 25,
+        taskSnapshot: {
+          creatorCurrentPaymentStreak: 4,
+          opponentCurrentPaymentStreak: 7,
         },
-        paymentOccurrence: {
-          findMany: jest.fn(),
-        },
-        gamificationProfile: {
-          findUnique: jest
-            .fn()
-            .mockResolvedValueOnce({
-              currentPaymentStreak: 3,
-            })
-            .mockResolvedValueOnce({
-              currentPaymentStreak: 6,
-            }),
-        },
-      };
-      prisma.wager.findMany.mockResolvedValue([{ id: 'wager-id' }]);
-      prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-        const callback = operation as (
-          tx: typeof transactionClient,
-        ) => Promise<unknown>;
-        return callback(transactionClient);
       });
+      transactionClient.gamificationProfile.findUnique
+        .mockResolvedValueOnce({
+          currentPaymentStreak: 3,
+        })
+        .mockResolvedValueOnce({
+          currentPaymentStreak: 6,
+        });
+      prisma.wager.findMany.mockResolvedValue([{ id: 'wager-id' }]);
+      useTransactionClient(transactionClient);
       rewardService.adjustCoins.mockResolvedValue({ coinBalance: 100 });
       notificationsService.create.mockResolvedValue(undefined);
       const rslt = await service.runAll();
@@ -439,40 +358,14 @@ describe('SchedulerService', () => {
       expect(rslt.resolvedWagerCount).toBe(1);
     });
     it('treats a deactivated participant as losing the wager', async () => {
-      const startDate = new Date('2026-08-01T00:00:00.000Z');
-      const endDate = new Date('2026-08-08T00:00:00.000Z');
-      const transactionClient = {
-        wager: {
-          findUnique: jest.fn().mockResolvedValue({
-            id: 'wager-id',
-            creatorId: 'creator-id',
-            opponentId: 'opponent-id',
-            taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
-            stakeAmount: 50,
-            status: WagerStatus.ACTIVE,
-            startDate,
-            endDate,
-            taskSnapshot: null,
-            creator: {
-              displayName: 'Creator',
-              deletedAt: new Date('2026-08-05T00:00:00.000Z'),
-            },
-            opponent: {
-              displayName: 'Opponent',
-              deletedAt: null,
-            },
-          }),
-          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-          update: jest.fn().mockResolvedValue({}),
+      const transactionClient = createSettlementClient({
+        creator: {
+          displayName: 'Creator',
+          deletedAt: new Date('2026-08-05T00:00:00.000Z'),
         },
-      };
-      prisma.wager.findMany.mockResolvedValue([{ id: 'wager-id' }]);
-      prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-        const callback = operation as (
-          tx: typeof transactionClient,
-        ) => Promise<unknown>;
-        return callback(transactionClient);
       });
+      prisma.wager.findMany.mockResolvedValue([{ id: 'wager-id' }]);
+      useTransactionClient(transactionClient);
       rewardService.grantCoins.mockResolvedValue({ coinBalance: 200 });
       notificationsService.create.mockResolvedValue(undefined);
       await service.runAll();
@@ -492,40 +385,9 @@ describe('SchedulerService', () => {
       });
     });
     it('does not pay a wager another scheduler run already claimed', async () => {
-      const startDate = new Date('2026-08-01T00:00:00.000Z');
-      const endDate = new Date('2026-08-08T00:00:00.000Z');
-      const transactionClient = {
-        wager: {
-          findUnique: jest.fn().mockResolvedValue({
-            id: 'wager-id',
-            creatorId: 'creator-id',
-            opponentId: 'opponent-id',
-            taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
-            stakeAmount: 50,
-            status: WagerStatus.ACTIVE,
-            startDate,
-            endDate,
-            taskSnapshot: null,
-            creator: {
-              displayName: 'Creator',
-              deletedAt: null,
-            },
-            opponent: {
-              displayName: 'Opponent',
-              deletedAt: null,
-            },
-          }),
-          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-          update: jest.fn(),
-        },
-      };
+      const transactionClient = createSettlementClient({}, 0);
       prisma.wager.findMany.mockResolvedValue([{ id: 'wager-id' }]);
-      prisma.$transaction.mockImplementationOnce((operation: unknown) => {
-        const callback = operation as (
-          tx: typeof transactionClient,
-        ) => Promise<unknown>;
-        return callback(transactionClient);
-      });
+      useTransactionClient(transactionClient);
       const rslt = await service.runAll();
       expect(rslt.resolvedWagerCount).toBe(0);
       expect(rewardService.grantCoins).not.toHaveBeenCalled();
@@ -534,76 +396,44 @@ describe('SchedulerService', () => {
       expect(transactionClient.wager.update).not.toHaveBeenCalled();
     });
     it('retries settlement after a failed reward transaction', async () => {
-      const startDate = new Date('2026-08-01T00:00:00.000Z');
-      const endDate = new Date('2026-08-08T00:00:00.000Z');
-      const transactionClient = {
-        wager: {
-          findUnique: jest.fn().mockResolvedValue({
-            id: 'wager-id',
-            creatorId: 'creator-id',
-            opponentId: 'opponent-id',
-            taskType: WagerTaskType.ALL_PAYMENTS_ON_TIME,
-            stakeAmount: 50,
-            status: WagerStatus.ACTIVE,
-            startDate,
-            endDate,
-            taskSnapshot: null,
-            creator: {
-              displayName: 'Creator',
+      const transactionClient = createSettlementClient();
+      transactionClient.paymentOccurrence.findMany
+        .mockResolvedValueOnce([
+          {
+            status: PaymentOccurrenceStatus.PAID,
+            payment: {
+              paymentStatus: PaymentRecordStatus.ON_TIME,
               deletedAt: null,
             },
-            opponent: {
-              displayName: 'Opponent',
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            status: PaymentOccurrenceStatus.PAID_LATE,
+            payment: {
+              paymentStatus: PaymentRecordStatus.LATE,
               deletedAt: null,
             },
-          }),
-          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-          update: jest.fn().mockResolvedValue({}),
-        },
-        paymentOccurrence: {
-          findMany: jest
-            .fn()
-            .mockResolvedValueOnce([
-              {
-                status: PaymentOccurrenceStatus.PAID,
-                payment: {
-                  paymentStatus: PaymentRecordStatus.ON_TIME,
-                  deletedAt: null,
-                },
-              },
-            ])
-            .mockResolvedValueOnce([
-              {
-                status: PaymentOccurrenceStatus.PAID_LATE,
-                payment: {
-                  paymentStatus: PaymentRecordStatus.LATE,
-                  deletedAt: null,
-                },
-              },
-            ])
-            .mockResolvedValueOnce([
-              {
-                status: PaymentOccurrenceStatus.PAID,
-                payment: {
-                  paymentStatus: PaymentRecordStatus.ON_TIME,
-                  deletedAt: null,
-                },
-              },
-            ])
-            .mockResolvedValueOnce([
-              {
-                status: PaymentOccurrenceStatus.PAID_LATE,
-                payment: {
-                  paymentStatus: PaymentRecordStatus.LATE,
-                  deletedAt: null,
-                },
-              },
-            ]),
-        },
-        gamificationProfile: {
-          findUnique: jest.fn(),
-        },
-      };
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            status: PaymentOccurrenceStatus.PAID,
+            payment: {
+              paymentStatus: PaymentRecordStatus.ON_TIME,
+              deletedAt: null,
+            },
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            status: PaymentOccurrenceStatus.PAID_LATE,
+            payment: {
+              paymentStatus: PaymentRecordStatus.LATE,
+              deletedAt: null,
+            },
+          },
+        ]);
       prisma.wager.findMany.mockResolvedValue([{ id: 'wager-id' }]);
       prisma.$transaction.mockImplementation((operation: unknown) => {
         const callback = operation as (
