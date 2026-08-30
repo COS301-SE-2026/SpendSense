@@ -10,6 +10,8 @@ import {
 
 const TEST_SECRET = 'e2e-tester-secret';
 
+type E2eFixture = Awaited<ReturnType<typeof createApiE2eFixture>>;
+
 function getResponseData<T>(body: unknown) {
   return (body as { data: T }).data;
 }
@@ -71,6 +73,59 @@ async function setSocialState(
       longestPaymentStreak: currentPaymentStreak,
     },
   });
+}
+
+async function createWagerContext(e2e: E2eFixture) {
+  const { userA, userB } = await createFriendshipScenario(e2e.prisma as never);
+  const tokenA = await createE2eAccessToken(userA);
+  const tokenB = await createE2eAccessToken(userB);
+
+  await setSocialState(e2e.prisma, userA.id, 200, 5);
+  await setSocialState(e2e.prisma, userB.id, 200, 5);
+
+  return {
+    userA,
+    userB,
+    tokenA,
+    tokenB,
+  };
+}
+
+async function createPendingWager(
+  e2e: E2eFixture,
+  tokenA: string,
+  opponentId: string,
+  durationDays: number,
+) {
+  const response = await e2e.request
+    .post('/api/v1/wagers')
+    .set('Authorization', `Bearer ${tokenA}`)
+    .send({
+      opponentId,
+      taskType: 'MAINTAIN_PAYMENT_STREAK',
+      stakeAmount: 50,
+      durationDays,
+    })
+    .expect(201);
+
+  return {
+    response,
+    wagerId: getResponseData<{ id: string }>(response.body).id,
+  };
+}
+
+async function acceptWager(e2e: E2eFixture, wagerId: string, tokenB: string) {
+  return e2e.request
+    .patch(`/api/v1/wagers/${wagerId}/accept`)
+    .set('Authorization', `Bearer ${tokenB}`)
+    .expect(200);
+}
+
+async function runScheduler(e2e: E2eFixture) {
+  return e2e.request
+    .post('/api/v1/scheduler/run')
+    .set('x-scheduler-secret', TEST_SECRET)
+    .expect(201);
 }
 
 describe('Friends and Wagers E2E', () => {
@@ -578,29 +633,14 @@ describe('Friends and Wagers E2E', () => {
     it('declines and cancals pending wagers without moving any coins', async () => {
       const e2e = await createApiE2eFixture();
       try {
-        const { userA, userB } = await createFriendshipScenario(
-          e2e.prisma as never,
+        const { userA, userB, tokenA, tokenB } = await createWagerContext(e2e);
+
+        const { wagerId: declinedWagerId } = await createPendingWager(
+          e2e,
+          tokenA,
+          userB.id,
+          2,
         );
-        const tokenA = await createE2eAccessToken(userA);
-        const tokenB = await createE2eAccessToken(userB);
-
-        await setSocialState(e2e.prisma, userA.id, 200, 5);
-        await setSocialState(e2e.prisma, userB.id, 200, 5);
-
-        const declinedWager = await e2e.request
-          .post('/api/v1/wagers')
-          .set('Authorization', `Bearer ${tokenA}`)
-          .send({
-            opponentId: userB.id,
-            taskType: 'MAINTAIN_PAYMENT_STREAK',
-            stakeAmount: 50,
-            durationDays: 2,
-          })
-          .expect(201);
-
-        const declinedWagerId = getResponseData<{ id: string }>(
-          declinedWager.body,
-        ).id;
 
         const declineResponse = await e2e.request
           .patch(`/api/v1/wagers/${declinedWagerId}/decline`)
@@ -614,20 +654,12 @@ describe('Friends and Wagers E2E', () => {
           },
         });
 
-        const cancelledWager = await e2e.request
-          .post('/api/v1/wagers')
-          .set('Authorization', `Bearer ${tokenA}`)
-          .send({
-            opponentId: userB.id,
-            taskType: 'MAINTAIN_PAYMENT_STREAK',
-            stakeAmount: 50,
-            durationDays: 2,
-          })
-          .expect(201);
-
-        const cancelledWagerId = getResponseData<{ id: string }>(
-          cancelledWager.body,
-        ).id;
+        const { wagerId: cancelledWagerId } = await createPendingWager(
+          e2e,
+          tokenA,
+          userB.id,
+          2,
+        );
 
         const cancelResponse = await e2e.request
           .delete(`/api/v1/wagers/${cancelledWagerId}`)
@@ -686,32 +718,11 @@ describe('Friends and Wagers E2E', () => {
     it('accepts a wager and escrows both stakes without allowing negative balances', async () => {
       const e2e = await createApiE2eFixture();
       try {
-        const { userA, userB } = await createFriendshipScenario(
-          e2e.prisma as never,
-        );
-        const tokenA = await createE2eAccessToken(userA);
-        const tokenB = await createE2eAccessToken(userB);
+        const { userA, userB, tokenA, tokenB } = await createWagerContext(e2e);
 
-        await setSocialState(e2e.prisma, userA.id, 200, 5);
-        await setSocialState(e2e.prisma, userB.id, 200, 5);
+        const { wagerId } = await createPendingWager(e2e, tokenA, userB.id, 2);
 
-        const createResponse = await e2e.request
-          .post('/api/v1/wagers')
-          .set('Authorization', `Bearer ${tokenA}`)
-          .send({
-            opponentId: userB.id,
-            taskType: 'MAINTAIN_PAYMENT_STREAK',
-            stakeAmount: 50,
-            durationDays: 2,
-          })
-          .expect(201);
-
-        const wagerId = getResponseData<{ id: string }>(createResponse.body).id;
-
-        const acceptResponse = await e2e.request
-          .patch(`/api/v1/wagers/${wagerId}/accept`)
-          .set('Authorization', `Bearer ${tokenB}`)
-          .expect(200);
+        const acceptResponse = await acceptWager(e2e, wagerId, tokenB);
 
         expectDataEnvelope(acceptResponse.body as Record<string, unknown>);
         expect(getResponseData(acceptResponse.body)).toMatchObject({
@@ -798,32 +809,11 @@ describe('Friends and Wagers E2E', () => {
     it('settles a deterministic winner, conserves coins, creates notifications and cannot settle twice', async () => {
       const e2e = await createApiE2eFixture();
       try {
-        const { userA, userB } = await createFriendshipScenario(
-          e2e.prisma as never,
-        );
-        const tokenA = await createE2eAccessToken(userA);
-        const tokenB = await createE2eAccessToken(userB);
+        const { userA, userB, tokenA, tokenB } = await createWagerContext(e2e);
 
-        await setSocialState(e2e.prisma, userA.id, 200, 5);
-        await setSocialState(e2e.prisma, userB.id, 200, 5);
+        const { wagerId } = await createPendingWager(e2e, tokenA, userB.id, 1);
 
-        const createResponse = await e2e.request
-          .post('/api/v1/wagers')
-          .set('Authorization', `Bearer ${tokenA}`)
-          .send({
-            opponentId: userB.id,
-            taskType: 'MAINTAIN_PAYMENT_STREAK',
-            stakeAmount: 50,
-            durationDays: 1,
-          })
-          .expect(201);
-
-        const wagerId = getResponseData<{ id: string }>(createResponse.body).id;
-
-        await e2e.request
-          .patch(`/api/v1/wagers/${wagerId}/accept`)
-          .set('Authorization', `Bearer ${tokenB}`)
-          .expect(200);
+        await acceptWager(e2e, wagerId, tokenB);
 
         await e2e.prisma.gamificationProfile.update({
           where: { userId: userB.id },
@@ -843,10 +833,7 @@ describe('Friends and Wagers E2E', () => {
           },
         });
 
-        const firstRun = await e2e.request
-          .post('/api/v1/scheduler/run')
-          .set('x-scheduler-secret', TEST_SECRET)
-          .expect(201);
+        const firstRun = await runScheduler(e2e);
 
         expectDataEnvelope(firstRun.body as Record<string, unknown>);
         expect(
@@ -939,10 +926,7 @@ describe('Friends and Wagers E2E', () => {
             },
           });
 
-        const secondRun = await e2e.request
-          .post('/api/v1/scheduler/run')
-          .set('x-scheduler-secret', TEST_SECRET)
-          .expect(201);
+        const secondRun = await runScheduler(e2e);
 
         expect(
           getResponseData<{ resolvedWagerCount: number }>(secondRun.body)
@@ -996,32 +980,11 @@ describe('Friends and Wagers E2E', () => {
     it('settles a draw by returning each stake and preserves the total balance', async () => {
       const e2e = await createApiE2eFixture();
       try {
-        const { userA, userB } = await createFriendshipScenario(
-          e2e.prisma as never,
-        );
-        const tokenA = await createE2eAccessToken(userA);
-        const tokenB = await createE2eAccessToken(userB);
+        const { userA, userB, tokenA, tokenB } = await createWagerContext(e2e);
 
-        await setSocialState(e2e.prisma, userA.id, 200, 5);
-        await setSocialState(e2e.prisma, userB.id, 200, 5);
+        const { wagerId } = await createPendingWager(e2e, tokenA, userB.id, 1);
 
-        const createResponse = await e2e.request
-          .post('/api/v1/wagers')
-          .set('Authorization', `Bearer ${tokenA}`)
-          .send({
-            opponentId: userB.id,
-            taskType: 'MAINTAIN_PAYMENT_STREAK',
-            stakeAmount: 50,
-            durationDays: 1,
-          })
-          .expect(201);
-
-        const wagerId = getResponseData<{ id: string }>(createResponse.body).id;
-
-        await e2e.request
-          .patch(`/api/v1/wagers/${wagerId}/accept`)
-          .set('Authorization', `Bearer ${tokenB}`)
-          .expect(200);
+        await acceptWager(e2e, wagerId, tokenB);
 
         const balancesAfterEscrow =
           await e2e.prisma.gamificationProfile.findMany({
@@ -1050,10 +1013,7 @@ describe('Friends and Wagers E2E', () => {
           },
         });
 
-        const runResponse = await e2e.request
-          .post('/api/v1/scheduler/run')
-          .set('x-scheduler-secret', TEST_SECRET)
-          .expect(201);
+        const runResponse = await runScheduler(e2e);
 
         expect(
           getResponseData<{ resolvedWagerCount: number }>(runResponse.body)
