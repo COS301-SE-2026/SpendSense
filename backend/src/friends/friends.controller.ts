@@ -27,6 +27,7 @@ import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorato
 import { UsersService } from '../users/users.service';
 import { CreateFriendRequestDto } from './dto/create-friend-request.dto';
 import { ListFriendRequestsQueryDto } from './dto/list-friend-requests-query.dto';
+import { ListLeaderboardQueryDto } from './dto/list-leaderboard-query.dto';
 import { SearchFriendsQueryDto } from './dto/search-friends-query.dto';
 import { FriendsService } from './friends.service';
 
@@ -170,6 +171,30 @@ export class FriendsController {
   async listFriends(@CurrentAuthUser() authUser: AuthUser) {
     const user = await this.usersService.findOrCreateUser(authUser);
     return this.friendsService.listFriends(user.id);
+  }
+
+  @ApiOperation({ summary: 'Get the paginated friends leaderboard' })
+  @ApiQuery({
+    name: 'metric',
+    required: false,
+    enum: ['xp', 'coins', 'streak'],
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, minimum: 1 })
+  @ApiOkResponse({
+    description:
+      'A 20-entry leaderboard page with global ranks and pagination metadata.',
+  })
+  @Get('leaderboard')
+  async listLeaderboard(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Query() query: ListLeaderboardQueryDto,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.friendsService.listLeaderboard(
+      user.id,
+      query.metric ?? 'xp',
+      query.page ?? 1,
+    );
   }
 
   @ApiOperation({ summary: 'Get a friend’s public summary' })
