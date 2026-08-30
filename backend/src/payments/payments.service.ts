@@ -77,7 +77,7 @@ export class PaymentsService {
     private readonly badgeEngineService: BadgeEngineService,
     private readonly rewardService: RewardService,
     private readonly creditScoreService: CreditScoreService,
-  ) { }
+  ) {}
 
   async logPayment(
     dto: LogPaymentDto,
@@ -134,9 +134,9 @@ export class PaymentsService {
     const isLate = paidDate.getTime() > occurrence.dueDate.getTime();
     const daysLate = isLate
       ? Math.ceil(
-        (paidDate.getTime() - occurrence.dueDate.getTime()) /
-        (1000 * 60 * 60 * 24),
-      )
+          (paidDate.getTime() - occurrence.dueDate.getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
       : 0;
     const simulatedInterestCalculation = daysLate * 2;
 
@@ -187,18 +187,26 @@ export class PaymentsService {
         },
       });
 
-
-
-      const { scoreEventId, scoreBefore, scoreAfter, scoreDelta, tierBefore, tierAfter, explanation, onTimePaymentCount, } = await this.creditScoreService.recalculateAfterPayment(tx, {
+      const {
+        scoreEventId,
+        scoreBefore,
+        scoreAfter,
+        scoreDelta,
+        tierBefore,
+        tierAfter,
+        explanation,
+        onTimePaymentCount,
+      } = await this.creditScoreService.recalculateAfterPayment(tx, {
         userId,
         occurrenceId: occurrence.id,
         paymentRecordId: paymentRecord.id,
-        eventType: isLate ? ScoreEventType.PAYMENT_LATE : ScoreEventType.PAYMENT_ON_TIME,
-        explanation: isLate ? `Paid ${occurrence.obligation.name} ${daysLate} day${daysLate === 1 ? '' : 's'} late.` : `Paid ${occurrence.obligation.name} on time.`,
+        eventType: isLate
+          ? ScoreEventType.PAYMENT_LATE
+          : ScoreEventType.PAYMENT_ON_TIME,
+        explanation: isLate
+          ? `Paid ${occurrence.obligation.name} ${daysLate} day${daysLate === 1 ? '' : 's'} late.`
+          : `Paid ${occurrence.obligation.name} on time.`,
       });
-
-
-
 
       if (scoreAfter !== scoreBefore) {
         await this.notificationsService.create(
@@ -248,7 +256,7 @@ export class PaymentsService {
         {
           userId,
           sourceEventId: paymentEvent.id,
-          onTimePaymentCount, 
+          onTimePaymentCount,
           currentPaymentStreak,
           currentScore: scoreAfter,
         },
@@ -300,15 +308,6 @@ export class PaymentsService {
       };
     });
   }
-}
-
-
-function resolveScoreTier(score: number): ScoreTier {
-  if (score >= 800) return ScoreTier.ELITE;
-  if (score >= 700) return ScoreTier.EXCELLENT;
-  if (score >= 600) return ScoreTier.GOOD;
-  if (score >= 500) return ScoreTier.FAIR;
-  return ScoreTier.BUILDING;
 }
 
 /**

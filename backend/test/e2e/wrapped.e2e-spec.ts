@@ -1,4 +1,3 @@
-import { BadgeCategory } from '@prisma/client';
 import request from 'supertest';
 import { createApiE2eFixture } from './fixtures';
 import { createE2eAccessToken } from '../../../test-support/auth/e2e-auth';

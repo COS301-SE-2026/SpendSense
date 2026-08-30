@@ -20,9 +20,11 @@ export class MonthlyWrappedService {
       asOf,
     );
 
-    const [year,monthNumber] = yearMonth.split('-').map(Number) ;
-    const month = monthNumber ; 
-    const monthLabel = new Date(Date.UTC(year,monthNumber -1 , 1)).toLocaleString('en-ZA', { month: 'long'});
+    const [year, monthNumber] = yearMonth.split('-').map(Number);
+    const month = monthNumber;
+    const monthLabel = new Date(
+      Date.UTC(year, monthNumber - 1, 1),
+    ).toLocaleString('en-ZA', { month: 'long' });
 
     return {
       month,

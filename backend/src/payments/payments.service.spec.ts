@@ -21,7 +21,6 @@ import { RewardService } from '../rewards/reward.service';
 
 import { CreditScoreService } from '../credit-score/credit-score.service'; // we need to mock the credit score service bc of the changes in payments.service.ts
 
-
 // below is a mock credit score service with the new return structure
 type MockScoreImpact = {
   scoreEventId: string;
@@ -36,13 +35,19 @@ type MockScoreImpact = {
 };
 
 const mockCreditScoreService: {
-  recalculateAfterPayment: jest.Mock<Promise<MockScoreImpact>, [unknown, unknown]>;
+  recalculateAfterPayment: jest.Mock<
+    Promise<MockScoreImpact>,
+    [unknown, unknown]
+  >;
 } = {
-  recalculateAfterPayment: jest.fn(),
+  recalculateAfterPayment: jest.fn<
+    Promise<MockScoreImpact>,
+    [unknown, unknown]
+  >(),
 };
 
-// and here are two reusable results for the above mocked credit score service - the main reason for these 
-// two is that their score delta's are still 8 - so that the whole test file isnt effected by the changes 
+// and here are two reusable results for the above mocked credit score service - the main reason for these
+// two is that their score delta's are still 8 - so that the whole test file isnt effected by the changes
 const onTimeScoreImpact: MockScoreImpact = {
   scoreEventId: 'score-event-1',
   scoreBefore: 600,
@@ -258,7 +263,9 @@ describe('PaymentsService', () => {
     mockPrismaService.gamificationProfile.update.mockResolvedValue({});
     mockPrismaService.rewardTransaction.create.mockResolvedValue({});
 
-    mockCreditScoreService.recalculateAfterPayment.mockResolvedValue(onTimeScoreImpact);
+    mockCreditScoreService.recalculateAfterPayment.mockResolvedValue(
+      onTimeScoreImpact,
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -420,7 +427,9 @@ describe('PaymentsService', () => {
       createdAt: new Date(),
     });
 
-    mockCreditScoreService.recalculateAfterPayment.mockResolvedValueOnce(lateScoreImpact);
+    mockCreditScoreService.recalculateAfterPayment.mockResolvedValueOnce(
+      lateScoreImpact,
+    );
 
     const result = await service.logPayment(dto, currentUserId);
 
@@ -660,7 +669,9 @@ describe('PaymentsService', () => {
     mockPrismaService.paymentOccurrence.update.mockResolvedValue(
       mockUpdatedOccurrence,
     );
-    mockCreditScoreService.recalculateAfterPayment.mockResolvedValue(lateScoreImpact);
+    mockCreditScoreService.recalculateAfterPayment.mockResolvedValue(
+      lateScoreImpact,
+    );
     await service.logPayment(dto, currentUserId);
     expect(mockNotificationsService.create).toHaveBeenCalledTimes(1);
     expect(mockNotificationsService.create).toHaveBeenCalledWith(

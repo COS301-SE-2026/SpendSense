@@ -11,7 +11,7 @@ type LogPaymentResponse = {
     occurrence: {
       status: string;
     };
-    // extening response to include the credit-score impoact 
+    // extening response to include the credit-score impoact
     scoreImpact: {
       scoreEventId: string;
       previousScore: number;
@@ -38,7 +38,7 @@ describe('Payments E2E', () => {
         where: {
           userId: user.id,
         },
-      })
+      });
 
       const expectedScoreBefore = profileBefore?.currentScore ?? 600;
 
@@ -59,7 +59,10 @@ describe('Payments E2E', () => {
       expect(body.data.occurrence.status).toBe('PAID');
 
       expect(body.data.scoreImpact.previousScore).toBe(expectedScoreBefore);
-      expect(body.data.scoreImpact.delta).toBe(body.data.scoreImpact.currentScore - body.data.scoreImpact.previousScore);
+      expect(body.data.scoreImpact.delta).toBe(
+        body.data.scoreImpact.currentScore -
+          body.data.scoreImpact.previousScore,
+      );
 
       const storedOccurrence = await e2e.prisma.paymentOccurrence.findUnique({
         where: { id: occurrence.id },
@@ -85,10 +88,13 @@ describe('Payments E2E', () => {
 
       expect(storedProfile).not.toBeNull(); // profile should definitly exist
       expect(storedProfile?.previousScore).toBe(expectedScoreBefore); // the stored prev score should equal the score before the update
-      expect(storedProfile?.currentScore).toBe(body.data.scoreImpact.currentScore,); // same with current score (after the imact)
-      expect(storedProfile?.currentScore).toBe(storedProfile!.previousScore + body.data.scoreImpact.delta); // chek th emaths
+      expect(storedProfile?.currentScore).toBe(
+        body.data.scoreImpact.currentScore,
+      ); // same with current score (after the imact)
+      expect(storedProfile?.currentScore).toBe(
+        storedProfile!.previousScore + body.data.scoreImpact.delta,
+      ); // chek th emaths
       expect(storedProfile?.lastCalculatedAt).not.toBeNull();
-
 
       // ScoreEvent assesment
       const storedScoreEvent = await e2e.prisma.scoreEvent.findUnique({
@@ -110,10 +116,9 @@ describe('Payments E2E', () => {
           pointsDelta: body.data.scoreImpact.delta,
         }),
       );
-      expect(storedScoreEvent!.pointsDelta).toBe(storedScoreEvent!.scoreAfter - storedScoreEvent!.scoreBefore); // again just to double check the maths
-
-
-
+      expect(storedScoreEvent!.pointsDelta).toBe(
+        storedScoreEvent!.scoreAfter - storedScoreEvent!.scoreBefore,
+      ); // again just to double check the maths
     } finally {
       await e2e.close();
     }

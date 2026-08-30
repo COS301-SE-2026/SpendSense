@@ -26,10 +26,9 @@ type CreditScoreDb = PrismaService | Prisma.TransactionClient;
 
 @Injectable()
 export class CreditScoreService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async getCreditScore(userId: string, db: CreditScoreDb = this.prisma) {
-
     const paymentHistoryScore = await this.calculatePaymentHistory(userId, db);
     const paymentH =
       CREDIT_SCORE_COMPONENT_WEIGHTS.PAYMENT_HISTORY * paymentHistoryScore;
@@ -50,7 +49,11 @@ export class CreditScoreService {
 
     const obligationDiveristy =
       CREDIT_SCORE_COMPONENT_WEIGHTS.OBLIGATION_DIVERSITY *
-      (await this.calculateObligationDiversityScore(userId, paymentHistoryScore, db));
+      (await this.calculateObligationDiversityScore(
+        userId,
+        paymentHistoryScore,
+        db,
+      ));
 
     const sumValues =
       paymentH +
@@ -98,7 +101,7 @@ export class CreditScoreService {
       savingsBuffer: Math.round(savingsBuffer),
       onTimePaymentCount,
       onLatePaymentCount,
-      missedPaymentCount
+      missedPaymentCount,
     };
   }
 
@@ -115,8 +118,8 @@ export class CreditScoreService {
             PaymentOccurrenceStatus.PAID_LATE,
             PaymentOccurrenceStatus.MISSED,
             PaymentOccurrenceStatus.OVERDUE,
-          ]
-        }
+          ],
+        },
       },
       select: {
         id: true,
@@ -886,10 +889,12 @@ export class CreditScoreService {
     };
   }
 
-
   // the following functionality is for MISSED and OVERDUE payment effects on the credit-score
 
-  private async countMissedPayments(userId: string, db: CreditScoreDb = this.prisma): Promise<number> {
+  private async countMissedPayments(
+    userId: string,
+    db: CreditScoreDb = this.prisma,
+  ): Promise<number> {
     return db.paymentOccurrence.count({
       where: {
         userId,
@@ -908,7 +913,7 @@ export class CreditScoreService {
       explanation: string;
     },
   ) {
-    const { userId, occurrenceId, eventType, explanation, } = params;
+    const { userId, occurrenceId, eventType, explanation } = params;
 
     const creditProfile = await tx.creditProfile.upsert({
       where: { userId },
@@ -937,11 +942,10 @@ export class CreditScoreService {
         previousScore: scoreBefore,
         currentScore: scoreAfter,
         scoreTier: tierAfter,
-        lastCalculatedAt: new Date(),// when this functions runs
+        lastCalculatedAt: new Date(), // when this functions runs
         onTimePaymentCount: result.onTimePaymentCount,
         latePaymentCount: result.onLatePaymentCount,
         missedPaymentCount: result.missedPaymentCount,
-
       },
     });
 
@@ -950,7 +954,7 @@ export class CreditScoreService {
         userId,
         creditProfileId: creditProfile.id,
         occurrenceId,
-        paymentRecordId: null, // ther is no payment method for missed / overdue 
+        paymentRecordId: null, // ther is no payment method for missed / overdue
         eventType,
         pointsDelta: scoreDelta,
         scoreBefore,
@@ -977,7 +981,4 @@ export class CreditScoreService {
       missedPaymentCount: updatedProfile.missedPaymentCount,
     };
   }
-
-
-
 }
