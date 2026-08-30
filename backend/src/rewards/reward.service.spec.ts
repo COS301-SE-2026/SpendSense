@@ -420,6 +420,45 @@ describe('RewardService', () => {
         },
       });
     });
+
+    it('will store the mascot mood and the reason on the source event', async () => {
+      tx.gamificationProfile.upsert.mockResolvedValue({});
+
+      tx.userEvent.findUnique.mockResolvedValue({
+        metadata: {
+          existingValue: 'value-1',
+        },
+      });
+
+      await service.setMascotMood(tx as never, {
+        userId,
+        mood: MascotMood.HAPPY,
+        reason: 'Quiz completed',
+        sourceEventId: 'quiz-event-1',
+      });
+
+      expect(tx.userEvent.findUnique).toHaveBeenCalledWith({
+        where: {
+          id: 'quiz-event-1',
+        },
+        select: {
+          metadata: true,
+        },
+      });
+
+      expect(tx.userEvent.update).toHaveBeenCalledWith({
+        where: {
+          id: 'quiz-event-1',
+        },
+        data: {
+          metadata: {
+            existingValue: 'value-1',
+            mascotMood: MascotMood.HAPPY,
+            moodReason: 'Quiz completed',
+          },
+        },
+      });
+    });
   });
 
   describe('notify', () => {
@@ -500,6 +539,56 @@ describe('RewardService', () => {
 
       expect(tx.gamificationProfile.upsert).toHaveBeenCalledTimes(1);
       expect(result).toEqual({ coinBalance: 25 });
+    });
+  });
+
+  it('will make CELEBRATING take preference when leveling up', async () => {
+    tx.gamificationProfile.upsert
+      .mockResolvedValueOnce({ xp: 90 })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({});
+
+    tx.userEvent.findUnique.mockResolvedValue({
+      metadata: {},
+    });
+
+    await service.settleAction(tx as never, {
+      userId,
+      sourceEventId: 'quiz-event-1',
+      xp: {
+        amount: 10,
+      },
+      mood: {
+        value: MascotMood.HAPPY,
+        reason: 'Quiz completed',
+      },
+    });
+
+    expect(tx.gamificationProfile.upsert).toHaveBeenLastCalledWith({
+      where: {
+        userId,
+      },
+      update: {
+        mascotMood: MascotMood.CELEBRATING,
+        mascotMoodUpdatedAt: expect.any(Date) as Date,
+      },
+      create: {
+        userId,
+        mascotMood: MascotMood.CELEBRATING,
+        mascotMoodUpdatedAt: expect.any(Date) as Date,
+      },
+    });
+
+    expect(tx.userEvent.update).toHaveBeenLastCalledWith({
+      where: {
+        id: 'quiz-event-1',
+      },
+      data: {
+        metadata: {
+          mascotMood: MascotMood.CELEBRATING,
+          moodReason: 'Leveled up',
+        },
+      },
     });
   });
 });

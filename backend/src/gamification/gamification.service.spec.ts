@@ -184,4 +184,153 @@ describe('GamificationService', () => {
       },
     });
   });
+
+  it('will reset mascot level progress at 100xp', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+      gamificationProfile: {
+        coinBalance: 100,
+        xp: 200,
+        mascotLevel: 3,
+        mascotMood: MascotMood.HAPPY,
+        currentPaymentStreak: 4,
+        longestPaymentStreak: 6,
+        currentKnowledgeStreak: 1,
+        longestKnowledgeStreak: 3,
+      },
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    const result = await service.getGamificationProfile(authUser);
+
+    expect(result.mascotLevelProgress).toEqual({
+      currentLevelXp: 0,
+      xpForNextLevel: 100,
+      percentToNextLevel: 0,
+    });
+  });
+
+  it('will return the users equipped cosmetics', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+      gamificationProfile: {
+        coinBalance: 145,
+        xp: 320,
+        mascotLevel: 3,
+        mascotMood: MascotMood.HAPPY,
+        currentPaymentStreak: 4,
+        longestPaymentStreak: 6,
+        currentKnowledgeStreak: 1,
+        longestKnowledgeStreak: 3,
+      },
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.userInventoryItem.findMany.mockResolvedValue([
+      {
+        cosmeticItem: {
+          slot: 'HAT',
+          code: 'party_hat',
+          iconKey: 'hat_party',
+        },
+      },
+      {
+        cosmeticItem: {
+          slot: 'ACCESSORY',
+          code: 'medal',
+          iconKey: 'medal',
+        },
+      },
+    ]);
+
+    const result = await service.getGamificationProfile(authUser);
+
+    expect(result.equippedCosmetics).toEqual([
+      {
+        slot: 'HAT',
+        code: 'party_hat',
+        iconKey: 'hat_party',
+      },
+      {
+        slot: 'ACCESSORY',
+        code: 'medal',
+        iconKey: 'medal',
+      },
+    ]);
+
+    expect(prisma.userInventoryItem.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        equipped: true,
+        cosmeticItem: {
+          isActive: true,
+        },
+      },
+      include: {
+        cosmeticItem: {
+          select: {
+            slot: true,
+            code: true,
+            iconKey: true,
+          },
+        },
+      },
+    });
+  });
+
+  it('will return the reason for the mascots mood', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+      gamificationProfile: {
+        coinBalance: 145,
+        xp: 320,
+        mascotLevel: 3,
+        mascotMood: MascotMood.CELEBRATING,
+        currentPaymentStreak: 4,
+        longestPaymentStreak: 6,
+        currentKnowledgeStreak: 1,
+        longestKnowledgeStreak: 3,
+      },
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.userEvent.findMany.mockResolvedValue([
+      {
+        metadata: {
+          mascotMood: MascotMood.CELEBRATING,
+          moodReason: 'Earned the First On-Time Payment badge',
+        },
+      },
+    ]);
+
+    const result = await service.getGamificationProfile(authUser);
+
+    expect(result.moodReason).toBe('Earned the First On-Time Payment badge');
+  });
+
+  it('will return a mood reason of null after it has decayed back to NEUTRAL', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+      gamificationProfile: {
+        coinBalance: 145,
+        xp: 320,
+        mascotLevel: 1,
+        mascotMood: MascotMood.NEUTRAL,
+        currentPaymentStreak: 4,
+        longestPaymentStreak: 6,
+        currentKnowledgeStreak: 1,
+        longestKnowledgeStreak: 3,
+      },
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.userEvent.findMany.mockResolvedValue([
+      {
+        metadata: {
+          mascotMood: MascotMood.HAPPY,
+          moodReason: 'Quiz completed',
+        },
+      },
+    ]);
+
+    const result = await service.getGamificationProfile(authUser);
+
+    expect(result.moodReason).toBeNull();
+  });
 });

@@ -134,4 +134,167 @@ describe('SchedulerService', () => {
       });
     });
   });
+
+  describe('decayMascotMoods', () => {
+    const now = new Date('2026-08-30T12:00:00.000Z');
+
+    it('will leave moods alone when they are not old enough to decay yet', async () => {
+      prisma.gamificationProfile.findMany.mockResolvedValue([]);
+
+      const result = await service.decayMascotMoods(now);
+
+      expect(prisma.gamificationProfile.updateMany).not.toHaveBeenCalled();
+      expect(result).toBe(0);
+    });
+
+    it('will not decay the same mood again at a later time', async () => {
+      const updatedAt = new Date('2026-08-29T12:00:00.000Z');
+
+      prisma.gamificationProfile.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 'profile-1',
+            mascotMood: 'CELEBRATING',
+            mascotMoodUpdatedAt: updatedAt,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+
+      prisma.gamificationProfile.updateMany.mockResolvedValue({
+        count: 1,
+      });
+
+      const firstResult = await service.decayMascotMoods(now);
+      const secondResult = await service.decayMascotMoods(
+        new Date('2026-08-30T12:01:00.000Z'),
+      );
+
+      expect(firstResult).toBe(1);
+      expect(secondResult).toBe(0);
+
+      expect(prisma.gamificationProfile.updateMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('will decay HAPPY STRESSED and SAD after 72 hours', async () => {
+      const updatedAt = new Date('2026-08-27T12:00:00.000Z');
+
+      prisma.gamificationProfile.findMany.mockResolvedValue([
+        {
+          id: 'profile-happy',
+          mascotMood: 'HAPPY',
+          mascotMoodUpdatedAt: updatedAt,
+        },
+        {
+          id: 'profile-stressed',
+          mascotMood: 'STRESSED',
+          mascotMoodUpdatedAt: updatedAt,
+        },
+        {
+          id: 'profile-sad',
+          mascotMood: 'SAD',
+          mascotMoodUpdatedAt: updatedAt,
+        },
+      ]);
+
+      prisma.gamificationProfile.updateMany.mockResolvedValue({
+        count: 1,
+      });
+
+      const result = await service.decayMascotMoods(now);
+
+      expect(prisma.gamificationProfile.updateMany).toHaveBeenCalledTimes(3);
+
+      expect(result).toBe(3);
+    });
+
+    it('will decay CELEBRATING after 24 hours', async () => {
+      const updatedAt = new Date('2026-08-29T12:00:00.000Z');
+
+      prisma.gamificationProfile.findMany.mockResolvedValue([
+        {
+          id: 'profile-1',
+          mascotMood: 'CELEBRATING',
+          mascotMoodUpdatedAt: updatedAt,
+        },
+      ]);
+
+      prisma.gamificationProfile.updateMany.mockResolvedValue({
+        count: 1,
+      });
+
+      const result = await service.decayMascotMoods(now);
+
+      expect(prisma.gamificationProfile.findMany).toHaveBeenCalledWith({
+        where: {
+          OR: [
+            {
+              mascotMood: 'CELEBRATING',
+              mascotMoodUpdatedAt: {
+                lte: new Date('2026-08-29T12:00:00.000Z'),
+              },
+            },
+            {
+              mascotMood: {
+                in: ['HAPPY', 'SAD', 'STRESSED'],
+              },
+              mascotMoodUpdatedAt: {
+                lte: new Date('2026-08-27T12:00:00.000Z'),
+              },
+            },
+          ],
+        },
+        select: {
+          id: true,
+          mascotMood: true,
+          mascotMoodUpdatedAt: true,
+        },
+      });
+
+      expect(prisma.gamificationProfile.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'profile-1',
+          mascotMood: 'CELEBRATING',
+          mascotMoodUpdatedAt: updatedAt,
+        },
+        data: {
+          mascotMood: 'NEUTRAL',
+          mascotMoodUpdatedAt: now,
+        },
+      });
+
+      expect(result).toBe(1);
+    });
+
+    it('will not overwrite a new mascot reaction with an old decay', async () => {
+      const oldUpdatedAt = new Date('2026-08-27T12:00:00.000Z');
+
+      prisma.gamificationProfile.findMany.mockResolvedValue([
+        {
+          id: 'profile-1',
+          mascotMood: 'SAD',
+          mascotMoodUpdatedAt: oldUpdatedAt,
+        },
+      ]);
+
+      prisma.gamificationProfile.updateMany.mockResolvedValue({
+        count: 0,
+      });
+
+      const result = await service.decayMascotMoods(now);
+
+      expect(prisma.gamificationProfile.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'profile-1',
+          mascotMood: 'SAD',
+          mascotMoodUpdatedAt: oldUpdatedAt,
+        },
+        data: {
+          mascotMood: 'NEUTRAL',
+          mascotMoodUpdatedAt: now,
+        },
+      });
+
+      expect(result).toBe(0);
+    });
+  });
 });

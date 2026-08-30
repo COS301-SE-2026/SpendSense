@@ -162,6 +162,12 @@ describe('BadgeEngineService', () => {
       reason: 'Badge unlock: On-Time Starter',
       sourceEventId: 'badge-event-1',
     });
+    expect(rewardService.setMascotMood).toHaveBeenCalledWith(transaction, {
+      userId: 'user-1',
+      mood: 'CELEBRATING',
+      reason: 'Earned the On-Time Starter badge',
+      sourceEventId: 'badge-event-1',
+    });
     expect(notificationsService.create).toHaveBeenCalledWith(
       {
         userId: 'user-1',
