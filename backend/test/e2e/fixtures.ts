@@ -12,12 +12,14 @@ import { createUser } from '../../../test-support/factories/user';
 import { seedBadges } from '../../prisma/seed/badges';
 import { seedCategories } from '../../prisma/seed/categories';
 import { seedQuizzes } from '../../prisma/seed/quizzes';
+import { seedCosmetics } from '../../prisma/seed/cosmetics';
 
 async function resetAndSeed(prisma: PrismaClient): Promise<void> {
   await resetE2eDatabase(prisma);
   await seedCategories(prisma);
   await seedBadges(prisma);
   await seedQuizzes(prisma);
+  await seedCosmetics(prisma);
 }
 
 export async function createApiE2eFixture() {
