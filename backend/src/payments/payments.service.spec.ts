@@ -19,7 +19,54 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { BadgeEngineService } from '../gamification/badge-engine.service';
 import { RewardService } from '../rewards/reward.service';
 
-// to run the tests in this file by itself: npm test -- payments.service.spec.ts
+import { CreditScoreService } from '../credit-score/credit-score.service'; // we need to mock the credit score service bc of the changes in payments.service.ts
+
+
+// below is a mock credit score service with the new return structure
+type MockScoreImpact = {
+  scoreEventId: string;
+  scoreBefore: number;
+  scoreAfter: number;
+  scoreDelta: number;
+  tierBefore: ScoreTier;
+  tierAfter: ScoreTier;
+  explanation: string;
+  onTimePaymentCount: number;
+  latePaymentCount: number;
+};
+
+const mockCreditScoreService: {
+  recalculateAfterPayment: jest.Mock<Promise<MockScoreImpact>, [unknown, unknown]>;
+} = {
+  recalculateAfterPayment: jest.fn(),
+};
+
+// and here are two reusable results for the above mocked credit score service - the main reason for these 
+// two is that their score delta's are still 8 - so that the whole test file isnt effected by the changes 
+const onTimeScoreImpact: MockScoreImpact = {
+  scoreEventId: 'score-event-1',
+  scoreBefore: 600,
+  scoreAfter: 608,
+  scoreDelta: 8,
+  tierBefore: ScoreTier.GOOD,
+  tierAfter: ScoreTier.GOOD,
+  explanation: 'Paid Mock obligation on time.',
+  onTimePaymentCount: 1,
+  latePaymentCount: 0,
+};
+
+const lateScoreImpact: MockScoreImpact = {
+  scoreEventId: 'score-event-1',
+  scoreBefore: 600,
+  scoreAfter: 592,
+  scoreDelta: -8,
+  tierBefore: ScoreTier.GOOD,
+  tierAfter: ScoreTier.FAIR,
+  explanation: 'Paid Mock obligation 3 days late.',
+  onTimePaymentCount: 0,
+  latePaymentCount: 1,
+};
+
 type PrismaMockMethod = jest.Mock<Promise<unknown>, [unknown]>;
 type TransactionCallback = (tx: PaymentsPrismaMock) => Promise<unknown>;
 
@@ -210,6 +257,9 @@ describe('PaymentsService', () => {
     });
     mockPrismaService.gamificationProfile.update.mockResolvedValue({});
     mockPrismaService.rewardTransaction.create.mockResolvedValue({});
+
+    mockCreditScoreService.recalculateAfterPayment.mockResolvedValue(onTimeScoreImpact);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentsService,
@@ -224,6 +274,10 @@ describe('PaymentsService', () => {
         {
           provide: BadgeEngineService,
           useValue: mockBadgeEngineService,
+        },
+        {
+          provide: CreditScoreService,
+          useValue: mockCreditScoreService,
         },
         RewardService,
       ],
@@ -365,6 +419,8 @@ describe('PaymentsService', () => {
       calculationMetadata: {},
       createdAt: new Date(),
     });
+
+    mockCreditScoreService.recalculateAfterPayment.mockResolvedValueOnce(lateScoreImpact);
 
     const result = await service.logPayment(dto, currentUserId);
 
@@ -604,6 +660,7 @@ describe('PaymentsService', () => {
     mockPrismaService.paymentOccurrence.update.mockResolvedValue(
       mockUpdatedOccurrence,
     );
+    mockCreditScoreService.recalculateAfterPayment.mockResolvedValue(lateScoreImpact);
     await service.logPayment(dto, currentUserId);
     expect(mockNotificationsService.create).toHaveBeenCalledTimes(1);
     expect(mockNotificationsService.create).toHaveBeenCalledWith(
@@ -633,20 +690,16 @@ describe('PaymentsService', () => {
     mockPrismaService.paymentOccurrence.update.mockResolvedValue(
       mockUpdatedOccurrence,
     );
-    mockPrismaService.creditProfile.upsert.mockResolvedValue({
-      id: 'credit-profile-1',
-      userId: currentUserId,
-      currentScore: 850,
-      previousScore: 842,
-      scoreTier: ScoreTier.ELITE,
-      onTimePaymentCount: 1,
+    mockCreditScoreService.recalculateAfterPayment.mockResolvedValueOnce({
+      scoreEventId: 'score-event-1',
+      scoreBefore: 850,
+      scoreAfter: 850,
+      scoreDelta: 0,
+      tierBefore: ScoreTier.ELITE,
+      tierAfter: ScoreTier.ELITE,
+      explanation: 'Paid Mock obligation on time.',
+      onTimePaymentCount: 2,
       latePaymentCount: 0,
-      missedPaymentCount: 0,
-      currentUtilisationScore: null,
-      lastCalculatedAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      deletedAt: null,
     });
     await service.logPayment(dto, currentUserId);
     expect(mockNotificationsService.create).not.toHaveBeenCalled();
@@ -662,7 +715,7 @@ describe('PaymentsService', () => {
       status: PaymentOccurrenceStatus.PAID,
       paidAt: new Date(dto.paidDate),
     });
-    mockPrismaService.creditProfile.update.mockRejectedValue(
+    mockCreditScoreService.recalculateAfterPayment.mockRejectedValueOnce(
       new Error('Score update failed'),
     );
     await expect(service.logPayment(dto, currentUserId)).rejects.toThrow(
@@ -754,7 +807,7 @@ describe('PaymentsService', () => {
       status: PaymentOccurrenceStatus.PAID,
       paidAt: new Date(dto.paidDate),
     });
-    mockPrismaService.creditProfile.update.mockRejectedValue(
+    mockCreditScoreService.recalculateAfterPayment.mockRejectedValueOnce(
       new Error('Score update failed'),
     );
     await expect(service.logPayment(dto, currentUserId)).rejects.toThrow(
