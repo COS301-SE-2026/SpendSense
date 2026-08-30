@@ -4,9 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { FriendRequestStatus, ScoreTier } from '@prisma/client';
+import { FriendRequestStatus, Prisma, ScoreTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { FriendRequestDirection } from './dto/list-friend-requests-query.dto';
+import type { LeaderboardMetric } from './dto/list-leaderboard-query.dto';
+
+const leaderboardPageSize = 20;
 
 @Injectable()
 export class FriendsService {
@@ -291,6 +294,40 @@ export class FriendsService {
     });
   }
 
+  async listLeaderboard(
+    userId: string,
+    metric: LeaderboardMetric,
+    page: number,
+  ) {
+    const offset = (page - 1) * leaderboardPageSize;
+    const [totalEntries, rows] = await Promise.all([
+      this.prisma.user.count({
+        where: {
+          deletedAt: null,
+          OR: [{ id: userId }, { friendOf: { some: { userId } } }],
+        },
+      }),
+      this.getLeaderboardRows(userId, metric, offset),
+    ]);
+
+    return {
+      entries: rows.map((row) => ({
+        rank: Number(row.rank),
+        userId: row.userId,
+        displayName: row.displayName ?? 'SpendSense user',
+        avatarUrl: row.avatarUrl,
+        isSelf: row.userId === userId,
+        value: Number(row.value),
+      })),
+      pagination: {
+        page,
+        pageSize: leaderboardPageSize,
+        totalEntries,
+        totalPages: Math.ceil(totalEntries / leaderboardPageSize),
+      },
+    };
+  }
+
   private async getRequestForAction(
     requestId: string,
     userId: string,
@@ -343,6 +380,42 @@ export class FriendsService {
       badgeCount: friend.badges.length,
     };
   }
+
+  private getLeaderboardRows(
+    userId: string,
+    metric: LeaderboardMetric,
+    offset: number,
+  ) {
+    const valueColumn = {
+      xp: Prisma.raw('profile."xp"'),
+      coins: Prisma.raw('profile."coinBalance"'),
+      streak: Prisma.raw('profile."currentPaymentStreak"'),
+    }[metric];
+
+    return this.prisma.$queryRaw<LeaderboardRow[]>`
+      WITH members AS (
+        SELECT ${userId} AS "id"
+        UNION
+        SELECT "friendId" FROM "Friendship" WHERE "userId" = ${userId}
+      ), ranked AS (
+        SELECT
+          user_record."id" AS "userId",
+          user_record."displayName" AS "displayName",
+          user_record."avatarUrl" AS "avatarUrl",
+          ${valueColumn} AS "value",
+          (RANK() OVER (ORDER BY ${valueColumn} DESC))::integer AS "rank"
+        FROM members
+        JOIN "User" AS user_record ON user_record."id" = members."id"
+        JOIN "GamificationProfile" AS profile ON profile."userId" = user_record."id"
+        WHERE user_record."deletedAt" IS NULL
+      )
+      SELECT "userId", "displayName", "avatarUrl", "value", "rank"
+      FROM ranked
+      ORDER BY "value" DESC, "displayName" ASC NULLS LAST, "userId" ASC
+      OFFSET ${offset}
+      LIMIT ${leaderboardPageSize}
+    `;
+  }
 }
 
 const friendSummarySelect = {
@@ -361,4 +434,12 @@ type FriendSummaryUser = {
   creditProfile: { scoreTier: ScoreTier } | null;
   gamificationProfile: { currentPaymentStreak: number } | null;
   badges: { id: string }[];
+};
+
+type LeaderboardRow = {
+  rank: number | bigint;
+  userId: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  value: number | bigint;
 };
