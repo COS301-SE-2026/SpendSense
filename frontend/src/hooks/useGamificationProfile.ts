@@ -1,5 +1,8 @@
 import {useState, useEffect, useCallback} from 'react'
+import {subscribeToCoinBalance} from '@/features/gamification/coinBalance'
 import {getGamificationProfile} from '@/features/gamification/gamificationApi'
+import type {EquippedCosmetic} from '@/features/cosmetics/cosmeticsTypes'
+import type {MascotLevelProgress} from '@/lib/mascot'
 
 // GET /gamification/profile
 
@@ -22,6 +25,9 @@ export interface GamificationProfile{
     knowledgeStreak: number
     longestKnowledgeStreak: number
     badges: GamificationBadge[]
+    mascotLevelProgress?: MascotLevelProgress
+    moodReason?: string | null
+    equippedCosmetics?: EquippedCosmetic[]
 }
 
 interface UseGamificationProfileReturn{
@@ -67,6 +73,14 @@ export function useGamificationProfile(): UseGamificationProfileReturn{
         // eslint-disable-next-line react-hooks/set-state-in-effect
         void fetchProfile()
     }, [fetchProfile])
+
+    //some endpoints (eg. accepting a wager) return the caller's new balance
+    //inline, so take that number instead of re-fetching the whole profile
+    useEffect(()=>{
+        return subscribeToCoinBalance((coins)=>{
+            setProfile((current)=> current ? {...current, coins} : current)
+        })
+    }, [])
 
     return{
         profile,
