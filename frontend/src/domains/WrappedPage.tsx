@@ -6,6 +6,7 @@ import {getLatestWrapped,type WrappedSummary} from "@/features/profile/profileAp
 import IntroSlide from "./IntroSlide"
 import ScoreSlide from "./ScoreSlide"
 import PaymentsSlide from "./paymentsSlide"
+import StreakSlide from "./StreakSlide"
 type StorySlide={
     id:string
     duration:number
@@ -276,6 +277,8 @@ export default function WrappedPage(){
                                     missedPayments={wrapped.missedPayments}
                                     onTimePaymentRate={wrapped.onTimePaymentRate}
                                 />
+                            ):slide.id==="streak"?(
+                                <StreakSlide longestPaymentStreakThisMonth={wrapped.longestPaymentStreakThisMonth}/>
                             ):(
                                 <>
                                     <motion.div
