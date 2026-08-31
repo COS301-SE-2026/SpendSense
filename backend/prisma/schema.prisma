@@ -90,7 +90,37 @@ enum NotificationType {
   REWARD
   BADGE_EARNED
   PAYMENT_STATUS
+  WAGER_INVITE
+  WAGER_RESULT
   SYSTEM
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum WagerStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+enum WagerTaskType {
+  ALL_PAYMENTS_ON_TIME
+  NO_MISSED_PAYMENTS
+  MAINTAIN_PAYMENT_STREAK
+}
+
+enum WagerOutcome {
+  WON
+  LOST
+  DRAW
 }
 
 enum ScoreTier {
@@ -212,6 +242,12 @@ model User {
   badges                 UserBadge[]
   quizSessions           QuizSession[]
   inventoryItems         UserInventoryItem[]
+  sentFriendRequests     FriendRequest[]         @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[]         @relation("FriendRequestReceiver")
+  friendships            Friendship[]            @relation("FriendshipUser")
+  friendOf               Friendship[]            @relation("FriendshipFriend")
+  wagersCreated          Wager[]                 @relation("WagersCreated")
+  wagersReceived         Wager[]                 @relation("WagersReceived")
 
   @@index([email])
   @@index([deletedAt])
@@ -477,7 +513,7 @@ model QuizSession {
   completedAt    DateTime?
   score          Int                 @default(0)
   totalQuestions Int
-  questionIds    String[]           @default([])
+  questionIds    String[]            @default([])
   coinsAwarded   Int                 @default(0)
   xpAwarded      Int                 @default(0)
   user           User                @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -623,4 +659,55 @@ model UserInventoryItem {
 
   @@unique([userId, cosmeticItemId])
   @@index([userId, equipped])
+}
+
+model FriendRequest {
+  id          String              @id @default(uuid())
+  senderId    String
+  receiverId  String
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  respondedAt DateTime?
+  sender      User                @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User                @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status, createdAt])
+  @@index([senderId, status, createdAt])
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String
+  friendId  String
+  createdAt DateTime @default(now())
+  user      User     @relation("FriendshipUser", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User     @relation("FriendshipFriend", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@index([friendId])
+}
+
+model Wager {
+  id              String        @id @default(uuid())
+  creatorId       String
+  opponentId      String
+  taskType        WagerTaskType
+  stakeAmount     Int
+  status          WagerStatus   @default(PENDING)
+  startDate       DateTime?
+  endDate         DateTime?
+  durationDays    Int
+  invitedAt       DateTime      @default(now())
+  respondedAt     DateTime?
+  resolvedAt      DateTime?
+  creatorOutcome  WagerOutcome?
+  opponentOutcome WagerOutcome?
+  taskSnapshot    Json?
+  creator         User          @relation("WagersCreated", fields: [creatorId], references: [id], onDelete: Cascade)
+  opponent        User          @relation("WagersReceived", fields: [opponentId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId, status])
+  @@index([opponentId, status])
+  @@index([status, endDate])
 }
