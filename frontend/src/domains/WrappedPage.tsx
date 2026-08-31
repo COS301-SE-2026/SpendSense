@@ -9,6 +9,7 @@ import PaymentsSlide from "./paymentsSlide"
 import StreakSlide from "./StreakSlide"
 import BadgesSlide from "./BadgesSlide"
 import LearningSlide from "./LearningSlide"
+import ShareSlide from "./ShareSlide"
 
 type StorySlide={
     id:string
@@ -291,6 +292,15 @@ export default function WrappedPage(){
                                 <LearningSlide
                                     quizzesCompleted={wrapped.quizzesCompleted}
                                     knowledgeStreakEnd={wrapped.knowledgeStreakEnd}
+                                />
+                            ):slide.id==="share"?(
+                                <ShareSlide
+                                    monthLabel={wrapped.monthLabel}
+                                    scoreDelta={wrapped.scoreDelta}
+                                    onTimePaymentRate={wrapped.onTimePaymentRate}
+                                    longestPaymentStreakThisMonth={wrapped.longestPaymentStreakThisMonth}
+                                    numberBadgesEarned={wrapped.numberBadgesEarned}
+                                    quizzesCompleted={wrapped.quizzesCompleted}
                                 />
                             ):(
                                 <>
