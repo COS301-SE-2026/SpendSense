@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InsightsService } from 'src/insights/insights.service';
 import { CreditScoreService } from 'src/credit-score/credit-score.service';
-import type { WrappedBadge, WrappedSummary } from './types/wrapped-summary.type';
+import type {
+  WrappedBadge,
+  WrappedSummary,
+} from './types/wrapped-summary.type';
 
 @Injectable()
 export class MonthlyWrappedService {
@@ -10,20 +13,35 @@ export class MonthlyWrappedService {
     private readonly prisma: PrismaService,
     private readonly insightsService: InsightsService,
     private readonly creditScoreService: CreditScoreService,
-  ) { }
+  ) {}
 
-  async getWrappedResponse(userId: string, yearMonth: string,): Promise<WrappedSummary> {
-
+  async getWrappedResponse(
+    userId: string,
+    yearMonth: string,
+  ): Promise<WrappedSummary> {
     const [year, monthNumber] = yearMonth.split('-').map(Number);
     const month = monthNumber;
-    const monthLabel = new Date(Date.UTC(year, monthNumber - 1, 1),).toLocaleString('en-ZA', { month: 'long' });
+    const monthLabel = new Date(
+      Date.UTC(year, monthNumber - 1, 1),
+    ).toLocaleString('en-ZA', { month: 'long' });
 
     const asOf = new Date(Date.UTC(year, month));
 
-    const paymentStats = await this.insightsService.getPaymentStreak(userId, asOf);
-    const scoreMovement = await this.getScoreMovementForMonth(userId, year, month);
+    const paymentStats = await this.insightsService.getPaymentStreak(
+      userId,
+      asOf,
+    );
+    const scoreMovement = await this.getScoreMovementForMonth(
+      userId,
+      year,
+      month,
+    );
 
-    const bodgestEardnedDuringMonth = await this.getBadgesForMonth(userId, year, monthNumber);
+    const bodgestEardnedDuringMonth = await this.getBadgesForMonth(
+      userId,
+      year,
+      monthNumber,
+    );
 
     return {
       month,
@@ -38,7 +56,8 @@ export class MonthlyWrappedService {
       latePayments: paymentStats.currentMonthLateCount,
       missedPayments: paymentStats.currentMonthMissedCount,
       onTimePaymentRate: paymentStats.currentMonthOnTimeRate,
-      longestPaymentStreakThisMonth: paymentStats.longestCurrentMonthOnTimeStreak,
+      longestPaymentStreakThisMonth:
+        paymentStats.longestCurrentMonthOnTimeStreak,
 
       numberBadgesEarned: bodgestEardnedDuringMonth.length,
       arrayBadgesEarned: bodgestEardnedDuringMonth,
@@ -54,7 +73,11 @@ export class MonthlyWrappedService {
   /////////////////////////////////////////////////////////////////////////
 
   // gets the badges a user has earned this month
-  async getBadgesForMonth(userId: string, year: number, month: number): Promise<WrappedBadge[]> {
+  async getBadgesForMonth(
+    userId: string,
+    year: number,
+    month: number,
+  ): Promise<WrappedBadge[]> {
     const startDate = new Date(Date.UTC(year, month - 1, 1));
     const endDate = new Date(Date.UTC(year, month, 1));
 
@@ -67,7 +90,7 @@ export class MonthlyWrappedService {
         },
       },
       orderBy: {
-        earnedAt: "asc",
+        earnedAt: 'asc',
       },
       include: {
         badgeDefinition: {
@@ -82,13 +105,11 @@ export class MonthlyWrappedService {
       },
     });
 
-
     const wrappedBadges: WrappedBadge[] = [];
 
     for (const badge of badges) {
-
       if (!badge.earnedAt) {
-        throw new Error("Badge is missing earnedAt date.",);
+        throw new Error('Badge is missing earnedAt date.');
       }
 
       wrappedBadges.push({
@@ -104,16 +125,17 @@ export class MonthlyWrappedService {
 
   /////////////////////////////////////////////////////////////////////////
   // get the score movement for the user this month
-  private async getScoreMovementForMonth(userId: string, year: number, month: number) {
-
+  private async getScoreMovementForMonth(
+    userId: string,
+    year: number,
+    month: number,
+  ) {
     const startDate = new Date(Date.UTC(year, month - 1, 1));
     const endDate = new Date(Date.UTC(year, month, 1));
 
     const [firstEventOfMonth, lastEventOfMonth] = await Promise.all([
-
-      // firstEventOfMonth = 
+      // firstEventOfMonth =
       this.prisma.scoreEvent.findFirst({
-
         where: {
           userId,
           createdAt: {
@@ -123,14 +145,12 @@ export class MonthlyWrappedService {
         },
 
         orderBy: {
-          createdAt: "asc",
+          createdAt: 'asc',
         },
-
       }),
 
-      // lastEventOfMonth = 
+      // lastEventOfMonth =
       this.prisma.scoreEvent.findFirst({
-
         where: {
           userId,
           createdAt: {
@@ -140,27 +160,23 @@ export class MonthlyWrappedService {
         },
 
         orderBy: {
-          createdAt: "desc",
+          createdAt: 'desc',
         },
-
       }),
-
-
     ]);
 
     if (firstEventOfMonth && lastEventOfMonth) {
-
       const scoreStartOfMonth = firstEventOfMonth.scoreBefore;
       const scoreEndOfMonth = lastEventOfMonth.scoreAfter;
 
       return {
         scoreStartOfMonth: scoreStartOfMonth,
         scoreEndOfMonth: scoreEndOfMonth,
-        scoreDelta: (scoreEndOfMonth - scoreStartOfMonth),
-        scoreTierEnd: this.creditScoreService.determineScoreTier(scoreEndOfMonth),
+        scoreDelta: scoreEndOfMonth - scoreStartOfMonth,
+        scoreTierEnd:
+          this.creditScoreService.determineScoreTier(scoreEndOfMonth),
         hasScoreData: true,
       };
-
     }
 
     return {
@@ -169,7 +185,6 @@ export class MonthlyWrappedService {
       scoreDelta: 0,
       scoreTierEnd: this.creditScoreService.determineScoreTier(300),
       hasScoreData: false,
-    }
-
+    };
   }
 }

@@ -2,15 +2,13 @@ import request from 'supertest';
 import { createApiE2eFixture } from './fixtures';
 import { createE2eAccessToken } from '../../../test-support/auth/e2e-auth';
 import { createMonthlyWrappedScenario } from '../../../test-support/scenarios/wrapped';
-import type { WrappedSummary } from '../../src/wrapped/types/wrapped-summary.type'
+import type { WrappedSummary } from '../../src/wrapped/types/wrapped-summary.type';
 
 type ApiResponse<T> = {
   data: T;
 };
 
 describe('Monthly Wrapped E2E', () => {
-
-
   it('E2E for getBadgesForMonth() - badges earned by the authenticated user during the requested month', async () => {
     const fixture = await createApiE2eFixture();
     const scenario = await createMonthlyWrappedScenario(fixture.prisma, {
@@ -56,15 +54,15 @@ describe('Monthly Wrapped E2E', () => {
         'Monthly Wrapped scenario badges must have earnedAt dates.',
       );
     }
-    expect(wrapped.arrayBadgesEarned[0].earnedAt).toBe(firstEarnedAt.toISOString());
-    expect(wrapped.arrayBadgesEarned[1].earnedAt).toBe(secondEarnedAt.toISOString());
-
+    expect(wrapped.arrayBadgesEarned[0].earnedAt).toBe(
+      firstEarnedAt.toISOString(),
+    );
+    expect(wrapped.arrayBadgesEarned[1].earnedAt).toBe(
+      secondEarnedAt.toISOString(),
+    );
   });
 
-
-
   it('E2E for getScoreMovementForMonth() - tracks the usersscore movement for the month', async () => {
-
     const fixture = await createApiE2eFixture();
     const scenario = await createMonthlyWrappedScenario(fixture.prisma, {
       year: 2026,
@@ -92,8 +90,5 @@ describe('Monthly Wrapped E2E', () => {
     expect(wrapped.scoreEnd).toBe(660);
     expect(wrapped.scoreDelta).toBe(60);
     expect(wrapped.scoreTierEnd).toBe('GOOD');
-
   });
-
-
 });

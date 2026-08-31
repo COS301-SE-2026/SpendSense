@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiOkResponse,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -16,7 +15,6 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import { UsersService } from '../users/users.service';
 import { MonthlyWrappedService } from './wrapped.service';
-import type { WrappedSummary } from './types/wrapped-summary.type';
 @ApiTags('wrapped')
 @ApiBearerAuth()
 @UseGuards(SupabaseJwtGuard)
