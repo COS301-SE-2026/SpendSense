@@ -8,7 +8,9 @@ import {
   PaymentOccurrence,
   UserEventSourceType,
   UserEventType,
+  ScoreTier,
 } from '@prisma/client';
+import { CreditScoreService } from '../credit-score/credit-score.service';
 
 describe('PaymentOccurrencesService', () => {
   let service: PaymentOccurrencesService;
@@ -30,6 +32,9 @@ describe('PaymentOccurrencesService', () => {
       create: jest.fn(),
     },
     $transaction: jest.fn(),
+  };
+  const mockCreditScoreService = {
+    recalculateAfterOccurrenceStatusChange: jest.fn(),
   };
 
   const buildOccurrence = (
@@ -74,6 +79,21 @@ describe('PaymentOccurrencesService', () => {
       (callback: (tx: typeof transaction) => unknown) => callback(transaction),
     );
 
+    mockCreditScoreService.recalculateAfterOccurrenceStatusChange.mockResolvedValue(
+      {
+        scoreEventId: 'mock-scoreEventId',
+        scoreBefore: 600,
+        scoreAfter: 580,
+        scoreDelta: -20,
+        tierBefore: ScoreTier.GOOD,
+        tierAfter: ScoreTier.FAIR,
+        explanation: 'Payment overdue.',
+        onTimePaymentCount: 0,
+        latePaymentCount: 0,
+        missedPaymentCount: 0,
+      },
+    );
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PaymentOccurrencesService,
@@ -84,6 +104,10 @@ describe('PaymentOccurrencesService', () => {
         {
           provide: RewardService,
           useValue: rewardService,
+        },
+        {
+          provide: CreditScoreService,
+          useValue: mockCreditScoreService,
         },
       ],
     }).compile();

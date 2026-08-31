@@ -36,11 +36,12 @@ export function FriendAvatar({
 	size = "md",
 	className,
 }: Readonly<{
-	displayName: string
+	displayName?: string | null
 	avatarUrl?: string | null
 	size?: AvatarSize
 	className?: string
 }>) {
+	const safeDisplayName = displayName?.trim() || "Unknown user"
 	const base = cn(
 		"flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#091828] font-bold dark:border-[#2d3449]",
 		sizeStyles[size],
@@ -48,12 +49,12 @@ export function FriendAvatar({
 	)
 
 	if (avatarUrl) {
-		return <img src={avatarUrl} alt={displayName} className={cn(base, "object-cover")} />
+		return <img src={avatarUrl} alt={safeDisplayName} className={cn(base, "object-cover")} />
 	}
 
 	return (
-		<div className={cn(base, toneForName(displayName))} aria-hidden="true">
-			{initialsFromName(displayName)}
+		<div className={cn(base, toneForName(safeDisplayName))} aria-hidden="true">
+			{initialsFromName(safeDisplayName)}
 		</div>
 	)
 }
