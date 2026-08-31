@@ -7,6 +7,8 @@ import IntroSlide from "./IntroSlide"
 import ScoreSlide from "./ScoreSlide"
 import PaymentsSlide from "./paymentsSlide"
 import StreakSlide from "./StreakSlide"
+import BadgesSlide from "./BadgesSlide"
+
 type StorySlide={
     id:string
     duration:number
@@ -279,6 +281,11 @@ export default function WrappedPage(){
                                 />
                             ):slide.id==="streak"?(
                                 <StreakSlide longestPaymentStreakThisMonth={wrapped.longestPaymentStreakThisMonth}/>
+                            ):slide.id==="achievements"?(
+                                <BadgesSlide
+                                    numberBadgesEarned={wrapped.numberBadgesEarned}
+                                    arrayBadgesEarned={wrapped.arrayBadgesEarned}
+                                />
                             ):(
                                 <>
                                     <motion.div
