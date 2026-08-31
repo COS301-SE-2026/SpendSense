@@ -752,7 +752,7 @@ export class CreditScoreService {
     return committedAmount > monthlyBudget;
   }
 
-  private determineScoreTier(finalCreditScore: number): ScoreTier {
+  determineScoreTier(finalCreditScore: number): ScoreTier {
     if (finalCreditScore >= 300 && finalCreditScore <= 579) {
       return ScoreTier.BUILDING;
     }

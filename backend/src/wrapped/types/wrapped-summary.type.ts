@@ -22,7 +22,8 @@ export type WrappedSummary = {
   onTimePaymentRate: number;
   longestPaymentStreakThisMonth: number;
 
-  badgesEarned: WrappedBadge[];
+  numberBadgesEarned: number ;
+  arrayBadgesEarned: WrappedBadge[];
 
   coinsEarned: number;
   quizzesCompleted: number;

@@ -16,7 +16,7 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
 import { UsersService } from '../users/users.service';
 import { MonthlyWrappedService } from './wrapped.service';
-
+import type { WrappedSummary } from './types/wrapped-summary.type';
 @ApiTags('wrapped')
 @ApiBearerAuth()
 @UseGuards(SupabaseJwtGuard)
@@ -41,34 +41,6 @@ export class MonthlyWrappedController {
     status: 401,
     description: 'Unauthorised',
   })
-  @ApiOkResponse({
-    description: '',
-    schema: {
-      example: {
-        year: 2026,
-        month: 8,
-        badgesEarned: 2,
-        badges: [
-          {
-            badgeKey: 'FIRST_OBLIGATION_CREATED',
-            name: 'First Obligation',
-            description: 'Created your first tracked financial obligation',
-            category: 'OBLIGATION',
-            iconKey: 'plus-circle',
-            earnedAt: '2026-08-04T15:05:00.000Z',
-          },
-          {
-            badgeKey: 'FIRST_ON_TIME_PAYMENT',
-            name: 'On-time Starter',
-            description: 'Logged your first on-time payment',
-            category: 'PAYMENT',
-            iconKey: 'check-circle',
-            earnedAt: '2026-08-14T15:05:00.000Z',
-          },
-        ],
-      },
-    },
-  })
   async getMonthlyWrapped(@CurrentAuthUser() authUser: AuthUser) {
     const user = await this.usersService.findOrCreateUser(authUser);
     const currentDate = new Date();
@@ -84,6 +56,6 @@ export class MonthlyWrappedController {
     ) {
       throw new BadRequestException('Invalid year or month');
     }
-    return this.monthlyWrappedService.getBadgesForMonth(user.id, year, month);
+    return this.monthlyWrappedService.getWrappedResponse(user.id, '2026-08');
   }
 }
