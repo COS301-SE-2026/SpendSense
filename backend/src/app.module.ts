@@ -19,6 +19,7 @@ import { QuizModule } from './quiz/quiz.module';
 import { InsightsModule } from './insights/insights.module';
 import { CreditScoreModule } from './credit-score/credit-score.module';
 import { RewardModule } from './rewards/reward.module';
+import { MonthlyWrappedModule } from './wrapped/wrapped.module';
 import { FriendsModule } from './friends/friends.module';
 import { WagersModule } from './wagers/wagers.module';
 
@@ -42,6 +43,7 @@ import { WagersModule } from './wagers/wagers.module';
     InsightsModule,
     CreditScoreModule,
     RewardModule,
+    MonthlyWrappedModule,
     FriendsModule,
     WagersModule,
   ],

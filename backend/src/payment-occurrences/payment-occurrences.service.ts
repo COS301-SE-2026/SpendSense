@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaymentOccurrenceStatus } from '@prisma/client';
+import { PaymentOccurrenceStatus, ScoreEventType } from '@prisma/client';
 import { UpcomingOccurrencesDto } from './dto/upcoming-occurrences.dto';
 import {
   MascotMood,
@@ -10,12 +10,14 @@ import {
   UserEventSourceType,
 } from '@prisma/client';
 import { RewardService } from '../rewards/reward.service';
+import { CreditScoreService } from '../credit-score/credit-score.service';
 
 @Injectable()
 export class PaymentOccurrencesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rewardService: RewardService,
+    private readonly creditScoreService: CreditScoreService,
   ) {}
 
   // upcomming list
@@ -213,6 +215,16 @@ export class PaymentOccurrencesService {
           },
         });
 
+        await this.creditScoreService.recalculateAfterOccurrenceStatusChange(
+          transaction,
+          {
+            userId: occurrence.userId,
+            occurrenceId: occurrence.id,
+            eventType: ScoreEventType.PAYMENT_OVERDUE,
+            explanation: 'Payment overdue',
+          },
+        );
+
         await this.createOccurrenceStatusNotification(
           transaction,
           occurrence,
@@ -253,6 +265,16 @@ export class PaymentOccurrencesService {
             status: PaymentOccurrenceStatus.MISSED,
           },
         });
+
+        await this.creditScoreService.recalculateAfterOccurrenceStatusChange(
+          transaction,
+          {
+            userId: occurrence.userId,
+            occurrenceId: occurrence.id,
+            eventType: ScoreEventType.PAYMENT_MISSED,
+            explanation: 'Payment missed',
+          },
+        );
 
         await this.createOccurrenceStatusNotification(
           transaction,
