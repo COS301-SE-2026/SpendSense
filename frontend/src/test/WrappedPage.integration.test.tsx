@@ -158,6 +158,17 @@ function previous(){
     fireEvent.click(screen.getByRole("button",{name:"Previous story"}))
 }
 
+async function goToStory(story:number){
+    renderWrapped()
+    await waitForIntro()
+    for(let index=1;index<story;index++){
+        next()
+    }
+    await waitFor(()=>{
+        expect(screen.getByText(`${story}/7`)).toBeInTheDocument()
+    })
+}
+
 describe("WrappedPage",()=>{
     beforeEach(()=>{
         vi.clearAllMocks()
@@ -172,10 +183,8 @@ describe("WrappedPage",()=>{
         expect(screen.getByText("Getting your Wrapped ready...")).toBeInTheDocument()
     })
     it("loads the latest Wrapped from the API",async()=>{
-        renderWrapped()
-        await waitForIntro()
+        await goToStory(1)
         expect(mockedGetLatestWrapped).toHaveBeenCalledTimes(1)
-        expect(screen.getByText("1/7")).toBeInTheDocument()
     })
     it("shows the request error separately from Wrapped data",async()=>{
         mockedGetLatestWrapped.mockRejectedValueOnce(new Error("Network error"))
@@ -187,89 +196,37 @@ describe("WrappedPage",()=>{
         expect(screen.getByRole("button",{name:"Try again"})).toBeInTheDocument()
     })
     it("renders the month returned by the backend on the intro slide",async()=>{
-        renderWrapped()
-        await waitForIntro()
+        await goToStory(1)
         expect(screen.getByText("Intro August")).toBeInTheDocument()
     })
     it("passes score values to the score slide",async()=>{
-        renderWrapped()
-        await waitForIntro()
-        next()
-        await waitFor(()=>{
-            expect(screen.getByText("Score 642 681 39 GOOD")).toBeInTheDocument()
-        })
-        expect(screen.getByText("2/7")).toBeInTheDocument()
+        await goToStory(2)
+        expect(screen.getByText("Score 642 681 39 GOOD")).toBeInTheDocument()
     })
     it("passes payment values to the payments slide",async()=>{
-        renderWrapped()
-        await waitForIntro()
-        next()
-        next()
-        await waitFor(()=>{
-            expect(screen.getByText("Payments 3 1 1 0.6")).toBeInTheDocument()
-        })
-        expect(screen.getByText("3/7")).toBeInTheDocument()
+        await goToStory(3)
+        expect(screen.getByText("Payments 3 1 1 0.6")).toBeInTheDocument()
     })
     it("passes the best payment streak to the streak slide",async()=>{
-        renderWrapped()
-        await waitForIntro()
-        next()
-        next()
-        next()
-        await waitFor(()=>{
-            expect(screen.getByText("Streak 2")).toBeInTheDocument()
-        })
-
-        expect(screen.getByText("4/7")).toBeInTheDocument()
+        await goToStory(4)
+        expect(screen.getByText("Streak 2")).toBeInTheDocument()
     })
     it("passes earned badge data to the badges slide",async()=>{
-        renderWrapped()
-        await waitForIntro()
-        next()
-        next()
-        next()
-        next()
-        await waitFor(()=>{
-            expect(screen.getByText(/Badges 2/)).toBeInTheDocument()
-        })
+        await goToStory(5)
+        expect(screen.getByText(/Badges 2/)).toBeInTheDocument()
         expect(screen.getByText(/On-Time Starter/)).toBeInTheDocument()
         expect(screen.getByText(/Three Payment Streak/)).toBeInTheDocument()
-        expect(screen.getByText("5/7")).toBeInTheDocument()
     })
     it("passes quiz data to the learning slide",async()=>{
-        renderWrapped()
-        await waitForIntro()
-        next()
-        next()
-        next()
-        next()
-        next()
-        await waitFor(()=>{
-            expect(screen.getByText("Learning 2 0")).toBeInTheDocument()
-        })
-        expect(screen.getByText("6/7")).toBeInTheDocument()
+        await goToStory(6)
+        expect(screen.getByText("Learning 2 0")).toBeInTheDocument()
     })
     it("passes the Wrapped summary to the share slide",async()=>{
-        renderWrapped()
-        await waitForIntro()
-        next()
-        next()
-        next()
-        next()
-        next()
-        next()
-        await waitFor(()=>{
-            expect(screen.getByText("Share August 39 0.6 2 2 2")).toBeInTheDocument()
-        })
-        expect(screen.getByText("7/7")).toBeInTheDocument()
+        await goToStory(7)
+        expect(screen.getByText("Share August 39 0.6 2 2 2")).toBeInTheDocument()
     })
     it("moves backward to the previous story",async()=>{
-        renderWrapped()
-        await waitForIntro()
-        next()
-        await waitFor(()=>{
-            expect(screen.getByText("2/7")).toBeInTheDocument()
-        })
+        await goToStory(2)
         previous()
         await waitFor(()=>{
             expect(screen.getByText("Intro August")).toBeInTheDocument()
@@ -277,19 +234,11 @@ describe("WrappedPage",()=>{
         expect(screen.getByText("1/7")).toBeInTheDocument()
     })
     it("disables previous navigation on the first story",async()=>{
-        renderWrapped()
-        await waitForIntro()
+        await goToStory(1)
         expect(screen.getByRole("button",{name:"Previous story"})).toBeDisabled()
     })
     it("disables next navigation on the final story",async()=>{
-        renderWrapped()
-        await waitForIntro()
-        for(let index=0;index<6;index++){
-            next()
-        }
-        await waitFor(()=>{
-            expect(screen.getByText("7/7")).toBeInTheDocument()
-        })
+        await goToStory(7)
         expect(screen.getByRole("button",{name:"Next story"})).toBeDisabled()
     })
     it("auto advances after the intro duration",async()=>{
@@ -306,14 +255,8 @@ describe("WrappedPage",()=>{
         expect(screen.getByText("2/7")).toBeInTheDocument()
     })
     it("does not auto advance past the final story",async()=>{
-        renderWrapped()
-        await waitForIntro()
-        for(let index=0;index<6;index++){
-            next()
-        }
-        await waitFor(()=>{
-            expect(screen.getByText("7/7")).toBeInTheDocument()
-        })
+        await goToStory(7)
         expect(screen.getByRole("button",{name:"Next story"})).toBeDisabled()
+        expect(screen.getByText("Share August 39 0.6 2 2 2")).toBeInTheDocument()
     })
 })
