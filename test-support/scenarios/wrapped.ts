@@ -45,9 +45,29 @@ export type MonthlyWrappedScenario = {
             };
         };
     };
+
+
+    creditProfile: {
+        is:string,
+        previousScore: number;
+        currentScore:number;
+    };
+
+    scoreEvents:{
+        firstScoreEventInMonth : {
+            id:string;
+            scoreBefore:number;
+            scoreAfter:number;
+        };
+        lastScoreEventInMonth :{
+            id:string;
+            scoreBefore:number;
+            scoreAfter:number;
+        };
+    };
 };
 
-export async function createMonthlyWrappedWithBadges(prisma: any, options: MonthlyWrappedScenarioOptions = {}) : Promise<MonthlyWrappedScenario> {
+export async function createMonthlyWrappedScenario(prisma: any, options: MonthlyWrappedScenarioOptions = {}): Promise<MonthlyWrappedScenario> {
 
     const year = options.year ?? 2026;
     const month = options.month ?? 8;
@@ -85,6 +105,111 @@ export async function createMonthlyWrappedWithBadges(prisma: any, options: Month
         earnedAt: new Date(Date.UTC(year, month - 1, 20, 10, 0, 0)),
     });
 
+    // creating credit profile for the user to test score movement
+    const creditProfile = await prisma.creditProfile.create({
+
+        data: {
+            userId: user.id,
+            previousScore: 630,
+            currentScore: 660,
+            scoreTier: 'GOOD',
+        },
+
+    })
+
+
+    const ScoreEvents = await Promise.all([
+
+        // this is a credit score movement in JULY, this should not count 
+        prisma.scoreEvent.create({
+            data: {
+                userId: user.id,
+                creditProfileId: creditProfile.id,
+                eventType: 'MANUAL_ADJUSTMENT',
+                pointsDelta: 20,
+                scoreBefore: 600,
+                scoreAfter: 620,
+                explanation: 'JULY monthlt score movement',
+                createdAt: new Date(Date.UTC(year, month - 2, 10, 12)),
+
+            },
+        }),
+
+        // this is the first credit score movement in the current month (currently august) so this should be in wrapped response
+        prisma.scoreEvent.create({
+            data: {
+                userId: user.id,
+                creditProfileId: creditProfile.id,
+                eventType: 'MANUAL_ADJUSTMENT',
+                pointsDelta: 20,
+                scoreBefore: 600,
+                scoreAfter: 620,
+                explanation: 'first monthlt score movement',
+                createdAt: new Date(Date.UTC(year, month - 1, 10, 12)),
+
+            },
+        }),
+
+        prisma.scoreEvent.create({
+            data: {
+                userId: user.id,
+                creditProfileId: creditProfile.id,
+                eventType: 'MANUAL_ADJUSTMENT',
+                pointsDelta: 25,
+                scoreBefore: 620,
+                scoreAfter: 645,
+                explanation: 'second monthlt score movement',
+                createdAt: new Date(Date.UTC(year, month - 1, 11, 12)),
+
+            },
+        }),
+
+        prisma.scoreEvent.create({
+            data: {
+                userId: user.id,
+                creditProfileId: creditProfile.id,
+                eventType: 'MANUAL_ADJUSTMENT',
+                pointsDelta: -15,
+                scoreBefore: 645,
+                scoreAfter: 630,
+                explanation: 'third monthlt score movement',
+                createdAt: new Date(Date.UTC(year, month - 1, 12, 12)),
+
+            },
+        }),
+
+        prisma.scoreEvent.create({
+            data: {
+                userId: user.id,
+                creditProfileId: creditProfile.id,
+                eventType: 'MANUAL_ADJUSTMENT',
+                pointsDelta: 30,
+                scoreBefore: 630,
+                scoreAfter: 660,
+                explanation: 'LAST monthlt score movement',
+                createdAt: new Date(Date.UTC(year, month, - 1, 13, 12)),
+
+            },
+        }),
+
+        // this is a score event taking place in septermber, therefore wrapped should not include it.
+        prisma.scoreEvent.create({
+            data: {
+                userId: user.id,
+                creditProfileId: creditProfile.id,
+                eventType: 'MANUAL_ADJUSTMENT',
+                pointsDelta: 40,
+                scoreBefore: 660,
+                scoreAfter: 700,
+                explanation: 'Next months first monthlt score movement',
+                createdAt: new Date(Date.UTC(year, month ,1, 12)),
+
+            },
+        }),
+
+    ])
+
+
     return {
         user,
         year,
@@ -99,6 +224,11 @@ export async function createMonthlyWrappedWithBadges(prisma: any, options: Month
                 userBadge: secondUserBadge,
             },
         },
+        creditProfile,
+        scoreEvents:{
+            firstScoreEventInMonth: ScoreEvents[1],
+            lastScoreEventInMonth: ScoreEvents[4],
+        }        
     };
 }
 
