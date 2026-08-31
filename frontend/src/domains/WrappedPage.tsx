@@ -5,6 +5,7 @@ import {useNavigate} from "react-router-dom"
 import {getLatestWrapped,type WrappedSummary} from "@/features/profile/profileApi"
 import IntroSlide from "./IntroSlide"
 import ScoreSlide from "./ScoreSlide"
+import PaymentsSlide from "./paymentsSlide"
 type StorySlide={
     id:string
     duration:number
@@ -267,6 +268,13 @@ export default function WrappedPage(){
                                     scoreEnd={wrapped.scoreEnd}
                                     scoreDelta={wrapped.scoreDelta}
                                     scoreTierEnd={wrapped.scoreTierEnd}
+                                />
+                            ):slide.id==="payments"?(
+                                <PaymentsSlide
+                                    onTimePayments={wrapped.onTimePayments}
+                                    latePayments={wrapped.latePayments}
+                                    missedPayments={wrapped.missedPayments}
+                                    onTimePaymentRate={wrapped.onTimePaymentRate}
                                 />
                             ):(
                                 <>
