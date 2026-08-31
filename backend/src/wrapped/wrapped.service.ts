@@ -7,7 +7,11 @@ import type {
   WrappedCoinEvent,
   WrappedSummary,
 } from './types/wrapped-summary.type';
-import { RewardTransactionType } from '@prisma/client';
+import {
+  QuizSessionStatus,
+  QuizSessionType,
+  RewardTransactionType,
+} from '@prisma/client';
 
 @Injectable()
 export class MonthlyWrappedService {
@@ -60,6 +64,12 @@ export class MonthlyWrappedService {
       monthNumber,
     );
 
+    const knowledgeStreakEnd = await this.getKnowledgeStreakEndForMonth(
+      userId,
+      year,
+      monthNumber,
+    );
+
     const hasData =
       scoreMovement.hasScoreData ||
       paymentStats.currentMonthOnTimeCount > 0 ||
@@ -94,7 +104,7 @@ export class MonthlyWrappedService {
       coinEvents: coinSummary.cointEvents,
 
       quizzesCompleted,
-      knowledgeStreakEnd: 0,
+      knowledgeStreakEnd,
     };
   }
 
@@ -291,5 +301,46 @@ export class MonthlyWrappedService {
     });
 
     return numCompletedQuizzes;
+  }
+
+  private async getKnowledgeStreakEndForMonth(
+    userId: string,
+    year: number,
+    month: number,
+  ): Promise<number> {
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 1));
+    const sessions = await this.prisma.quizSession.findMany({
+      where: {
+        userId,
+        type: QuizSessionType.DAILY,
+        status: QuizSessionStatus.COMPLETED,
+        quizDate: { lt: endDate },
+      },
+      select: { quizDate: true },
+      orderBy: { quizDate: 'desc' },
+    });
+
+    if (!sessions[0]?.quizDate || sessions[0].quizDate < startDate) {
+      return 0;
+    }
+
+    let streak = 0;
+    let expectedDate = new Date(sessions[0].quizDate);
+
+    for (const session of sessions) {
+      if (!session.quizDate) continue;
+
+      const quizDate = session.quizDate;
+      if (quizDate.getTime() === expectedDate.getTime()) {
+        streak += 1;
+        expectedDate = new Date(expectedDate);
+        expectedDate.setUTCDate(expectedDate.getUTCDate() - 1);
+      } else if (quizDate.getTime() < expectedDate.getTime()) {
+        break;
+      }
+    }
+
+    return streak;
   }
 }
