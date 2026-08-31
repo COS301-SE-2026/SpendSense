@@ -90,10 +90,11 @@ jobs:
             ghcr.io/${{ steps.owner.outputs.lowercase }}/spendsense-ai:${{ github.sha }}
 
   migrate-database:
-    name: Apply pending Prisma migrations to Supabase
+    name: Apply pending Prisma migrations to private RDS
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
@@ -107,11 +108,68 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      - name: Configure temporary AWS credentials via GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a
+        with:
+          role-to-assume: ${{ vars.AWS_RDS_MIGRATION_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: spendsense-rds-migration-${{ github.run_id }}
+
+      - name: Install AWS Session Manager plugin
+        run: |
+          curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 \
+            'https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb' \
+            --output "$RUNNER_TEMP/session-manager-plugin.deb"
+          sudo dpkg --install "$RUNNER_TEMP/session-manager-plugin.deb"
+          session-manager-plugin --version
+
+      - name: Open temporary SSM tunnel to RDS
+        id: rds-tunnel
+        env:
+          AWS_RDS_MIGRATION_INSTANCE_ID: ${{ vars.AWS_RDS_MIGRATION_INSTANCE_ID }}
+          RDS_HOST: ${{ vars.RDS_HOST }}
+        run: |
+          set -euo pipefail
+          LOG_FILE="$RUNNER_TEMP/ssm-rds-tunnel.log"
+          nohup aws ssm start-session \
+            --target "$AWS_RDS_MIGRATION_INSTANCE_ID" \
+            --document-name AWS-StartPortForwardingSessionToRemoteHost \
+            --parameters "{\"host\":[\"$RDS_HOST\"],\"portNumber\":[\"5432\"],\"localPortNumber\":[\"5433\"]}" \
+            >"$LOG_FILE" 2>&1 &
+          TUNNEL_PID=$!
+          echo "pid=$TUNNEL_PID" >> "$GITHUB_OUTPUT"
+
+          for _ in $(seq 1 30); do
+            if nc -z 127.0.0.1 5433; then
+              echo 'SSM tunnel is listening on 127.0.0.1:5433.'
+              exit 0
+            fi
+            if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
+              cat "$LOG_FILE" >&2 || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+          echo 'Timed out waiting for the SSM tunnel.' >&2
+          cat "$LOG_FILE" >&2 || true
+          exit 1
+
       - name: Run pending migrations
         working-directory: backend
         run: npx prisma migrate deploy
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.RDS_MIGRATION_DATABASE_URL }}
+
+      - name: Close temporary SSM tunnel
+        if: ${{ always() }}
+        env:
+          TUNNEL_PID: ${{ steps.rds-tunnel.outputs.pid }}
+        run: |
+          if [ -n "$TUNNEL_PID" ] && kill -0 "$TUNNEL_PID" 2>/dev/null; then
+            kill "$TUNNEL_PID"
+            wait "$TUNNEL_PID" 2>/dev/null || true
+          fi
 
   deploy-to-ec2:
     name: Pull new images + restart containers on EC2
