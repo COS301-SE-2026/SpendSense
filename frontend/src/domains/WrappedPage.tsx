@@ -8,6 +8,7 @@ import ScoreSlide from "./ScoreSlide"
 import PaymentsSlide from "./paymentsSlide"
 import StreakSlide from "./StreakSlide"
 import BadgesSlide from "./BadgesSlide"
+import LearningSlide from "./LearningSlide"
 
 type StorySlide={
     id:string
@@ -285,6 +286,11 @@ export default function WrappedPage(){
                                 <BadgesSlide
                                     numberBadgesEarned={wrapped.numberBadgesEarned}
                                     arrayBadgesEarned={wrapped.arrayBadgesEarned}
+                                />
+                            ):slide.id==="learning"?(
+                                <LearningSlide
+                                    quizzesCompleted={wrapped.quizzesCompleted}
+                                    knowledgeStreakEnd={wrapped.knowledgeStreakEnd}
                                 />
                             ):(
                                 <>
