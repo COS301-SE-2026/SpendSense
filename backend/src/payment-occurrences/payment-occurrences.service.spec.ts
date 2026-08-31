@@ -7,6 +7,7 @@ import {
   PaymentOccurrenceStatus,
   PaymentOccurrence,
   UserEventSourceType,
+  UserEventType,
   ScoreTier,
 } from '@prisma/client';
 import { CreditScoreService } from '../credit-score/credit-score.service';
@@ -16,6 +17,7 @@ describe('PaymentOccurrencesService', () => {
   let transaction: {
     paymentOccurrence: { update: jest.Mock };
     notification: { create: jest.Mock };
+    userEvent: { create: jest.Mock };
   };
   let rewardService: {
     advanceStreak: jest.Mock;
@@ -62,6 +64,11 @@ describe('PaymentOccurrencesService', () => {
     transaction = {
       paymentOccurrence: { update: jest.fn() },
       notification: { create: jest.fn() },
+      userEvent: {
+        create: jest.fn().mockResolvedValue({
+          id: 'missed-event-1',
+        }),
+      },
     };
     rewardService = {
       advanceStreak: jest.fn(),
@@ -230,6 +237,20 @@ describe('PaymentOccurrencesService', () => {
         userId: occurrence.userId,
         mood: 'SAD',
         reason: 'Payment occurrence missed',
+        sourceEventId: 'missed-event-1',
+      });
+
+      expect(transaction.userEvent.create).toHaveBeenCalledWith({
+        data: {
+          userId: occurrence.userId,
+          eventType: UserEventType.PAYMENT_OVERDUE,
+          sourceType: UserEventSourceType.PAYMENT_OCCURRENCE,
+          sourceId: occurrence.id,
+          metadata: {
+            occurrenceId: occurrence.id,
+            transition: 'MISSED',
+          },
+        },
       });
 
       expect(rslt).toEqual({ transitionedCount: 1 });

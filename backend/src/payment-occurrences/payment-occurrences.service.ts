@@ -8,6 +8,7 @@ import {
   NotificationType,
   PaymentOccurrence,
   UserEventSourceType,
+  UserEventType,
 } from '@prisma/client';
 import { RewardService } from '../rewards/reward.service';
 import { CreditScoreService } from '../credit-score/credit-score.service';
@@ -288,10 +289,25 @@ export class PaymentOccurrencesService {
           field: 'currentPaymentStreak',
           advance: false,
         });
+
+        const missedEvent = await transaction.userEvent.create({
+          data: {
+            userId: occurrence.userId,
+            eventType: UserEventType.PAYMENT_OVERDUE,
+            sourceType: UserEventSourceType.PAYMENT_OCCURRENCE,
+            sourceId: occurrence.id,
+            metadata: {
+              occurrenceId: occurrence.id,
+              transition: 'MISSED',
+            },
+          },
+        });
+
         await this.rewardService.setMascotMood(transaction, {
           userId: occurrence.userId,
           mood: MascotMood.SAD,
           reason: 'Payment occurrence missed',
+          sourceEventId: missedEvent.id,
         });
       });
 

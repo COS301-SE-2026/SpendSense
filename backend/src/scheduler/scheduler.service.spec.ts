@@ -1,6 +1,7 @@
 import { SchedulerService } from './scheduler.service';
 import type { RemindersService } from '../reminders/reminders.service';
 import type { PaymentOccurrencesService } from '../payment-occurrences/payment-occurrences.service';
+import type { PrismaService } from '../prisma/prisma.service';
 import {
   NotificationType,
   PaymentOccurrenceStatus,
@@ -24,11 +25,18 @@ describe('SchedulerService', () => {
       'transitionOverdueOccurrences' | 'transitionMissedOccurrence'
     >
   >;
+
   const prisma = {
     $transaction: jest.fn(),
+
     wager: {
       updateMany: jest.fn(),
       findMany: jest.fn(),
+    },
+
+    gamificationProfile: {
+      findMany: jest.fn(),
+      updateMany: jest.fn(),
     },
   };
   const rewardService = {
@@ -84,6 +92,8 @@ describe('SchedulerService', () => {
   };
 
   beforeEach(() => {
+    jest.clearAllMocks();
+
     remindersService = {
       processDueReminders: jest.fn(),
     };
@@ -93,18 +103,26 @@ describe('SchedulerService', () => {
       transitionMissedOccurrence: jest.fn(),
     };
 
-    jest.clearAllMocks();
     remindersService.processDueReminders.mockResolvedValue({
       processedCount: 0,
     });
+
     paymentOccurrencesService.transitionOverdueOccurrences.mockResolvedValue({
       transitionedCount: 0,
     });
+
     paymentOccurrencesService.transitionMissedOccurrence.mockResolvedValue({
       transitionedCount: 0,
     });
+
     prisma.wager.updateMany.mockResolvedValue({ count: 0 });
     prisma.wager.findMany.mockResolvedValue([]);
+
+    prisma.gamificationProfile.findMany.mockResolvedValue([]);
+    prisma.gamificationProfile.updateMany.mockResolvedValue({
+      count: 0,
+    });
+
     service = new SchedulerService(
       remindersService as unknown as RemindersService,
       paymentOccurrencesService as unknown as PaymentOccurrencesService,
@@ -143,7 +161,7 @@ describe('SchedulerService', () => {
   });
 
   describe('runAll', () => {
-    it('run all three methods and then combine the counts', async () => {
+    it('run all scheduled methods and combine the counts', async () => {
       paymentOccurrencesService.transitionOverdueOccurrences.mockResolvedValue({
         transitionedCount: 2,
       });
@@ -168,6 +186,7 @@ describe('SchedulerService', () => {
         overdueTransitionedCount: 2,
         missedTransitionedCount: 1,
         processedCount: 3,
+        mascotMoodsDecayedCount: 0,
         expiredWagerCount: 0,
         resolvedWagerCount: 0,
       });
@@ -180,6 +199,7 @@ describe('SchedulerService', () => {
         overdueTransitionedCount: 0,
         missedTransitionedCount: 0,
         processedCount: 0,
+        mascotMoodsDecayedCount: 0,
         expiredWagerCount: 0,
         resolvedWagerCount: 0,
       });
@@ -452,6 +472,169 @@ describe('SchedulerService', () => {
       expect(rewardService.grantCoins).toHaveBeenCalledTimes(2);
       expect(rslt.resolvedWagerCount).toBe(1);
       expect(notificationsService.create).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('decayMascotMoods', () => {
+    const now = new Date('2026-08-30T12:00:00.000Z');
+
+    it('will leave moods alone when they are not old enough to decay yet', async () => {
+      prisma.gamificationProfile.findMany.mockResolvedValue([]);
+
+      const result = await service.decayMascotMoods(now);
+
+      expect(prisma.gamificationProfile.updateMany).not.toHaveBeenCalled();
+      expect(result).toBe(0);
+    });
+
+    it('will not decay the same mood again at a later time', async () => {
+      const updatedAt = new Date('2026-08-29T12:00:00.000Z');
+
+      prisma.gamificationProfile.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 'profile-1',
+            mascotMood: 'CELEBRATING',
+            mascotMoodUpdatedAt: updatedAt,
+          },
+        ])
+        .mockResolvedValueOnce([]);
+
+      prisma.gamificationProfile.updateMany.mockResolvedValue({
+        count: 1,
+      });
+
+      const firstResult = await service.decayMascotMoods(now);
+      const secondResult = await service.decayMascotMoods(
+        new Date('2026-08-30T12:01:00.000Z'),
+      );
+
+      expect(firstResult).toBe(1);
+      expect(secondResult).toBe(0);
+
+      expect(prisma.gamificationProfile.updateMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('will decay HAPPY STRESSED and SAD after 72 hours', async () => {
+      const updatedAt = new Date('2026-08-27T12:00:00.000Z');
+
+      prisma.gamificationProfile.findMany.mockResolvedValue([
+        {
+          id: 'profile-happy',
+          mascotMood: 'HAPPY',
+          mascotMoodUpdatedAt: updatedAt,
+        },
+        {
+          id: 'profile-stressed',
+          mascotMood: 'STRESSED',
+          mascotMoodUpdatedAt: updatedAt,
+        },
+        {
+          id: 'profile-sad',
+          mascotMood: 'SAD',
+          mascotMoodUpdatedAt: updatedAt,
+        },
+      ]);
+
+      prisma.gamificationProfile.updateMany.mockResolvedValue({
+        count: 1,
+      });
+
+      const result = await service.decayMascotMoods(now);
+
+      expect(prisma.gamificationProfile.updateMany).toHaveBeenCalledTimes(3);
+
+      expect(result).toBe(3);
+    });
+
+    it('will decay CELEBRATING after 24 hours', async () => {
+      const updatedAt = new Date('2026-08-29T12:00:00.000Z');
+
+      prisma.gamificationProfile.findMany.mockResolvedValue([
+        {
+          id: 'profile-1',
+          mascotMood: 'CELEBRATING',
+          mascotMoodUpdatedAt: updatedAt,
+        },
+      ]);
+
+      prisma.gamificationProfile.updateMany.mockResolvedValue({
+        count: 1,
+      });
+
+      const result = await service.decayMascotMoods(now);
+
+      expect(prisma.gamificationProfile.findMany).toHaveBeenCalledWith({
+        where: {
+          OR: [
+            {
+              mascotMood: 'CELEBRATING',
+              mascotMoodUpdatedAt: {
+                lte: new Date('2026-08-29T12:00:00.000Z'),
+              },
+            },
+            {
+              mascotMood: {
+                in: ['HAPPY', 'SAD', 'STRESSED'],
+              },
+              mascotMoodUpdatedAt: {
+                lte: new Date('2026-08-27T12:00:00.000Z'),
+              },
+            },
+          ],
+        },
+        select: {
+          id: true,
+          mascotMood: true,
+          mascotMoodUpdatedAt: true,
+        },
+      });
+
+      expect(prisma.gamificationProfile.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'profile-1',
+          mascotMood: 'CELEBRATING',
+          mascotMoodUpdatedAt: updatedAt,
+        },
+        data: {
+          mascotMood: 'NEUTRAL',
+          mascotMoodUpdatedAt: now,
+        },
+      });
+
+      expect(result).toBe(1);
+    });
+
+    it('will not overwrite a new mascot reaction with an old decay', async () => {
+      const oldUpdatedAt = new Date('2026-08-27T12:00:00.000Z');
+
+      prisma.gamificationProfile.findMany.mockResolvedValue([
+        {
+          id: 'profile-1',
+          mascotMood: 'SAD',
+          mascotMoodUpdatedAt: oldUpdatedAt,
+        },
+      ]);
+
+      prisma.gamificationProfile.updateMany.mockResolvedValue({
+        count: 0,
+      });
+
+      const result = await service.decayMascotMoods(now);
+
+      expect(prisma.gamificationProfile.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'profile-1',
+          mascotMood: 'SAD',
+          mascotMoodUpdatedAt: oldUpdatedAt,
+        },
+        data: {
+          mascotMood: 'NEUTRAL',
+          mascotMoodUpdatedAt: now,
+        },
+      });
+
+      expect(result).toBe(0);
     });
   });
 });

@@ -23,12 +23,12 @@ export function LongButton({
     ...props
 }: LongButtonProps){
     const variantStyles: Record<LongButtonVariant,string> ={
-        primaryPinkBorder: "bg-[#FF6B9D] text-[#700034] border-[#FF6B9D] shadow-[3px_4px_0_#0a1929] hover:bg-[#FF85B0]",
-        primaryDark: "bg-[#0a1929] text-white border-transparent hover:bg-[#17131f]",
-        primaryPink: "bg-[#ac2a5d] text-[#3a0d23] border-transparent hover:bg-[#f74f92]",
+        primaryPinkBorder: "bg-[#FF6B9D] text-[#700034] border-[#FF6B9D] shadow-[3px_4px_0_#0a1929] hover:bg-[#FF85B0] dark:shadow-[3px_4px_0_#060e20]",
+        primaryDark: "bg-[#0a1929] text-white border-transparent hover:bg-[#17131f] dark:bg-[#1c263c] dark:border-[#2d3449] dark:hover:bg-[#2d3449]",
+        primaryPink: "bg-[#ac2a5d] text-[#3a0d23] border-transparent hover:bg-[#f74f92] dark:bg-[#ff6b9d] dark:text-[#3a0d23] dark:hover:bg-[#ff85b0]",
         primaryMint: "bg-[#72cdbc] text-[#08060d] border-transparent hover:bg-[#65c4b2]",
         primaryYellow: "bg-[#ffdc8a] text-[#08060d] border-transparent hover:bg-[#ffd372]",
-        outline: "bg-white text-[#08060d] border-[#0a1929] hover:bg-[#f4f3ec] shadow-[3px_4px_0_#0a1929]",
+        outline: "bg-white text-[#08060d] border-[#0a1929] hover:bg-[#f4f3ec] shadow-[3px_4px_0_#0a1929] dark:bg-[#131b2e] dark:text-white dark:border-[#2d3449] dark:hover:bg-[#1c263c] dark:shadow-[3px_4px_0_#060e20]",
         form:"bg-white text-[#787A80] shadow-[0_0_15px_rgba(72,187,120,0.3)] border-none dark:bg-[#131b2e] dark:text-[#a0aec0] dark:shadow-none",
     }
     const sizeStyles: Record<LongButtoneSize,string> ={
