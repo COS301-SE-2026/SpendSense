@@ -45,6 +45,7 @@ export class MonthlyWrappedController {
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
+    const yearMonth = `${year}-${String(month).padStart(2, '0')}`;
 
     if (
       !Number.isInteger(year) ||
@@ -54,6 +55,6 @@ export class MonthlyWrappedController {
     ) {
       throw new BadRequestException('Invalid year or month');
     }
-    return this.monthlyWrappedService.getWrappedResponse(user.id, '2026-08');
+    return this.monthlyWrappedService.getWrappedResponse(user.id, yearMonth);
   }
 }
