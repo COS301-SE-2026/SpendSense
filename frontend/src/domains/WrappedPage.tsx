@@ -155,7 +155,7 @@ export default function WrappedPage(){
                                     <motion.div
                                         key={`${story.id}-${activeIndex}`}
                                         initial={{width:"0%"}}
-                                        animate={{width:story.duration===0?"100%":"100%"}}
+                                        animate={{width:"100%"}}
                                         transition={{duration:story.duration===0?0.4:story.duration/1000,ease:"linear"}}
                                         className="h-full rounded-full bg-[#091828] dark:bg-white"
                                     />
