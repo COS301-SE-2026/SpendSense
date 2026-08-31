@@ -4,6 +4,7 @@ import {ArrowLeft,ChevronLeft,ChevronRight,RefreshCw,Sparkles} from "lucide-reac
 import {useNavigate} from "react-router-dom"
 import {getLatestWrapped,type WrappedSummary} from "@/features/profile/profileApi"
 import IntroSlide from "./IntroSlide"
+import ScoreSlide from "./ScoreSlide"
 type StorySlide={
     id:string
     duration:number
@@ -260,6 +261,13 @@ export default function WrappedPage(){
                         >
                             {slide.id==="intro"?(
                                 <IntroSlide monthLabel={wrapped.monthLabel}/>
+                            ):slide.id==="score"?(
+                                <ScoreSlide
+                                    scoreStart={wrapped.scoreStart}
+                                    scoreEnd={wrapped.scoreEnd}
+                                    scoreDelta={wrapped.scoreDelta}
+                                    scoreTierEnd={wrapped.scoreTierEnd}
+                                />
                             ):(
                                 <>
                                     <motion.div
