@@ -4,8 +4,10 @@ import { InsightsService } from '../insights/insights.service';
 import { CreditScoreService } from '../credit-score/credit-score.service';
 import type {
   WrappedBadge,
+  WrappedCoinEvent,
   WrappedSummary,
 } from './types/wrapped-summary.type';
+import { RewardTransactionType } from '@prisma/client';
 
 @Injectable()
 export class MonthlyWrappedService {
@@ -20,7 +22,9 @@ export class MonthlyWrappedService {
     yearMonth: string,
   ): Promise<WrappedSummary> {
     const [year, monthNumber] = yearMonth.split('-').map(Number);
+
     const month = monthNumber;
+
     const monthLabel = new Date(
       Date.UTC(year, monthNumber - 1, 1),
     ).toLocaleString('en-ZA', { month: 'long' });
@@ -31,6 +35,7 @@ export class MonthlyWrappedService {
       userId,
       asOf,
     );
+
     const scoreMovement = await this.getScoreMovementForMonth(
       userId,
       year,
@@ -43,9 +48,32 @@ export class MonthlyWrappedService {
       monthNumber,
     );
 
+    const coinSummary = await this.getCoinsSummaryForMonth(
+      userId,
+      year,
+      monthNumber,
+    );
+
+    const quizzesCompleted = await this.getQuizzesCompletedForMonth(
+      userId,
+      year,
+      monthNumber,
+    );
+
+    const hasData =
+      scoreMovement.hasScoreData ||
+      paymentStats.currentMonthOnTimeCount > 0 ||
+      paymentStats.currentMonthLateCount > 0 ||
+      paymentStats.currentMonthMissedCount > 0 ||
+      bodgestEardnedDuringMonth.length > 0 ||
+      coinSummary.coinsEarned > 0 ||
+      quizzesCompleted > 0;
+
     return {
       month,
       monthLabel,
+
+      hasData,
 
       scoreStart: scoreMovement.scoreStartOfMonth,
       scoreEnd: scoreMovement.scoreEndOfMonth,
@@ -62,11 +90,11 @@ export class MonthlyWrappedService {
       numberBadgesEarned: bodgestEardnedDuringMonth.length,
       arrayBadgesEarned: bodgestEardnedDuringMonth,
 
-      coinsEarned: 0,
-      quizzesCompleted: 0,
-      knowledgeStreakEnd: 0,
+      coinsEarned: coinSummary.coinsEarned,
+      coinEvents: coinSummary.cointEvents,
 
-      hasData: false,
+      quizzesCompleted,
+      knowledgeStreakEnd: 0,
     };
   }
 
@@ -186,5 +214,82 @@ export class MonthlyWrappedService {
       scoreTierEnd: this.creditScoreService.determineScoreTier(300),
       hasScoreData: false,
     };
+  }
+
+  /////////////////////////////////////////////////////////////////////////
+  // coins earned
+  private async getCoinsSummaryForMonth(
+    userId: string,
+    year: number,
+    month: number,
+  ) {
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 1));
+
+    const coinRewards = await this.prisma.rewardTransaction.findMany({
+      where: {
+        userId,
+        type: RewardTransactionType.EARNED,
+        createdAt: {
+          gte: startDate,
+          lt: endDate,
+        },
+      },
+
+      orderBy: {
+        createdAt: 'asc',
+      },
+
+      include: {
+        sourceEvent: {
+          select: {
+            eventType: true,
+          },
+        },
+      },
+    });
+
+    const cointEvents: WrappedCoinEvent[] = [];
+    let coinsEarned = 0;
+
+    for (const coinReward of coinRewards) {
+      coinsEarned += coinReward.amount;
+
+      cointEvents.push({
+        eventType: coinReward.sourceEvent?.eventType ?? '',
+        amount: coinReward.amount,
+        reason: coinReward.reason,
+        earnedAt: coinReward.createdAt,
+      });
+    }
+
+    return {
+      coinsEarned,
+      cointEvents,
+    };
+  }
+
+  /////////////////////////////////////////////////////////////////////////
+  // quizzes completed
+
+  private async getQuizzesCompletedForMonth(
+    userId: string,
+    year: number,
+    month: number,
+  ) {
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 1));
+
+    const numCompletedQuizzes = this.prisma.quizSession.count({
+      where: {
+        userId,
+        completedAt: {
+          gte: startDate,
+          lt: endDate,
+        },
+      },
+    });
+
+    return numCompletedQuizzes;
   }
 }
