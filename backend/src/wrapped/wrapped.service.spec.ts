@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MonthlyWrappedService } from './wrapped.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { InsightsService } from '../insights/insights.service';
+import { CreditScoreService } from '../credit-score/credit-score.service';
 
 describe('MonthlyWrappedService', () => {
   let service: MonthlyWrappedService;
@@ -11,6 +13,8 @@ describe('MonthlyWrappedService', () => {
     },
   };
 
+  const CreditScoreServiceMock = {};
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -18,6 +22,16 @@ describe('MonthlyWrappedService', () => {
         {
           provide: PrismaService,
           useValue: prismaMock,
+        },
+        {
+          provide: InsightsService,
+          useValue: {
+            getPaymentStreak: jest.fn(),
+          },
+        },
+        {
+          provide: CreditScoreService,
+          useValue: CreditScoreServiceMock,
         },
       ],
     }).compile();
@@ -52,9 +66,18 @@ describe('MonthlyWrappedService', () => {
     ]);
 
     const response = await service.getBadgesForMonth('mock-user-id', 2026, 8);
-    expect(response.badgesEarned).toBe(2);
-    expect(response.year).toBe(2026);
-    expect(response.month).toBe(8);
-    expect(response.badges).toHaveLength(2);
+    expect(response).toHaveLength(2);
+    expect(response[0]).toEqual({
+      badgeKey: 'FIRST_PAYMENT',
+      name: 'First Payment',
+      iconKey: 'first-payment',
+      earnedAt: new Date('2026-08-05T10:00:00.000Z'),
+    });
+    expect(response[1]).toEqual({
+      badgeKey: 'PAYMENT_STREAK',
+      name: 'Payment Streak',
+      iconKey: 'payment-streak',
+      earnedAt: new Date('2026-08-20T10:00:00.000Z'),
+    });
   });
 });

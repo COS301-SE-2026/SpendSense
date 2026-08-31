@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { InsightsService } from 'src/insights/insights.service';
-import { CreditScoreService } from 'src/credit-score/credit-score.service';
+import { InsightsService } from '../insights/insights.service';
+import { CreditScoreService } from '../credit-score/credit-score.service';
 import type {
   WrappedBadge,
   WrappedSummary,

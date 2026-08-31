@@ -765,7 +765,10 @@ export class CreditScoreService {
     if (finalCreditScore >= 720 && finalCreditScore <= 779) {
       return ScoreTier.EXCELLENT;
     }
-    return ScoreTier.ELITE;
+    if (finalCreditScore >= 780 && finalCreditScore <= 850) {
+      return ScoreTier.ELITE;
+    }
+    return ScoreTier.BUILDING;
   }
 
   private async countPaymentStatuses(
