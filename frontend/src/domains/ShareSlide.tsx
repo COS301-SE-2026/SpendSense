@@ -45,11 +45,13 @@ export default function ShareSlide(props:Readonly<ShareSlideProps>){
     const animatedStreak=useCountUp(props.longestPaymentStreakThisMonth)
     const animatedBadges=useCountUp(props.numberBadgesEarned)
     const animatedQuizzes=useCountUp(props.quizzesCompleted)
-    const scoreMovement=props.scoreDelta>0
-        ?`+${isExporting?props.scoreDelta:animatedScore}`
-        :props.scoreDelta<0
-            ?`-${isExporting?Math.abs(props.scoreDelta):animatedScore}`
-            :"0"
+    const scoreValue=isExporting?Math.abs(props.scoreDelta):animatedScore
+    let scoreMovement="0"
+    if(props.scoreDelta>0){
+        scoreMovement=`+${scoreValue}`
+    }else if(props.scoreDelta<0){
+        scoreMovement=`-${scoreValue}`
+    }
     const shownPaymentRate=isExporting?paymentRate:animatedPaymentRate
     const shownStreak=isExporting?props.longestPaymentStreakThisMonth:animatedStreak
     const shownBadges=isExporting?props.numberBadgesEarned:animatedBadges

@@ -11,6 +11,12 @@ export default function LearningSlide({quizzesCompleted,knowledgeStreakEnd}:Read
     const hasKnowledgeStreak=knowledgeStreakEnd>0
     const quizLabel=quizzesCompleted===1?"quiz":"quizzes"
     const dayLabel=knowledgeStreakEnd===1?"day":"days"
+    let learningSummary="Your next learning streak starts with one quiz."
+    if(hasKnowledgeStreak){
+        learningSummary=`Learning kept flowing with a ${knowledgeStreakEnd}-${dayLabel} streak.`
+    }else if(hasQuizzes){
+        learningSummary="You made time to sharpen your money knowledge."
+    }
     return(
         <div className="relative flex min-h-[68vh] w-full flex-col justify-center">
             <motion.div
@@ -287,11 +293,7 @@ export default function LearningSlide({quizzesCompleted,knowledgeStreakEnd}:Read
                     transition={{delay:1.7,duration:0.4}}
                     className="mx-auto mt-4 max-w-[280px] text-sm font-bold leading-relaxed text-[#777080] dark:text-[#a0aec0]"
                 >
-                    {hasKnowledgeStreak
-                        ?`Learning kept flowing with a ${knowledgeStreakEnd}-${dayLabel} streak.`
-                        :hasQuizzes
-                            ?"You made time to sharpen your money knowledge."
-                            :"Your next learning streak starts with one quiz."}
+                    {learningSummary}
                 </motion.p>
             </motion.div>
         </div>

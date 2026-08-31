@@ -97,6 +97,125 @@ const ACCENTS={
         secondary:"bg-[#F5F2FC] dark:bg-[#312a48]",
     },
 }as const
+
+function renderSlideContent(slide:StorySlide,wrapped:WrappedSummary,isLast:boolean,restart:()=>void){
+    switch(slide.id){
+        case"intro":
+            return <IntroSlide monthLabel={wrapped.monthLabel}/>
+        case"score":
+            return(
+                <ScoreSlide
+                    scoreStart={wrapped.scoreStart}
+                    scoreEnd={wrapped.scoreEnd}
+                    scoreDelta={wrapped.scoreDelta}
+                    scoreTierEnd={wrapped.scoreTierEnd}
+                />
+            )
+        case"payments":
+            return(
+                <PaymentsSlide
+                    onTimePayments={wrapped.onTimePayments}
+                    latePayments={wrapped.latePayments}
+                    missedPayments={wrapped.missedPayments}
+                    onTimePaymentRate={wrapped.onTimePaymentRate}
+                />
+            )
+        case"streak":
+            return <StreakSlide longestPaymentStreakThisMonth={wrapped.longestPaymentStreakThisMonth}/>
+        case"achievements":
+            return(
+                <BadgesSlide
+                    numberBadgesEarned={wrapped.numberBadgesEarned}
+                    arrayBadgesEarned={wrapped.arrayBadgesEarned}
+                />
+            )
+        case"learning":
+            return(
+                <LearningSlide
+                    quizzesCompleted={wrapped.quizzesCompleted}
+                    knowledgeStreakEnd={wrapped.knowledgeStreakEnd}
+                />
+            )
+        case"share":
+            return(
+                <ShareSlide
+                    monthLabel={wrapped.monthLabel}
+                    scoreDelta={wrapped.scoreDelta}
+                    onTimePaymentRate={wrapped.onTimePaymentRate}
+                    longestPaymentStreakThisMonth={wrapped.longestPaymentStreakThisMonth}
+                    numberBadgesEarned={wrapped.numberBadgesEarned}
+                    quizzesCompleted={wrapped.quizzesCompleted}
+                />
+            )
+        default:
+            return(
+                <>
+                    <motion.div
+                        initial={{opacity:0,y:18,rotate:-3}}
+                        animate={{opacity:1,y:0,rotate:-3}}
+                        transition={{delay:0.1,duration:0.45}}
+                        className={`inline-flex items-center gap-2 rounded-full border-2 border-[#091828] px-4 py-2 shadow-[3px_3px_0_#091828] dark:border-[#060e20] dark:shadow-[3px_3px_0_#060e20] ${ACCENTS[slide.accent].background}`}
+                    >
+                        <Sparkles className={`size-4 ${ACCENTS[slide.accent].foreground}`}/>
+                        <span className={`text-[11px] font-extrabold uppercase tracking-[0.14em] ${ACCENTS[slide.accent].foreground}`}>{slide.eyebrow}</span>
+                    </motion.div>
+                    <motion.h1
+                        initial={{opacity:0,y:30,scale:0.94}}
+                        animate={{opacity:1,y:0,scale:1}}
+                        transition={{delay:0.2,duration:0.55,ease:[0.22,1,0.36,1]}}
+                        className="mt-7 max-w-[330px] text-[3.5rem] font-extrabold leading-[0.92] tracking-[-0.05em] text-[#091828] dark:text-white"
+                    >
+                        {slide.title}
+                    </motion.h1>
+                    <motion.p
+                        initial={{opacity:0,y:24}}
+                        animate={{opacity:1,y:0}}
+                        transition={{delay:0.35,duration:0.5}}
+                        className="mt-6 max-w-[310px] text-base font-semibold leading-relaxed text-[#6b6375] dark:text-[#a0aec0]"
+                    >
+                        {slide.description}
+                    </motion.p>
+                    <motion.div
+                        initial={{opacity:0,scale:0.8,rotate:6}}
+                        animate={{opacity:1,scale:1,rotate:3}}
+                        transition={{delay:0.5,duration:0.55,ease:[0.22,1,0.36,1]}}
+                        className={`mt-9 rounded-[2rem] border-2 border-[#091828] p-6 shadow-[6px_6px_0_#091828] dark:border-[#060e20] dark:shadow-[6px_6px_0_#060e20] ${ACCENTS[slide.accent].secondary}`}
+                    >
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <p className={`text-xs font-extrabold uppercase tracking-[0.14em] ${ACCENTS[slide.accent].foreground}`}>Template area</p>
+                                <p className="mt-2 text-2xl font-extrabold leading-tight text-[#091828] dark:text-white">{isLast?"Ready to share":"Story content goes here"}</p>
+                            </div>
+                            <motion.div
+                                animate={{rotate:[-5,8,-5],scale:[1,1.08,1]}}
+                                transition={{duration:2.5,repeat:Infinity,ease:"easeInOut"}}
+                                className={`flex size-16 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] dark:border-[#060e20] ${ACCENTS[slide.accent].background}`}
+                            >
+                                <Sparkles className={`size-7 ${ACCENTS[slide.accent].foreground}`}/>
+                            </motion.div>
+                        </div>
+                    </motion.div>
+                    {isLast&&(
+                        <motion.button
+                            type="button"
+                            onClick={(event)=>{
+                                event.stopPropagation()
+                                restart()
+                            }}
+                            initial={{opacity:0,y:18}}
+                            animate={{opacity:1,y:0}}
+                            transition={{delay:0.65,duration:0.45}}
+                            className="relative z-40 mt-8 flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#091828] bg-[#091828] px-6 py-4 text-base font-extrabold text-white shadow-[5px_5px_0_#FF6B9D] transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none dark:border-[#060e20] dark:bg-[#ffb1c5] dark:text-[#650030] dark:shadow-[5px_5px_0_#ff6b9d]"
+                        >
+                            <RefreshCw className="size-5"/>
+                            Replay Wrapped
+                        </motion.button>
+                    )}
+                </>
+            )
+    }
+}
+
 export default function WrappedPage(){
     const navigate=useNavigate()
     const[wrapped,setWrapped]=useState<WrappedSummary|null>(null)
@@ -265,108 +384,7 @@ export default function WrappedPage(){
                             transition={{duration:0.5,ease:[0.22,1,0.36,1]}}
                             className="relative z-20 w-full"
                         >
-                            {slide.id==="intro"?(
-                                <IntroSlide monthLabel={wrapped.monthLabel}/>
-                            ):slide.id==="score"?(
-                                <ScoreSlide
-                                    scoreStart={wrapped.scoreStart}
-                                    scoreEnd={wrapped.scoreEnd}
-                                    scoreDelta={wrapped.scoreDelta}
-                                    scoreTierEnd={wrapped.scoreTierEnd}
-                                />
-                            ):slide.id==="payments"?(
-                                <PaymentsSlide
-                                    onTimePayments={wrapped.onTimePayments}
-                                    latePayments={wrapped.latePayments}
-                                    missedPayments={wrapped.missedPayments}
-                                    onTimePaymentRate={wrapped.onTimePaymentRate}
-                                />
-                            ):slide.id==="streak"?(
-                                <StreakSlide longestPaymentStreakThisMonth={wrapped.longestPaymentStreakThisMonth}/>
-                            ):slide.id==="achievements"?(
-                                <BadgesSlide
-                                    numberBadgesEarned={wrapped.numberBadgesEarned}
-                                    arrayBadgesEarned={wrapped.arrayBadgesEarned}
-                                />
-                            ):slide.id==="learning"?(
-                                <LearningSlide
-                                    quizzesCompleted={wrapped.quizzesCompleted}
-                                    knowledgeStreakEnd={wrapped.knowledgeStreakEnd}
-                                />
-                            ):slide.id==="share"?(
-                                <ShareSlide
-                                    monthLabel={wrapped.monthLabel}
-                                    scoreDelta={wrapped.scoreDelta}
-                                    onTimePaymentRate={wrapped.onTimePaymentRate}
-                                    longestPaymentStreakThisMonth={wrapped.longestPaymentStreakThisMonth}
-                                    numberBadgesEarned={wrapped.numberBadgesEarned}
-                                    quizzesCompleted={wrapped.quizzesCompleted}
-                                />
-                            ):(
-                                <>
-                                    <motion.div
-                                        initial={{opacity:0,y:18,rotate:-3}}
-                                        animate={{opacity:1,y:0,rotate:-3}}
-                                        transition={{delay:0.1,duration:0.45}}
-                                        className={`inline-flex items-center gap-2 rounded-full border-2 border-[#091828] px-4 py-2 shadow-[3px_3px_0_#091828] dark:border-[#060e20] dark:shadow-[3px_3px_0_#060e20] ${ACCENTS[slide.accent].background}`}
-                                    >
-                                        <Sparkles className={`size-4 ${ACCENTS[slide.accent].foreground}`}/>
-                                        <span className={`text-[11px] font-extrabold uppercase tracking-[0.14em] ${ACCENTS[slide.accent].foreground}`}>{slide.eyebrow}</span>
-                                    </motion.div>
-                                    <motion.h1
-                                        initial={{opacity:0,y:30,scale:0.94}}
-                                        animate={{opacity:1,y:0,scale:1}}
-                                        transition={{delay:0.2,duration:0.55,ease:[0.22,1,0.36,1]}}
-                                        className="mt-7 max-w-[330px] text-[3.5rem] font-extrabold leading-[0.92] tracking-[-0.05em] text-[#091828] dark:text-white"
-                                    >
-                                        {slide.title}
-                                    </motion.h1>
-                                    <motion.p
-                                        initial={{opacity:0,y:24}}
-                                        animate={{opacity:1,y:0}}
-                                        transition={{delay:0.35,duration:0.5}}
-                                        className="mt-6 max-w-[310px] text-base font-semibold leading-relaxed text-[#6b6375] dark:text-[#a0aec0]"
-                                    >
-                                        {slide.description}
-                                    </motion.p>
-                                    <motion.div
-                                        initial={{opacity:0,scale:0.8,rotate:6}}
-                                        animate={{opacity:1,scale:1,rotate:3}}
-                                        transition={{delay:0.5,duration:0.55,ease:[0.22,1,0.36,1]}}
-                                        className={`mt-9 rounded-[2rem] border-2 border-[#091828] p-6 shadow-[6px_6px_0_#091828] dark:border-[#060e20] dark:shadow-[6px_6px_0_#060e20] ${ACCENTS[slide.accent].secondary}`}
-                                    >
-                                        <div className="flex items-center justify-between gap-4">
-                                            <div>
-                                                <p className={`text-xs font-extrabold uppercase tracking-[0.14em] ${ACCENTS[slide.accent].foreground}`}>Template area</p>
-                                                <p className="mt-2 text-2xl font-extrabold leading-tight text-[#091828] dark:text-white">{isLast?"Ready to share":"Story content goes here"}</p>
-                                            </div>
-                                            <motion.div
-                                                animate={{rotate:[-5,8,-5],scale:[1,1.08,1]}}
-                                                transition={{duration:2.5,repeat:Infinity,ease:"easeInOut"}}
-                                                className={`flex size-16 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] dark:border-[#060e20] ${ACCENTS[slide.accent].background}`}
-                                            >
-                                                <Sparkles className={`size-7 ${ACCENTS[slide.accent].foreground}`}/>
-                                            </motion.div>
-                                        </div>
-                                    </motion.div>
-                                    {isLast&&(
-                                        <motion.button
-                                            type="button"
-                                            onClick={(event)=>{
-                                                event.stopPropagation()
-                                                restart()
-                                            }}
-                                            initial={{opacity:0,y:18}}
-                                            animate={{opacity:1,y:0}}
-                                            transition={{delay:0.65,duration:0.45}}
-                                            className="relative z-40 mt-8 flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#091828] bg-[#091828] px-6 py-4 text-base font-extrabold text-white shadow-[5px_5px_0_#FF6B9D] transition active:translate-x-[3px] active:translate-y-[3px] active:shadow-none dark:border-[#060e20] dark:bg-[#ffb1c5] dark:text-[#650030] dark:shadow-[5px_5px_0_#ff6b9d]"
-                                        >
-                                            <RefreshCw className="size-5"/>
-                                            Replay Wrapped
-                                        </motion.button>
-                                    )}
-                                </>
-                            )}
+                            {renderSlideContent(slide,wrapped,isLast,restart)}
                         </motion.section>
                     </AnimatePresence>
                 </div>

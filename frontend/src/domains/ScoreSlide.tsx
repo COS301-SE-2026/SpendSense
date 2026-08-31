@@ -13,12 +13,18 @@ export default function ScoreSlide({scoreStart,scoreEnd,scoreDelta,scoreTierEnd}
     const positive=scoreDelta>0
     const negative=scoreDelta<0
     const movementText=positive?`+${scoreDelta}`:`${scoreDelta}`
-    const MovementIcon=positive?ArrowUpRight:negative?TrendingDown:Minus
-    const movementStyle=positive
-        ?"bg-[#DCEFE8] text-[#0E7A5F] dark:bg-[#0f4f42] dark:text-[#5eead4]"
-        :negative
-            ?"bg-[#FFD9E1] text-[#AC2A5D] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
-            :"bg-[#FFE9B5] text-[#7A5A00] dark:bg-[#3a3118] dark:text-[#ffd166]"
+    let MovementIcon=Minus
+    let movementStyle="bg-[#FFE9B5] text-[#7A5A00] dark:bg-[#3a3118] dark:text-[#ffd166]"
+    let movementSummary="Your score stayed level this month."
+    if(positive){
+        MovementIcon=ArrowUpRight
+        movementStyle="bg-[#DCEFE8] text-[#0E7A5F] dark:bg-[#0f4f42] dark:text-[#5eead4]"
+        movementSummary=`Up ${scoreDelta} points this month.`
+    }else if(negative){
+        MovementIcon=TrendingDown
+        movementStyle="bg-[#FFD9E1] text-[#AC2A5D] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
+        movementSummary=`Down ${Math.abs(scoreDelta)} points this month.`
+    }
     return(
         <div className="relative flex min-h-[68vh] w-full flex-col justify-center">
             <motion.div
@@ -125,11 +131,7 @@ export default function ScoreSlide({scoreStart,scoreEnd,scoreDelta,scoreTierEnd}
                 transition={{delay:2.05,duration:0.45}}
                 className="mt-6 max-w-[285px] text-base font-bold leading-relaxed text-[#777080] dark:text-[#a0aec0]"
             >
-                {positive
-                    ?`Up ${scoreDelta} points this month.`
-                    :negative
-                        ?`Down ${Math.abs(scoreDelta)} points this month.`
-                        :"Your score stayed level this month."}
+                {movementSummary}
             </motion.p>
         </div>
     )
