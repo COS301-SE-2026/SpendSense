@@ -29,7 +29,7 @@ export class MonthlyWrappedService {
       Date.UTC(year, monthNumber - 1, 1),
     ).toLocaleString('en-ZA', { month: 'long' });
 
-    const asOf = new Date(Date.UTC(year, month));
+    const asOf = new Date(Date.UTC(year, monthNumber, 1) - 1);
 
     const paymentStats = await this.insightsService.getPaymentStreak(
       userId,
