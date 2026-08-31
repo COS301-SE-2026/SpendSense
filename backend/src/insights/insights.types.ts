@@ -82,3 +82,12 @@ export interface PaymentStreakStats {
   currentMonthOnTimeRate: number;
   hasEnoughData: boolean;
 }
+
+export type CurrentMonthPaymentStats = {
+  onTimeCount: number;
+  lateCount: number;
+  missedCount: number;
+  overdueCount: number;
+  currentOnTimeStreak: number;
+  longestOnTimeStreak: number;
+};
