@@ -95,16 +95,18 @@ function groupByDay(occurrences: CalendarOccurrence[]): Record<number, CalendarO
 }
  
 // summary totals from occurrence list
+// the third card is labelled MISSED but represents money still owed on a past
+// due date, so it covers both OVERDUE (past due) and MISSED (past recovery)
 function calcSummary(occurrences: CalendarOccurrence[]){
   let paid = 0
   let dueSoon = 0
-  let overdue = 0
+  let missed = 0
   for(const occ of occurrences){
     if(occ.status === "PAID" || occ.status === "PAID_LATE") paid += occ.amountDue
-    else if(occ.status === "OVERDUE") overdue += occ.amountDue
+    else if(occ.status === "OVERDUE" || occ.status === "MISSED") missed += occ.amountDue
     else if(occ.status === "PENDING") dueSoon += occ.amountDue
   }
-  return {paid, dueSoon, overdue}
+  return {paid, dueSoon, missed}
 }
  
 function dotForStatus(status: OccurrenceStatus): DotType{
@@ -203,7 +205,7 @@ export default function CalendarPage(){
  
   // tap an occurrence card,fetch detail (for scoreRisk) then carry everything to PaymentForm
   async function handleOccurrenceTap(occ: CalendarOccurrence) {
-    if (occ.status === "PAID"||occ.status === "PAID_LATE"||occ.status === "CANCELLED") return
+    if (occ.status === "PAID"||occ.status === "PAID_LATE"||occ.status === "CANCELLED"||occ.status === "MISSED") return
  
     setTappingId(occ.id)
     try{
@@ -346,7 +348,7 @@ export default function CalendarPage(){
               </p>
               {loading
                 ? <div className="mt-2 h-7 w-24 animate-pulse rounded-full bg-[#E3EAE6] dark:bg-[#1c263c]" />
-                : <p className="mt-1 text-2xl font-extrabold text-[#AC2A5D] dark:text-[#ffb4ab]">{formatCurrency(summary.overdue)}</p>
+                : <p className="mt-1 text-2xl font-extrabold text-[#AC2A5D] dark:text-[#ffb4ab]">{formatCurrency(summary.missed)}</p>
               }
             </div>
           </div>
@@ -590,4 +592,3 @@ function CalendarGrid({
     </div>
   )
 }
- 

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -350,6 +351,12 @@ type UserExportResult = {
   quizSessions: UserExportData['quizSessions'];
 };
 
+export type UserDataDeletionResult = {
+  deleted: true;
+  deletedAt: Date;
+  recordsDeleted: Record<string, number>;
+};
+
 export type InternalUserProfile = Prisma.UserGetPayload<{
   include: typeof userProfileInclude;
 }>;
@@ -503,6 +510,94 @@ export class UsersService {
       deactivated: true,
       deactivatedAt,
     };
+  }
+
+  async deleteAllUserData(authUser: AuthUser): Promise<UserDataDeletionResult> {
+    const userIdentity = await this.prisma.user.findUnique({
+      where: { supabaseAuthId: authUser.supabaseAuthId },
+      select: { id: true },
+    });
+
+    if (!userIdentity) {
+      throw new NotFoundException('User account was not found');
+    }
+
+    const userId = userIdentity.id;
+    const deletedAt = new Date();
+
+    const recordsDeleted = await this.prisma.$transaction(async (tx) => {
+      const scoreEvents = await tx.scoreEvent.deleteMany({ where: { userId } });
+      const reminders = await tx.reminder.deleteMany({ where: { userId } });
+      const paymentRecords = await tx.paymentRecord.deleteMany({
+        where: { userId },
+      });
+      const paymentOccurrences = await tx.paymentOccurrence.deleteMany({
+        where: { userId },
+      });
+      const paymentSchedules = await tx.paymentSchedule.deleteMany({
+        where: { obligation: { userId } },
+      });
+      const obligations = await tx.financialObligation.deleteMany({
+        where: { userId },
+      });
+      const notifications = await tx.notification.deleteMany({
+        where: { userId },
+      });
+      const rewardTransactions = await tx.rewardTransaction.deleteMany({
+        where: { userId },
+      });
+      const userEvents = await tx.userEvent.deleteMany({ where: { userId } });
+      const badges = await tx.userBadge.deleteMany({ where: { userId } });
+      const quizAnswers = await tx.quizSessionAnswer.deleteMany({
+        where: { session: { userId } },
+      });
+      const quizSessions = await tx.quizSession.deleteMany({
+        where: { userId },
+      });
+      const inventoryItems = await tx.userInventoryItem.deleteMany({
+        where: { userId },
+      });
+      const creditProfile = await tx.creditProfile.deleteMany({
+        where: { userId },
+      });
+      const gamificationProfile = await tx.gamificationProfile.deleteMany({
+        where: { userId },
+      });
+      const notificationPreference = await tx.notificationPreference.deleteMany(
+        { where: { userId } },
+      );
+      const preference = await tx.userPreference.deleteMany({
+        where: { userId },
+      });
+
+      await tx.user.delete({ where: { id: userId } });
+
+      return {
+        scoreEvents: scoreEvents.count,
+        reminders: reminders.count,
+        paymentRecords: paymentRecords.count,
+        paymentOccurrences: paymentOccurrences.count,
+        paymentSchedules: paymentSchedules.count,
+        obligations: obligations.count,
+        notifications: notifications.count,
+        rewardTransactions: rewardTransactions.count,
+        userEvents: userEvents.count,
+        badges: badges.count,
+        quizAnswers: quizAnswers.count,
+        quizSessions: quizSessions.count,
+        inventoryItems: inventoryItems.count,
+        creditProfile: creditProfile.count,
+        gamificationProfile: gamificationProfile.count,
+        notificationPreference: notificationPreference.count,
+        preference: preference.count,
+        user: 1,
+      };
+    });
+
+    // TODO: the Supabase auth identity (email + credentials) still exists and
+    // has to be removed with a service-role admin client for the erasure to be
+    // complete under POPIA. That client does not exist in this codebase yet.
+    return { deleted: true, deletedAt, recordsDeleted };
   }
 
   async exportUserData(authUser: AuthUser): Promise<UserExportResult> {

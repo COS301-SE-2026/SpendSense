@@ -25,7 +25,7 @@ const sections =[
     },
     {
         label: "Account",
-        description: "Logout, deactivate, export your data",
+        description: "Logout, deactivate, export or delete your data",
         icon: <UserX className="size-5"/>,
         to: "/settings/account",
     },

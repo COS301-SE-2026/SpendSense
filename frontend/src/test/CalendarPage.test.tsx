@@ -55,6 +55,19 @@ const paidOccurrence ={
 	reminders: [],
 }
  
+const missedOccurrence ={
+	id: 'occ-4',
+	dueDate: '2026-05-10T00:00:00.000Z',
+	amountDue: 430,
+	currency: 'ZAR',
+	status: 'MISSED' as const,
+	sequenceNumber: 3,
+	daysUntilDue: -30,
+	riskLevel: 'CRITICAL' as const,
+	obligation: {id: 'obl-4', name: 'Gym Membership', type: 'SUBSCRIPTION', priority: 'LOW'},
+	reminders: [],
+}
+ 
 function defaultHookState(overrides = {}){
 	return{
 		occurrences: [pendingOccurrence, overdueOccurrence, paidOccurrence],
@@ -311,5 +324,35 @@ describe('CalendarPage', ()=>{
 	it('back button links to home', ()=>{
 		renderCalendar()
 		expect(screen.getByRole('link', {name: /go back/i })).toHaveAttribute('href', '/')
+	})
+
+	it('counts MISSED occurrences in the missed total alongside OVERDUE', ()=>{
+		vi.mocked(useCalendarOccurrences).mockReturnValue(
+			defaultHookState({occurrences: [overdueOccurrence, missedOccurrence]}) as never
+		)
+		renderCalendar()
+ 
+		expect(screen.getAllByText(/R.*1.?050/).length).toBeGreaterThan(0)
+	})
+ 
+	it('labels a MISSED occurrence as MISSED, not DUE SOON', ()=>{
+		vi.mocked(useCalendarOccurrences).mockReturnValue(
+			defaultHookState({occurrences: [missedOccurrence]}) as never
+		)
+		renderCalendar()
+ 
+		const card = screen.getByRole('button', {name: /gym membership/i})
+		expect(card).toHaveTextContent('MISSED')
+		expect(card).not.toHaveTextContent('DUE SOON')
+	})
+ 
+	it('does not offer tap to pay on a MISSED occurrence', ()=>{
+		vi.mocked(useCalendarOccurrences).mockReturnValue(
+			defaultHookState({occurrences: [missedOccurrence]}) as never
+		)
+		renderCalendar()
+ 
+		expect(screen.queryByText(/tap to pay/i)).not.toBeInTheDocument()
+		expect(screen.getByRole('button', {name: /gym membership, missed/i})).toBeDisabled()
 	})
 })

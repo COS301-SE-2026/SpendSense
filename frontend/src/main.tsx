@@ -12,6 +12,7 @@ import StickerAlbumPage from './domains/StickerAlbumPage'
 import StickerDetailPage from './domains/StickerDetailPage'
 import {initAuthListener} from './features/auth/auth.service'
 import {initTheme} from './lib/theme'
+import {initReducedMotion} from './lib/motion'
 import QuestsPage from './domains/QuestsPage'
 import QuizPage from './domains/QuizPage'
 import FriendsPage from './domains/FriendsPage'
@@ -49,6 +50,7 @@ import HomeRoute from './components/HomeRoute'
 
 initAuthListener()
 initTheme()
+initReducedMotion()
 import PaymentForm from './domains/PaymentForm.tsx'
 
 createRoot(document.getElementById('root')!).render(

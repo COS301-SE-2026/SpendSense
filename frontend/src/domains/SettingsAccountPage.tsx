@@ -1,19 +1,23 @@
 import * as React from "react"
 import {useNavigate} from "react-router-dom"
-import {LogOut, UserX, Download} from "lucide-react"
+import {LogOut, UserX, Download, ShieldAlert} from "lucide-react"
 import {CustomCard} from "@/components/ui/CustomCard"
 import {LongButton} from "@/components/common/LongButton"
 import {CustomInput} from "@/components/common/CustomInput"
 import {SubPageShell} from "@/components/common/SubPageShell"
 import {signOut} from "@/features/auth/auth.service"
-import {deactivateAccount, exportUserData} from "@/features/profile/profileApi"
+import {deactivateAccount, exportUserData, deleteAllUserData} from "@/features/profile/profileApi"
 
-//logout, deactivate account, export data
+//logout, deactivate account, export data, POPIA data deletion
+
+//typed exactly to arm the irreversible POPIA erasure
+const DELETE_DATA_PHRASE = "DELETE MY DATA"
 
 export default function SettingsAccountPage(){
     const nav =useNavigate()
     const[confirmText, setConfirmText]= React.useState("")
-    const[busy, setBusy]= React.useState<"logout"|"deactivate"|"export"|null>(null)
+    const[deleteConfirmText, setDeleteConfirmText]= React.useState("")
+    const[busy, setBusy]= React.useState<"logout"|"deactivate"|"export"|"delete"|null>(null)
     const[feedback, setFeedback] =React.useState<{kind: "success" | "error"; message: string} |null>(null)
 
 
@@ -65,8 +69,25 @@ export default function SettingsAccountPage(){
 
     }
 
+    //POPIA s24: destroys the account and every record attached to it.
+    //Unlike deactivation nothing is retained, so we sign out straight after.
+    const handleDeleteData = async()=> {
+        if(deleteConfirmText !== DELETE_DATA_PHRASE) return
+        setBusy("delete")
+        setFeedback(null)
+
+        try{
+            await deleteAllUserData()
+            await signOut()
+            nav("/login")
+        }catch{
+            setFeedback({kind: "error", message: "Couldn't delete your data. Please try again"})
+            setBusy(null)
+        }
+    }
+
     return (
-        <SubPageShell title="Account" subtitle= "Session, deactivation and your data">
+        <SubPageShell title="Account" subtitle= "Session, deactivation, export and deletion">
             {/*logout*/}
             
             <CustomCard variant ="navyBorder" size="sm" className="flex items-center gap-3 dark:border-[#574146] dark:bg-[#171f33]">
@@ -152,6 +173,54 @@ export default function SettingsAccountPage(){
                     {busy=== "deactivate" ? "Deactivating...": "Deactivate my account"}
                 </LongButton>
             </CustomCard> 
+
+
+            {/*POPIA data deletion*/}
+
+            <CustomCard variant="navyBorder" size="md" className="border-[#AC2A5D] bg-[#FFF3F7] dark:border-[#ffb4ab] dark:bg-[#211722]">
+                <div className="flex items-center gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#FFD8E6] text-[#AC2A5D] dark:bg-[#ffb4ab]/20 dark:text-[#ffb4ab]">
+                        <ShieldAlert className="size-5"/>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-[#091828] dark:text-[#dae2fd]">Delete all my data</p>
+                        <p className="text-xs text-[#6B6375] dark:text-[#ddbfc5]">Your POPIA right to have your personal information destroyed</p>
+                    </div>
+                </div>
+
+                <p className="mt-3 text-xs text-[#6B6375] dark:text-[#ddbfc5]">
+                    Section 24 of the Protection of Personal Information Act lets you ask us to destroy the personal
+                    information we hold about you. This permanently erases your profile, obligations, payments,
+                    reminders, notifications, credit score history, coins, streaks, badges and quiz results.
+                </p>
+
+                <p className="mt-2 text-xs font-bold text-[#AC2A5D] dark:text-[#ffb4ab]">
+                    This cannot be undone and nothing is kept. Export your data first if you want a copy.
+                </p>
+
+                <label htmlFor="confirmDeleteData" className="mt-4 block text-xs font-bold uppercase tracking-wide text-[#6B6375] dark:text-[#ddbfc5]">
+                    Type {DELETE_DATA_PHRASE} to confirm
+                </label>
+
+                <CustomInput
+                    id="confirmDeleteData"
+                    value={deleteConfirmText}
+                    onChange={(e)=> setDeleteConfirmText(e.target.value)}
+                    className="mt-1"
+                />
+
+                <LongButton
+                    LongVariant="primaryPink"
+                    LongSize="md"
+                    showArrow={false}
+                    className="mt-3 dark:bg-[#ffb4ab] dark:text-[#690005] dark:hover:bg-[#ffc9c2]"
+                    onClick={handleDeleteData}
+                    disabled={deleteConfirmText !== DELETE_DATA_PHRASE || busy !== null}
+                >
+                    {busy === "delete" ? "Deleting your data..." : "Delete all my data"}
+                </LongButton>
+            </CustomCard>
 
             {feedback && (
                 <p className={`text-center text-xs ${feedback.kind === "success" ? "text-[#3DBFA0]" : "text-[#AC2A5D] dark:text-[#ffb4ab]"}`}>

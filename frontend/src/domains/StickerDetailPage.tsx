@@ -125,6 +125,18 @@ export default function StickerDetailPage(){
     const state = location.state as BadgeRouterState | null
     const badge = state?.badge ?? null
 
+    // pop back to wherever the user came from (the album, with its scroll
+    // position/state intact) instead of pushing a fresh /stickers entry -
+    // pushing would leave this detail page sitting in history, so the
+    // album's own back arrow would return here instead of skipping past it
+    const goBack = () => {
+        if (location.key !== "default") {
+            navigate(-1)
+        } else {
+            navigate("/stickers")
+        }
+    }
+
     if(!badge){
         return(
             <div className="min-h-screen bg-[#F5F0E8] flex flex-col items-center justify-center gap-4 px-6 text-center dark:bg-[#0b1326]">
@@ -159,7 +171,7 @@ export default function StickerDetailPage(){
         <div className="w-full max-w-sm flex flex-col min-h-screen">
 
             <header className="px-5 pt-5 flex items-center justify-between">
-                <button type="button" aria-label="Go back" onClick={() => navigate("/stickers")} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
+                <button type="button" aria-label="Go back" onClick={goBack} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
                         <ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]" />
                 </button>
 
@@ -226,7 +238,7 @@ export default function StickerDetailPage(){
 
                 <button
                     type="button"
-                    onClick={()=>navigate("/stickers")}
+                    onClick={goBack}
                     className="text-sm text-[#6b6375] hover:text-[#091828] transition-colors dark:text-[#a0aec0]"
                 >
                     Back to Album

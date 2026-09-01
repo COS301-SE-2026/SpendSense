@@ -1,4 +1,4 @@
-import {useNavigate} from "react-router-dom"
+import {useNavigate, useLocation} from "react-router-dom"
 import {cn} from "@/lib/utils"
 import {
     ChevronLeft,
@@ -204,7 +204,16 @@ function CategorySection({category, badges, earnedKeys, onSelect}: {
 
 export default function StickerAlbumPage(){
     const nav = useNavigate()
+    const location = useLocation()
     const {profile, loading, error} = useGamificationProfile()
+
+    const goBack = () => {
+        if (location.key !== "default") {
+            nav(-1)
+        } else {
+            nav("/")
+        }
+    }
 
     const earnedBadges = profile?.badges ?? []
     const earnedKeys = new Set(earnedBadges.map(b => b.badgeKey))
@@ -244,7 +253,7 @@ export default function StickerAlbumPage(){
 
             {/* HEADER */}
             <header className="bg-[#F0F7F4] px-4 pt-5 pb-3 flex items-center justify-between dark:bg-[#1c263c]">
-                <button type="button" aria-label="Go back" onClick={() => nav("/")} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
+                <button type="button" aria-label="Go back" onClick={goBack} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
                         <ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]" />
                 </button>
                 <div className="flex flex-1 items-center justify-center">

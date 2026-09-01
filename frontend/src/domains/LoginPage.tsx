@@ -101,7 +101,7 @@ export default function LoginPage(){
                     {/* login with google butt */}
                     <div>
                         <LongButton type="submit" LongVariant="outline"  disabled fullWidth>
-                            {isLoading ? "Loading...":"Will be login with Google"}
+                            {isLoading ? "Loading...":"Login with Google"}
                         </LongButton>
                     </div>
                     <div className="text-center text-[#44474C]">

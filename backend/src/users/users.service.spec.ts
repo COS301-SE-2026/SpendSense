@@ -412,3 +412,203 @@ describe('UsersService', () => {
     );
   });
 });
+
+const DELETE_MANY_MODELS = [
+  'scoreEvent',
+  'reminder',
+  'paymentRecord',
+  'paymentOccurrence',
+  'paymentSchedule',
+  'financialObligation',
+  'notification',
+  'rewardTransaction',
+  'userEvent',
+  'userBadge',
+  'quizSessionAnswer',
+  'quizSession',
+  'userInventoryItem',
+  'creditProfile',
+  'gamificationProfile',
+  'notificationPreference',
+  'userPreference',
+] as const;
+
+type DeletionModel = (typeof DELETE_MANY_MODELS)[number];
+
+type DeletionTx = Record<
+  DeletionModel,
+  { deleteMany: jest.Mock<Promise<{ count: number }>, [{ where: unknown }]> }
+> & {
+  user: { delete: jest.Mock<Promise<unknown>, [{ where: { id: string } }]> };
+};
+
+describe('UsersService data deletion', () => {
+  let service: UsersService;
+  let prisma: {
+    user: { findUnique: jest.Mock<Promise<unknown>, [unknown]> };
+    $transaction: jest.Mock<
+      Promise<unknown>,
+      [(tx: DeletionTx) => Promise<unknown>]
+    >;
+  };
+  let tx: DeletionTx;
+  let callOrder: string[];
+  let whereByModel: Partial<Record<string, unknown>>;
+
+  const authUser: AuthUser = {
+    supabaseAuthId: 'test-supabase-user-1',
+    email: 'test-user-1@example.com',
+  };
+
+  const userId = 'usr_authenticated';
+
+  beforeEach(() => {
+    callOrder = [];
+    whereByModel = {};
+
+    tx = {
+      user: {
+        delete: jest.fn((args: { where: { id: string } }) => {
+          callOrder.push('user.delete');
+          whereByModel['user.delete'] = args.where;
+          return Promise.resolve({});
+        }),
+      },
+    } as DeletionTx;
+
+    DELETE_MANY_MODELS.forEach((model, index) => {
+      tx[model] = {
+        deleteMany: jest.fn((args: { where: unknown }) => {
+          callOrder.push(model);
+          whereByModel[model] = args.where;
+          // distinct counts so the receipt cannot pass by coincidence
+          return Promise.resolve({ count: index + 1 });
+        }),
+      };
+    });
+
+    prisma = {
+      user: { findUnique: jest.fn<Promise<unknown>, [unknown]>() },
+      $transaction: jest.fn((callback: (t: DeletionTx) => Promise<unknown>) =>
+        callback(tx),
+      ),
+    };
+
+    service = new UsersService(prisma as unknown as PrismaService);
+  });
+
+  it('deletes every user-owned table and the user record itself', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    DELETE_MANY_MODELS.forEach((model) => {
+      expect(tx[model].deleteMany).toHaveBeenCalledTimes(1);
+    });
+    expect(tx.user.delete).toHaveBeenCalledTimes(1);
+    expect(whereByModel['user.delete']).toEqual({ id: userId });
+  });
+
+  it('scopes every delete to the authenticated user', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { supabaseAuthId: authUser.supabaseAuthId },
+      select: { id: true },
+    });
+
+    expect(whereByModel.paymentSchedule).toEqual({ obligation: { userId } });
+    expect(whereByModel.quizSessionAnswer).toEqual({ session: { userId } });
+
+    DELETE_MANY_MODELS.filter(
+      (model) => model !== 'paymentSchedule' && model !== 'quizSessionAnswer',
+    ).forEach((model) => {
+      expect(whereByModel[model]).toEqual({ userId });
+    });
+  });
+
+  it('deletes restricted children before their parents', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    const before = (child: string, parent: string) => {
+      expect(callOrder.indexOf(child)).toBeGreaterThanOrEqual(0);
+      expect(callOrder.indexOf(parent)).toBeGreaterThanOrEqual(0);
+      expect(callOrder.indexOf(child)).toBeLessThan(callOrder.indexOf(parent));
+    };
+
+    before('scoreEvent', 'creditProfile');
+    before('scoreEvent', 'paymentRecord');
+    before('reminder', 'paymentOccurrence');
+    before('paymentRecord', 'paymentOccurrence');
+    before('paymentOccurrence', 'paymentSchedule');
+    before('paymentSchedule', 'financialObligation');
+    before('rewardTransaction', 'userEvent');
+    before('quizSessionAnswer', 'quizSession');
+
+    expect(callOrder[callOrder.length - 1]).toBe('user.delete');
+  });
+
+  it('runs the whole erasure in a single transaction', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a per-table receipt of what was destroyed', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    const result = await service.deleteAllUserData(authUser);
+
+    expect(result.deleted).toBe(true);
+    expect(result.deletedAt).toBeInstanceOf(Date);
+    expect(result.recordsDeleted.scoreEvents).toBe(1);
+    expect(result.recordsDeleted.preference).toBe(DELETE_MANY_MODELS.length);
+    expect(result.recordsDeleted.user).toBe(1);
+  });
+
+  it('leaves shared reference data untouched', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    ['category', 'badgeDefinition', 'quizQuestion', 'cosmeticItem'].forEach(
+      (model) => {
+        expect(callOrder).not.toContain(model);
+      },
+    );
+  });
+
+  it('writes no audit event that would recreate the deleted personal data', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    expect(tx.userEvent.deleteMany).toHaveBeenCalledTimes(1);
+    expect(
+      (tx as unknown as { userEvent: { create?: jest.Mock } }).userEvent.create,
+    ).toBeUndefined();
+  });
+
+  it('still erases an account that was deactivated first', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await expect(service.deleteAllUserData(authUser)).resolves.toEqual(
+      expect.objectContaining({ deleted: true }),
+    );
+  });
+
+  it('rejects deletion when no user exists for the identity', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.deleteAllUserData(authUser)).rejects.toThrow(
+      'User account was not found',
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+});
