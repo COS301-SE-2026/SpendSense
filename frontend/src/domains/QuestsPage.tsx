@@ -183,13 +183,13 @@ export default function QuestsPage(){
 						<QuizQuestCard
 							icon={<Mountain className="size-5"/>}
 							tone="lilac"
-							title="Financial Topic Quizes"
+							title="Financial Topic Quizzes"
 							eyebrow="Choose your subject"
 							description="Explore focused lessons and take a quiz when you're ready."
 							progress={topicsProgress}
 							progressLabel={`${availableTopics} of ${totalTopics} topics unlocked`}
 							actionLabel="Explore topics"
-							actionAriaLabel="Financial Topic Quizes"
+							actionAriaLabel="Financial Topic Quizzes"
 							onAction={()=>navigate("/quiz/topics")}
 						/>
 					)}
