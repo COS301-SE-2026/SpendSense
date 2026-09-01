@@ -5,6 +5,8 @@ import {
 	LogOut,
     TrendingUp,
     ChevronRight,
+    BookOpen,
+    CalendarCheck,
 } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { SparklesIcon, FireIcon, SunriseIcon } from "@hugeicons/core-free-icons"
@@ -29,8 +31,7 @@ import { useNotifications } from "@/features/notifications/useNotifications"
 import type { DashboardData } from "@/types/DashboardTypes"
 import type { CreditScore } from "@/types/credit-scoreTypes"
 import { getCrditScore } from "@/features/credit-score/credit-scoreApi"
-import { StreakFlame } from "@/components/common/StreakFlame"
-import { StreakTicks } from "@/components/common/StreakTicks"
+import { StreakCarousel, type StreakPanel } from "@/components/dashboard/StreakCarousel"
 import { BottomNav } from "@/components/common/BottomNav"
 
 export default function DashboardPage() {
@@ -76,6 +77,24 @@ export default function DashboardPage() {
 	const score_ = creditScore?.creditScore ?? 0 // current credit score 
 	const level_ = gamificationProfile?.mascotLevel ?? 1
 	const knowledgeStreak=gamificationProfile?.currentKnowledgeStreak??0
+	const paymentStreak=gamificationProfile?.currentPaymentStreak??0
+
+	const streakPanels: StreakPanel[]=[
+		{
+			key: "knowledge",
+			title: "Knowledge streak",
+			days: knowledgeStreak,
+			best: gamificationProfile?.longestKnowledgeStreak ?? 0,
+			icon: BookOpen,
+		},
+		{
+			key: "payment",
+			title: "On-time payments",
+			days: paymentStreak,
+			best: gamificationProfile?.longestPaymentStreak ?? 0,
+			icon: CalendarCheck,
+		},
+	]
 
 	const xp = {
 		current: gamificationProfile?.xp ?? 0,
@@ -124,26 +143,7 @@ export default function DashboardPage() {
 				</div>
 
 				<div className="mt-3 flex flex-col items-center gap-2">
-					<CustomCard
-						className="flex w-full max-w-[280px] flex-col items-center rounded-2xl bg-[#FFF4F7] p-4 dark:bg-[#1c263c]"
-						data-testid="knowledge-streak"
-					>
-						<p className="text-xs font-bold uppercase tracking-wide text-[#6b6375] dark:text-[#ff6b9d]">Knowledge streak</p>
-						<StreakFlame
-							days={knowledgeStreak}
-							label="days"
-							size="sm"
-						/>
-						<StreakTicks
-							total={7}
-							completed={Array.from(
-								{length:Math.min(knowledgeStreak,7)},
-								(_,index)=>index,
-							)}
-							size="sm"
-							aria-label={`${knowledgeStreak} day knowledge streak`}
-						/>
-					</CustomCard>
+					<StreakCarousel panels={streakPanels} />
 					<div className="flex items-center justify-center gap-2">
 						<CustomBadge variant="level" size="md" className="dark:border dark:border-solid dark:border-white/10 dark:bg-black">
 							Lvl {level_}
