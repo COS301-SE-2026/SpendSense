@@ -26,7 +26,7 @@ export class MonthlyWrappedController {
   ) {}
 
   @Get('latest')
-  @ApiOperation({ summary: 'Get badges earned during a specified month' })
+  @ApiOperation({ summary: "Get the previous UTC calendar month's Wrapped" })
   @ApiResponse({
     status: 200,
     description: 'Monthly Wrapped was returned successfully',
@@ -42,9 +42,11 @@ export class MonthlyWrappedController {
   async getMonthlyWrapped(@CurrentAuthUser() authUser: AuthUser) {
     const user = await this.usersService.findOrCreateUser(authUser);
     const currentDate = new Date();
-
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth() + 1;
+    const previousMonth = new Date(
+      Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth() - 1, 1),
+    );
+    const year = previousMonth.getUTCFullYear();
+    const month = previousMonth.getUTCMonth() + 1;
     const yearMonth = `${year}-${String(month).padStart(2, '0')}`;
 
     if (
