@@ -259,6 +259,24 @@ describe('UsersService', () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
+  it('turns duplicate display names into a conflict error', async () => {
+    const existingUser = {
+      id: 'usr_authenticated',
+      supabaseAuthId: authUser.supabaseAuthId,
+      deletedAt: null,
+    } as InternalUserProfile;
+
+    prisma.user.findUnique.mockResolvedValue(existingUser);
+    prisma.user.update.mockRejectedValue({
+      code: 'P2002',
+      meta: { target: ['displayName'] },
+    });
+
+    await expect(
+      service.updateProfile(authUser, { displayName: 'Taken Name' }),
+    ).rejects.toThrow('Display name is already taken');
+  });
+
   it('rejects a deactivated account during profile resolution', async () => {
     const deactivatedUser = {
       id: 'usr_deactivated',
