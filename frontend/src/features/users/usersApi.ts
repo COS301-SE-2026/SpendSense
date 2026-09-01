@@ -12,6 +12,14 @@ export async function getMe(){
     return apiFetch('/users/me')
 }
 
+export async function isDisplayNameAvailable(displayName: string) {
+    const query = encodeURIComponent(displayName.trim())
+    const response = await apiFetch<{data: {available: boolean}}>(
+        `/users/display-name/availability?displayName=${query}`
+    )
+    return response.data.available
+}
+
 export async function updateMe(body: {displayName?: string; avatarUrl?: string | null; onboardingCompleted?: boolean}) {
     return apiFetch('/users/me', {method: 'PATCH', body: JSON.stringify(body)})
 }

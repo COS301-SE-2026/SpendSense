@@ -16,13 +16,15 @@ import { Link, useNavigate} from "react-router-dom";
 import logo from "../components/SpendSenseLogoLight.svg";
 import { LongButton } from "../components/common/LongButton";
 import { CustomInput } from "../components/common/CustomInput";
-import { getMe } from "../features/users/usersApi";
+import { getMe, isDisplayNameAvailable } from "../features/users/usersApi";
 
 //validation rules
 const registrationSchema=z.object({
     displayName:z
 		.string()
-		.min(1,"Full name is required."),
+		.trim()
+		.min(1,"Display name is required.")
+		.max(80,"Display name must be 80 characters or fewer."),
     email: z
         .string()
         .min(1,"Email is required.")
@@ -55,6 +57,12 @@ export default function RegisterPage(){
 		setIsLoading(true);
 		setError(null);
 		try{
+			const displayNameAvailable = await isDisplayNameAvailable(data.displayName);
+			if (!displayNameAvailable) {
+				setError("That display name is already taken.");
+				return;
+			}
+
 			const result = await signUp(data.email, data.password, data.displayName);
 			if (result.session) {
 				await getMe();
@@ -79,9 +87,9 @@ export default function RegisterPage(){
 				</div> 
 				<form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
 						{/* inputs */}
-					{/* fullname->displayName */}
+					{/* display name */}
 					<div className="space-y-1">
-						<label htmlFor="displayName" className="text-xs font-semibold text-[#091828]">Full name</label>
+						<label htmlFor="displayName" className="text-xs font-semibold text-[#091828]">Display name</label>
 						<CustomInput
 							id="displayName"
 							variant="regLog"
