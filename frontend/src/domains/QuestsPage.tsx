@@ -3,8 +3,6 @@ import{ Link, useNavigate } from "react-router-dom"
 import{
 	CalendarCheck,
 	Mountain,
-	Gift,
-	ChevronRight,
 	Trophy,
 	AlertTriangle,
 	Coins,
