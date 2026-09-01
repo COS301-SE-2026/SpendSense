@@ -194,14 +194,6 @@ export default function QuestsPage(){
 						/>
 					)}
 				</section>
-				<button type="button" className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-dashed border-[#B8CBBF] bg-white/70 px-4 py-3 text-left dark:border-[#a0aec0]/40 dark:bg-[#131b2e]/70">
-					<QuestIcon tone="yellow"><Gift className="size-5"/></QuestIcon>
-					<span className="min-w-0 flex-1">
-						<span className="block text-sm font-bold text-[#091828] dark:text-white">Rewards</span>
-						<span className="block text-xs text-[#6b6375] dark:text-[#a0aec0]">Redeem your coins and claim exclusive perks.</span>
-					</span>
-					<ChevronRight className="size-4 shrink-0 text-[#6b6375] dark:text-[#a0aec0]"/>
-				</button>
 			</div>
 			<DailyQuizConfirmDialog
 				open={isDailyQuizConfirmOpen}
