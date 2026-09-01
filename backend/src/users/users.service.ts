@@ -17,6 +17,11 @@ import {
 import type { AuthUser } from '../auth/types/auth-user.type';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 import type { UpdatePreferencesDto } from './dto/update-preferences.dto';
+import {
+  getDisplayNameViolation,
+  getDisplayNameViolationMessage,
+  normalizeDisplayName,
+} from './display-name-policy';
 
 // UsersService: manages internal user records
 // bridges supabaseAuthId with the internal user table & default related records
@@ -65,8 +70,6 @@ const userProfileInclude = {
     },
   },
 } satisfies Prisma.UserInclude;
-
-const MAX_DISPLAY_NAME_LENGTH = 80;
 
 function isDisplayNameUniqueConstraintError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
@@ -395,14 +398,23 @@ export type UserPreferenceResult = Prisma.UserPreferenceGetPayload<{
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async isDisplayNameAvailable(displayName: string): Promise<boolean> {
-    const normalizedDisplayName = displayName.trim();
+  async checkDisplayName(displayName: string): Promise<{
+    available: boolean;
+    reason?: 'taken' | 'prohibited';
+  }> {
+    const normalizedDisplayName = normalizeDisplayName(displayName);
+    if (getDisplayNameViolation(normalizedDisplayName) === 'prohibited') {
+      return { available: false, reason: 'prohibited' };
+    }
+
     const existing = await this.prisma.user.findUnique({
       where: { displayName: normalizedDisplayName },
       select: { id: true },
     });
 
-    return existing === null;
+    return existing === null
+      ? { available: true }
+      : { available: false, reason: 'taken' };
   }
 
   // find/create the internal user for given supabase auth identity
@@ -425,13 +437,11 @@ export class UsersService {
       return existing;
     }
 
-    const displayName = authUser.displayName?.trim();
-    if (!displayName) {
-      throw new BadRequestException('A display name is required');
-    }
-    if (displayName.length > MAX_DISPLAY_NAME_LENGTH) {
+    const displayName = normalizeDisplayName(authUser.displayName);
+    const displayNameViolation = getDisplayNameViolation(displayName);
+    if (displayNameViolation) {
       throw new BadRequestException(
-        `Display name must be ${MAX_DISPLAY_NAME_LENGTH} characters or fewer`,
+        getDisplayNameViolationMessage(displayNameViolation),
       );
     }
 
@@ -488,13 +498,25 @@ export class UsersService {
     }
 
     const currentUser = await this.findOrCreateUser(authUser);
+    const displayName =
+      updates.displayName !== undefined
+        ? normalizeDisplayName(updates.displayName)
+        : undefined;
+    const displayNameViolation =
+      displayName !== undefined ? getDisplayNameViolation(displayName) : null;
+
+    if (displayNameViolation) {
+      throw new BadRequestException(
+        getDisplayNameViolationMessage(displayNameViolation),
+      );
+    }
 
     try {
       return await this.prisma.user.update({
         where: { id: currentUser.id },
         data: {
-          ...(updates.displayName !== undefined && {
-            displayName: updates.displayName,
+          ...(displayName !== undefined && {
+            displayName,
           }),
           ...(updates.avatarUrl !== undefined && {
             avatarUrl: updates.avatarUrl,

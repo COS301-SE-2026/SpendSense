@@ -12,12 +12,12 @@ export async function getMe(){
     return apiFetch('/users/me')
 }
 
-export async function isDisplayNameAvailable(displayName: string) {
+export async function checkDisplayName(displayName: string) {
     const query = encodeURIComponent(displayName.trim())
-    const response = await apiFetch<{data: {available: boolean}}>(
+    const response = await apiFetch<{data: {available: boolean; reason?: 'taken' | 'prohibited'}}>(
         `/users/display-name/availability?displayName=${query}`
     )
-    return response.data.available
+    return response.data
 }
 
 export async function updateMe(body: {displayName?: string; avatarUrl?: string | null; onboardingCompleted?: boolean}) {

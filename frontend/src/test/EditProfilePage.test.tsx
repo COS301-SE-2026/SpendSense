@@ -126,4 +126,15 @@ describe('EditProfilePage', ()=>{
 
         expect(await screen.findByText(/already taken/i)).toBeInTheDocument()
     })
+
+    it('shows a specific message when the display name contains prohibited language', async ()=> {
+        mockedUpdateMe.mockRejectedValue(
+            Object.assign(new Error('This display name contains prohibited language.'), {statusCode: 400}),
+        )
+        renderPage()
+        fireEvent.change(nameInput(), {target: {value: 'Ash0le'}})
+        fireEvent.click(saveButton())
+
+        expect(await screen.findByText(/prohibited language/i)).toBeInTheDocument()
+    })
 })

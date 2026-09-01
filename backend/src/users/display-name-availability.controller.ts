@@ -9,15 +9,13 @@ export class DisplayNameAvailabilityController {
   constructor(private readonly usersService: UsersService) {}
 
   @ApiOperation({
-    summary: 'Check whether a display name is available for signup',
+    summary: 'Check whether a display name can be used for signup',
   })
   @ApiQuery({ name: 'displayName', required: true, example: 'Kyle M' })
   @Get('display-name/availability')
   async checkAvailability(@Query() query: DisplayNameAvailabilityDto) {
     return {
-      available: await this.usersService.isDisplayNameAvailable(
-        query.displayName,
-      ),
+      ...(await this.usersService.checkDisplayName(query.displayName)),
     };
   }
 }

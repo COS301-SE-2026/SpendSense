@@ -62,24 +62,33 @@ describe('UsersService', () => {
     service = new UsersService(prisma as unknown as PrismaService);
   });
 
-  it('reports whether a display name is available', async () => {
+  it('reports whether a display name can be used', async () => {
     prisma.user.findUnique.mockResolvedValue(null);
 
-    await expect(service.isDisplayNameAvailable('  New User  ')).resolves.toBe(
-      true,
-    );
+    await expect(service.checkDisplayName('  New User  ')).resolves.toEqual({
+      available: true,
+    });
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { displayName: 'New User' },
       select: { id: true },
     });
   });
 
-  it('reports a display name as unavailable when it already exists', async () => {
+  it('reports a display name as taken when it already exists', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'usr_existing' } as never);
 
-    await expect(service.isDisplayNameAvailable('Existing User')).resolves.toBe(
-      false,
-    );
+    await expect(service.checkDisplayName('Existing User')).resolves.toEqual({
+      available: false,
+      reason: 'taken',
+    });
+  });
+
+  it('reports prohibited language before checking the database', async () => {
+    await expect(service.checkDisplayName('Ash0le')).resolves.toEqual({
+      available: false,
+      reason: 'prohibited',
+    });
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 
   it('returns the existing internal user profile when one already exists', async () => {
@@ -325,6 +334,31 @@ describe('UsersService', () => {
     await expect(service.findOrCreateUser(authUser)).rejects.toThrow(
       'Display name is already taken',
     );
+  });
+
+  it('rejects prohibited language during signup bootstrap', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.findOrCreateUser({
+        ...authUser,
+        displayName: 'Ash0le',
+      }),
+    ).rejects.toThrow('This display name contains prohibited language.');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects prohibited language when updating a display name', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'usr_authenticated',
+      supabaseAuthId: authUser.supabaseAuthId,
+      deletedAt: null,
+    } as InternalUserProfile);
+
+    await expect(
+      service.updateProfile(authUser, { displayName: 'Ash0le' }),
+    ).rejects.toThrow('This display name contains prohibited language.');
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   it('rejects an empty profile update', async () => {

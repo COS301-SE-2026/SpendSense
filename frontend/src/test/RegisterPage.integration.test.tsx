@@ -191,6 +191,23 @@ describe("Register page integration", () => {
         expect(signUpSpy).not.toHaveBeenCalled();
     });
 
+    it("does not call Supabase when the display name contains prohibited language", async () => {
+        vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+            ok: true,
+            json: async() => ({data: {available: false, reason: "prohibited"}}),
+        } as Response);
+        const signUpSpy = vi.spyOn(supabase.auth, "signUp");
+
+        renderRegisterPage();
+        fillForm({ displayName: "Ash0le" });
+        fireEvent.click(screen.getByRole("button", {name: /join the quest/i}));
+
+        await waitFor(() => {
+            expect(screen.getByText("This display name contains prohibited language.")).toBeInTheDocument();
+        });
+        expect(signUpSpy).not.toHaveBeenCalled();
+    });
+
     it("navigates to the login page via the 'Log in' link", () => {
         renderRegisterPage();
         fireEvent.click(screen.getByRole("link", {name: /log in/i}));

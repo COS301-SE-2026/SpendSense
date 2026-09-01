@@ -16,7 +16,7 @@ import { Link, useNavigate} from "react-router-dom";
 import logo from "../components/SpendSenseLogoLight.svg";
 import { LongButton } from "../components/common/LongButton";
 import { CustomInput } from "../components/common/CustomInput";
-import { getMe, isDisplayNameAvailable } from "../features/users/usersApi";
+import { checkDisplayName, getMe } from "../features/users/usersApi";
 
 //validation rules
 const registrationSchema=z.object({
@@ -57,9 +57,13 @@ export default function RegisterPage(){
 		setIsLoading(true);
 		setError(null);
 		try{
-			const displayNameAvailable = await isDisplayNameAvailable(data.displayName);
-			if (!displayNameAvailable) {
-				setError("That display name is already taken.");
+			const displayNameCheck = await checkDisplayName(data.displayName);
+			if (!displayNameCheck.available) {
+				setError(
+					displayNameCheck.reason === "prohibited"
+						? "This display name contains prohibited language."
+						: "That display name is already taken."
+				);
 				return;
 			}
 
