@@ -41,6 +41,10 @@ describe('ObligationsService', () => {
 
   const userId = 'user-1';
 
+  // Far enough out that dueDate minus the largest daysBefore used below
+  // (7) is still in the future no matter when this suite runs.
+  const occurrenceDueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
   beforeEach(() => {
     transaction = {
       paymentOccurrence: {
@@ -49,7 +53,7 @@ describe('ObligationsService', () => {
           amountDue: 99,
           sequenceNum: 1,
           status: 'PENDING',
-          dueDate: new Date('2026-08-20'),
+          dueDate: occurrenceDueDate,
         }),
       },
       paymentSchedule: {

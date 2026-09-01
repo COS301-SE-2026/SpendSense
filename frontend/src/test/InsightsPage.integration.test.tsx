@@ -5,11 +5,16 @@ import {describe, it, expect, vi, beforeEach} from 'vitest'
 import '@testing-library/jest-dom'
 import InsightsPage from '../domains/InsightsPage'
 import ProfilePage from '../domains/ProfilePage'
-import {apiFetch} from '../lib/api'
+import WrappedPage from '../domains/WrappedPage'
+import {apiDataFetch,apiFetch} from '../lib/api'
 
-vi.mock('../lib/api', ()=> ({
-    apiFetch: vi.fn(),
+vi.mock('../lib/api',()=>({
+    apiFetch:vi.fn(),
+    apiDataFetch:vi.fn(),
 }))
+
+const mockedApiFetch=vi.mocked(apiFetch)
+const mockedApiDataFetch=vi.mocked(apiDataFetch)
 
 vi.mock('../hooks/useUserProfile', ()=> {
     const stableUser={
@@ -39,8 +44,6 @@ vi.mock('../hooks/useUserProfile', ()=> {
 vi.mock('@/components/common/BottomNav', ()=> ({
     BottomNav: ()=> <nav data-testid="bottom-nav"/>
 }))
-
-const mockedApiFetch =vi.mocked(apiFetch)
 
 const sampleInsightsResponse={
     data: {
@@ -74,6 +77,27 @@ const sampleInsightsResponse={
     },
 }
 
+const sampleWrappedResponse={
+    month:8,
+    monthLabel:'August',
+    scoreStart:642,
+    scoreEnd:681,
+    scoreDelta:39,
+    scoreTierEnd:'GOOD',
+    onTimePayments:3,
+    latePayments:1,
+    missedPayments:1,
+    onTimePaymentRate:0.6,
+    longestPaymentStreakThisMonth:2,
+    numberBadgesEarned:2,
+    arrayBadgesEarned:[],
+    coinsEarned:85,
+    coinEvents:[],
+    quizzesCompleted:2,
+    knowledgeStreakEnd:0,
+    hasData:true,
+}
+
 function renderInsightsRoute(){
     return render(
         <MemoryRouter initialEntries={['/insights']}>
@@ -84,12 +108,12 @@ function renderInsightsRoute(){
     )
 }
 
-function renderProfileAndInsightsRoutes(){
+function renderProfileAndWrappedRoutes(){
     return render(
         <MemoryRouter initialEntries={['/profile']}>
             <Routes>
                 <Route path="/profile" element={<ProfilePage/>}/>
-                <Route path="/insights" element={<InsightsPage />}/>
+                <Route path="/wrapped" element={<WrappedPage />}/>
             </Routes>
         </MemoryRouter>
     )
@@ -186,20 +210,18 @@ describe('Insights integration', ()=>{
         expect(screen.getByText(/no obligation amounts are scheduled/i)).toBeInTheDocument()
     })
 
-    it('navigates from the Profile "Wrapped" row to /insights and loads real data', async()=> {
-        mockedApiFetch.mockResolvedValueOnce(sampleInsightsResponse)
-        renderProfileAndInsightsRoutes()
+    it('navigates from the Profile "Wrapped" row to /wrapped', async()=> {
+        mockedApiDataFetch.mockResolvedValueOnce(sampleWrappedResponse)
+        renderProfileAndWrappedRoutes()
 
         const wrappedRow=screen.getByRole('link', {name: /wrapped/i})
-        expect(wrappedRow).toHaveAttribute('href', '/insights')
+        expect(wrappedRow).toHaveAttribute('href', '/wrapped')
 
         fireEvent.click(wrappedRow)
 
         await waitFor(()=> {
-            expect(screen.getByText('On-time payment rate')).toBeInTheDocument()
+            expect(screen.getByText('August')).toBeInTheDocument()
         })
-
-        expect(mockedApiFetch).toHaveBeenCalledWith('/insights')
     })
 
     it('displays the as-of date returned by the server', async()=> {

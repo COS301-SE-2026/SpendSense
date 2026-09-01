@@ -94,13 +94,13 @@ describe('ProfilePage', ()=> {
         expect(screen.getByRole('img', {name: /rachel c's avatar/i})).toHaveAttribute('src', 'https://example.com/a.svg')
     })
 
-    it('links every enabled menu row to its route(wrapped routed to insights)', ()=> {
+    it('links every enabled menu row to its route(wrapped routed to /wrapped)', ()=> {
         renderProfile()
         expect(screen.getByRole('link', {name: /edit profile/i})).toHaveAttribute('href', '/edit-profile')
         expect(screen.getByRole('link', {name: /settings/i})).toHaveAttribute('href', '/settings')
         expect(screen.getByRole('link', {name: /friends & social/i})).toHaveAttribute('href', '/friends')
         expect(screen.getByRole('link', {name: /sticker album/i})).toHaveAttribute('href', '/stickers')
-        expect(screen.getByRole('link', {name: /wrapped/i})).toHaveAttribute('href', '/insights')
+        expect(screen.getByRole('link', {name: /wrapped/i})).toHaveAttribute('href', '/wrapped')
         expect(screen.getByRole('link', {name: /mascot home/i})).toHaveAttribute('href', '/mascot')
         expect(screen.getByRole('link', {name: /help & support/i})).toHaveAttribute('href', '/help')
 

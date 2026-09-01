@@ -32,9 +32,9 @@ export function NotificationToast({
             role="status"
             aria-live="polite"
             data-testid="notification-toast"
-            className="fixed left-1/2 top-5 z-50 flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 items-start gap-3 rounded-2xl border border-[#d9ede7] bg-white p-4 shadow-lg"
+            className="fixed left-1/2 top-5 z-50 flex w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 items-start gap-3 rounded-2xl border border-[#d9ede7] bg-white p-4 shadow-lg dark:bg-[#131b2e]"
         >
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#ffd8e6] text-[#ac2a5d]">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#ffd8e6] text-[#ac2a5d] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]">
                 <Bell className="size-5"/>
             </div>
             <button
@@ -42,16 +42,16 @@ export function NotificationToast({
                 onClick={openNotifications}
                 className="min-w-0 flex-1 text-left"
             >
-                <p className="text-xs font-bold uppercase tracking-wide text-[#ac2a5d]">New notification</p>
-                <p className="mt-1 font-bold text-[#091828]">{notification.title}</p>
-                <p className="mt-1 text-sm text-[#6b6375]">{notification.message}</p>
-                <p className="mt-2 text-xs font-bold text-[#ac2a5d]">View notifications</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-[#ac2a5d] dark:text-[#ff6b9d]">New notification</p>
+                <p className="mt-1 font-bold text-[#091828] dark:text-[#ffffff]">{notification.title}</p>
+                <p className="mt-1 text-sm text-[#6b6375] dark:text-[#a0aec0]">{notification.message}</p>
+                <p className="mt-2 text-xs font-bold text-[#ac2a5d] dark:text-[#ff6b9d]">View notifications</p>
             </button>
             <button
                 type="button"
                 aria-label="Dismiss notification"
                 onClick={onDismiss}
-                className="flex size-8 shrink-0 items-center justify-center rounded-full text-[#6b6375] transition hover:bg-[#f4fbf7] hover:text-[#091828]"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full text-[#6b6375] transition hover:bg-[#f4fbf7] hover:text-[#091828] dark:text-[#a0aec0]"
             >
                 <X className="size-4"/>
             </button>

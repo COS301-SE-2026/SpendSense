@@ -1,18 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentOccurrencesService } from './payment-occurrences.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RewardService } from '../rewards/reward.service';
 import {
   NotificationType,
   PaymentOccurrenceStatus,
   PaymentOccurrence,
   UserEventSourceType,
+  UserEventType,
+  ScoreTier,
 } from '@prisma/client';
+import { CreditScoreService } from '../credit-score/credit-score.service';
 
 describe('PaymentOccurrencesService', () => {
   let service: PaymentOccurrencesService;
   let transaction: {
     paymentOccurrence: { update: jest.Mock };
     notification: { create: jest.Mock };
+    userEvent: { create: jest.Mock };
+  };
+  let rewardService: {
+    advanceStreak: jest.Mock;
+    setMascotMood: jest.Mock;
   };
 
   const mockPrismaService = {
@@ -23,6 +32,9 @@ describe('PaymentOccurrencesService', () => {
       create: jest.fn(),
     },
     $transaction: jest.fn(),
+  };
+  const mockCreditScoreService = {
+    recalculateAfterOccurrenceStatusChange: jest.fn(),
   };
 
   const buildOccurrence = (
@@ -52,10 +64,34 @@ describe('PaymentOccurrencesService', () => {
     transaction = {
       paymentOccurrence: { update: jest.fn() },
       notification: { create: jest.fn() },
+      userEvent: {
+        create: jest.fn().mockResolvedValue({
+          id: 'missed-event-1',
+        }),
+      },
+    };
+    rewardService = {
+      advanceStreak: jest.fn(),
+      setMascotMood: jest.fn(),
     };
 
     mockPrismaService.$transaction.mockImplementation(
       (callback: (tx: typeof transaction) => unknown) => callback(transaction),
+    );
+
+    mockCreditScoreService.recalculateAfterOccurrenceStatusChange.mockResolvedValue(
+      {
+        scoreEventId: 'mock-scoreEventId',
+        scoreBefore: 600,
+        scoreAfter: 580,
+        scoreDelta: -20,
+        tierBefore: ScoreTier.GOOD,
+        tierAfter: ScoreTier.FAIR,
+        explanation: 'Payment overdue.',
+        onTimePaymentCount: 0,
+        latePaymentCount: 0,
+        missedPaymentCount: 0,
+      },
     );
 
     const module: TestingModule = await Test.createTestingModule({
@@ -64,6 +100,14 @@ describe('PaymentOccurrencesService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: RewardService,
+          useValue: rewardService,
+        },
+        {
+          provide: CreditScoreService,
+          useValue: mockCreditScoreService,
         },
       ],
     }).compile();
@@ -103,7 +147,6 @@ describe('PaymentOccurrencesService', () => {
           sourceType: UserEventSourceType.PAYMENT_OCCURRENCE,
         },
       });
-
       expect(rslt).toEqual({ transitionedCount: 1 });
     });
 
@@ -131,6 +174,8 @@ describe('PaymentOccurrencesService', () => {
       expect(rslt).toEqual({ transitionedCount: 0 });
       expect(transaction.paymentOccurrence.update).not.toHaveBeenCalled();
       expect(transaction.notification.create).not.toHaveBeenCalled();
+      expect(rewardService.advanceStreak).not.toHaveBeenCalled();
+      expect(rewardService.setMascotMood).not.toHaveBeenCalled();
     });
 
     it('will not transition an occurrence again that was marked OVERDUE previously', async () => {
@@ -183,6 +228,30 @@ describe('PaymentOccurrencesService', () => {
           sourceType: UserEventSourceType.PAYMENT_OCCURRENCE,
         },
       });
+      expect(rewardService.advanceStreak).toHaveBeenCalledWith(transaction, {
+        userId: occurrence.userId,
+        field: 'currentPaymentStreak',
+        advance: false,
+      });
+      expect(rewardService.setMascotMood).toHaveBeenCalledWith(transaction, {
+        userId: occurrence.userId,
+        mood: 'SAD',
+        reason: 'Payment occurrence missed',
+        sourceEventId: 'missed-event-1',
+      });
+
+      expect(transaction.userEvent.create).toHaveBeenCalledWith({
+        data: {
+          userId: occurrence.userId,
+          eventType: UserEventType.PAYMENT_OVERDUE,
+          sourceType: UserEventSourceType.PAYMENT_OCCURRENCE,
+          sourceId: occurrence.id,
+          metadata: {
+            occurrenceId: occurrence.id,
+            transition: 'MISSED',
+          },
+        },
+      });
 
       expect(rslt).toEqual({ transitionedCount: 1 });
     });
@@ -211,6 +280,8 @@ describe('PaymentOccurrencesService', () => {
       expect(rslt).toEqual({ transitionedCount: 0 });
       expect(transaction.paymentOccurrence.update).not.toHaveBeenCalled();
       expect(transaction.notification.create).not.toHaveBeenCalled();
+      expect(rewardService.advanceStreak).not.toHaveBeenCalled();
+      expect(rewardService.setMascotMood).not.toHaveBeenCalled();
     });
 
     it('will not transition an occurrence again that was marked MISSED previously', async () => {

@@ -11,10 +11,18 @@ import ObligationForm from './domains/ObligationForm.tsx'
 import StickerAlbumPage from './domains/StickerAlbumPage'
 import StickerDetailPage from './domains/StickerDetailPage'
 import {initAuthListener} from './features/auth/auth.service'
+import {initTheme} from './lib/theme'
 import QuestsPage from './domains/QuestsPage'
 import QuizPage from './domains/QuizPage'
 import FriendsPage from './domains/FriendsPage'
-import { FriendsListPage, AddFriendPage, FriendProfilePage, FriendActivityPage, LeaderboardPage } from './domains/FriendsSubPages'
+import LeaderboardPage from './domains/LeaderboardPage'
+import FriendsListPage from './domains/FriendsListPage'
+import AddFriendPage from './domains/AddFriendPage'
+import FriendProfilePage from './domains/FriendProfilePage'
+import FriendActivityPage from './domains/FriendActivityPage'
+import WagersPage from './domains/WagersPage'
+import NewWagerPage from './domains/NewWagerPage'
+import WagerDetailPage from './domains/WagerDetailPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import InsightsPage from './domains/InsightsPage.tsx'
 import ProfilePage from './domains/ProfilePage.tsx'
@@ -29,6 +37,7 @@ import QuizQuestionPage from './domains/QuizQuestionPage.tsx'
 import QuizAnswerFeedbackPage from './domains/QuizAnswerFeedbackPage.tsx'
 import QuizResultsPage from './domains/QuizResultsPage.tsx'
 import MascotPage from './domains/MascotPage.tsx'
+import MascotShopPage from './domains/MascotShopPage.tsx'
 import WrappedPage from './domains/WrappedPage.tsx'
 import SettingsPage from './domains/SettingsPage.tsx'
 import SettingsPreferencesPage from './domains/SettingsPreferencesPage.tsx'
@@ -39,6 +48,7 @@ import HelpPage from './domains/HelpPage.tsx'
 import HomeRoute from './components/HomeRoute'
 
 initAuthListener()
+initTheme()
 import PaymentForm from './domains/PaymentForm.tsx'
 
 createRoot(document.getElementById('root')!).render(
@@ -75,7 +85,11 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
           <Route path="/friends/activity" element={<FriendActivityPage/>}/>
           <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
+          <Route path="/wagers" element={<WagersPage/>}/>
+          <Route path="/wagers/new" element={<NewWagerPage/>}/>
+          <Route path="/wagers/:wagerId" element={<WagerDetailPage/>}/>
           <Route path="/mascot" element={<MascotPage/>}/>
+          <Route path="/mascot/shop" element={<MascotShopPage/>}/>
           <Route path="/wrapped" element={<WrappedPage/>}/>
           <Route path="/settings" element={<SettingsPage/>}/>
           <Route path="/settings/preferences" element={<SettingsPreferencesPage/>}/>

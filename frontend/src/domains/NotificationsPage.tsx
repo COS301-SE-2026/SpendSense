@@ -10,9 +10,9 @@ import {
     Info,
     Trash2,
     TrendingUp,
+    ChevronLeft,
 } from "lucide-react"
 import {CustomCard} from "@/components/ui/CustomCard"
-import {IconButton} from "@/components/common/IconButton"
 import {
     deleteManyNotifications,
     getNotifications,
@@ -286,18 +286,21 @@ export default function NotificationsPage(){
     )
 
     return(
-        <div className="min-h-screen bg-[#f4fbf7] pb-24">
+        <div className="min-h-screen bg-[#f4fbf7] pb-24 dark:bg-[#0b1326]">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
                 <header className="flex items-center justify-between">
-                    <IconButton
-                        IconVariant="iconBack"
-                        aria-label="Go back"
-                        onClick={()=>nav(-1)}
-                    />
+                    <button type="button" aria-label="Go back" onClick={() => nav(-1)} className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
+                        <ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]" />
+                    </button>
 
-                    <h1 className="text-lg font-bold text-[#091828]">
-                        Notifications
-                    </h1>
+                    <div className="flex flex-1 items-center justify-center">
+                        <div
+                            className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
+                            style={{transform: "rotate(-3deg)"}}>
+                                
+                            <span className="text-base font-bold text-[#091828] dark:text-[#091828]">Notifications</span>
+                        </div>
+                    </div>
 
                     <div className="size-10"/>
                 </header>
@@ -321,8 +324,8 @@ export default function NotificationsPage(){
                         className={cn(
                             "flex h-11 flex-1 items-center justify-center rounded-full border px-4 text-sm font-semibold transition",
                             unreadOnly
-                                ? "border-[#ac2a5d] bg-[#ffd8e6] text-[#ac2a5d]"
-                                : "border-[#d4ded9] bg-white text-[#091828]",
+                                ? "border-[#ac2a5d] bg-[#ffd8e6] text-[#ac2a5d] dark:border-[#ff6b9d] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
+                                : "border-[#d4ded9] bg-white text-[#091828] dark:border-[#2d3449] dark:bg-[#131b2e] dark:text-[#ffffff]",
                         )}
                     >
                         Unread only
@@ -412,8 +415,8 @@ function UnreadHeader({
                 className={cn(
                     "shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold transition",
                     manageMode
-                        ?"bg-[#ffd8e6] text-[#ac2a5d] hover:bg-[#ffc4da]"
-                        :"text-[#6b6375] hover:text-[#091828]",
+                        ?"bg-[#ffd8e6] text-[#ac2a5d] hover:bg-[#ffc4da] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
+                        :"text-[#6b6375] hover:text-[#091828] dark:text-[#a0aec0]",
                 )}
             >
                 {manageMode?"Done":"Manage"}
@@ -435,7 +438,7 @@ function UnreadSummary({
 }:UnreadSummaryProps){
     if(unreadLoading&&!unreadLoaded){
         return(
-            <p className="text-sm font-semibold text-[#6b6375]">
+            <p className="text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
                 Loading unread notifications...
             </p>
         )
@@ -443,7 +446,7 @@ function UnreadSummary({
 
     if(!unreadLoaded){
         return(
-            <p className="text-sm font-semibold text-[#6b6375]">
+            <p className="text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
                 Unread count unavailable
             </p>
         )
@@ -452,8 +455,8 @@ function UnreadSummary({
     if(unreadCount===0){
         return(
             <div>
-                <p className="font-bold text-[#091828]">You're all caught up</p>
-                <p className="mt-0.5 text-sm text-[#6b6375]">
+                <p className="font-bold text-[#091828] dark:text-[#ffffff]">You're all caught up</p>
+                <p className="mt-0.5 text-sm text-[#6b6375] dark:text-[#a0aec0]">
                     All your notifications have been read.
                 </p>
             </div>
@@ -461,7 +464,7 @@ function UnreadSummary({
     }
 
     return(
-        <p className="text-sm font-semibold text-[#6b6375]">
+        <p className="text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
             {unreadCount} unread {unreadCount===1?"notification":"notifications"}
         </p>
     )
@@ -486,14 +489,14 @@ function SelectAllControl({
         <button
             type="button"
             onClick={onToggle}
-            className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#091828]"
+            className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#091828] dark:text-[#ffffff]"
         >
             <span
                 className={cn(
                     "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
                     allSelected
-                        ?"border-[#ac2a5d] bg-[#ac2a5d] text-white"
-                        :"border-[#d4ded9] bg-white",
+                        ?"border-[#ac2a5d] bg-[#ac2a5d] text-white dark:border-[#ff6b9d] dark:bg-[#ff6b9d] dark:text-[#6e0035]"
+                        :"border-[#d4ded9] bg-white dark:border-[#2d3449] dark:bg-[#131b2e]",
                 )}
             >
                 {allSelected&&<Check className="size-3" strokeWidth={3}/>}
@@ -523,18 +526,18 @@ function NotificationMessages({
             )}
 
             {loadError&&(
-                <div className="mt-6 flex items-center gap-3 rounded-2xl border-2 border-[#ac2a5d] bg-[#ffd9e1] px-4 py-3">
-                    <AlertTriangle className="size-4 shrink-0 text-[#ac2a5d]"/>
+                <div className="mt-6 flex items-center gap-3 rounded-2xl border-2 border-[#ac2a5d] bg-[#ffd9e1] px-4 py-3 dark:border-[#ff6b9d] dark:bg-[#2d1b2e]">
+                    <AlertTriangle className="size-4 shrink-0 text-[#ac2a5d] dark:text-[#ff6b9d]"/>
 
                     <div className="flex-1">
-                        <p className="text-sm font-semibold text-[#ac2a5d]">
+                        <p className="text-sm font-semibold text-[#ac2a5d] dark:text-[#ff6b9d]">
                             {loadError}
                         </p>
 
                         <button
                             type="button"
                             onClick={onRetry}
-                            className="mt-1 text-sm font-bold text-[#091828] underline"
+                            className="mt-1 text-sm font-bold text-[#091828] underline dark:text-[#ffffff]"
                         >
                             Try again
                         </button>
@@ -553,10 +556,10 @@ function InlineError({message}:Readonly<{message:string}>){
     return(
         <div
             role="alert"
-            className="mt-4 flex items-center gap-2 rounded-2xl border border-[#ac2a5d] bg-[#ffd9e1] px-4 py-3"
+            className="mt-4 flex items-center gap-2 rounded-2xl border border-[#ac2a5d] bg-[#ffd9e1] px-4 py-3 dark:border-[#ff6b9d] dark:bg-[#2d1b2e]"
         >
-            <AlertTriangle className="size-4 shrink-0 text-[#ac2a5d]"/>
-            <p className="text-sm font-semibold text-[#ac2a5d]">
+            <AlertTriangle className="size-4 shrink-0 text-[#ac2a5d] dark:text-[#ff6b9d]"/>
+            <p className="text-sm font-semibold text-[#ac2a5d] dark:text-[#ff6b9d]">
                 {message}
             </p>
         </div>
@@ -601,7 +604,7 @@ function NotificationContent({
                 {[1,2,3,4].map((item)=>(
                     <div
                         key={item}
-                        className="h-16 animate-pulse rounded-xl bg-[#d9ede7]"
+                        className="h-16 animate-pulse rounded-xl bg-[#d9ede7] dark:bg-[#1c263c]"
                     />
                 ))}
             </div>
@@ -613,10 +616,10 @@ function NotificationContent({
     if(notifications.length===0){
         return(
             <div className="flex flex-col items-center justify-center gap-2 py-20 text-center">
-                <p className="font-bold text-[#091828]">
+                <p className="font-bold text-[#091828] dark:text-[#ffffff]">
                     {filtersActive?"No matching notifications":"You're caught up"}
                 </p>
-                <p className="max-w-xs text-sm text-[#6b6375]">
+                <p className="max-w-xs text-sm text-[#6b6375] dark:text-[#a0aec0]">
                     {filtersActive
                         ?"No notifications matched the selected filters."
                         :"You do not have any notifications yet."}
@@ -626,7 +629,7 @@ function NotificationContent({
     }
     return(
         <>
-            <CustomCard className="mt-6 rounded-3xl bg-white shadow-sm">
+            <CustomCard className="mt-6 rounded-3xl bg-white shadow-sm dark:bg-[#131b2e]">
                 {notifications.map((notification)=>(
                     <NotificationRow
                         key={notification.id}
@@ -674,12 +677,12 @@ function PaginationControls({
                 type="button"
                 disabled={page<=1||loading}
                 onClick={()=>onPageChange(page-1)}
-                className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40 dark:border-[#2d3449] dark:bg-[#131b2e] dark:text-[#ffffff]"
             >
                 Previous
             </button>
 
-            <p className="text-sm font-semibold text-[#6b6375]">
+            <p className="text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
                 Page {page} of {totalPages}
             </p>
 
@@ -687,7 +690,7 @@ function PaginationControls({
                 type="button"
                 disabled={page>=totalPages||loading}
                 onClick={()=>onPageChange(page+1)}
-                className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:cursor-not-allowed disabled:opacity-40 dark:border-[#2d3449] dark:bg-[#131b2e] dark:text-[#ffffff]"
             >
                 Next
             </button>
@@ -723,9 +726,9 @@ function BulkActionBar({
     }
 
     return(
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e8e4f4] bg-white/95 backdrop-blur">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e8e4f4] bg-white/95 backdrop-blur dark:border-[#2d3449] dark:bg-[#131b2e]/95">
             <div className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-5 py-3">
-                <p className="text-sm font-semibold text-[#091828]">
+                <p className="text-sm font-semibold text-[#091828] dark:text-[#ffffff]">
                     {selectedCount} selected
                 </p>
 
@@ -735,7 +738,7 @@ function BulkActionBar({
                             type="button"
                             disabled={bulkPending}
                             onClick={onCancelDelete}
-                            className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:opacity-50"
+                            className="rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] disabled:opacity-50 dark:border-[#2d3449] dark:bg-[#131b2e] dark:text-[#ffffff]"
                         >
                             Cancel
                         </button>
@@ -743,7 +746,7 @@ function BulkActionBar({
                             type="button"
                             disabled={bulkPending}
                             onClick={onConfirmDelete}
-                            className="rounded-full bg-[#ac2a5d] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                            className="rounded-full bg-[#ac2a5d] px-4 py-2 text-sm font-bold text-white disabled:opacity-50 dark:bg-[#ff6b9d] dark:text-[#6e0035]"
                         >
                             {bulkPending?"Deleting...":"Confirm delete"}
                         </button>
@@ -755,7 +758,7 @@ function BulkActionBar({
                                 type="button"
                                 disabled={bulkPending}
                                 onClick={onMarkRead}
-                                className="flex items-center gap-1.5 rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] transition-colors duration-150 hover:border-[#ac2a5d] hover:bg-[#fff2f7] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[#d4ded9] disabled:hover:bg-white"
+                                className="flex items-center gap-1.5 rounded-full border border-[#d4ded9] bg-white px-4 py-2 text-sm font-semibold text-[#091828] transition-colors duration-150 hover:border-[#ac2a5d] hover:bg-[#fff2f7] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[#d4ded9] disabled:hover:bg-white dark:border-[#2d3449] dark:bg-[#131b2e] dark:text-[#ffffff]"
                             >
                                 <Check className="size-4"/>
                                 Mark read
@@ -765,7 +768,7 @@ function BulkActionBar({
                             type="button"
                             disabled={bulkPending||selectedCount===0}
                             onClick={onStartDelete}
-                            className="flex items-center gap-1.5 rounded-full bg-[#ffd9e1] px-4 py-2 text-sm font-semibold text-[#ac2a5d] transition-colors duration-150 hover:bg-[#ffc4d3] hover:text-[#922149] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#ffd9e1] disabled:hover:text-[#ac2a5d]"
+                            className="flex items-center gap-1.5 rounded-full bg-[#ffd9e1] px-4 py-2 text-sm font-semibold text-[#ac2a5d] transition-colors duration-150 hover:bg-[#ffc4d3] hover:text-[#922149] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#ffd9e1] disabled:hover:text-[#ac2a5d] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
                         >
                             <Trash2 className="size-4"/>
                             Delete
@@ -787,12 +790,12 @@ const ICON_TYPE:Record<NotifType,React.ReactNode>={
 }
 
 const TONE_TYPE:Record<NotifType,string>={
-    REWARD:"bg-[#ffe9b5] text-[#7a5a00]",
-    PAYMENT_STATUS:"bg-[#e8e4f4] text-[#5b4d8b]",
-    SYSTEM:"bg-[#0a1929] text-white",
-    SCORE_CHANGE:"bg-[#dcefe8] text-[#091828]",
-    REMINDER:"bg-[#ffe9b5] text-[#7a5a00]",
-    BADGE_EARNED:"bg-[#ffd8e6] text-[#ac2a5d]",
+    REWARD:"bg-[#ffe9b5] text-[#7a5a00] dark:bg-[#3f2e00] dark:text-[#ffdf9b]",
+    PAYMENT_STATUS:"bg-[#e8e4f4] text-[#5b4d8b] dark:bg-[#1c263c] dark:text-[#c5b3f0]",
+    SYSTEM:"bg-[#0a1929] text-white dark:bg-[#1e293b]",
+    SCORE_CHANGE:"bg-[#dcefe8] text-[#091828] dark:bg-[#1c263c] dark:text-[#ffffff]",
+    REMINDER:"bg-[#ffe9b5] text-[#7a5a00] dark:bg-[#3f2e00] dark:text-[#ffdf9b]",
+    BADGE_EARNED:"bg-[#ffd8e6] text-[#ac2a5d] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]",
 }
 
 function NotificationRow({
@@ -818,8 +821,8 @@ function NotificationRow({
             aria-label={`${notification.title}${unread?", unread":""}`}
             aria-pressed={selectMode?selected:undefined}
             className={cn(
-                "flex w-full items-start gap-3 border-b border-[#e8e4f4] px-3 py-3 text-left transition last:border-b-0 hover:bg-[#f4fbf7]",
-                unread?"bg-[#fbfefc]":"bg-white",
+                "flex w-full items-start gap-3 border-b border-[#e8e4f4] px-3 py-3 text-left transition last:border-b-0 hover:bg-[#f4fbf7] dark:border-[#2d3449]",
+                unread?"bg-[#fbfefc] dark:bg-[#1c263c]":"bg-white dark:bg-[#131b2e]",
                 pending&&"cursor-wait opacity-60",
             )}
         >
@@ -828,8 +831,8 @@ function NotificationRow({
                     className={cn(
                         "mt-1 flex size-5 shrink-0 items-center justify-center rounded-full border-2",
                         selected
-                            ? "border-[#ac2a5d] bg-[#ac2a5d] text-white"
-                            : "border-[#d4ded9] bg-white",
+                            ? "border-[#ac2a5d] bg-[#ac2a5d] text-white dark:border-[#ff6b9d] dark:bg-[#ff6b9d] dark:text-[#6e0035]"
+                            : "border-[#d4ded9] bg-white dark:border-[#2d3449] dark:bg-[#131b2e]",
                     )}
                 >
                     {selected&&<Check className="size-3" strokeWidth={3}/>}
@@ -848,12 +851,12 @@ function NotificationRow({
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                     {unread&&(
-                        <span className="size-1.5 shrink-0 rounded-full bg-[#ac2a5d]"/>
+                        <span className="size-1.5 shrink-0 rounded-full bg-[#ac2a5d] dark:bg-[#ff6b9d]"/>
                     )}
 
                     <p
                         className={cn(
-                            "truncate text-sm text-[#091828]",
+                            "truncate text-sm text-[#091828] dark:text-[#ffffff]",
                             unread?"font-bold":"font-semibold",
                         )}
                     >
@@ -861,12 +864,12 @@ function NotificationRow({
                     </p>
                 </div>
 
-                <p className="mt-0.5 text-sm text-[#6b6375]">
+                <p className="mt-0.5 text-sm text-[#6b6375] dark:text-[#a0aec0]">
                     {notification.message}
                 </p>
             </div>
 
-            <span className="shrink-0 text-[11px] font-medium text-[#6b6375]">
+            <span className="shrink-0 text-[11px] font-medium text-[#6b6375] dark:text-[#a0aec0]">
                 {pending?"Updating...":formatTime(notification.createdAt)}
             </span>
         </button>
