@@ -446,7 +446,10 @@ describe('UsersService data deletion', () => {
   let service: UsersService;
   let prisma: {
     user: { findUnique: jest.Mock<Promise<unknown>, [unknown]> };
-    $transaction: jest.Mock<Promise<unknown>, [(tx: DeletionTx) => Promise<unknown>]>;
+    $transaction: jest.Mock<
+      Promise<unknown>,
+      [(tx: DeletionTx) => Promise<unknown>]
+    >;
   };
   let tx: DeletionTx;
   let callOrder: string[];
@@ -574,7 +577,6 @@ describe('UsersService data deletion', () => {
 
     await service.deleteAllUserData(authUser);
 
-   
     ['category', 'badgeDefinition', 'quizQuestion', 'cosmeticItem'].forEach(
       (model) => {
         expect(callOrder).not.toContain(model);

@@ -512,9 +512,7 @@ export class UsersService {
     };
   }
 
-  async deleteAllUserData(
-    authUser: AuthUser,
-  ): Promise<UserDataDeletionResult> {
+  async deleteAllUserData(authUser: AuthUser): Promise<UserDataDeletionResult> {
     const userIdentity = await this.prisma.user.findUnique({
       where: { supabaseAuthId: authUser.supabaseAuthId },
       select: { id: true },
@@ -565,8 +563,9 @@ export class UsersService {
       const gamificationProfile = await tx.gamificationProfile.deleteMany({
         where: { userId },
       });
-      const notificationPreference =
-        await tx.notificationPreference.deleteMany({ where: { userId } });
+      const notificationPreference = await tx.notificationPreference.deleteMany(
+        { where: { userId } },
+      );
       const preference = await tx.userPreference.deleteMany({
         where: { userId },
       });
