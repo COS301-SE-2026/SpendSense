@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach,describe, it, expect, vi } from 'vitest'
 import DashboardPage from '../domains/DashboardPage'
@@ -109,7 +109,11 @@ describe('DashboardPage', () => {
   it('renders the knowledge streak and level badge', async () => {
     await renderLoadedDashboard()
 
-    expect(screen.getByText(/knowledge streak/i)).toBeInTheDocument()
+    // scoped to the panel: the carousel also has an sr-only live region
+    // naming the active streak
+    expect(
+      within(screen.getByTestId('streak-panel-knowledge')).getByText(/knowledge streak/i),
+    ).toBeInTheDocument()
 
     expect(
       screen.getByRole('img', {
@@ -124,6 +128,66 @@ describe('DashboardPage', () => {
     ).toBeInTheDocument()
 
     expect(screen.getByText('Lvl 4')).toBeInTheDocument()
+  })
+
+  it('starts on the knowledge streak and pages to the payment streak', async () => {
+    await renderLoadedDashboard()
+
+    const knowledge = screen.getByTestId('streak-panel-knowledge')
+    const payment = screen.getByTestId('streak-panel-payment')
+
+    expect(knowledge).toHaveAttribute('aria-hidden', 'false')
+    expect(payment).toHaveAttribute('aria-hidden', 'true')
+
+    fireEvent.click(screen.getByRole('button', {name: /show next streak/i}))
+
+    expect(knowledge).toHaveAttribute('aria-hidden', 'true')
+    expect(payment).toHaveAttribute('aria-hidden', 'false')
+    expect(within(payment).getByText(/on-time payments/i)).toBeInTheDocument()
+  })
+
+  it('shows the payment streak value from the dashboard payload', async () => {
+    await renderLoadedDashboard()
+
+    fireEvent.click(screen.getByRole('button', {name: /show next streak/i}))
+
+    expect(screen.getByRole('img', {name: '7-days'})).toBeInTheDocument()
+  })
+
+  it('wraps around so the user can page back the way they came', async () => {
+    await renderLoadedDashboard()
+
+    fireEvent.click(screen.getByRole('button', {name: /show previous streak/i}))
+
+    expect(screen.getByTestId('streak-panel-payment')).toHaveAttribute('aria-hidden', 'false')
+  })
+
+  it('lets the user jump straight to a streak with the dots', async () => {
+    await renderLoadedDashboard()
+
+    fireEvent.click(screen.getByRole('button', {name: /show on-time payments/i}))
+
+    expect(screen.getByTestId('streak-panel-payment')).toHaveAttribute('aria-hidden', 'false')
+  })
+
+  it('pages on a horizontal swipe', async () => {
+    await renderLoadedDashboard()
+    const viewport = screen.getByTestId('streak-carousel-viewport')
+
+    fireEvent.touchStart(viewport, {touches: [{clientX: 200}]})
+    fireEvent.touchEnd(viewport, {changedTouches: [{clientX: 100}]})
+
+    expect(screen.getByTestId('streak-panel-payment')).toHaveAttribute('aria-hidden', 'false')
+  })
+
+  it('ignores a swipe too small to be intentional', async () => {
+    await renderLoadedDashboard()
+    const viewport = screen.getByTestId('streak-carousel-viewport')
+
+    fireEvent.touchStart(viewport, {touches: [{clientX: 200}]})
+    fireEvent.touchEnd(viewport, {changedTouches: [{clientX: 185}]})
+
+    expect(screen.getByTestId('streak-panel-knowledge')).toHaveAttribute('aria-hidden', 'false')
   })
 
   it('renders the XP progress section', async () => {

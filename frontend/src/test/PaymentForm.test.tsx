@@ -57,12 +57,12 @@ describe("PaymentForm (ObligationForm) Component",()=>{
         expect(screen.getByRole("button",{ name: /log payment/i })).toBeInTheDocument();
     });
 
-    //redirect ot dashboard "/" on cancel
-    it("should redirect home when clicking the cancel button",async ()=>{
+    //return to the previous page on cancel
+    it("should navigate back when clicking the cancel button",async ()=>{
         const user = userEvent.setup();
         render(<PaymentForm />);
         await user.click(screen.getByRole("button",{ name :/clear form/i }));
-        expect(mockNavigate).toHaveBeenCalledWith("/");
+        expect(mockNavigate).toHaveBeenCalledWith(-1);
     });
 
     // validation testing
