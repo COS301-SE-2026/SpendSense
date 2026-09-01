@@ -105,7 +105,7 @@ export default function ObligationForm(){
        }
    }
     return(
-        <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4FBF7] px-4">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#F4FBF7] px-4 dark:bg-[#0b1326]">
             <div className="w-full max-w-sm space-y-5">
                 {/* header -> cancel button(IconVariant="iconCancel"),heading*/}
                 <div className="flex items-center justify-between gap-3 mb-2">
@@ -115,18 +115,18 @@ export default function ObligationForm(){
                             aria-label="Clear form"
                             onClick={()=>navigate("/")}/>    
                     </div>   
-                    <h1 className="text-center text-[#091828] text-3xl font-bold">Add Payment</h1>
+                    <h1 className="text-center text-[#091828] text-3xl font-bold dark:text-white">Add Payment</h1>
                     <div className="size-10 flex-shrink-0" aria-hidden="true"/>
                 </div>
                 {selectedOccurrence && selectedObligation && (
-                    <div className="rounded-3xl border-2 border-[#091828] bg-white p-4 shadow-[4px_4px_0_#091828]">
-                        <p className="text-xs font-bold uppercase tracking-wide text-[#6b6375]">Selected payment</p>
+                    <div className="rounded-3xl border-2 border-[#091828] bg-white p-4 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#131b2e]">
+                        <p className="text-xs font-bold uppercase tracking-wide text-[#6b6375] dark:text-[#a0aec0]">Selected payment</p>
                         <div className="mt-2 flex items-center justify-between gap-3">
                             <div>
-                                <p className="text-lg font-extrabold text-[#091828]">{selectedObligation.name}</p>
-                                <p className="text-xs font-semibold text-[#6b6375]">{selectedObligation.type} | {selectedOccurrence.status}</p>
+                                <p className="text-lg font-extrabold text-[#091828] dark:text-white">{selectedObligation.name}</p>
+                                <p className="text-xs font-semibold text-[#6b6375] dark:text-[#a0aec0]">{selectedObligation.type} | {selectedOccurrence.status}</p>
                             </div>
-                            <p className="text-lg font-extrabold text-[#AC2A5D]">
+                            <p className="text-lg font-extrabold text-[#AC2A5D] dark:text-[#ff6b9d]">
                                 {selectedOccurrence.currency === "ZAR" ? "R" : selectedOccurrence.currency} {selectedAmount.toFixed(2)}
                             </p>
                         </div>
@@ -139,7 +139,7 @@ export default function ObligationForm(){
                     ) : (
                         <>
                             <div className="space-y-1">
-                                <label htmlFor="occurrenceId" className="text-xs font-semibold text-[#091828]">Occurence id</label>
+                                <label htmlFor="occurrenceId" className="text-xs font-semibold text-[#091828] dark:text-white">Occurence id</label>
                                 <CustomInput
                                     variant="form"
                                     id="occurrenceId"
@@ -148,12 +148,12 @@ export default function ObligationForm(){
                                     className="w-full"
                                 />
                             </div>
-                            {errors.occurrenceId?.message && <p className="text-xs text-red-500">{errors.occurrenceId.message}</p>}
+                            {errors.occurrenceId?.message && <p className="text-xs text-red-500 dark:text-[#ffb4ab]">{errors.occurrenceId.message}</p>}
                         </>
                     )}
                     {/* amount paid*/}
                     <div className="space-y-1">
-                        <label htmlFor="amountPaid" className="text-xs font-semibold text-[#091828]">Amount paid</label>
+                        <label htmlFor="amountPaid" className="text-xs font-semibold text-[#091828] dark:text-white">Amount paid</label>
                         <CustomInput
                             variant="form"
                             id="amountPaid"
@@ -163,10 +163,10 @@ export default function ObligationForm(){
                             className="w-full"
                         />
                     </div>
-                    {errors.amountPaid?.message && <p className="text-xs text-red-500">{errors.amountPaid.message}</p>}
+                    {errors.amountPaid?.message && <p className="text-xs text-red-500 dark:text-[#ffb4ab]">{errors.amountPaid.message}</p>}
                     {/* date paid */}
                     <div className="space-y-1">
-                        <label htmlFor="paidDate" className="text-xs font-semibold text-[#091828] mb-1">Date paid</label>
+                        <label htmlFor="paidDate" className="text-xs font-semibold text-[#091828] dark:text-white mb-1">Date paid</label>
                         <Controller
                             control={control}
                             name="paidDate"
@@ -179,15 +179,15 @@ export default function ObligationForm(){
                                         showArrow={false}
                                         className="rounded-lg w-full justify-start text-left font-normal flex items-center"
                                     >
-                                    <CalenderIcon className="mr-2 h-4 w-4 text-gray-500" />
+                                    <CalenderIcon className="mr-2 h-4 w-4 text-gray-500 dark:text-[#a0aec0]" />
                                     {field.value ? (
                                         new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(field.value))
                                     ) : (
-                                        <span className="text-gray-400">Select date</span>
+                                        <span className="text-gray-400 dark:text-[#a0aec0]">Select date</span>
                                     )}
                                     </LongButton>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 bg-white border rounded-md shadow-md" align="start">
+                                <PopoverContent className="w-auto p-0 bg-white border rounded-md shadow-md dark:border-[#2d3449] dark:bg-[#131b2e]" align="start">
                                     <Calendar
                                     mode="single"
                                     selected={field.value}
@@ -198,10 +198,10 @@ export default function ObligationForm(){
                             )}
                         />
                     </div>
-                    {errors.paidDate?.message && <p className="text-xs text-red-500">{errors.paidDate.message}</p>}       
+                    {errors.paidDate?.message && <p className="text-xs text-red-500 dark:text-[#ffb4ab]">{errors.paidDate.message}</p>}       
                     {/* notes */}
                     <div className="space-y-1">
-                        <label htmlFor="notes" className="text-xs font-semibold text-[#091828]">Notes</label>
+                        <label htmlFor="notes" className="text-xs font-semibold text-[#091828] dark:text-white">Notes</label>
                         <CustomInput
                             variant="form"
                             id="notes"
@@ -210,12 +210,12 @@ export default function ObligationForm(){
                             className="w-full"
                         />
                     </div>
-                    {errors.notes?.message && <p className="text-xs text-red-500">{errors.notes.message}</p>}
-                    {submitError && <p className="rounded-2xl bg-[#FFD9E1] px-4 py-3 text-xs font-semibold text-[#AC2A5D]">{submitError}</p>}
+                    {errors.notes?.message && <p className="text-xs text-red-500 dark:text-[#ffb4ab]">{errors.notes.message}</p>}
+                    {submitError && <p className="rounded-2xl bg-[#FFD9E1] px-4 py-3 text-xs font-semibold text-[#AC2A5D] dark:bg-[#93000a]/30 dark:text-[#ffb4ab]">{submitError}</p>}
                     <LongButton 
                         LongVariant="primaryDark" 
                         type="submit" 
-                        className="w-full"
+                        className="w-full dark:bg-[#ff6b9d] dark:hover:bg-[#6e0035]"
                         disabled={isSubmitting}
                     >
                         {isSubmitting ? "Saving..." : "Log Payment"}
@@ -248,17 +248,17 @@ function PaymentImpactModal({
     const mood=result?.rewards?.mascotMood;
 
     return(
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#091828]/40 px-4 pb-6">
-            <div className="w-full max-w-sm rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[6px_6px_0_#091828] animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#091828]/40 px-4 pb-6 dark:bg-black/70">
+            <div className="w-full max-w-sm rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[6px_6px_0_#091828] animate-in fade-in slide-in-from-bottom-5 duration-300 dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[6px_6px_0_#060e20]">
                 <div className="flex items-start gap-3">
-                    <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#DCEFE8]">
-                        <CheckCircle2 className="size-6 text-[#10775F]"/>
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#DCEFE8] dark:bg-[#0f4f42]">
+                        <CheckCircle2 className="size-6 text-[#10775F] dark:text-[#5eead4]"/>
                     </div>
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-wide text-[#6b6375]">Payment impact</p>
-                        <h2 className="text-2xl font-extrabold text-[#091828]">Payment made!</h2>
+                        <p className="text-xs font-bold uppercase tracking-wide text-[#6b6375] dark:text-[#a0aec0]">Payment impact</p>
+                        <h2 className="text-2xl font-extrabold text-[#091828] dark:text-white">Payment made!</h2>
                         {result?.scoreImpact?.explanation && (
-                            <p className="mt-1 text-xs font-semibold text-[#6b6375]">{result.scoreImpact.explanation}</p>
+                            <p className="mt-1 text-xs font-semibold text-[#6b6375] dark:text-[#a0aec0]">{result.scoreImpact.explanation}</p>
                         )}
                     </div>
                 </div>
@@ -291,7 +291,7 @@ function PaymentImpactModal({
                 </div>
 
                 {result?.paymentImpact?.isLate && (
-                    <div className="mt-4 rounded-2xl bg-[#FFD9E1] px-4 py-3 text-xs font-semibold text-[#AC2A5D]">
+                    <div className="mt-4 rounded-2xl bg-[#FFD9E1] px-4 py-3 text-xs font-semibold text-[#AC2A5D] dark:bg-[#93000a]/30 dark:text-[#ffb4ab]">
                         This payment was {result.paymentImpact.daysLate} days late.
                     </div>
                 )}
@@ -299,7 +299,7 @@ function PaymentImpactModal({
                 <LongButton
                     LongVariant="primaryDark"
                     type="button"
-                    className="mt-5 w-full"
+                    className="mt-5 w-full dark:bg-[#1e293b] dark:hover:bg-[#334155]"
                     onClick={onDone}
                 >
                     Back to dashboard
@@ -321,11 +321,11 @@ function ImpactStat({
     detail:string;
 }){
     return(
-        <div className="rounded-2xl bg-[#F4FBF7] px-3 py-3">
-            <div className="mb-2 text-[#AC2A5D]">{icon}</div>
-            <p className="text-[10px] font-bold uppercase tracking-wide text-[#6b6375]">{label}</p>
-            <p className="mt-1 text-base font-extrabold text-[#091828]">{value}</p>
-            <p className="mt-0.5 text-[10px] font-semibold text-[#6b6375]">{detail}</p>
+        <div className="rounded-2xl bg-[#F4FBF7] px-3 py-3 dark:bg-[#1c263c]">
+            <div className="mb-2 text-[#AC2A5D] dark:text-[#ff6b9d]">{icon}</div>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[#6b6375] dark:text-[#a0aec0]">{label}</p>
+            <p className="mt-1 text-base font-extrabold text-[#091828] dark:text-white">{value}</p>
+            <p className="mt-0.5 text-[10px] font-semibold text-[#6b6375] dark:text-[#a0aec0]">{detail}</p>
         </div>
     );
 }

@@ -63,14 +63,14 @@ test.describe('Profile', ()=> {
         await expect(page.getByRole('button', {name: 'Dark'})).toHaveAttribute('aria-pressed', 'true',);
     });
 
-    test('Wrapped row on Profile redirects to Insights', async({
+    test('Wrapped row on Profile redirects to Wrapped', async({
         page,
         scenario,
     })=> {
         await scenario.profile.userWithProgress();
         await page.goto('/profile');
         await page.getByRole('link', {name: /wrapped/i}).click();
-        await expect(page).toHaveURL(/\/insights$/);
+        await expect(page).toHaveURL(/\/wrapped$/);
     });
 
 

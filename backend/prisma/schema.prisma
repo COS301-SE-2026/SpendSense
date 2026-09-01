@@ -2,7 +2,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -91,7 +90,37 @@ enum NotificationType {
   REWARD
   BADGE_EARNED
   PAYMENT_STATUS
+  WAGER_INVITE
+  WAGER_RESULT
   SYSTEM
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum WagerStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+enum WagerTaskType {
+  ALL_PAYMENTS_ON_TIME
+  NO_MISSED_PAYMENTS
+  MAINTAIN_PAYMENT_STREAK
+}
+
+enum WagerOutcome {
+  WON
+  LOST
+  DRAW
 }
 
 enum ScoreTier {
@@ -174,6 +203,7 @@ enum BadgeCategory {
   STREAK
   OBLIGATION
   SCORE
+  QUIZ
   DEMO
 }
 
@@ -182,6 +212,8 @@ enum BadgeCriteriaType {
   FIRST_ON_TIME_PAYMENT
   PAYMENT_STREAK_COUNT
   SCORE_REACHED
+  QUIZ_COMPLETED_COUNT
+  KNOWLEDGE_STREAK_COUNT
 }
 
 model User {
@@ -209,6 +241,13 @@ model User {
   rewardTransactions     RewardTransaction[]
   badges                 UserBadge[]
   quizSessions           QuizSession[]
+  inventoryItems         UserInventoryItem[]
+  sentFriendRequests     FriendRequest[]         @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[]         @relation("FriendRequestReceiver")
+  friendships            Friendship[]            @relation("FriendshipUser")
+  friendOf               Friendship[]            @relation("FriendshipFriend")
+  wagersCreated          Wager[]                 @relation("WagersCreated")
+  wagersReceived         Wager[]                 @relation("WagersReceived")
 
   @@index([email])
   @@index([deletedAt])
@@ -448,36 +487,37 @@ model ScoreEvent {
 }
 
 model QuizQuestion {
-  id                String              @id @default(uuid())
-  topic             QuizTopic
-  prompt            String
-  options           Json
-  correctOptionKey  String
-  explanation       String
-  difficulty        Int                 @default(1)
-  isActive          Boolean             @default(true)
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  sessionAnswers    QuizSessionAnswer[]
+  id               String              @id @default(uuid())
+  topic            QuizTopic
+  prompt           String
+  options          Json
+  correctOptionKey String
+  explanation      String
+  difficulty       Int                 @default(1)
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  sessionAnswers   QuizSessionAnswer[]
 
   @@index([topic, isActive])
 }
 
 model QuizSession {
-  id                String              @id @default(uuid())
-  userId            String
-  type              QuizSessionType
-  topic             QuizTopic?
-  quizDate          DateTime?
-  status            QuizSessionStatus   @default(IN_PROGRESS)
-  startedAt         DateTime            @default(now())
-  completedAt       DateTime?
-  score             Int                 @default(0)
-  totalQuestions    Int
-  coinsAwarded      Int                 @default(0)
-  xpAwarded         Int                 @default(0)
-  user              User                @relation(fields: [userId], references: [id], onDelete: Restrict)
-  answers           QuizSessionAnswer[]
+  id             String              @id @default(uuid())
+  userId         String
+  type           QuizSessionType
+  topic          QuizTopic?
+  quizDate       DateTime?
+  status         QuizSessionStatus   @default(IN_PROGRESS)
+  startedAt      DateTime            @default(now())
+  completedAt    DateTime?
+  score          Int                 @default(0)
+  totalQuestions Int
+  questionIds    String[]            @default([])
+  coinsAwarded   Int                 @default(0)
+  xpAwarded      Int                 @default(0)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  answers        QuizSessionAnswer[]
 
   @@unique([userId, type, quizDate])
   @@index([userId, status])
@@ -485,35 +525,37 @@ model QuizSession {
 }
 
 model QuizSessionAnswer {
-  id                 String        @id @default(uuid())
-  sessionId          String
-  questionId         String
-  selectedOptionKey  String
-  isCorrect          Boolean
-  attemptNumber      Int
-  answeredAt         DateTime      @default(now())
-  session            QuizSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  question           QuizQuestion  @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  id                String       @id @default(uuid())
+  sessionId         String
+  questionId        String
+  selectedOptionKey String
+  isCorrect         Boolean
+  attemptNumber     Int
+  answeredAt        DateTime     @default(now())
+  session           QuizSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question          QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Restrict)
 
   @@index([sessionId, answeredAt])
   @@index([questionId])
 }
 
 model GamificationProfile {
-  id                     String     @id @default(uuid())
-  userId                 String     @unique
-  coinBalance            Int        @default(0)
-  xp                     Int        @default(0)
-  mascotLevel            Int        @default(1)
-  mascotMood             MascotMood @default(NEUTRAL)
-  currentPaymentStreak   Int        @default(0)
-  longestPaymentStreak   Int        @default(0)
-  currentKnowledgeStreak Int        @default(0)
-  longestKnowledgeStreak Int        @default(0)
-  createdAt              DateTime   @default(now())
-  updatedAt              DateTime   @updatedAt
-  deletedAt              DateTime?
-  user                   User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  id                      String     @id @default(uuid())
+  userId                  String     @unique
+  coinBalance             Int        @default(0)
+  xp                      Int        @default(0)
+  mascotLevel             Int        @default(1)
+  mascotMood              MascotMood @default(NEUTRAL)
+  mascotMoodUpdatedAt     DateTime?
+  currentPaymentStreak    Int        @default(0)
+  longestPaymentStreak    Int        @default(0)
+  currentKnowledgeStreak  Int        @default(0)
+  longestKnowledgeStreak  Int        @default(0)
+  lastKnowledgeStreakDate DateTime?
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+  deletedAt               DateTime?
+  user                    User       @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([mascotMood])
   @@index([deletedAt])
@@ -560,6 +602,7 @@ model BadgeDefinition {
   category      BadgeCategory
   criteriaType  BadgeCriteriaType
   criteriaValue Int               @default(1)
+  bonusCoins    Int               @default(0)
   iconKey       String?
   isActive      Boolean           @default(true)
   createdAt     DateTime          @default(now())
@@ -584,4 +627,87 @@ model UserBadge {
   @@unique([userId, badgeDefinitionId])
   @@index([userId, earnedAt])
   @@index([badgeDefinitionId])
+}
+
+enum CosmeticSlot {
+  HAT
+  ACCESSORY
+}
+
+model CosmeticItem {
+  id             String              @id @default(uuid())
+  code           String              @unique
+  name           String
+  slot           CosmeticSlot
+  cost           Int
+  iconKey        String?
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  inventoryItems UserInventoryItem[]
+
+  @@index([slot, isActive])
+}
+
+model UserInventoryItem {
+  id             String       @id @default(uuid())
+  userId         String
+  cosmeticItemId String
+  purchasedAt    DateTime     @default(now())
+  equipped       Boolean      @default(false)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cosmeticItem   CosmeticItem @relation(fields: [cosmeticItemId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, cosmeticItemId])
+  @@index([userId, equipped])
+}
+
+model FriendRequest {
+  id          String              @id @default(uuid())
+  senderId    String
+  receiverId  String
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  respondedAt DateTime?
+  sender      User                @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User                @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status, createdAt])
+  @@index([senderId, status, createdAt])
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String
+  friendId  String
+  createdAt DateTime @default(now())
+  user      User     @relation("FriendshipUser", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User     @relation("FriendshipFriend", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@index([friendId])
+}
+
+model Wager {
+  id              String        @id @default(uuid())
+  creatorId       String
+  opponentId      String
+  taskType        WagerTaskType
+  stakeAmount     Int
+  status          WagerStatus   @default(PENDING)
+  startDate       DateTime?
+  endDate         DateTime?
+  durationDays    Int
+  invitedAt       DateTime      @default(now())
+  respondedAt     DateTime?
+  resolvedAt      DateTime?
+  creatorOutcome  WagerOutcome?
+  opponentOutcome WagerOutcome?
+  taskSnapshot    Json?
+  creator         User          @relation("WagersCreated", fields: [creatorId], references: [id], onDelete: Cascade)
+  opponent        User          @relation("WagersReceived", fields: [opponentId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId, status])
+  @@index([opponentId, status])
+  @@index([status, endDate])
 }

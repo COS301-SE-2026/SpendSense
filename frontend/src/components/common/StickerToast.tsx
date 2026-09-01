@@ -58,12 +58,12 @@ export function StickerToast({
 
 
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#091828]/70">
+        <p className="text-xs font-bold uppercase tracking-wide text-[#091828]/70 dark:text-[#ffffff]/70">
           {title}
         </p>
-        <p className="truncate text-sm font-bold text-[#091828]">{name}</p>
+        <p className="truncate text-sm font-bold text-[#091828] dark:text-[#ffffff]">{name}</p>
         {description && (
-          <p className="mt-0.5 truncate text-xs text-[#091828]/70">
+          <p className="mt-0.5 truncate text-xs text-[#091828]/70 dark:text-[#ffffff]/70">
             {description}
           </p>
         )}
@@ -75,7 +75,7 @@ export function StickerToast({
           <button
             type="button"
             onClick={onView}
-            className="inline-flex items-center gap-1 rounded-full bg-[#0a1929] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#17131f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+            className="inline-flex items-center gap-1 rounded-full bg-[#0a1929] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#17131f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 dark:bg-[#1e293b]"
           >
             {viewLabel}
             <ChevronRight className="size-3" aria-hidden="true" />
@@ -86,7 +86,7 @@ export function StickerToast({
             type="button"
             onClick={onDismiss}
             aria-label="Dismiss"
-            className="inline-flex size-7 items-center justify-center rounded-full text-[#091828]/60 transition hover:bg-black/5 hover:text-[#091828] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex size-7 items-center justify-center rounded-full text-[#091828]/60 transition hover:bg-black/5 hover:text-[#091828] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-[#ffffff]/60"
           >
             <X className="size-4" aria-hidden="true" />
           </button>
@@ -95,4 +95,3 @@ export function StickerToast({
     </div>
   )
 }
-     

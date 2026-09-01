@@ -39,3 +39,11 @@ export async function apiFetch<T>(
 
     return response.json() as Promise<T>
 }
+
+interface ApiEnvelope<T>{
+    data:T
+}
+export async function apiDataFetch<T>(path:string,options:RequestInit={}):Promise<T>{
+    const response=await apiFetch<ApiEnvelope<T>>(path,options)
+    return response.data
+}

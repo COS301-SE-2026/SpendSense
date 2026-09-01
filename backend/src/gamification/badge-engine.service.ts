@@ -4,10 +4,13 @@ import {
   BadgeCriteriaType,
   NotificationType,
   Prisma,
+  QuizSessionStatus,
   UserEventSourceType,
   UserEventType,
+  MascotMood,
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RewardService } from '../rewards/reward.service';
 
 type PaymentBadgeInput = {
   userId: string;
@@ -20,17 +23,26 @@ type ObligationBadgeInput = {
   userId: string;
   sourceEventId: string;
 };
+type QuizBadgeInput = {
+  userId: string;
+  sourceEventId: string;
+  currentKnowledgeStreak: number;
+};
 type BadgeDefinitionCandidate = {
   id: string;
   code: string;
   name: string;
   criteriaType: BadgeCriteriaType;
   criteriaValue: number;
+  bonusCoins: number;
 };
 
 @Injectable()
 export class BadgeEngineService {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly rewardService: RewardService,
+  ) {}
   async evaluatePaymentBadges(
     input: PaymentBadgeInput,
     client: Prisma.TransactionClient,
@@ -53,6 +65,7 @@ export class BadgeEngineService {
         name: true,
         criteriaType: true,
         criteriaValue: true,
+        bonusCoins: true,
       },
     });
     const qualifiedBadges = badgeDefinitions.filter((badge) =>
@@ -89,11 +102,57 @@ export class BadgeEngineService {
         name: true,
         criteriaType: true,
         criteriaValue: true,
+        bonusCoins: true,
       },
     });
     const qualifiedBadges = badgeDefinitions.filter(
       (badge) => obligationCount >= badge.criteriaValue,
     );
+    return this.awardBadges(
+      input.userId,
+      input.sourceEventId,
+      qualifiedBadges,
+      client,
+    );
+  }
+
+  async evaluateQuizBadges(
+    input: QuizBadgeInput,
+    client: Prisma.TransactionClient,
+  ): Promise<string[]> {
+    const completedQuizCount = await client.quizSession.count({
+      where: {
+        userId: input.userId,
+        status: QuizSessionStatus.COMPLETED,
+      },
+    });
+    const badgeDefinitions = await client.badgeDefinition.findMany({
+      where: {
+        isActive: true,
+        NOT: { category: BadgeCategory.DEMO },
+        criteriaType: {
+          in: [
+            BadgeCriteriaType.QUIZ_COMPLETED_COUNT,
+            BadgeCriteriaType.KNOWLEDGE_STREAK_COUNT,
+          ],
+        },
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        criteriaType: true,
+        criteriaValue: true,
+        bonusCoins: true,
+      },
+    });
+    const qualifiedBadges = badgeDefinitions.filter((badge) => {
+      const progress =
+        badge.criteriaType === BadgeCriteriaType.QUIZ_COMPLETED_COUNT
+          ? completedQuizCount
+          : input.currentKnowledgeStreak;
+      return progress >= badge.criteriaValue;
+    });
     return this.awardBadges(
       input.userId,
       input.sourceEventId,
@@ -158,7 +217,7 @@ export class BadgeEngineService {
               earnedAt,
             },
           });
-      await client.userEvent.create({
+      const badgeEvent = await client.userEvent.create({
         data: {
           userId,
           eventType: UserEventType.BADGE_EARNED,
@@ -171,6 +230,20 @@ export class BadgeEngineService {
           },
         },
       });
+      await this.rewardService.setMascotMood(client, {
+        userId,
+        mood: MascotMood.CELEBRATING,
+        reason: `Earned the ${badge.name} badge`,
+        sourceEventId: badgeEvent.id,
+      });
+      if (badge.bonusCoins > 0) {
+        await this.rewardService.grantCoins(client, {
+          userId,
+          amount: badge.bonusCoins,
+          reason: `Badge unlock: ${badge.name}`,
+          sourceEventId: badgeEvent.id,
+        });
+      }
       await this.notificationsService.create(
         {
           userId,

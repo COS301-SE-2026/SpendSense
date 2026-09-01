@@ -2,15 +2,53 @@ import { QuizSessionStatus, QuizSessionType, QuizTopic } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { UsersService } from '../users/users.service';
+import type { RewardService } from '../rewards/reward.service';
 import { CreateQuizSessionDto } from './dto/create-quiz-session.dto';
 import { QuizService } from './quiz.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { BadgeEngineService } from '../gamification/badge-engine.service';
+
+// A mutable in-memory GamificationProfile row, backing tx.gamificationProfile.upsert()/
+// update() so RewardService's primitives (which each independently read-then-write) see
+// each other's writes within one settlement, the same way a real transaction would.
+function createGamificationProfileMock(initial: {
+  coinBalance?: number;
+  xp?: number;
+  currentKnowledgeStreak?: number;
+  longestKnowledgeStreak?: number;
+  lastKnowledgeStreakDate?: Date | null;
+}) {
+  const state: Record<string, unknown> = {
+    id: 'profile-123',
+    coinBalance: 0,
+    xp: 0,
+    mascotLevel: 1,
+    currentKnowledgeStreak: 0,
+    longestKnowledgeStreak: 0,
+    lastKnowledgeStreakDate: null,
+    ...initial,
+  };
+
+  return {
+    state,
+    upsert: jest
+      .fn<Promise<unknown>, [unknown]>()
+      .mockImplementation(() => Promise.resolve({ ...state })),
+    update: jest
+      .fn<Promise<unknown>, [{ data: Record<string, unknown> }]>()
+      .mockImplementation(({ data }) => {
+        Object.assign(state, data);
+        return Promise.resolve({ ...state });
+      }),
+  };
+}
 
 type MockUser = {
   id: string;
   gamificationProfile: {
     currentKnowledgeStreak: number;
     longestKnowledgeStreak: number;
+    lastKnowledgeStreakDate?: Date | null;
   };
 };
 
@@ -50,6 +88,50 @@ const authUser: AuthUser = {
   email: 'user@example.com',
 };
 
+const completionQuestion = {
+  id: '00000000-0000-4000-8000-000000000001',
+  topic: QuizTopic.CREDIT_SCORE,
+  prompt: 'Credit question',
+  options: [{ key: 'A', text: 'Pay on time' }],
+  correctOptionKey: 'A',
+  explanation: 'Paying on time supports financial health.',
+};
+
+const createCompletionTransaction = (
+  type: QuizSessionType,
+  eventId: string,
+): QuizTransactionMock => ({
+  quizSession: {
+    findFirst: transactionMockMethod().mockResolvedValue({
+      id: 'session-streak',
+      type,
+      topic: type === QuizSessionType.TOPIC ? QuizTopic.CREDIT_SCORE : null,
+      status: QuizSessionStatus.IN_PROGRESS,
+      startedAt: new Date('2026-07-13T08:00:00.000Z'),
+      completedAt: null,
+      score: 0,
+      totalQuestions: 1,
+      coinsAwarded: 0,
+      xpAwarded: 0,
+      answers: [],
+    }),
+    update: transactionMockMethod(),
+  },
+  quizQuestion: {
+    findMany: transactionMockMethod().mockResolvedValue([completionQuestion]),
+    findUnique: transactionMockMethod().mockResolvedValue(completionQuestion),
+  },
+  quizSessionAnswer: { create: transactionMockMethod() },
+  userEvent: {
+    create: transactionMockMethod().mockResolvedValue({ id: eventId }),
+  },
+  gamificationProfile: {
+    upsert: transactionMockMethod(),
+    update: transactionMockMethod(),
+  },
+  rewardTransaction: { create: transactionMockMethod() },
+});
+
 describe('QuizService', () => {
   let service: QuizService;
   let prisma: {
@@ -63,11 +145,19 @@ describe('QuizService', () => {
     quizSession: {
       findFirst: jest.Mock<Promise<unknown>, [Prisma.QuizSessionFindFirstArgs]>;
       create: jest.Mock<Promise<unknown>, [Prisma.QuizSessionCreateArgs]>;
+      update: jest.Mock<Promise<unknown>, [Prisma.QuizSessionUpdateArgs]>;
     };
     $transaction: jest.Mock<Promise<unknown>, [QuizTransactionCallback]>;
   };
   let usersService: {
     findOrCreateUser: jest.Mock<Promise<MockUser>, [AuthUser]>;
+  };
+  let rewardService: {
+    settleAction: jest.Mock;
+    advanceStreak: jest.Mock;
+  };
+  let mockBadgeEngineService: {
+    evaluateQuizBadges: jest.Mock<Promise<string[]>, [unknown, unknown]>;
   };
 
   beforeEach(() => {
@@ -87,6 +177,9 @@ describe('QuizService', () => {
         create: jest
           .fn<Promise<unknown>, [Prisma.QuizSessionCreateArgs]>()
           .mockResolvedValue(null),
+        update: jest
+          .fn<Promise<unknown>, [Prisma.QuizSessionUpdateArgs]>()
+          .mockResolvedValue(null),
       },
       $transaction: jest
         .fn<Promise<unknown>, [QuizTransactionCallback]>()
@@ -101,19 +194,31 @@ describe('QuizService', () => {
           gamificationProfile: {
             currentKnowledgeStreak: 3,
             longestKnowledgeStreak: 7,
+            lastKnowledgeStreakDate: new Date('2026-07-12T00:00:00+02:00'),
           },
         }),
+    };
+    rewardService = {
+      settleAction: jest.fn(),
+      advanceStreak: jest.fn(),
+    };
+    mockBadgeEngineService = {
+      evaluateQuizBadges: jest
+        .fn<Promise<string[]>, [unknown, unknown]>()
+        .mockResolvedValue([]),
     };
 
     service = new QuizService(
       prisma as unknown as PrismaService,
       usersService as unknown as UsersService,
+      rewardService as unknown as RewardService,
+      mockBadgeEngineService as unknown as BadgeEngineService,
     );
   });
 
   it('marks seeded active topics as available and others as unavailable', async () => {
     prisma.quizQuestion.count.mockImplementation(({ where }) =>
-      Promise.resolve(where.topic === QuizTopic.CREDIT_SCORE ? 5 : 0),
+      Promise.resolve(where?.topic === QuizTopic.CREDIT_SCORE ? 5 : 0),
     );
 
     const topics = await service.listTopics();
@@ -340,13 +445,22 @@ describe('QuizService', () => {
         remainingQueue: 5,
       },
       currentQuestion: {
-        id: 'budgeting-1',
-        topic: QuizTopic.BUDGETING,
+        id: expect.any(String) as string,
+        topic: expect.any(String) as QuizTopic,
       },
       rewardPreview: { xp: 50, coins: 25 },
     });
     expect(result.currentQuestion).not.toHaveProperty('correctOptionKey');
-    expect(prisma.quizSession.create).toHaveBeenCalled();
+    const createArgs = prisma.quizSession.create.mock.calls[0]?.[0] as
+      | { data: { questionIds?: string[] } }
+      | undefined;
+    const createdQuestionIds = createArgs?.data.questionIds;
+    expect(createdQuestionIds).toEqual(expect.any(Array));
+    if (!createdQuestionIds) {
+      throw new Error('Expected the created session to persist question IDs');
+    }
+    expect(createdQuestionIds).toHaveLength(5);
+    expect(new Set(createdQuestionIds).size).toBe(5);
   });
 
   it('resumes an existing active topic session instead of creating another', async () => {
@@ -379,6 +493,96 @@ describe('QuizService', () => {
 
     expect(result.id).toBe('topic-session-123');
     expect(prisma.quizSession.create).not.toHaveBeenCalled();
+  });
+
+  it('changes the selected pool when random ordering changes', async () => {
+    prisma.quizQuestion.findMany.mockResolvedValue(
+      Array.from({ length: 6 }, (_, index) => ({
+        id: `question-${index + 1}`,
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: `Question ${index + 1}`,
+        options: [{ key: 'A', text: 'Answer' }],
+      })),
+    );
+    const randomSpy = jest.spyOn(Math, 'random');
+    const selectQuestionPool = async (
+      dto: CreateQuizSessionDto,
+    ): Promise<{ id: string }[]> =>
+      await (
+        service as unknown as {
+          selectQuestionPool: (
+            input: CreateQuizSessionDto,
+          ) => Promise<{ id: string }[]>;
+        }
+      ).selectQuestionPool(dto);
+
+    try {
+      randomSpy.mockReturnValue(0);
+      const firstPool = await selectQuestionPool({
+        type: QuizSessionType.TOPIC,
+        topic: QuizTopic.CREDIT_SCORE,
+      });
+      randomSpy.mockReturnValue(0.999);
+      const secondPool = await selectQuestionPool({
+        type: QuizSessionType.TOPIC,
+        topic: QuizTopic.CREDIT_SCORE,
+      });
+
+      expect(firstPool).toHaveLength(5);
+      expect(new Set(firstPool.map((question) => question.id)).size).toBe(5);
+      expect(secondPool.map((question) => question.id)).not.toEqual(
+        firstPool.map((question) => question.id),
+      );
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
+  it('resumes an existing session from its persisted question order', async () => {
+    prisma.quizSession.findFirst.mockResolvedValue({
+      id: 'persisted-session',
+      type: QuizSessionType.TOPIC,
+      topic: QuizTopic.CREDIT_SCORE,
+      status: QuizSessionStatus.IN_PROGRESS,
+      questionIds: ['credit-2', 'credit-1'],
+      startedAt: new Date('2026-07-13T08:00:00.000Z'),
+      completedAt: null,
+      score: 0,
+      totalQuestions: 2,
+      coinsAwarded: 0,
+      xpAwarded: 0,
+      answers: [],
+    });
+    prisma.quizQuestion.findMany.mockResolvedValue([
+      {
+        id: 'credit-1',
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: 'First credit question',
+        options: [{ key: 'A', text: 'Pay on time' }],
+      },
+      {
+        id: 'credit-2',
+        topic: QuizTopic.CREDIT_SCORE,
+        prompt: 'Second credit question',
+        options: [{ key: 'A', text: 'Check reports' }],
+      },
+    ]);
+
+    const result = await service.createOrResumeSession(authUser, {
+      type: QuizSessionType.TOPIC,
+      topic: QuizTopic.CREDIT_SCORE,
+    });
+
+    expect(result.currentQuestion?.id).toBe('credit-2');
+    expect(prisma.quizQuestion.findMany).toHaveBeenCalledWith({
+      where: { id: { in: ['credit-2', 'credit-1'] } },
+      select: {
+        id: true,
+        topic: true,
+        prompt: true,
+        options: true,
+      },
+    });
   });
 
   it('rejects a completed daily session for the current date', async () => {
@@ -537,10 +741,7 @@ describe('QuizService', () => {
       },
       quizSessionAnswer: { create: transactionMockMethod() },
       userEvent: { create: transactionMockMethod() },
-      gamificationProfile: {
-        upsert: transactionMockMethod(),
-        update: transactionMockMethod(),
-      },
+      gamificationProfile: createGamificationProfileMock({}),
       rewardTransaction: { create: transactionMockMethod() },
     };
     prisma.$transaction.mockImplementation((callback) => callback(tx));
@@ -606,24 +807,34 @@ describe('QuizService', () => {
       userEvent: {
         create: transactionMockMethod().mockResolvedValue({ id: 'event-123' }),
       },
-      gamificationProfile: {
-        upsert: transactionMockMethod().mockResolvedValue({
-          id: 'profile-123',
-          coinBalance: 10,
-          xp: 20,
-          currentKnowledgeStreak: 2,
-          longestKnowledgeStreak: 4,
-        }),
-        update: transactionMockMethod(),
-      },
+      gamificationProfile: createGamificationProfileMock({
+        coinBalance: 10,
+        xp: 20,
+        currentKnowledgeStreak: 2,
+        longestKnowledgeStreak: 4,
+        // Yesterday relative to the fixed `now` below - a normal consecutive-day advance.
+        lastKnowledgeStreakDate: new Date('2026-07-12T00:00:00.000Z'),
+      }),
       rewardTransaction: { create: transactionMockMethod() },
     };
     prisma.$transaction.mockImplementation((callback) => callback(tx));
-
-    const result = await service.submitAnswer(authUser, 'session-123', {
-      questionId: question.id,
-      selectedOptionKey: 'A',
+    rewardService.settleAction.mockResolvedValue({
+      coinBalance: 35,
+      xp: 70,
+      mascotLevel: 1,
+      leveledUp: false,
+      streak: { current: 4, longest: 7 },
     });
+
+    const result = await service.submitAnswer(
+      authUser,
+      'session-123',
+      {
+        questionId: question.id,
+        selectedOptionKey: 'A',
+      },
+      new Date('2026-07-13T10:00:00.000Z'),
+    );
 
     expect(result).toMatchObject({
       sessionId: 'session-123',
@@ -643,16 +854,26 @@ describe('QuizService', () => {
         totalQuestions: 1,
         reward: { xp: 50, coins: 25 },
         knowledgeStreak: {
-          previous: 2,
-          current: 3,
-          longest: 4,
+          previous: 3,
+          current: 4,
+          longest: 7,
           advanced: true,
         },
+        badgesEarned: [],
       },
     });
     expect(tx.userEvent.create).toHaveBeenCalled();
-    expect(tx.gamificationProfile.update).toHaveBeenCalled();
-    expect(tx.rewardTransaction.create).toHaveBeenCalled();
+    expect(rewardService.settleAction).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        userId: 'user-123',
+        sourceEventId: 'event-123',
+        coins: { amount: 25, reason: 'Quiz completion reward' },
+        xp: { amount: 50 },
+        streak: { field: 'currentKnowledgeStreak', advance: true },
+        mood: { value: 'HAPPY', reason: 'Quiz completed' },
+      }),
+    );
     const updateCall = tx.quizSession.update.mock.calls[0]?.[0] as {
       data: {
         status: QuizSessionStatus;
@@ -703,24 +924,29 @@ describe('QuizService', () => {
       userEvent: {
         create: transactionMockMethod().mockResolvedValue({ id: 'event-456' }),
       },
-      gamificationProfile: {
-        upsert: transactionMockMethod().mockResolvedValue({
-          id: 'profile-123',
-          coinBalance: 10,
-          xp: 20,
-          currentKnowledgeStreak: 2,
-          longestKnowledgeStreak: 4,
-        }),
-        update: transactionMockMethod(),
-      },
+      gamificationProfile: createGamificationProfileMock({
+        coinBalance: 10,
+        xp: 20,
+        currentKnowledgeStreak: 2,
+        longestKnowledgeStreak: 4,
+        lastKnowledgeStreakDate: new Date('2026-07-12T00:00:00.000Z'),
+      }),
       rewardTransaction: { create: transactionMockMethod() },
     };
     prisma.$transaction.mockImplementation((callback) => callback(tx));
-
-    const result = await service.submitAnswer(authUser, 'session-456', {
-      questionId: question.id,
-      selectedOptionKey: 'A',
+    rewardService.settleAction.mockResolvedValue({
+      coinBalance: 20,
+      xp: 70,
+      mascotLevel: 1,
+      leveledUp: false,
     });
+
+    const result = await service.submitAnswer(
+      authUser,
+      'session-456',
+      { questionId: question.id, selectedOptionKey: 'A' },
+      new Date('2026-07-13T08:00:00.000Z'),
+    );
 
     expect(result).toMatchObject({
       sessionId: 'session-456',
@@ -728,6 +954,197 @@ describe('QuizService', () => {
       result: {
         score: 1,
         totalQuestions: 1,
+        knowledgeStreak: {
+          previous: 3,
+          current: 3,
+          longest: 7,
+          advanced: false,
+        },
+        badgesEarned: [],
+      },
+    });
+    expect(rewardService.settleAction).toHaveBeenCalledWith(
+      tx,
+      expect.objectContaining({
+        userId: 'user-123',
+        sourceEventId: 'event-456',
+        coins: { amount: 10, reason: 'Quiz completion reward' },
+        xp: { amount: 20 },
+        mood: { value: 'HAPPY', reason: 'Quiz completed' },
+      }),
+    );
+    const settleCall = rewardService.settleAction.mock.calls[0] as
+      | [unknown, Record<string, unknown>]
+      | undefined;
+    expect(settleCall?.[1]).not.toHaveProperty('streak');
+  });
+
+  it('does not advance the knowledge streak twice on the same Johannesburg day', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-123',
+      gamificationProfile: {
+        currentKnowledgeStreak: 3,
+        longestKnowledgeStreak: 7,
+        lastKnowledgeStreakDate: new Date('2026-07-13T00:00:00+02:00'),
+      },
+    });
+    const tx = createCompletionTransaction(
+      QuizSessionType.DAILY,
+      'event-same-day',
+    );
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+    rewardService.settleAction.mockResolvedValue({
+      coinBalance: 35,
+      xp: 70,
+      mascotLevel: 1,
+      leveledUp: false,
+    });
+
+    const result = await service.submitAnswer(
+      authUser,
+      'session-streak',
+      { questionId: completionQuestion.id, selectedOptionKey: 'A' },
+      new Date('2026-07-13T18:00:00.000Z'),
+    );
+
+    expect(result.result?.knowledgeStreak).toEqual({
+      previous: 3,
+      current: 3,
+      longest: 7,
+      advanced: false,
+    });
+    expect(rewardService.advanceStreak).not.toHaveBeenCalled();
+    expect(tx.gamificationProfile.update).not.toHaveBeenCalled();
+    const settleCall = rewardService.settleAction.mock.calls[0] as
+      | [unknown, Record<string, unknown>]
+      | undefined;
+    expect(settleCall?.[0]).toBe(tx);
+    expect(settleCall?.[1]).not.toHaveProperty('streak');
+  });
+
+  it('resets the knowledge streak to one after a missed day', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-123',
+      gamificationProfile: {
+        currentKnowledgeStreak: 3,
+        longestKnowledgeStreak: 7,
+        lastKnowledgeStreakDate: new Date('2026-07-10T00:00:00+02:00'),
+      },
+    });
+    const tx = createCompletionTransaction(
+      QuizSessionType.DAILY,
+      'event-gap-day',
+    );
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+    rewardService.settleAction.mockResolvedValue({
+      coinBalance: 35,
+      xp: 70,
+      mascotLevel: 1,
+      leveledUp: false,
+    });
+    rewardService.advanceStreak
+      .mockResolvedValueOnce({ current: 0, longest: 7 })
+      .mockResolvedValueOnce({ current: 1, longest: 7 });
+
+    const result = await service.submitAnswer(
+      authUser,
+      'session-streak',
+      { questionId: completionQuestion.id, selectedOptionKey: 'A' },
+      new Date('2026-07-13T10:00:00.000Z'),
+    );
+
+    expect(result.result?.knowledgeStreak).toEqual({
+      previous: 3,
+      current: 1,
+      longest: 7,
+      advanced: true,
+    });
+    expect(rewardService.advanceStreak).toHaveBeenNthCalledWith(1, tx, {
+      userId: 'user-123',
+      field: 'currentKnowledgeStreak',
+      advance: false,
+    });
+    expect(rewardService.advanceStreak).toHaveBeenNthCalledWith(2, tx, {
+      userId: 'user-123',
+      field: 'currentKnowledgeStreak',
+      advance: true,
+    });
+    expect(tx.gamificationProfile.update).toHaveBeenCalledWith({
+      where: { userId: 'user-123' },
+      data: { lastKnowledgeStreakDate: new Date('2026-07-13T00:00:00+02:00') },
+    });
+  });
+
+  it('does not advance the knowledge streak twice for a same-day repeat completion', async () => {
+    const question = {
+      id: '00000000-0000-4000-8000-000000000001',
+      topic: QuizTopic.CREDIT_SCORE,
+      prompt: 'Credit question',
+      options: [{ key: 'A', text: 'Pay on time' }],
+      correctOptionKey: 'A',
+      explanation: 'Paying on time supports financial health.',
+    };
+    const tx: QuizTransactionMock = {
+      quizSession: {
+        findFirst: transactionMockMethod().mockResolvedValue({
+          id: 'session-789',
+          type: QuizSessionType.DAILY,
+          topic: null,
+          status: QuizSessionStatus.IN_PROGRESS,
+          startedAt: new Date('2026-07-13T08:00:00.000Z'),
+          completedAt: null,
+          score: 0,
+          totalQuestions: 1,
+          coinsAwarded: 0,
+          xpAwarded: 0,
+          answers: [],
+        }),
+        update: transactionMockMethod(),
+      },
+      quizQuestion: {
+        findMany: transactionMockMethod().mockResolvedValue([question]),
+        findUnique: transactionMockMethod().mockResolvedValue(question),
+      },
+      quizSessionAnswer: { create: transactionMockMethod() },
+      userEvent: {
+        create: transactionMockMethod().mockResolvedValue({ id: 'event-789' }),
+      },
+      gamificationProfile: createGamificationProfileMock({
+        coinBalance: 10,
+        xp: 20,
+        currentKnowledgeStreak: 2,
+        longestKnowledgeStreak: 4,
+        // Already advanced today - a manually-retried session should not double-count.
+        lastKnowledgeStreakDate: new Date('2026-07-13T00:00:00.000Z'),
+      }),
+      rewardTransaction: { create: transactionMockMethod() },
+    };
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-123',
+      gamificationProfile: {
+        currentKnowledgeStreak: 2,
+        longestKnowledgeStreak: 4,
+        lastKnowledgeStreakDate: new Date('2026-07-13T00:00:00+02:00'),
+      },
+    });
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+    rewardService.settleAction.mockResolvedValue({
+      coinBalance: 35,
+      xp: 70,
+      mascotLevel: 1,
+      leveledUp: false,
+      streak: undefined,
+    });
+
+    const result = await service.submitAnswer(
+      authUser,
+      'session-789',
+      { questionId: question.id, selectedOptionKey: 'A' },
+      new Date('2026-07-13T08:00:00.000Z'),
+    );
+
+    expect(result).toMatchObject({
+      result: {
         knowledgeStreak: {
           previous: 2,
           current: 2,
@@ -737,10 +1154,95 @@ describe('QuizService', () => {
       },
     });
     const profileUpdateCall = tx.gamificationProfile.update.mock
-      .calls[0]?.[0] as {
-      data: Record<string, unknown>;
+      .calls[0]?.[0] as { data?: Record<string, unknown> } | undefined;
+    expect(profileUpdateCall?.data ?? {}).not.toHaveProperty(
+      'currentKnowledgeStreak',
+    );
+    expect(profileUpdateCall?.data ?? {}).not.toHaveProperty(
+      'lastKnowledgeStreakDate',
+    );
+  });
+
+  it('resets the knowledge streak to 1 after a missed day instead of continuing it', async () => {
+    const question = {
+      id: '00000000-0000-4000-8000-000000000001',
+      topic: QuizTopic.CREDIT_SCORE,
+      prompt: 'Credit question',
+      options: [{ key: 'A', text: 'Pay on time' }],
+      correctOptionKey: 'A',
+      explanation: 'Paying on time supports financial health.',
     };
-    expect(profileUpdateCall.data).not.toHaveProperty('currentKnowledgeStreak');
-    expect(profileUpdateCall.data).not.toHaveProperty('longestKnowledgeStreak');
+    const tx: QuizTransactionMock = {
+      quizSession: {
+        findFirst: transactionMockMethod().mockResolvedValue({
+          id: 'session-999',
+          type: QuizSessionType.DAILY,
+          topic: null,
+          status: QuizSessionStatus.IN_PROGRESS,
+          startedAt: new Date('2026-07-13T08:00:00.000Z'),
+          completedAt: null,
+          score: 0,
+          totalQuestions: 1,
+          coinsAwarded: 0,
+          xpAwarded: 0,
+          answers: [],
+        }),
+        update: transactionMockMethod(),
+      },
+      quizQuestion: {
+        findMany: transactionMockMethod().mockResolvedValue([question]),
+        findUnique: transactionMockMethod().mockResolvedValue(question),
+      },
+      quizSessionAnswer: { create: transactionMockMethod() },
+      userEvent: {
+        create: transactionMockMethod().mockResolvedValue({ id: 'event-999' }),
+      },
+      gamificationProfile: createGamificationProfileMock({
+        coinBalance: 10,
+        xp: 20,
+        currentKnowledgeStreak: 5,
+        longestKnowledgeStreak: 7,
+        // 3 days before `now` below - the streak was broken by a missed day.
+        lastKnowledgeStreakDate: new Date('2026-07-10T00:00:00.000Z'),
+      }),
+      rewardTransaction: { create: transactionMockMethod() },
+    };
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-123',
+      gamificationProfile: {
+        currentKnowledgeStreak: 5,
+        longestKnowledgeStreak: 7,
+        lastKnowledgeStreakDate: new Date('2026-07-10T00:00:00+02:00'),
+      },
+    });
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+    rewardService.settleAction.mockResolvedValue({
+      coinBalance: 35,
+      xp: 70,
+      mascotLevel: 1,
+      leveledUp: false,
+      streak: undefined,
+    });
+    rewardService.advanceStreak
+      .mockResolvedValueOnce({ current: 0, longest: 7 })
+      .mockResolvedValueOnce({ current: 1, longest: 7 });
+
+    const result = await service.submitAnswer(
+      authUser,
+      'session-999',
+      { questionId: question.id, selectedOptionKey: 'A' },
+      new Date('2026-07-13T08:00:00.000Z'),
+    );
+
+    expect(result).toMatchObject({
+      result: {
+        knowledgeStreak: {
+          previous: 5,
+          current: 1,
+          longest: 7,
+          advanced: true,
+        },
+      },
+    });
   });
 });

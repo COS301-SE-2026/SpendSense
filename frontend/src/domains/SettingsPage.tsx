@@ -36,16 +36,16 @@ export default function SettingsPage(){
         <SubPageShell title="Settings" subtitle="Account and app preferences">
             {sections.map((s) => (
                 <Link key={s.to} to={s.to}>
-                    <CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3">
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#E3EAE6] text-[#091828]">
+                    <CustomCard variant="navyBorder" size="sm" className="flex items-center gap-3 dark:border-[#574146] dark:bg-[#171f33]">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#E3EAE6] text-[#091828] dark:bg-[#2d3449] dark:text-[#dae2fd]">
                             {s.icon}
                         </div>
 
                         <div className="min-w-0 flex-1">
-                            <p className ="text-sm font-bold text-[#091828]">{s.label}</p>
-                            <p className ="text-xs text-[#6B6375]">{s.description}</p>
+                            <p className ="text-sm font-bold text-[#091828] dark:text-[#dae2fd]">{s.label}</p>
+                            <p className ="text-xs text-[#6B6375] dark:text-[#ddbfc5]">{s.description}</p>
                         </div>
-                        <ChevronRight className ="size-4 shrink-0 text-[#6B6375]"/>
+                        <ChevronRight className ="size-4 shrink-0 text-[#6B6375] dark:text-[#a58a90]"/>
                     </CustomCard>
                 </Link>
             ))}

@@ -72,7 +72,7 @@ function Gauge({
         <path
           d={ARC_PATH}
           fill="none"
-          stroke="#E8EFEC"
+          className="stroke-[#E8EFEC] dark:stroke-[#1c263c]"
           strokeWidth={STROKE_WIDTH}
           strokeLinecap="round"
         />
@@ -101,4 +101,3 @@ function Gauge({
 }
  
 export { Gauge }
- 
