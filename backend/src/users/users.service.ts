@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -64,6 +65,24 @@ const userProfileInclude = {
     },
   },
 } satisfies Prisma.UserInclude;
+
+function isDisplayNameUniqueConstraintError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const prismaError = error as {
+    code?: unknown;
+    meta?: { target?: unknown };
+  };
+
+  if (prismaError.code !== 'P2002') {
+    return false;
+  }
+
+  const target = prismaError.meta?.target;
+  return Array.isArray(target) && target.includes('displayName');
+}
 
 const userExportSelect = {
   id: true,
@@ -439,24 +458,32 @@ export class UsersService {
 
     const currentUser = await this.findOrCreateUser(authUser);
 
-    return this.prisma.user.update({
-      where: { id: currentUser.id },
-      data: {
-        ...(updates.displayName !== undefined && {
-          displayName: updates.displayName,
-        }),
-        ...(updates.avatarUrl !== undefined && {
-          avatarUrl: updates.avatarUrl,
-        }),
-        ...(updates.monthlyBudget !== undefined && {
-          monthlyBudget: updates.monthlyBudget,
-        }),
-        ...(updates.onboardingCompleted !== undefined && {
-          onboardingCompleted: updates.onboardingCompleted,
-        }),
-      },
-      include: userProfileInclude,
-    });
+    try {
+      return await this.prisma.user.update({
+        where: { id: currentUser.id },
+        data: {
+          ...(updates.displayName !== undefined && {
+            displayName: updates.displayName,
+          }),
+          ...(updates.avatarUrl !== undefined && {
+            avatarUrl: updates.avatarUrl,
+          }),
+          ...(updates.monthlyBudget !== undefined && {
+            monthlyBudget: updates.monthlyBudget,
+          }),
+          ...(updates.onboardingCompleted !== undefined && {
+            onboardingCompleted: updates.onboardingCompleted,
+          }),
+        },
+        include: userProfileInclude,
+      });
+    } catch (error) {
+      if (isDisplayNameUniqueConstraintError(error)) {
+        throw new ConflictException('Display name is already taken');
+      }
+
+      throw error;
+    }
   }
 
   async updatePreferences(

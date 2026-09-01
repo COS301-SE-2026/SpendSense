@@ -115,4 +115,15 @@ describe('EditProfilePage', ()=>{
 
         expect(await screen.findByText(/couldn't save your changes/i)).toBeInTheDocument()
     })
+
+    it('shows a specific message when the display name is already taken', async ()=> {
+        mockedUpdateMe.mockRejectedValue(
+            Object.assign(new Error('Display name is already taken'), {statusCode: 409}),
+        )
+        renderPage()
+        fireEvent.change(nameInput(), {target: {value: 'Rachel CLifford'}})
+        fireEvent.click(saveButton())
+
+        expect(await screen.findByText(/already taken/i)).toBeInTheDocument()
+    })
 })

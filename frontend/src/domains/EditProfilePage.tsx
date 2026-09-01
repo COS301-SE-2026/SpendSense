@@ -34,8 +34,14 @@ export default function EditProfilePage(){
             await updateMe({displayName: trimmed})
             setFeedback({kind: "success", message: "Profile updated successfully!"})
             refetch()
-        }catch{
-            setFeedback({kind: "error", message: "Couldn't save your changes. Please try again"})
+        }catch(error: unknown){
+            const statusCode = typeof error === "object" && error !== null && "statusCode" in error
+                ? (error as {statusCode?: unknown}).statusCode
+                : undefined
+            const message = statusCode === 409
+                ? "That display name is already taken. Please choose another."
+                : "Couldn't save your changes. Please try again"
+            setFeedback({kind: "error", message})
         }finally{
             setSaving(false)
         }
