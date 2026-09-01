@@ -17,7 +17,7 @@ export type WagerTaskType =
 
 export type WagerOutcome = "WON" | "LOST" | "DRAW"
 
-export type LeaderboardMetric = "score" | "streak"
+export type LeaderboardMetric="xp"|"coins"|"streak"
 
 export type RequestDirection = "incoming" | "outgoing"
 
@@ -74,8 +74,8 @@ export interface RemoveFriendResult {
 	removed: boolean
 }
 
-//LeaderboardEntry. `value` is a streak count for metric=streak, or a tier
-//rank integer (BUILDING=1 ... ELITE=5) for metric=score.
+//LeaderboardEntry. value is total XP for metric=xp, current coin balance for
+//metric=coins, or current payment streak for metric=streak.
 export interface LeaderboardEntry {
 	rank: number
 	userId: string
@@ -83,6 +83,18 @@ export interface LeaderboardEntry {
 	avatarUrl: string | null
 	isSelf: boolean
 	value: number
+}
+
+export interface LeaderboardPagination{
+	page:number
+	pageSize:number
+	totalEntries:number
+	totalPages:number
+}
+
+export interface LeaderboardResult{
+	entries:LeaderboardEntry[]
+	pagination:LeaderboardPagination
 }
 
 //WagerSummary

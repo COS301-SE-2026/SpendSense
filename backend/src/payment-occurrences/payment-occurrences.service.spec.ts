@@ -7,13 +7,17 @@ import {
   PaymentOccurrenceStatus,
   PaymentOccurrence,
   UserEventSourceType,
+  UserEventType,
+  ScoreTier,
 } from '@prisma/client';
+import { CreditScoreService } from '../credit-score/credit-score.service';
 
 describe('PaymentOccurrencesService', () => {
   let service: PaymentOccurrencesService;
   let transaction: {
     paymentOccurrence: { update: jest.Mock };
     notification: { create: jest.Mock };
+    userEvent: { create: jest.Mock };
   };
   let rewardService: {
     advanceStreak: jest.Mock;
@@ -28,6 +32,9 @@ describe('PaymentOccurrencesService', () => {
       create: jest.fn(),
     },
     $transaction: jest.fn(),
+  };
+  const mockCreditScoreService = {
+    recalculateAfterOccurrenceStatusChange: jest.fn(),
   };
 
   const buildOccurrence = (
@@ -57,6 +64,11 @@ describe('PaymentOccurrencesService', () => {
     transaction = {
       paymentOccurrence: { update: jest.fn() },
       notification: { create: jest.fn() },
+      userEvent: {
+        create: jest.fn().mockResolvedValue({
+          id: 'missed-event-1',
+        }),
+      },
     };
     rewardService = {
       advanceStreak: jest.fn(),
@@ -65,6 +77,21 @@ describe('PaymentOccurrencesService', () => {
 
     mockPrismaService.$transaction.mockImplementation(
       (callback: (tx: typeof transaction) => unknown) => callback(transaction),
+    );
+
+    mockCreditScoreService.recalculateAfterOccurrenceStatusChange.mockResolvedValue(
+      {
+        scoreEventId: 'mock-scoreEventId',
+        scoreBefore: 600,
+        scoreAfter: 580,
+        scoreDelta: -20,
+        tierBefore: ScoreTier.GOOD,
+        tierAfter: ScoreTier.FAIR,
+        explanation: 'Payment overdue.',
+        onTimePaymentCount: 0,
+        latePaymentCount: 0,
+        missedPaymentCount: 0,
+      },
     );
 
     const module: TestingModule = await Test.createTestingModule({
@@ -77,6 +104,10 @@ describe('PaymentOccurrencesService', () => {
         {
           provide: RewardService,
           useValue: rewardService,
+        },
+        {
+          provide: CreditScoreService,
+          useValue: mockCreditScoreService,
         },
       ],
     }).compile();
@@ -206,6 +237,20 @@ describe('PaymentOccurrencesService', () => {
         userId: occurrence.userId,
         mood: 'SAD',
         reason: 'Payment occurrence missed',
+        sourceEventId: 'missed-event-1',
+      });
+
+      expect(transaction.userEvent.create).toHaveBeenCalledWith({
+        data: {
+          userId: occurrence.userId,
+          eventType: UserEventType.PAYMENT_OVERDUE,
+          sourceType: UserEventSourceType.PAYMENT_OCCURRENCE,
+          sourceId: occurrence.id,
+          metadata: {
+            occurrenceId: occurrence.id,
+            transition: 'MISSED',
+          },
+        },
       });
 
       expect(rslt).toEqual({ transitionedCount: 1 });

@@ -1,14 +1,14 @@
-import { apiFetch } from '../../lib/api'
+import { apiDataFetch } from "../../lib/api"
 import type {
 	AcceptFriendRequestResult,
 	FriendRequestStatusResult,
 	FriendRequestSummary,
 	FriendSummary,
-	LeaderboardEntry,
 	LeaderboardMetric,
 	RemoveFriendResult,
 	RequestDirection,
 	UserSearchResult,
+	LeaderboardResult,
 } from './friendsTypes'
 
 //friendsApi: the social graph half of UC-A.
@@ -25,11 +25,7 @@ import type {
 // PATCH  /api/v1/friends/requests/:id/accept
 // PATCH  /api/v1/friends/requests/:id/decline
 // DELETE /api/v1/friends/requests/:id
-// GET    /api/v1/friends/leaderboard?metric=score|streak
-
-interface Container<T> {
-	data: T
-}
+// GET    /api/v1/friends/leaderboard?metric=xp|coins|streak&page=
 
 interface RequestOptions {
 	signal?: AbortSignal
@@ -37,11 +33,10 @@ interface RequestOptions {
 
 // GET /api/v1/friends
 export async function getFriends(options?: RequestOptions): Promise<FriendSummary[]> {
-	const res = await apiFetch<Container<FriendSummary[]>>('/friends', {
+	return apiDataFetch<FriendSummary[]>('/friends', {
 		method: 'GET',
 		signal: options?.signal,
 	})
-	return res.data
 }
 
 // GET /api/v1/friends/:friendId - 404 if not currently a friend
@@ -49,14 +44,13 @@ export async function getFriend(
 	friendId: string,
 	options?: RequestOptions,
 ): Promise<FriendSummary> {
-	const res = await apiFetch<Container<FriendSummary>>(
+	return apiDataFetch<FriendSummary>(
 		`/friends/${encodeURIComponent(friendId)}`,
 		{
 			method: 'GET',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
 
 // DELETE /api/v1/friends/:friendId
@@ -64,14 +58,13 @@ export async function removeFriend(
 	friendId: string,
 	options?: RequestOptions,
 ): Promise<RemoveFriendResult> {
-	const res = await apiFetch<Container<RemoveFriendResult>>(
+	return apiDataFetch<RemoveFriendResult>(
 		`/friends/${encodeURIComponent(friendId)}`,
 		{
 			method: 'DELETE',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
 
 // GET /api/v1/friends/search?query=
@@ -81,14 +74,13 @@ export async function searchUsers(
 	query: string,
 	options?: RequestOptions,
 ): Promise<UserSearchResult[]> {
-	const res = await apiFetch<Container<UserSearchResult[]>>(
+	return apiDataFetch<UserSearchResult[]>(
 		`/friends/search?query=${encodeURIComponent(query)}`,
 		{
 			method: 'GET',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
 
 // GET /api/v1/friends/requests?direction= - only PENDING come back
@@ -96,14 +88,13 @@ export async function getFriendRequests(
 	direction: RequestDirection = 'incoming',
 	options?: RequestOptions,
 ): Promise<FriendRequestSummary[]> {
-	const res = await apiFetch<Container<FriendRequestSummary[]>>(
+	return apiDataFetch<FriendRequestSummary[]>(
 		`/friends/requests?direction=${direction}`,
 		{
 			method: 'GET',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
 
 // POST /api/v1/friends/requests
@@ -111,12 +102,11 @@ export async function sendFriendRequest(
 	receiverId: string,
 	options?: RequestOptions,
 ): Promise<FriendRequestStatusResult> {
-	const res = await apiFetch<Container<FriendRequestStatusResult>>('/friends/requests', {
+	return apiDataFetch<FriendRequestStatusResult>('/friends/requests', {
 		method: 'POST',
 		body: JSON.stringify({ receiverId }),
 		signal: options?.signal,
 	})
-	return res.data
 }
 
 // PATCH /api/v1/friends/requests/:id/accept
@@ -125,14 +115,13 @@ export async function acceptFriendRequest(
 	requestId: string,
 	options?: RequestOptions,
 ): Promise<AcceptFriendRequestResult> {
-	const res = await apiFetch<Container<AcceptFriendRequestResult>>(
+	return apiDataFetch<AcceptFriendRequestResult>(
 		`/friends/requests/${encodeURIComponent(requestId)}/accept`,
 		{
 			method: 'PATCH',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
 
 // PATCH /api/v1/friends/requests/:id/decline
@@ -140,14 +129,13 @@ export async function declineFriendRequest(
 	requestId: string,
 	options?: RequestOptions,
 ): Promise<FriendRequestStatusResult> {
-	const res = await apiFetch<Container<FriendRequestStatusResult>>(
+	return apiDataFetch<FriendRequestStatusResult>(
 		`/friends/requests/${encodeURIComponent(requestId)}/decline`,
 		{
 			method: 'PATCH',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
 
 // DELETE /api/v1/friends/requests/:id - cancels our own outgoing request
@@ -155,28 +143,27 @@ export async function cancelFriendRequest(
 	requestId: string,
 	options?: RequestOptions,
 ): Promise<FriendRequestStatusResult> {
-	const res = await apiFetch<Container<FriendRequestStatusResult>>(
+	return apiDataFetch<FriendRequestStatusResult>(
 		`/friends/requests/${encodeURIComponent(requestId)}`,
 		{
 			method: 'DELETE',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }
 
 // GET /api/v1/friends/leaderboard?metric=
 // always includes the caller, with isSelf true on exactly one row
 export async function getFriendsLeaderboard(
-	metric: LeaderboardMetric = 'score',
+	metric: LeaderboardMetric = 'xp',
+	page = 1,
 	options?: RequestOptions,
-): Promise<LeaderboardEntry[]> {
-	const res = await apiFetch<Container<LeaderboardEntry[]>>(
-		`/friends/leaderboard?metric=${metric}`,
+): Promise<LeaderboardResult> {
+	return apiDataFetch<LeaderboardResult>(
+		`/friends/leaderboard?metric=${metric}&page=${page}`,
 		{
 			method: 'GET',
 			signal: options?.signal,
 		},
 	)
-	return res.data
 }

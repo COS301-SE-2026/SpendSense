@@ -7,6 +7,7 @@ import {
   QuizSessionStatus,
   UserEventSourceType,
   UserEventType,
+  MascotMood,
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RewardService } from '../rewards/reward.service';
@@ -228,6 +229,12 @@ export class BadgeEngineService {
             triggerSourceEventId: sourceEventId,
           },
         },
+      });
+      await this.rewardService.setMascotMood(client, {
+        userId,
+        mood: MascotMood.CELEBRATING,
+        reason: `Earned the ${badge.name} badge`,
+        sourceEventId: badgeEvent.id,
       });
       if (badge.bonusCoins > 0) {
         await this.rewardService.grantCoins(client, {

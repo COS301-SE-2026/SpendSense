@@ -17,6 +17,7 @@ describe('BadgeEngineService', () => {
   };
   let rewardService: {
     grantCoins: jest.Mock;
+    setMascotMood: jest.Mock;
   };
   let transaction: {
     badgeDefinition: {
@@ -75,6 +76,7 @@ describe('BadgeEngineService', () => {
     };
     rewardService = {
       grantCoins: jest.fn().mockResolvedValue({ coinBalance: 0 }),
+      setMascotMood: jest.fn().mockResolvedValue(undefined),
     };
     transaction = {
       badgeDefinition: {
@@ -158,6 +160,12 @@ describe('BadgeEngineService', () => {
       userId: 'user-1',
       amount: firstOnTimeBadge.bonusCoins,
       reason: 'Badge unlock: On-Time Starter',
+      sourceEventId: 'badge-event-1',
+    });
+    expect(rewardService.setMascotMood).toHaveBeenCalledWith(transaction, {
+      userId: 'user-1',
+      mood: 'CELEBRATING',
+      reason: 'Earned the On-Time Starter badge',
       sourceEventId: 'badge-event-1',
     });
     expect(notificationsService.create).toHaveBeenCalledWith(
