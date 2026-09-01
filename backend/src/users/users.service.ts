@@ -66,6 +66,8 @@ const userProfileInclude = {
   },
 } satisfies Prisma.UserInclude;
 
+const MAX_DISPLAY_NAME_LENGTH = 80;
+
 function isDisplayNameUniqueConstraintError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
     return false;
@@ -393,6 +395,16 @@ export type UserPreferenceResult = Prisma.UserPreferenceGetPayload<{
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async isDisplayNameAvailable(displayName: string): Promise<boolean> {
+    const normalizedDisplayName = displayName.trim();
+    const existing = await this.prisma.user.findUnique({
+      where: { displayName: normalizedDisplayName },
+      select: { id: true },
+    });
+
+    return existing === null;
+  }
+
   // find/create the internal user for given supabase auth identity
   // on the first login, this creates User + UserPreference + NotificationPreference + CreditProfile + GamificationProfile in a single transactoin
   // returns the existing user on subsequent calls
@@ -413,39 +425,58 @@ export class UsersService {
       return existing;
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          supabaseAuthId,
-          email: email ?? `${supabaseAuthId}@unknown.spendsense`,
-          preference: { create: {} },
-          notificationPreference: { create: {} },
-          creditProfile: {
-            create: {
-              currentScore: 600,
-              previousScore: 600,
-              scoreTier: ScoreTier.GOOD,
+    const displayName = authUser.displayName?.trim();
+    if (!displayName) {
+      throw new BadRequestException('A display name is required');
+    }
+    if (displayName.length > MAX_DISPLAY_NAME_LENGTH) {
+      throw new BadRequestException(
+        `Display name must be ${MAX_DISPLAY_NAME_LENGTH} characters or fewer`,
+      );
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            supabaseAuthId,
+            email: email ?? `${supabaseAuthId}@unknown.spendsense`,
+            displayName,
+            preference: { create: {} },
+            notificationPreference: { create: {} },
+            creditProfile: {
+              create: {
+                currentScore: 600,
+                previousScore: 600,
+                scoreTier: ScoreTier.GOOD,
+              },
+            },
+            gamificationProfile: { create: {} },
+          },
+          include: userProfileInclude,
+        });
+
+        await tx.userEvent.create({
+          data: {
+            userId: user.id,
+            eventType: UserEventType.USER_CREATED,
+            sourceType: UserEventSourceType.USER,
+            sourceId: user.id,
+            metadata: {
+              supabaseAuthId,
             },
           },
-          gamificationProfile: { create: {} },
-        },
-        include: userProfileInclude,
-      });
+        });
 
-      await tx.userEvent.create({
-        data: {
-          userId: user.id,
-          eventType: UserEventType.USER_CREATED,
-          sourceType: UserEventSourceType.USER,
-          sourceId: user.id,
-          metadata: {
-            supabaseAuthId,
-          },
-        },
+        return user;
       });
+    } catch (error) {
+      if (isDisplayNameUniqueConstraintError(error)) {
+        throw new ConflictException('Display name is already taken');
+      }
 
-      return user;
-    });
+      throw error;
+    }
   }
 
   async updateProfile(

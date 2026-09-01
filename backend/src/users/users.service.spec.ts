@@ -41,6 +41,7 @@ describe('UsersService', () => {
   const authUser: AuthUser = {
     supabaseAuthId: 'test-supabase-user-1',
     email: 'test-user-1@example.com',
+    displayName: 'Test User',
   };
 
   beforeEach(() => {
@@ -59,6 +60,26 @@ describe('UsersService', () => {
     };
 
     service = new UsersService(prisma as unknown as PrismaService);
+  });
+
+  it('reports whether a display name is available', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.isDisplayNameAvailable('  New User  ')).resolves.toBe(
+      true,
+    );
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { displayName: 'New User' },
+      select: { id: true },
+    });
+  });
+
+  it('reports a display name as unavailable when it already exists', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'usr_existing' } as never);
+
+    await expect(service.isDisplayNameAvailable('Existing User')).resolves.toBe(
+      false,
+    );
   });
 
   it('returns the existing internal user profile when one already exists', async () => {
@@ -186,6 +207,7 @@ describe('UsersService', () => {
         data: expect.objectContaining({
           supabaseAuthId: authUser.supabaseAuthId,
           email: authUser.email,
+          displayName: authUser.displayName,
           preference: { create: {} },
           notificationPreference: { create: {} },
           creditProfile: {
@@ -248,6 +270,60 @@ describe('UsersService', () => {
         where: { id: existingUser.id },
         data: updates,
       }),
+    );
+  });
+
+  it('rejects creation when the authenticated user has no display name', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.findOrCreateUser({
+        ...authUser,
+        displayName: null,
+      }),
+    ).rejects.toThrow('A display name is required');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('trims the display name before creating the internal user', async () => {
+    const createdUser = {} as InternalUserProfile;
+    const tx = {
+      user: {
+        create: jest
+          .fn<Promise<InternalUserProfile>, [unknown]>()
+          .mockResolvedValue(createdUser),
+      },
+      userEvent: {
+        create: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+      },
+    };
+
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+
+    await service.findOrCreateUser({
+      ...authUser,
+      displayName: '  Trimmed User  ',
+    });
+
+    expect(tx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          displayName: 'Trimmed User',
+        }) as unknown,
+      }),
+    );
+  });
+
+  it('turns a display name race into a conflict error during signup bootstrap', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.$transaction.mockRejectedValue({
+      code: 'P2002',
+      meta: { target: ['displayName'] },
+    });
+
+    await expect(service.findOrCreateUser(authUser)).rejects.toThrow(
+      'Display name is already taken',
     );
   });
 
