@@ -64,14 +64,28 @@ export class SupabaseJwtGuard implements CanActivate {
     return token;
   }
 
-  private buildAuthUser(payload: { sub?: string; email?: unknown }): AuthUser {
+  private buildAuthUser(payload: {
+    sub?: string;
+    email?: unknown;
+    user_metadata?: unknown;
+  }): AuthUser {
     if (!payload.sub) {
       throw new UnauthorizedException('Token subject is missing');
     }
 
+    const metadata = payload.user_metadata;
+    const displayName =
+      metadata !== null &&
+      typeof metadata === 'object' &&
+      'display_name' in metadata &&
+      typeof metadata.display_name === 'string'
+        ? metadata.display_name
+        : null;
+
     return {
       supabaseAuthId: payload.sub,
       email: typeof payload.email === 'string' ? payload.email : null,
+      displayName,
     };
   }
 

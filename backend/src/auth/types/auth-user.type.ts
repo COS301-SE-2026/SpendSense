@@ -4,4 +4,5 @@
 export interface AuthUser {
   supabaseAuthId: string; // supabase auth user id
   email: string | null; // email from the jwt
+  displayName?: string | null; // display name from Supabase user metadata
 }

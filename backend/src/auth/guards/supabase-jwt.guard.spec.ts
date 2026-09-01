@@ -120,6 +120,9 @@ describe('SupabaseJwtGuard', () => {
       payload: {
         sub: 'supabase-user-123',
         email: 'student@example.com',
+        user_metadata: {
+          display_name: 'Student User',
+        },
       },
     } as Awaited<ReturnType<typeof jwtVerify>>);
 
@@ -136,6 +139,31 @@ describe('SupabaseJwtGuard', () => {
     expect((request as Request & { authUser?: unknown }).authUser).toEqual({
       supabaseAuthId: 'supabase-user-123',
       email: 'student@example.com',
+      displayName: 'Student User',
+    });
+  });
+
+  it('sets displayName to null when the token has no display name metadata', async () => {
+    jwtVerifyMock.mockResolvedValue({
+      payload: {
+        sub: 'supabase-user-123',
+        email: 'student@example.com',
+      },
+    } as Awaited<ReturnType<typeof jwtVerify>>);
+
+    const request = {
+      headers: {
+        authorization: 'Bearer valid-token',
+      },
+    };
+    const guard = new SupabaseJwtGuard();
+
+    await guard.canActivate(createExecutionContext(request));
+
+    expect((request as Request & { authUser?: unknown }).authUser).toEqual({
+      supabaseAuthId: 'supabase-user-123',
+      email: 'student@example.com',
+      displayName: null,
     });
   });
 });
