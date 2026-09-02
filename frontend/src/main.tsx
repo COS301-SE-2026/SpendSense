@@ -47,6 +47,7 @@ import SettingsAccountPage from './domains/SettingsAccountPage.tsx'
 import EditProfilePage from './domains/EditProfilePage.tsx'
 import HelpPage from './domains/HelpPage.tsx'
 import HomeRoute from './components/HomeRoute'
+import ScrollToTop from './components/common/ScrollToTop.tsx'
 
 initAuthListener()
 initTheme()
@@ -56,6 +57,7 @@ import PaymentForm from './domains/PaymentForm.tsx'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
+      <ScrollToTop/>
       <NotificationsProvider>
         <NotificationListener/>
         <Routes>
