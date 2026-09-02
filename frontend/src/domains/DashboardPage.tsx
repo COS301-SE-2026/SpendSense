@@ -89,15 +89,6 @@ export default function DashboardPage() {
 		nextLevel: (gamificationProfile?.mascotLevel ?? 1) + 1,
 	}
 
-	async function handleSignOut() {
-		try {
-			await signOut()
-			clearUnreadCount()
-			navigate("/login")
-		} catch (error) {
-			console.error("Failed to sign out:", error)
-		}
-	}
 
 	const stickersCollected = dashboard?.stickerStats?.collected
 	const stickersTotal = dashboard?.stickerStats?.total
