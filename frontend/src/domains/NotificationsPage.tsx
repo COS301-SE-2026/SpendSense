@@ -223,12 +223,7 @@ export default function NotificationsPage(){
             return
         }
 
-        let destination:string|null=null
-        if(notification.type==="SYSTEM"&&notification.title==="New friend request"){
-            destination="/friends"
-        }else if(notification.type==="WAGER_INVITE"&&notification.sourceId){
-            destination=`/wagers/${notification.sourceId}`
-        }
+        const destination=getNotificationDestination(notification)
 
         if(markingId!==null){
             return
@@ -894,6 +889,16 @@ function NotificationRow({
             </span>
         </button>
     )
+}
+
+function getNotificationDestination(notification:Notification){
+    if(notification.type==="SYSTEM"&&notification.title==="New friend request"){
+        return "/friends"
+    }
+    if(notification.type==="WAGER_INVITE"&&notification.sourceId){
+        return `/wagers/${notification.sourceId}`
+    }
+    return null
 }
 
 function formatTime(date:string){
