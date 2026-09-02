@@ -161,4 +161,40 @@ describe("ObligationForm Component", () => {
 			expect(screen.queryByText(/notification channels:/i)).not.toBeInTheDocument();
 		});
 	});
+
+	it("shows remaining monthly budget when making an obligation", async () => {
+		vi.mocked(useCalendarOccurrences).mockReturnValue({
+			occurrences: [
+				{
+					id: "occurrence-paid",
+					dueDate: "2026-09-01T00:00:00.000Z",
+					amountDue: 3500,
+					currency: "ZAR",
+					status: "PAID",
+					sequenceNumber: 1,
+					daysUntilDue: -1,
+					riskLevel: "LOW",
+					obligation: {
+						id: "obligation-1",
+						name: "Rent",
+						type: "RENT",
+						priority: "HIGH",
+					},
+					reminders: [],
+				},
+			],
+			loading: false,
+			error: null,
+			displayMonth: 8,
+			displayYear: 2026,
+			goToPreviousMonth: vi.fn(),
+			goToNextMonth: vi.fn(),
+			refetch: vi.fn(),
+		})
+
+		renderComponent()
+		expect(screen.getByText(/R.*6.?500/)).toBeInTheDocument()
+		expect(screen.getByText(/R.*10.?000/)).toBeInTheDocument()
+		expect(screen.getByText(/monthly budget left/i)).toBeInTheDocument()
+	})
 });

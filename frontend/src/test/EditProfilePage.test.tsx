@@ -18,6 +18,7 @@ const mockedUser = {
   coins: 1250,
   paymentStreak: 28,
   preferences: null,
+  monthlyBudget: 10000,
 }
 const mockedHookReturn = {
   user: mockedUser,
@@ -101,7 +102,7 @@ describe('EditProfilePage', ()=>{
         fireEvent.click(saveButton())
 
         await waitFor(()=> {
-            expect(mockedUpdateMe).toHaveBeenCalledWith({displayName: 'Rachel Clifford'})
+            expect(mockedUpdateMe).toHaveBeenCalledWith(expect.objectContaining({displayName: 'Rachel Clifford'}))
         })
 
         expect(await screen.findByText(/profile updated/i)).toBeInTheDocument()
@@ -136,5 +137,28 @@ describe('EditProfilePage', ()=>{
         fireEvent.click(saveButton())
 
         expect(await screen.findByText(/prohibited language/i)).toBeInTheDocument()
+    })
+
+    it('updates monthly budget', async () => {
+        renderPage()
+        const budgetInput = screen.getByLabelText(/monthly budget/i)
+
+        await userEvent.clear(budgetInput)
+        await userEvent.type(budgetInput, '11500')
+        await userEvent.click(
+            screen.getByRole('button', {name: /save/i})
+        )
+        await waitFor(() => {
+            expect(updateMe).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    monthlyBudget: 11500,
+                }),
+            )
+        })
+    })
+
+    it('loads the monthly budget', () => {
+        renderPage()
+        expect(screen.getByLabelText(/monthly budget/i)).toHaveValue(10000)
     })
 })
