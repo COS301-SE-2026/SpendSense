@@ -7,10 +7,12 @@ import {ChevronLeft} from "lucide-react"
 export function SubPageShell({
     title,
     subtitle,
+    stickyHeader = false,
     children,
 }: Readonly<{
     title: string
     subtitle?: string
+    stickyHeader?: boolean
     children: React.ReactNode
 }>){
     
@@ -18,7 +20,14 @@ export function SubPageShell({
     return(
         <div className ="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
             <div className ="mx-auto w-full max-w-md px-5 pt-6">
-                <header className ="flex items-center gap-3">
+                <header
+                    data-sticky={stickyHeader}
+                    className={
+                        "flex items-center gap-3" +
+                        (stickyHeader
+                            ? " sticky top-0 z-20 -mx-5 -mt-6 bg-[#F4FBF7] px-5 pb-3 pt-6 dark:bg-[#0b1326]"
+                            : "")
+                    }>
                     <button 
                         type ="button" 
                         aria-label="Back"
