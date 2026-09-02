@@ -40,6 +40,8 @@ export default function EditProfilePage(){
                 : undefined
             const message = statusCode === 409
                 ? "That display name is already taken. Please choose another."
+                : statusCode === 400 && error instanceof Error && error.message === "This display name contains prohibited language."
+                ? error.message
                 : "Couldn't save your changes. Please try again"
             setFeedback({kind: "error", message})
         }finally{

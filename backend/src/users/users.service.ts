@@ -17,6 +17,11 @@ import {
 import type { AuthUser } from '../auth/types/auth-user.type';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 import type { UpdatePreferencesDto } from './dto/update-preferences.dto';
+import {
+  getDisplayNameViolation,
+  getDisplayNameViolationMessage,
+  normalizeDisplayName,
+} from './display-name-policy';
 
 // UsersService: manages internal user records
 // bridges supabaseAuthId with the internal user table & default related records
@@ -393,6 +398,25 @@ export type UserPreferenceResult = Prisma.UserPreferenceGetPayload<{
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async checkDisplayName(displayName: string): Promise<{
+    available: boolean;
+    reason?: 'taken' | 'prohibited';
+  }> {
+    const normalizedDisplayName = normalizeDisplayName(displayName);
+    if (getDisplayNameViolation(normalizedDisplayName) === 'prohibited') {
+      return { available: false, reason: 'prohibited' };
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { displayName: normalizedDisplayName },
+      select: { id: true },
+    });
+
+    return existing === null
+      ? { available: true }
+      : { available: false, reason: 'taken' };
+  }
+
   // find/create the internal user for given supabase auth identity
   // on the first login, this creates User + UserPreference + NotificationPreference + CreditProfile + GamificationProfile in a single transactoin
   // returns the existing user on subsequent calls
@@ -413,39 +437,56 @@ export class UsersService {
       return existing;
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          supabaseAuthId,
-          email: email ?? `${supabaseAuthId}@unknown.spendsense`,
-          preference: { create: {} },
-          notificationPreference: { create: {} },
-          creditProfile: {
-            create: {
-              currentScore: 600,
-              previousScore: 600,
-              scoreTier: ScoreTier.GOOD,
+    const displayName = normalizeDisplayName(authUser.displayName);
+    const displayNameViolation = getDisplayNameViolation(displayName);
+    if (displayNameViolation) {
+      throw new BadRequestException(
+        getDisplayNameViolationMessage(displayNameViolation),
+      );
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            supabaseAuthId,
+            email: email ?? `${supabaseAuthId}@unknown.spendsense`,
+            displayName,
+            preference: { create: {} },
+            notificationPreference: { create: {} },
+            creditProfile: {
+              create: {
+                currentScore: 600,
+                previousScore: 600,
+                scoreTier: ScoreTier.GOOD,
+              },
+            },
+            gamificationProfile: { create: {} },
+          },
+          include: userProfileInclude,
+        });
+
+        await tx.userEvent.create({
+          data: {
+            userId: user.id,
+            eventType: UserEventType.USER_CREATED,
+            sourceType: UserEventSourceType.USER,
+            sourceId: user.id,
+            metadata: {
+              supabaseAuthId,
             },
           },
-          gamificationProfile: { create: {} },
-        },
-        include: userProfileInclude,
-      });
+        });
 
-      await tx.userEvent.create({
-        data: {
-          userId: user.id,
-          eventType: UserEventType.USER_CREATED,
-          sourceType: UserEventSourceType.USER,
-          sourceId: user.id,
-          metadata: {
-            supabaseAuthId,
-          },
-        },
+        return user;
       });
+    } catch (error) {
+      if (isDisplayNameUniqueConstraintError(error)) {
+        throw new ConflictException('Display name is already taken');
+      }
 
-      return user;
-    });
+      throw error;
+    }
   }
 
   async updateProfile(
@@ -457,13 +498,25 @@ export class UsersService {
     }
 
     const currentUser = await this.findOrCreateUser(authUser);
+    const displayName =
+      updates.displayName !== undefined
+        ? normalizeDisplayName(updates.displayName)
+        : undefined;
+    const displayNameViolation =
+      displayName !== undefined ? getDisplayNameViolation(displayName) : null;
+
+    if (displayNameViolation) {
+      throw new BadRequestException(
+        getDisplayNameViolationMessage(displayNameViolation),
+      );
+    }
 
     try {
       return await this.prisma.user.update({
         where: { id: currentUser.id },
         data: {
-          ...(updates.displayName !== undefined && {
-            displayName: updates.displayName,
+          ...(displayName !== undefined && {
+            displayName,
           }),
           ...(updates.avatarUrl !== undefined && {
             avatarUrl: updates.avatarUrl,

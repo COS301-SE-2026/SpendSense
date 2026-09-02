@@ -41,6 +41,7 @@ describe('UsersService', () => {
   const authUser: AuthUser = {
     supabaseAuthId: 'test-supabase-user-1',
     email: 'test-user-1@example.com',
+    displayName: 'Test User',
   };
 
   beforeEach(() => {
@@ -59,6 +60,35 @@ describe('UsersService', () => {
     };
 
     service = new UsersService(prisma as unknown as PrismaService);
+  });
+
+  it('reports whether a display name can be used', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.checkDisplayName('  New User  ')).resolves.toEqual({
+      available: true,
+    });
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { displayName: 'New User' },
+      select: { id: true },
+    });
+  });
+
+  it('reports a display name as taken when it already exists', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'usr_existing' } as never);
+
+    await expect(service.checkDisplayName('Existing User')).resolves.toEqual({
+      available: false,
+      reason: 'taken',
+    });
+  });
+
+  it('reports prohibited language before checking the database', async () => {
+    await expect(service.checkDisplayName('Ash0le')).resolves.toEqual({
+      available: false,
+      reason: 'prohibited',
+    });
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 
   it('returns the existing internal user profile when one already exists', async () => {
@@ -186,6 +216,7 @@ describe('UsersService', () => {
         data: expect.objectContaining({
           supabaseAuthId: authUser.supabaseAuthId,
           email: authUser.email,
+          displayName: authUser.displayName,
           preference: { create: {} },
           notificationPreference: { create: {} },
           creditProfile: {
@@ -249,6 +280,85 @@ describe('UsersService', () => {
         data: updates,
       }),
     );
+  });
+
+  it('rejects creation when the authenticated user has no display name', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.findOrCreateUser({
+        ...authUser,
+        displayName: null,
+      }),
+    ).rejects.toThrow('A display name is required');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('trims the display name before creating the internal user', async () => {
+    const createdUser = {} as InternalUserProfile;
+    const tx = {
+      user: {
+        create: jest
+          .fn<Promise<InternalUserProfile>, [unknown]>()
+          .mockResolvedValue(createdUser),
+      },
+      userEvent: {
+        create: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+      },
+    };
+
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+
+    await service.findOrCreateUser({
+      ...authUser,
+      displayName: '  Trimmed User  ',
+    });
+
+    expect(tx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          displayName: 'Trimmed User',
+        }) as unknown,
+      }),
+    );
+  });
+
+  it('turns a display name race into a conflict error during signup bootstrap', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.$transaction.mockRejectedValue({
+      code: 'P2002',
+      meta: { target: ['displayName'] },
+    });
+
+    await expect(service.findOrCreateUser(authUser)).rejects.toThrow(
+      'Display name is already taken',
+    );
+  });
+
+  it('rejects prohibited language during signup bootstrap', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.findOrCreateUser({
+        ...authUser,
+        displayName: 'Ash0le',
+      }),
+    ).rejects.toThrow('This display name contains prohibited language.');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects prohibited language when updating a display name', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'usr_authenticated',
+      supabaseAuthId: authUser.supabaseAuthId,
+      deletedAt: null,
+    } as InternalUserProfile);
+
+    await expect(
+      service.updateProfile(authUser, { displayName: 'Ash0le' }),
+    ).rejects.toThrow('This display name contains prohibited language.');
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   it('rejects an empty profile update', async () => {
