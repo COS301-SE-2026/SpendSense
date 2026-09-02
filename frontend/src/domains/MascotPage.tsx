@@ -11,6 +11,7 @@ import {CustomCard} from "@/components/ui/CustomCard"
 import {Progress} from "@/components/ui/progress"
 import {LongButton} from "@/components/common/LongButton"
 import {SubPageShell} from "@/components/common/SubPageShell"
+import {BottomNav} from "@/components/common/BottomNav"
 import {SectionHeader} from "@/components/common/SectionHeader"
 import {StatTile} from "@/components/common/StatTile"
 import {ErrorCard, LoadingCard} from "@/components/common/AsyncStates"
@@ -31,20 +32,18 @@ export default function MascotPage(){
 
     if (loading) {
 		return (
-			<SubPageShell title="Mascot Home">
+			<SubPageShell title="Mascot Home" showBackButton={false}>
 				<LoadingCard label="Loading your mascot" />
+                <BottomNav active="mascot" />
 			</SubPageShell>
 		)
 	}
 
     if(error || !profile){
         return (
-            <SubPageShell title="Mascot Home">
+            <SubPageShell title="Mascot Home" showBackButton={false}>
                 <ErrorCard message={error ?? "Your mascot is out of reach right now."} onRetry={refetch}/>
-
-                <LongButton LongVariant="primaryDark" LongSize="md" showArrow={false} asChild>
-                    <Link to="/profile">Back to Profile</Link>
-                </LongButton>
+                <BottomNav active="mascot" />
             </SubPageShell>
         )
     }
@@ -59,7 +58,7 @@ export default function MascotPage(){
     const moodReason = profile?.moodReason ?? null
 
     return(
-        <SubPageShell title="Mascot Home" subtitle="Your mascot. Your space. Your journey.">
+        <SubPageShell title="Mascot Home" subtitle="Your mascot. Your space. Your journey." showBackButton={false}>
 			{/* level and mood pills, image 6's two floating badges. no mood score or level
 			    title, neither exists on GET /gamification/profile */}
 			<div className="flex items-stretch gap-3">
@@ -191,9 +190,7 @@ export default function MascotPage(){
                 </Link>
             </LongButton>
 
-            <LongButton LongVariant="primaryDark" LongSize="md" showArrow={false} asChild>
-                <Link to="/profile">Back to Profile</Link>
-            </LongButton>
+            <BottomNav active="mascot" />
         </SubPageShell>
     )
 }

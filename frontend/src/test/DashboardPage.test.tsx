@@ -1,10 +1,9 @@
 import React from 'react'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach,describe, it, expect, vi } from 'vitest'
 import DashboardPage from '../domains/DashboardPage'
 import'@testing-library/jest-dom'
-import { signOut } from '../features/auth/auth.service'
 import {NotificationsProvider} from '../features/notifications/NotificationsContext'
 import {getNotifications} from '../features/notifications/notificationsApi'
 
@@ -52,10 +51,6 @@ vi.mock('../features/credit-score/credit-scoreApi', () => ({
       onLatePaymentCount: 1,
     },
   }),
-}))
-
-vi.mock('../features/auth/auth.service', () => ({
-  signOut: vi.fn(),
 }))
 
 vi.mock('../features/notifications/notificationsApi',()=>({
@@ -209,7 +204,8 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument()
     expect(screen.getByText('Home')).toBeInTheDocument()
     expect(screen.getByText('Calendar')).toBeInTheDocument()
-    expect(screen.getByText('Profile')).toBeInTheDocument()
+    expect(screen.getByText('Friends')).toBeInTheDocument()
+    expect(screen.getByText('Mascot')).toBeInTheDocument()
   })
 
   it('marks Home as the active nav tab', () => {
@@ -219,11 +215,11 @@ describe('DashboardPage', () => {
   })
 
 
-  it('enables Profile navigation tab', async () =>{
+  it('enables Mascot navigation tab', async () =>{
     await renderLoadedDashboard()
-    const profileLink = screen.getByRole('link', { name: /profile/i })
-    expect(profileLink).not.toHaveAttribute('aria-disabled', 'true')
-    expect(profileLink).not.toHaveClass('pointer-events-none')
+    const mascotLink = screen.getByRole('link', { name: /mascot/i })
+    expect(mascotLink).not.toHaveAttribute('aria-disabled', 'true')
+    expect(mascotLink).not.toHaveClass('pointer-events-none')
   })
 
   it('renders nav links pointing to correct routes', async () => {
@@ -239,25 +235,20 @@ describe('DashboardPage', () => {
     expect(obligationLink).toHaveAttribute('href', '/obligationForm')
   })
 
-  it('signs out and navigates to login', async () => {
-    vi.mocked(signOut).mockResolvedValue(undefined)
-
+  it('opens the profile from the dashboard header', async () => {
     render(
     <MemoryRouter initialEntries={['/']}>
       <NotificationsProvider>
         <Routes>
           <Route path="/" element={<DashboardPage/>}/>
-          <Route path="/login" element={<div>Login page</div>}/>
+          <Route path="/profile" element={<div>Profile page</div>}/>
         </Routes>
       </NotificationsProvider>
     </MemoryRouter>,
 )
 
-    fireEvent.click(screen.getByRole('button', { name: /sign out/i }))
+    fireEvent.click(screen.getByRole('button', { name: /profile/i }))
 
-    await waitFor(() => {
-      expect(signOut).toHaveBeenCalledOnce()
-      expect(screen.getByText('Login page')).toBeInTheDocument()
-    })
+    expect(await screen.findByText('Profile page')).toBeInTheDocument()
   })
 })
