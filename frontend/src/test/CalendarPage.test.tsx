@@ -384,4 +384,11 @@ describe('CalendarPage', ()=>{
 		expect(screen.queryByText(/tap to pay/i)).not.toBeInTheDocument()
 		expect(screen.getByRole('button', {name: /gym membership, missed/i})).toBeDisabled()
 	})
+
+	it('shows the remaining monthly budget', () => {
+		renderCalendar()
+		expect(screen.getByText(/R.*4.?800/)).toBeInTheDocument()
+		expect(screen.getByText(/R.*10.?000/)).toBeInTheDocument()
+		expect(screen.getByText(/monthly budget left/i)).toBeInTheDocument()
+	})
 })
