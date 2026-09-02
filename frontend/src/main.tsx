@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.tsx'
 import DashboardPage from '@/domains/DashboardPage.tsx'
 import CalendarPage from '@/domains/CalendarPage.tsx'
+import ScheduledPaymentsPage from '@/domains/ScheduledPaymentsPage.tsx'
 import LoginPage from './domains/LoginPage'
 import RegisterPage from './domains/RegisterPage.tsx'
 import ObligationForm from './domains/ObligationForm.tsx'
@@ -63,6 +64,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dev" element={<App />} />
           <Route path="/calendar" element={<CalendarPage />}/>
+          <Route path="/calendar/scheduled" element={<ProtectedRoute><ScheduledPaymentsPage/></ProtectedRoute>}/>
           <Route path="/login" element={<LoginPage />}/>
           <Route path="/register" element={<RegisterPage/>}/>
           <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm/></ProtectedRoute>}/>

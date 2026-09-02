@@ -325,7 +325,14 @@ describe('CalendarPage', ()=>{
 		renderCalendar()
 		expect(screen.getByRole('link', {name: /go back/i })).toHaveAttribute('href', '/')
 	})
-
+ 
+	it('menu button opens the full scheduled payments list', ()=>{
+		renderCalendar()
+		expect(
+			screen.getByRole('link', {name: /all scheduled payments/i}),
+		).toHaveAttribute('href', '/calendar/scheduled')
+	})
+ 
 	it('counts MISSED occurrences in the missed total alongside OVERDUE', ()=>{
 		vi.mocked(useCalendarOccurrences).mockReturnValue(
 			defaultHookState({occurrences: [overdueOccurrence, missedOccurrence]}) as never

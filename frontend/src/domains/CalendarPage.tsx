@@ -11,45 +11,23 @@ import {
 } from "lucide-react"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { cn } from "@/lib/utils"
-import { apiFetch } from "@/lib/api"
 import { useCalendarOccurrences, type CalendarOccurrence } from "@/hooks/useCalendarOccurrences"
+import { getOccurrenceDetail } from "@/features/payments/paymentsApi"
+import {
+  BADGE_STYLES,
+  formatCurrency,
+  iconBgForType,
+  isPayable,
+  type OccurrenceStatus,
+} from "@/features/payments/occurrenceDisplay"
+import { ObligationInitial } from "@/components/common/ObligationInitial"
 import { BottomNav } from "@/components/common/BottomNav"
  
  
 // TYPES
- 
-type OccurrenceStatus = "PENDING"|"OVERDUE"|"PAID"|"PAID_LATE"|"MISSED"|"CANCELLED"
- 
+
 type DotType = {color: string; check?: boolean}
- 
-interface OccurrenceDetail{
-  occurrence:{
-    id: string
-    dueDate: string
-    amountDue: number
-    currency: string
-    status: string
-    sequenceNumber: number
-    paidAt: string|null
-    overdueAt: string|null
-    missedAt: string|null
-  }
-  obligation:{
-    id: string
-    name: string
-    type: string
-    priority: string
-  }
-  paymentRecord: null|unknown
-  scoreRisk:{
-    estimatedPenaltyIfMissed: number
-    estimatedPenaltyIfLate: number
-    explanation: string
-  }
-  reminders: unknown[]
-}
- 
- 
+
 // CONSTANTS
  
 const MONTH_NAMES =[
@@ -59,16 +37,6 @@ const MONTH_NAMES =[
  
 const DAY_HEADERS =["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
  
-const BADGE_STYLES: Record<OccurrenceStatus, { bg: string; text: string; label: string }> ={
-  PENDING: { bg: "bg-[#FFD9E1] dark:bg-[#2d1b2e]", text: "text-[#3F001B] dark:text-[#ff6b9d]", label: "DUE SOON"},
-  OVERDUE: { bg: "bg-[#AC2A5D] dark:bg-[#93000a]", text: "text-white dark:text-[#ffdad6]", label: "OVERDUE"},
-  PAID: { bg: "bg-[#6FC9B0] dark:bg-[#0f4f42]", text: "text-white dark:text-[#5eead4]", label: "PAID"},
-  PAID_LATE: { bg: "bg-[#6FC9B0] dark:bg-[#0f4f42]", text: "text-white dark:text-[#5eead4]", label: "PAID LATE"},
-  MISSED: { bg: "bg-[#AC2A5D] dark:bg-[#93000a]", text: "text-white dark:text-[#ffdad6]", label: "MISSED"},
-  CANCELLED: { bg: "bg-[#D3D3D3] dark:bg-[#2d3449]", text: "text-[#555] dark:text-[#a0aec0]", label: "CANCELLED"},
-}
- 
- 
 // HELPERS
  
 function getDaysInMonth(year: number, month: number): number{
@@ -77,10 +45,6 @@ function getDaysInMonth(year: number, month: number): number{
  
 function getStartDayOfMonth(year: number, month: number): number{
   return new Date(year, month, 1).getDay()
-}
- 
-function formatCurrency(amount: number): string{
-  return `R ${amount.toLocaleString("en-ZA", {minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
  
 // group occurrences by day of month for quick calendar lookup
@@ -119,48 +83,6 @@ function dotForStatus(status: OccurrenceStatus): DotType{
     default: return { color: "bg-[#F2BF3C] dark:bg-[#ffd166]" }
   }
 }
- 
-function iconBgForType(type: string): string{
-  switch (type){
-    case "RENT": return "bg-[#091828] dark:bg-[#a0aec0]"
-    case "SUBSCRIPTION": return "bg-[#E9D5FF]"
-    case "UTILITY": return "bg-[#DCEFE8]"
-    case "BNPL": return "bg-[#FFE9B5]"
-    case "IOU": return "bg-[#FFD9E1]"
-    default: return "bg-[#E3EAE6]"
-  }
-}
- 
-// single letter icon fallback per obligation type
-function ObligationInitial({ type }: { type: string }){
-  const letters: Record<string, string>={
-    RENT: "R", SUBSCRIPTION: "S", UTILITY: "U", BNPL: "B", IOU: "I", CUSTOM: "C",
-  }
-  return(
-    <span className="text-sm font-bold text-[#091828]">
-      {letters[type] ?? "?"}
-    </span>
-  )
-}
- 
-// GET /payment-occurrences/:id
-// doublewrap: { data: { data: { occurrence, obligation, scoreRisk, ... } } }
-async function fetchOccurrenceDetail(id: string): Promise<OccurrenceDetail>{
-  const response = await apiFetch<{ data: { data: OccurrenceDetail}}>(
-    `/payment-occurrences/${id}`,
-  )
-  const detail = response?.data?.data
-  if(!detail) throw new Error("Unexpected response shape from /payment-occurrences/:id")
-
-  return{
-    ...detail,
-    occurrence:{
-      ...detail.occurrence,
-      amountDue: Number(detail.occurrence.amountDue),
-    },
-  }
-}
- 
  
 // MAIN PAGE
  
@@ -205,11 +127,11 @@ export default function CalendarPage(){
  
   // tap an occurrence card,fetch detail (for scoreRisk) then carry everything to PaymentForm
   async function handleOccurrenceTap(occ: CalendarOccurrence) {
-    if (occ.status === "PAID"||occ.status === "PAID_LATE"||occ.status === "CANCELLED"||occ.status === "MISSED") return
+    if (!isPayable(occ.status as OccurrenceStatus)) return
  
     setTappingId(occ.id)
     try{
-      const detail = await fetchOccurrenceDetail(occ.id)
+      const detail = await getOccurrenceDetail(occ.id)
       navigate("/paymentForm",{
         state:{
           occurrence: detail.occurrence,
@@ -273,12 +195,13 @@ export default function CalendarPage(){
               </div>
           </div>
  
-          <button
-            aria-label="Calendar settings"
+          <Link
+            to="/calendar/scheduled"
+            aria-label="All scheduled payments"
             className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#E3EAE6] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#1c263c] dark:shadow-[4px_4px_0_#060e20]"
           >
             <AlignJustify className="size-5 text-[#091828] dark:text-[#a0aec0]" />
-          </button>
+          </Link>
         </header>
  
         {/* MONTH NAVIGATION */}
@@ -447,7 +370,7 @@ function OccurrenceCard({
   const status = occurrence.status as OccurrenceStatus
   const badge = BADGE_STYLES[status] ?? BADGE_STYLES.PENDING
   const iconBg = iconBgForType(occurrence.obligation.type)
-  const isPayable = status === "PENDING" || status === "OVERDUE"
+  const payable = isPayable(status)
   const dayOfMonth = new Date(occurrence.dueDate).getDate()
   const monthShort = new Date(occurrence.dueDate).toLocaleString("en-ZA", { month: "short" })
  
@@ -455,14 +378,14 @@ function OccurrenceCard({
     <CustomCard className="rounded-3xl border-2 border-[#091828] bg-white p-4 shadow-sm dark:border-[#060e20] dark:bg-[#131b2e]">
       <button
         type="button"
-        disabled={!isPayable || isTapping}
+        disabled={!payable || isTapping}
         onClick={onTap}
         className={cn(
           "w-full text-left",
-          isPayable && !isTapping ? "cursor-pointer" : "cursor-default",
+          payable && !isTapping ? "cursor-pointer" : "cursor-default",
         )}
         aria-label={
-          isPayable
+          payable
             ? `Pay ${occurrence.obligation.name}, ${formatCurrency(occurrence.amountDue)}`
             : `${occurrence.obligation.name}, ${badge.label}`
         }
@@ -493,7 +416,7 @@ function OccurrenceCard({
               <span className={cn("inline-block rounded-full border border-[#091828] px-2 py-0.5 dark:border-[#060e20]", badge.bg)}>
                 <span className={cn("text-[10px] font-bold", badge.text)}>{badge.label}</span>
               </span>
-              {isPayable && !isTapping && (
+              {payable && !isTapping && (
                 <span className="text-[10px] font-semibold text-[#AC2A5D] dark:text-[#ff6b9d]">Tap to pay →</span>
               )}
             </div>
