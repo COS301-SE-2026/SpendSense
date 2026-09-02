@@ -1,4 +1,6 @@
 import {useNavigate, useLocation, useParams} from "react-router-dom"
+import {useRef} from "react"
+import {toPng} from "html-to-image"
 import {cn} from "@/lib/utils"
 import {
     ChevronLeft,
@@ -17,7 +19,7 @@ import {
     Zap,
     CheckCircle,
     Diamond,
-    PartyPopper,
+    Download,
 } from "lucide-react"
 import type {GamificationBadge} from "@/hooks/useGamificationProfile"
 
@@ -121,6 +123,7 @@ export default function StickerDetailPage(){
     const navigate = useNavigate()
     const location = useLocation()
     const {badgeKey} = useParams<{badgeKey: string}>()
+    const sharePageRef = useRef<HTMLDivElement>(null)
 
     const state = location.state as BadgeRouterState | null
     const badge = state?.badge ?? null
@@ -166,6 +169,71 @@ export default function StickerDetailPage(){
             year: "numeric",
         }) : ""
 
+    const waitForRender=()=>{
+        return new Promise<void>((resolve)=>{
+            requestAnimationFrame(()=>{
+                requestAnimationFrame(()=>{
+                    resolve()
+                })
+            })
+        })
+    }
+
+    const createImage=async()=>{
+        if(!sharePageRef.current){
+            throw new Error("Sticker unavailable.")
+        }
+        await document.fonts.ready
+        await waitForRender()
+        return toPng(sharePageRef.current,{
+            cacheBust:true,
+            pixelRatio:3,
+            backgroundColor:"#F4FBF7",
+            style:{
+                padding:"32px 32px 72px 32px",
+                border:"2px solid #091828",
+                background:"#F4FBF7",
+            },
+        })
+    }
+
+    const downloadImage=async()=>{
+        const dataUrl=await createImage()
+        const safeName=badge.name.replaceAll(/[^a-zA-Z0-9]+/g,"-").replaceAll(/^-|-$/g,"")
+        const link=document.createElement("a")
+        link.href=dataUrl
+        link.download=`SpendSense-${safeName}-Sticker.png`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+    }
+
+    const shareImage=async()=>{
+        const dataUrl=await createImage()
+        const response=await fetch(dataUrl)
+        const blob=await response.blob()
+        const safeName=badge.name.replaceAll(/[^a-zA-Z0-9]+/g,"-").replaceAll(/^-|-$/g,"")
+        const file=new File(
+            [blob],
+            `SpendSense-${safeName}-Sticker.png`,
+            {type:"image/png"},
+        )
+        if(navigator.share&&navigator.canShare?.({files:[file]})){
+            await navigator.share({
+                title:`${badge.name} Sticker`,
+                text:`I earned the ${badge.name} sticker on SpendSense!`,
+                files:[file],
+            })
+            return
+        }
+        const link=document.createElement("a")
+        link.href=dataUrl
+        link.download=file.name
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+    }
+
     return(
         <div className="min-h-screen bg-[#F0F7F4] flex flex-col items-center dark:bg-[#0b1326]">
         <div className="w-full max-w-sm flex flex-col min-h-screen">
@@ -185,6 +253,7 @@ export default function StickerDetailPage(){
                 </div>
                 <button
                     type="button"
+                    onClick={()=>void shareImage()}
                     className="size-9 flex items-center justify-center rounded-full bg-white/60 text-[#091828] dark:bg-[#131b2e]/60 dark:text-[#ffffff]"
                     aria-label="Share icon"
                 >
@@ -194,6 +263,7 @@ export default function StickerDetailPage(){
 
             <main className="px-6 pt-6 pb-12 flex flex-col items-center gap-6 max-w-sm mx-auto">
 
+                <div ref={sharePageRef} className="w-full flex flex-col items-center gap-6 pb-12">
                 {/* sparkle sticker card */}
                 <div className="relative">
                     <SparkleDecor className="absolute -top-3 -right-2" color="#F2BF3C" size={24}/>
@@ -227,13 +297,15 @@ export default function StickerDetailPage(){
                         <span className="text-sm font-bold">{tier} Tier</span>
                     </div>
                 </div>
+                </div>
 
                 <button
                     type="button"
-                    className="w-full rounded-full bg-[#FF6B9D] border-2 border-[#091828] shadow-[4px_5px_0_#091828] py-4 text-lg font-bold text-[#700034] flex items-center justify-center gap-2 transition-all active:shadow-none active:translate-x-[4px] active:translate-y-[5px] hover:bg-[#ff85b0] dark:border-[#060e20] dark:shadow-[4px_5px_0_#060e20] dark:text-[#1C1028]"
+                    onClick={()=>void downloadImage()}
+                    className="w-full flex items-center justify-center gap-2 rounded-full border-2 border-[#091828] bg-white px-4 py-3.5 text-sm font-extrabold text-[#091828] shadow-[4px_4px_0_#091828] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none dark:border-[#060e20] dark:bg-[#131b2e] dark:text-white dark:shadow-[4px_4px_0_#060e20]"
                 >
-                    <PartyPopper size={20}/>
-                    Share the Win With Friends
+                    <Download className="size-4"/>
+                    Save image
                 </button>
 
                 <button
