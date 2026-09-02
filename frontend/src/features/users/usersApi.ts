@@ -20,6 +20,6 @@ export async function checkDisplayName(displayName: string) {
     return response.data
 }
 
-export async function updateMe(body: {displayName?: string; avatarUrl?: string | null; onboardingCompleted?: boolean}) {
+export async function updateMe(body: {displayName?: string; avatarUrl?: string | null; onboardingCompleted?: boolean; montlyBudget: number;}) {
     return apiFetch('/users/me', {method: 'PATCH', body: JSON.stringify(body)})
 }

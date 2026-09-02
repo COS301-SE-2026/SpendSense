@@ -13,12 +13,33 @@ export default function EditProfilePage(){
     const{user, loading, refetch}= useUserProfile()
     const[displayName, setDisplayName]= React.useState("")
     const[saving, setSaving]= React.useState(false)
+    const [monthlyBudget, setMonthlyBudget] = React.useState("")
     const[feedback, setFeedback] =React.useState<{kind: "success"|"error", message: string} |null>(null)
 
-    React.useEffect(()=> {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        if(user) setDisplayName(user.displayName)
+    /* eslint-disable react-hooks/set-state-in-effect */
+    React.useEffect(() => {
+        if (user) {
+            setDisplayName(user.displayName)
+            setMonthlyBudget(
+                user.monthlyBudget != null
+                    ? String(user.monthlyBudget)
+                    : "",
+            )
+        }
     }, [user])
+    /* eslint-enable react-hooks/set-state-in-effect */
+
+    const budgetValue = 
+        monthlyBudget.trim() === ""
+            ? null 
+            : Number(monthlyBudget)
+
+    const budgetError = 
+        budgetValue !== null && 
+        (!Number.isFinite(budgetValue) || budgetValue < 0) 
+            ? "Please enter a valid monthly budget"
+            : null
+
 
     const trimmed =displayName.trim()
     const nameError=
@@ -26,12 +47,15 @@ export default function EditProfilePage(){
         : trimmed.length >NAME_MAX ? `Display name must be ${NAME_MAX} characters or fewer.` : null
 
     const handleSave= async()=> {
-        if(nameError) return
+        if(nameError || budgetError) return
         setSaving(true)
         setFeedback(null)
 
         try{
-            await updateMe({displayName: trimmed})
+            await updateMe({
+                displayName: trimmed,
+                ...(budgetValue !== null && {montlyBudget: budgetValue}),
+            })
             setFeedback({kind: "success", message: "Profile updated successfully!"})
             refetch()
         }catch(error: unknown){
@@ -96,6 +120,38 @@ export default function EditProfilePage(){
                             </div>
 
                             <div>
+                                <label
+                                    htmlFor="monthlyBudget"
+                                    className="text-xs font-bold uppercase tracking-wide text-[#6B6375] dark:text-[#a0aec0]"
+                                >
+                                    Monthly Budget
+                                </label>
+                                <div className="mt-1 flex items-center gap-2">
+                                    <span className="text-sm font-bold text-[#091828] dark:text-white">
+                                        R
+                                    </span>
+                                    <CustomInput
+                                        id="monthlyBudget"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={monthlyBudget}
+                                        onChange={(e) => setMonthlyBudget(e.target.value)}
+                                        placeholder="10000.00"
+                                        aria-invalid={Boolean(budgetError)}
+                                    />
+                                </div>
+                                <p className="mt-1 text-xs text-[#6B6375] dark:text-[#a0aec0]">
+                                    Your spending busget for each month.
+                                </p>
+                                {budgetError && (
+                                    <p className="mt-1 text-xs text-[#AC2A5D] dark:text-[#ff6b9d]">
+                                        {budgetError}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
                                 <p className="text-xs font-bold uppercase tracking-wide text-[#6B6375] dark:text-[#a0aec0]">Email</p>
                                 <p className="mt-1 text-sm text-[#091828] dark:text-[#ffffff]">{user.email}</p>
                                 <p className="mt-0.5 text-xs text-[#6B6375] dark:text-[#a0aec0]">Email changes go through account security, not this form</p>
@@ -115,7 +171,12 @@ export default function EditProfilePage(){
                         LongSize="md"
                         showArrow={false}
                         onClick={handleSave}
-                        disabled={saving||loading||Boolean(nameError)}
+                        disabled={
+                            saving||
+                            loading||
+                            Boolean(nameError)||
+                            Boolean(budgetError)
+                        }
                         className="dark:bg-[#ffb1c5] dark:text-[#650030] dark:hover:bg-[#ffc4d4]"
                     >
                         {saving ? "Saving...": "Save Changes"}

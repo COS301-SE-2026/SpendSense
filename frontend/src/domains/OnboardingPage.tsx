@@ -5,6 +5,7 @@ import { CustomCard } from "@/components/ui/CustomCard"
 import { Toggle } from "@/domains/SettingsPreferencesPage"
 import { getReminderPreferences, updateReminderPreferences } from "@/features/reminders/remindersApi"
 import { cn } from "@/lib/utils"
+import { updateMe } from "@/features/users/usersApi"
 
 const GOAL_OPTIONS = [
     {id: "payments", label: "Pay on time", icon: <Calendar className="size-5"/>},
@@ -30,6 +31,10 @@ export default function OnboardingPage(){
     const [reminderDaysBefore, setReminderDaysBefore] = React.useState(3)
     const [inAppEnabled, setInAppEnabled] = React.useState(true)
     const [error, setError] = React.useState(false)
+    const [monthlyBudget, setMonthlyBudget] = React.userState("")
+    const [budgetError, setBudgetError] = React.userState<string | null>(null)
+    const [isSaving, setIsSaving] = React.userState(false)
+
 
     const interacted = React.useRef(false)
 
@@ -73,6 +78,37 @@ export default function OnboardingPage(){
         void persist({inAppEnabled: next})
     }
 
+    async function handleContinue() {
+        setBudgetError(null)
+        setError(false)
+
+        let budget: number | undefined
+
+        if (monthlyBudget.trim() !== "") {
+            budget = Number(monthlyBudget)
+
+            if (!Number.isFinite(budget) || budget <= 0) {
+                setBudgetError("Please enter a valid monthly budget.")
+                return
+            }
+        }
+
+        setIsSaving(true)
+
+        try {
+            await updateMe({
+                ...(budget !== undefined && { monthlyBudget: budget }),
+                onboardingCompleted: true,
+            })
+
+            nav("/domains/dashboard")
+        } catch {
+            setError(true)
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
     return(
         <div className="min-h-screen bg-[#F4FBF7] px-4 pb-10 pt-8">
             <div className="mx-auto w-full max-w-sm">
@@ -114,6 +150,49 @@ export default function OnboardingPage(){
                                 </button>
                             )
                         })}
+                    </div>
+                </CustomCard>
+
+                <CustomCard variant="navyBorder" size="sm" className="mt-4">
+                    <div className="flex items-start gap-3">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#FFD8E6] text-[#AC2A5D]">
+                            <PiggyBank className="size-4"/>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <label
+                                htmlFor="monthlyBudget"
+                                className="text-sm font-bold text-[#091828]"
+                            >
+                                Monthly Budget
+                            </label>
+                            <p className="mt-1 text-sm text-[#6B6375]">
+                                What is your budget for each month?
+                            </p>
+                            <div className="mt-3 flex items-center gap-2">
+                                <span className="text-sm font-bold, text-[#091828]">
+                                    R
+                                </span>
+                                <input
+                                    id="monthlyBudget"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={monthlyBudget}
+                                    onChange={(event) => {
+                                        setMonthlyBudget(event.target.value)
+                                        setBudgetError(null)
+                                    }}
+                                    placeholder="1000.00"
+                                    className="w-full rounded-full border-2 border-[#E8E4F4] bg-white px-4 py-2 text-sm text-[#091828] outline-none focus:border-[#AC2A5D]"
+                                />
+                            </div>
+
+                            {budgetError && (
+                                <p className="mt-2 text-xs text-[#AC2A5D]">
+                                    {budgetError}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </CustomCard>
 
@@ -165,10 +244,11 @@ export default function OnboardingPage(){
 
                 <button
                     type="button"
-                    onClick={()=> nav("/domains/dashboard")}
-                    className={`${button} mt-6 w-full bg-[#FF6B9D] text-[#500D26]`}
+                    onClick={() => void handleContinue()}
+                    disabled={isSaving}
+                    className={`${button} mt-6 w-full bg-[#FF6B9D] text-[#500D26] disabled:cursor-not-allowed disabled:opacity-60`}
                 >
-                    Continue
+                    {isSaving ? "Saving..." : "Continue"}
                 </button>
 
             </div>
