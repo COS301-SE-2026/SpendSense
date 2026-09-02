@@ -124,6 +124,7 @@ vi.mock("@/components/common/AddTransactionButton",()=>({
 vi.mock("@/hooks/useGamificationProfile",()=>({
 	useGamificationProfile:()=>({
 		profile:{
+			coins:145,
 			knowledgeStreak:4,
 		},
 		loading:false,
@@ -363,5 +364,25 @@ describe("QuestsPage",()=>{
 		expect(quests).toHaveAttribute("aria-current","page")
 		expect(home).not.toHaveAttribute("aria-current")
 		expect(within(nav).getByTestId("add-transaction-button")).toBeInTheDocument()
+	})
+	it("renders a back arrow link to the home page",async ()=>{
+		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
+		renderPage()
+
+		expect(await screen.findByRole("link",{name:"Go back"})).toHaveAttribute("href","/")
+	})
+	it("shows the current coin balance in a popup",async ()=>{
+		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
+		renderPage()
+
+		const coinButton=await screen.findByRole("button",{name:"Show coin balance"})
+		expect(screen.queryByRole("dialog",{name:"Coin balance"})).not.toBeInTheDocument()
+		await userEvent.click(coinButton)
+		expect(screen.getByRole("dialog",{name:"Coin balance"})).toHaveTextContent("145 coins")
+		expect(coinButton).toHaveAttribute("aria-expanded","true")
+		await userEvent.click(coinButton)
+		expect(screen.queryByRole("dialog",{name:"Coin balance"})).not.toBeInTheDocument()
 	})
 })
