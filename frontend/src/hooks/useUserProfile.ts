@@ -8,6 +8,7 @@ export interface ProfileData{
     email: string
     avatarUrl: string|null
     memberSince: string
+    monthlyBudget: number|null
     level: number
     tier: string
     coins: number
@@ -27,6 +28,7 @@ interface MeResponse{
             displayName?: string|null
             avatarUrl?: string|null
             createdAt?: string
+            monthlyBudget?: number|null
         }
         preferences?: ProfileData['preferences']
         creditProfile?: {scoreTier?: string}
@@ -81,6 +83,9 @@ export function useUserProfile(): UseUserProfileReturn{
                 coins: Number(me.gamificationProfile?.coinBalance ?? 0),
                 paymentStreak: Number(me.gamificationProfile?.currentPaymentStreak ?? 0),
                 preferences: me.preferences ?? null,
+                monthlyBudget: me.user?.monthlyBudget != null 
+                    ? Number(me.user.monthlyBudget) 
+                    : null,
             })
         }
         catch(e){

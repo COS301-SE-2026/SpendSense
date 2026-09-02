@@ -50,7 +50,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
     it("should render all form fields and the 'Add Payment' header correctly",()=>{
         render(<PaymentForm />);
         expect(screen.getByRole("heading",{ name: /add payment/i })).toBeInTheDocument();
-        expect(screen.getByLabelText(/occurence id/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/occurrence id/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/amount paid/i)).toBeInTheDocument();
         expect(screen.getByRole("button",{ name: /\w+ \d{1,2}, \d{4}/i })).toBeInTheDocument()
         expect(screen.getByLabelText(/notes/i)).toBeInTheDocument();
@@ -69,11 +69,11 @@ describe("PaymentForm (ObligationForm) Component",()=>{
     it("should display Zod schema validation errors when missing required parameters",async ()=>{
         const user = userEvent.setup();
         render(<PaymentForm />);
-        await user.clear(screen.getByLabelText(/occurence id/i));
+        await user.clear(screen.getByLabelText(/occurrence id/i));
         await user.clear(screen.getByLabelText(/amount paid/i));
         await user.click(screen.getByRole("button",{ name :/log payment/i }));
         await waitFor(()=>{
-        expect(screen.getByText("OccurenceID is required.")).toBeInTheDocument();
+        expect(screen.getByText("OccurrenceID is required.")).toBeInTheDocument();
         expect(screen.getByText("Amount must be greater than 0")).toBeInTheDocument();
         });
     });
@@ -81,7 +81,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
     it("should fail validation if the user enters a negative payment amount",async ()=>{
         const user = userEvent.setup();
         render(<PaymentForm />);
-        await user.type(screen.getByLabelText(/occurence id/i),"occ_payment_xyz");
+        await user.type(screen.getByLabelText(/occurrence id/i),"occ_payment_xyz");
         await user.clear(screen.getByLabelText(/amount paid/i));
         await user.type(screen.getByLabelText(/amount paid/i),"-250");
         await user.click(screen.getByRole("button",{ name :/log payment/i }));
@@ -94,7 +94,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
     it("should log form values correctly and show the payment impact modal on success",async ()=>{
         const user = userEvent.setup();
         render(<PaymentForm />);
-        await user.type(screen.getByLabelText(/occurence id/i),"occ_12345");
+        await user.type(screen.getByLabelText(/occurrence id/i),"occ_12345");
         await user.clear(screen.getByLabelText(/amount paid/i));
         await user.type(screen.getByLabelText(/amount paid/i),"750.00");
         await user.type(screen.getByLabelText(/notes/i),"Paid in full");
@@ -138,7 +138,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
         render(<PaymentForm />);
 
         expect(screen.getByText("Netflix")).toBeInTheDocument();
-        expect(screen.queryByLabelText(/occurence id/i)).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/occurrence id/i)).not.toBeInTheDocument();
         expect(screen.getByLabelText(/amount paid/i)).toHaveValue("199");
 
         await user.click(screen.getByRole("button",{ name :/log payment/i }));

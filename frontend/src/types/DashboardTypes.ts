@@ -56,4 +56,8 @@ export type DashboardData = {
   recentBadges: unknown[]
   recentScoreEvents: unknown[]
   unreadNotifications: unknown[]
+  stickerStats?: {
+    collected: number
+    total: number
+  }
 }

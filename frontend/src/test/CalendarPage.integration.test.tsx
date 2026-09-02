@@ -3,6 +3,7 @@ import {render, screen, fireEvent, waitFor} from '@testing-library/react'
 import {MemoryRouter, Routes, Route} from 'react-router-dom'
 import {describe, it, expect, vi, beforeEach} from 'vitest'
 import CalendarPage from '../domains/CalendarPage'
+import { useUserProfile } from "@/hooks/useUserProfile"
 import '@testing-library/jest-dom'
 
 vi.mock('../hooks/useCalendarOccurrences', ()=>({
@@ -10,6 +11,9 @@ vi.mock('../hooks/useCalendarOccurrences', ()=>({
 }))
 vi.mock('../lib/api', ()=>({
 	apiFetch: vi.fn(),
+}))
+vi.mock("@/hooks/useUserProfile", () => ({
+    useUserProfile: vi.fn(),
 }))
 
 import {useCalendarOccurrences} from '../hooks/useCalendarOccurrences'
@@ -113,6 +117,23 @@ describe('CalendarPage integration', ()=>{
 		vi.clearAllMocks()
 		vi.mocked(useCalendarOccurrences).mockReturnValue(defaultHookState())
 		vi.mocked(apiFetch).mockResolvedValue(mockDetailResponse)
+		vi.mocked(useUserProfile).mockReturnValue({
+			user: {
+				displayName: "TestUser",
+				email: "testuser@example.com",
+				avatarUrl: null,
+				memberSince: "September 2026",
+				monthlyBudget: 10000,
+				level: 1,
+				tier: "Building",
+				coins: 0,
+				paymentStreak: 0,
+				preferences: null,
+			},
+			loading: false,
+			error: null,
+			refetch: vi.fn(),
+		})
 	})
 
 

@@ -8,6 +8,10 @@ import {
     Target,
     TrendingUp,
     CheckCircle,
+    Sparkles,
+    Flame,
+    Sun,
+    Circle,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -15,8 +19,8 @@ import { cn } from "@/lib/utils"
 type CarouselSlide = "wrapped" | "quests" | "insights" | "stickers"
 
 type DashboardCarouselProps = {
-    stickersCollected: number
-    stickersTotal: number
+    stickersCollected?: number
+    stickersTotal?: number
 }
 
 export function DashboardCarousel({ stickersCollected, stickersTotal, }: DashboardCarouselProps) {
@@ -34,10 +38,23 @@ export function DashboardCarousel({ stickersCollected, stickersTotal, }: Dashboa
     const [activeIndex, setActiveIndex] = React.useState(0)
     const swipeStartXRef = React.useRef<number | null>(null)
     const didSwipeRef = React.useRef(false)
+    const trackRef = React.useRef<HTMLDivElement>(null)
+
+    const triggerPop = () => {
+        const track = trackRef.current
+        if (!track) {
+            return
+        }
+
+        track.classList.remove("is-popping")
+        void track.offsetWidth
+        track.classList.add("is-popping")
+    }
 
     const goTo = (index: number) => {
         const nextIndex = (index + slides.length) % slides.length
         setActiveIndex(nextIndex)
+        triggerPop()
     }
     const goPrevious = () => {
         goTo(activeIndex - 1)
@@ -79,7 +96,7 @@ export function DashboardCarousel({ stickersCollected, stickersTotal, }: Dashboa
         didSwipeRef.current = false
     }
 
-    const hasStickerCounts = stickersCollected !== undefined && stickersTotal !== undefined
+    const hasStickerCounts = typeof stickersCollected === "number" && typeof stickersTotal === "number"
     const stickersRemaining = hasStickerCounts ? Math.max(stickersTotal - stickersCollected, 0) : 0
 
     return (
@@ -92,13 +109,11 @@ export function DashboardCarousel({ stickersCollected, stickersTotal, }: Dashboa
             </div>
 
             <div className="touch-pan-y overflow-hidden rounded-[24px] p-1 pb-2" onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} onPointerCancel={handlePointerCancel}>
-                <div className=" flex gap-4	transition-transform duration-500 ease-[cubic-bezier(.22,.8,.25,1)]"
+                <div ref={trackRef} className="dashboard-carousel-track flex items-stretch gap-4 transition-transform duration-500 ease-[cubic-bezier(.22,.8,.25,1)]"
                     style={{ transform: `translateX(calc(-${activeIndex * 100}% - ${activeIndex}rem))` }}
                 >
                     {slides.map((slide, index) => (
-                        <div key={slide} className="w-full shrink-0">
-                            <CarouselCard slide={slide} wrappedMonth={wrappedMonth} hasStickerCounts={hasStickerCounts} stickersCollected={stickersCollected} stickersRemaining={stickersRemaining} tilt={index % 2 === 0 ? "left" : "right"} onClick={handleCardClick} />
-                        </div>
+                        <CarouselCard key={slide} slide={slide} wrappedMonth={wrappedMonth} hasStickerCounts={hasStickerCounts} stickersCollected={stickersCollected ?? 0} stickersRemaining={stickersRemaining} tilt={index % 2 === 0 ? "left" : "right"} onClick={handleCardClick} />
                     ))}
                 </div>
             </div>
@@ -108,7 +123,7 @@ export function DashboardCarousel({ stickersCollected, stickersTotal, }: Dashboa
                     type="button"
                     onClick={goPrevious}
                     aria-label="Previous feature"
-                    className="flex size-8 items-center justify-centerrounded-full bg-whitetext-[#091828]shadow-[0_3px_10px_rgba(9,24,40,0.09)]transitionactive:scale-95dark:bg-[#1c263c]dark:text-white"
+                    className="flex size-8 items-center justify-center rounded-full bg-white text-[#091828] shadow-[0_3px_10px_rgba(9,24,40,0.09)] transition active:scale-95 dark:bg-[#1c263c] dark:text-white"
                 >
                     <ChevronLeft className="size-4" />
                 </button>
@@ -151,10 +166,8 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
     tilt: "left" | "right"
     onClick: (event: React.MouseEvent<HTMLAnchorElement>) => void
 }) {
-    const tiltClass = tilt === "left" ? "-rotate-[0.8deg]" : "rotate-[0.8deg]"
-
     const sharedClass = cn(
-        "block h-[172px] overflow-hidden rounded-[22px]",
+        "block h-[220px] w-full min-w-0 flex-[0_0_100%] overflow-hidden rounded-[22px]",
         "border-2 border-[#091828]",
         "p-4 text-[#091828]",
         "shadow-[4px_5px_0_#091828]",
@@ -169,8 +182,11 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
         "focus-visible:ring-offset-2",
         "dark:border-[#060e20]",
         "dark:shadow-[4px_5px_0_#060e20]",
-        tiltClass,
+        "dashboard-carousel-slide",
     )
+
+    const tiltValue = slide === "wrapped" ? "-1.1deg" : tilt === "left" ? "-0.8deg" : "0.8deg"
+    const slideStyle = { "--dashboard-carousel-tilt": tiltValue } as React.CSSProperties
 
     switch (slide) {
 
@@ -180,6 +196,7 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                     to="/wrapped"
                     onClick={onClick}
                     className={cn(sharedClass, "bg-[#FFD9E1]", "dark:bg-[#2d1b2e]")}
+                    style={slideStyle}
                     aria-label={`Open ${wrappedMonth} Wrapped`}
                 >
                     <div className="flex items-center gap-3">
@@ -207,6 +224,7 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                     to="/quests"
                     onClick={onClick}
                     className={cn(sharedClass, "bg-white dark:bg-[#131b2e] dark:text-white")}
+                    style={slideStyle}
                 >
                     <div className="flex items-center gap-3">
                         <SlideIcon tone="lilac"><Target className="size-5" /></SlideIcon>
@@ -235,6 +253,7 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                     to="/insights"
                     onClick={onClick}
                     className={cn(sharedClass, "bg-white dark:bg-[#131b2e] dark:text-white")}
+                    style={slideStyle}
                 >
                     <div className="flex items-center gap-3">
                         <SlideIcon tone="pink"><TrendingUp className="size-5" /></SlideIcon>
@@ -256,11 +275,12 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                     to="/stickers"
                     onClick={onClick}
                     className={cn(sharedClass, "bg-white dark:bg-[#131b2e] dark:text-white")}
+                    style={slideStyle}
                 >
                     <div className="flex items-center gap-3">
                         <SlideIcon tone="yellow"> <Images className="size-5" /> </SlideIcon>
                         <p className="flex-1 text-[11px] font-black uppercase tracking-[0.12em]"> Stickers</p>
-                        {hasStickerCounts && (
+                        {hasStickerCounts && stickersCollected !== undefined && (
                             <span className="whitespace-nowrap text-[10px] font-semibold text-[#6B6375] dark:text-[#a0aec0]">
                                 {stickersCollected} collected! {stickersRemaining} to go
                             </span>
@@ -276,9 +296,30 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                         Open your album to see the stickers you have earned.
                     </p>
 
+                    <StickerPreview />
+
                 </Link>
             )
     }
+}
+
+function StickerPreview() {
+    return (
+        <div className="mt-4 flex items-center gap-2" data-testid="sticker-preview" aria-hidden="true">
+            <span className="flex size-10 items-center justify-center rounded-full bg-[#FFD9E1] text-[#AC2A5D] dark:bg-[#ff6b9d]/20 dark:text-[#ff6b9d]">
+                <Sparkles className="size-5" />
+            </span>
+            <span className="flex size-10 items-center justify-center rounded-full bg-[#DCEFE8] text-[#16635A] dark:bg-[#12463d] dark:text-[#7fd8c4]">
+                <Flame className="size-5" />
+            </span>
+            <span className="flex size-10 items-center justify-center rounded-full bg-[#DCD5F4] text-[#5B4D8B] dark:bg-[#2a2545] dark:text-[#c5b3f0]">
+                <Sun className="size-5" />
+            </span>
+            <span className="flex size-10 items-center justify-center rounded-full border-2 border-dashed border-[#AEB8B2] text-[#AEB8B2] dark:border-[#64748b] dark:text-[#64748b]">
+                <Circle className="size-4" />
+            </span>
+        </div>
+    )
 }
 
 function SlideIcon({ tone, children }: { tone: "pink" | "yellow" | "lilac", children: React.ReactNode }) {

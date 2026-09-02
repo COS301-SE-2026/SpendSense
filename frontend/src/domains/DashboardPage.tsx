@@ -89,8 +89,18 @@ export default function DashboardPage() {
 		nextLevel: (gamificationProfile?.mascotLevel ?? 1) + 1,
 	}
 
-	const stickersCollected = 5
-	const stickersTotal = 5
+	async function handleSignOut() {
+		try {
+			await signOut()
+			clearUnreadCount()
+			navigate("/login")
+		} catch (error) {
+			console.error("Failed to sign out:", error)
+		}
+	}
+
+	const stickersCollected = dashboard?.stickerStats?.collected
+	const stickersTotal = dashboard?.stickerStats?.total
 
 	return (
 		<div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
@@ -138,12 +148,12 @@ export default function DashboardPage() {
 
 				</CustomCard>
 
-				<CreditStatsSection creditScore={creditScore} />
-
 				<DashboardCarousel
 					stickersCollected={stickersCollected}
 					stickersTotal={stickersTotal}
 				/>
+
+				<CreditStatsSection creditScore={creditScore} />
 
 
 				<section aria-label="Experience progress" className="mt-5" >

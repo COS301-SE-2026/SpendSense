@@ -34,6 +34,7 @@ vi.mock('../features/dashboard/dashboardApi', () => ({
         status: 'PENDING',
         obligation: { name: 'Internet Service' },
       }],
+      stickerStats: { collected: 2, total: 7 },
       unreadNotifications: [],
     },
   }),
@@ -189,6 +190,15 @@ describe('DashboardPage', () => {
     await renderLoadedDashboard()
     expect(document.body.textContent).toMatch(/850\s*\/\s*1[\s,.]?200\s*XP/i)
     expect(screen.getByText('Next Level: 5')).toBeInTheDocument()
+  })
+
+  it('renders the live sticker collection count on the sticker card', async () => {
+    await renderLoadedDashboard()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show stickers' }))
+
+    expect(screen.getByText('2 collected! 5 to go')).toBeInTheDocument()
+    expect(screen.getByTestId('sticker-preview')).toBeInTheDocument()
   })
 
   it('renders the Coming Up section with a bill', async () => {
