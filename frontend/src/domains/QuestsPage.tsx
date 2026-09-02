@@ -258,7 +258,7 @@ export default function QuestsPage(){
 				mode={dailyQuizConfirmMode}
 				progress={daily?.status==="IN_PROGRESS"?daily.session.progress:undefined}
 			/>
-			<BottomNav active="quests"/>
+			<BottomNav/>
 		</div>
 	)
 }
