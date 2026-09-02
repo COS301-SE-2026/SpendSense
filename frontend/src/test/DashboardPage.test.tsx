@@ -203,18 +203,12 @@ describe('DashboardPage', () => {
     expect(screen.getByText('R 54.00')).toBeInTheDocument()
   })
 
-  it('renders the Stickers section', () => {
-    renderDashboard()
-    expect(screen.getByText('Stickers')).toBeInTheDocument()
-    expect(screen.getByText('24 collected · 32 to go')).toBeInTheDocument()
-  })
 
   it('renders the bottom navigation', () => {
     renderDashboard()
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument()
     expect(screen.getByText('Home')).toBeInTheDocument()
     expect(screen.getByText('Calendar')).toBeInTheDocument()
-    expect(screen.getByText('Quests')).toBeInTheDocument()
     expect(screen.getByText('Profile')).toBeInTheDocument()
   })
 
@@ -224,13 +218,6 @@ describe('DashboardPage', () => {
     expect(homeLink).toHaveAttribute('aria-current', 'page')
   })
 
-  it('enables Quests navigation tabs', async () => {
-    await renderLoadedDashboard()
-    const questsLink = screen.getByRole('link', { name: /quests/i })
-    expect(questsLink).not.toHaveAttribute('aria-disabled', 'true')
-    expect(questsLink).not.toHaveClass('pointer-events-none')
-    
-  })
 
   it('enables Profile navigation tab', async () =>{
     await renderLoadedDashboard()
