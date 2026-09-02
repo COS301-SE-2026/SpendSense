@@ -15,7 +15,7 @@ import {Calendar} from "@/components/ui/calendar";
 const paymentSchema=z.object({
     occurrenceId:z 
         .string()
-        .min(1, "OccurenceID is required."),
+        .min(1, "OccurrenceID is required."),
     amountPaid: z
         .coerce.number()
         .positive("Amount must be greater than 0"),
@@ -139,7 +139,7 @@ export default function ObligationForm(){
                     ) : (
                         <>
                             <div className="space-y-1">
-                                <label htmlFor="occurrenceId" className="text-xs font-semibold text-[#091828] dark:text-white">Occurence id</label>
+                                <label htmlFor="occurrenceId" className="text-xs font-semibold text-[#091828] dark:text-white">Occurrence id</label>
                                 <CustomInput
                                     variant="form"
                                     id="occurrenceId"

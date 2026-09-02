@@ -12,6 +12,7 @@ import {
 import { CustomCard } from "@/components/ui/CustomCard"
 import { cn } from "@/lib/utils"
 import { useCalendarOccurrences, type CalendarOccurrence } from "@/hooks/useCalendarOccurrences"
+import { useUserProfile } from "@/hooks/useUserProfile"
 import { getOccurrenceDetail } from "@/features/payments/paymentsApi"
 import {
   BADGE_STYLES,
@@ -110,6 +111,13 @@ export default function CalendarPage(){
  
   const byDay = groupByDay(occurrences)
   const summary = calcSummary(occurrences)
+
+  const { user } = useUserProfile()
+  const monthlyBudget = user?.monthlyBudget ?? null
+  const remainingBudget = 
+    monthlyBudget !== null 
+      ? Math.max(monthlyBudget - summary.paid, 0) 
+      : null
  
   // dot map: at most 2 dots per day, overdue shown first
   const eventDots: Record<number, DotType[]> = {}
@@ -236,6 +244,23 @@ export default function CalendarPage(){
         )}
  
         {/* SUMMARY CARDS */}
+        {monthlyBudget !== null && (
+          <div className="mt-6">
+            <div className="rounded-3xl border-2 border-[#091828] bg-white px-5 py-4 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
+                MONTHLY BUDGET LEFT
+              </p>
+
+              <p className="mt-1 text-2xl font-extrabold text-[#091828] dark:text-white">
+                {formatCurrency(remainingBudget ?? 0)}
+                <span className="ml-2 text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
+                  of {formatCurrency(monthlyBudget)}
+                </span>
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="mt-6 flex flex-col gap-3">
           <div style={{ transform: "rotate(-2deg)" }}>
             <div className="rounded-3xl border-2 border-[#091828] bg-white px-5 py-4 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20]">

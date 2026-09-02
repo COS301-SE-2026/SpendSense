@@ -3,14 +3,19 @@ import { render, screen, fireEvent, } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import CalendarPage from '../domains/CalendarPage'
+import { useUserProfile } from "@/hooks/useUserProfile"
+import { useCalendarOccurrences } from '../hooks/useCalendarOccurrences'
 import '@testing-library/jest-dom'
  
 // mock the hook so unit tests don't make real API calls
 vi.mock('../hooks/useCalendarOccurrences', () => ({
 	useCalendarOccurrences: vi.fn(),
 }))
- 
-import { useCalendarOccurrences } from '../hooks/useCalendarOccurrences'
+
+vi.mock("@/hooks/useUserProfile", () => ({
+	useUserProfile: vi.fn(),
+}))
+
  
 const mockGoToPreviousMonth = vi.fn()
 const mockGoToNextMonth = vi.fn()
@@ -94,6 +99,23 @@ describe('CalendarPage', ()=>{
 	beforeEach(() => {
 		vi.clearAllMocks()
 		vi.mocked(useCalendarOccurrences).mockReturnValue(defaultHookState())
+		vi.mocked(useUserProfile).mockReturnValue({
+			user: {
+				displayName: "TestUser",
+				email: "testuser@example.com",
+				avatarUrl: null,
+				memberSince: "September 2026",
+				monthlyBudget: 10000,
+				level: 1,
+				tier: "Building",
+				coins: 0,
+				paymentStreak: 0,
+				preferences: null,
+			},
+			loading: false,
+			error: null,
+			refetch: vi.fn(),
+		})
 	})
  
 	afterEach(()=>{

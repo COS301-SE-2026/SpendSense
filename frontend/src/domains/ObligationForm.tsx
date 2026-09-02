@@ -7,6 +7,9 @@ import {useNavigate} from "react-router-dom";
 import {CustomBadge} from "@/components/common/CustomBadges";
 import {Popover, PopoverContent, PopoverTrigger} from "../components/ui/popover";
 import {Calendar} from "@/components/ui/calendar";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useCalendarOccurrences } from "@/hooks/useCalendarOccurrences";
+import { formatCurrency } from "@/features/payments/occurrenceDisplay";
 import {cn} from "@/lib/utils";
 import {
     X, RefreshCw,
@@ -150,6 +153,26 @@ export default function ObligationForm() {
         }
     };
 
+    const { user } = useUserProfile();
+    const { occurrences, loading: budgetLoading } = useCalendarOccurrences();
+    const paidThisMonth = occurrences.reduce((total, occurrences) => {
+        if (
+            occurrences.status === "PAID" ||
+            occurrences.status === "PAID_LATE"
+        ) {
+            return total + occurrences.amountDue;
+        }
+
+        return total
+    }, 0);
+
+    const monthlyBudget = user?.monthlyBudget ?? null;
+
+    const remainingBudget = 
+        monthlyBudget !== null 
+            ? Math.max(monthlyBudget - paidThisMonth, 0) 
+            : null;
+    
     return (
         <div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
@@ -174,6 +197,27 @@ export default function ObligationForm() {
                         <RefreshCw className="size-4" />
                     </button>
                 </div>
+
+                {monthlyBudget !== null && (
+                    <div className="mt-6">
+                        <div className="rounded-3xl border-2 border-[#091828] bg-white px-5 py-4 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20]">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
+                                MONTHLY BUDGET LEFT
+                            </p>
+                
+                            {budgetLoading ? (
+                                <div className="mt-2 h-7 w-36 animate-pulse rounded-full bg-[#E3EAE6] dark:bg-[#1c263c]"/>
+                            ) : (
+                                <p className="mt-1 text-2xl font-extrabold text-[#091828] dark:text-white">
+                                    {formatCurrency(remainingBudget ?? 0)}
+                                    <span className="ml-2 text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
+                                        of {formatCurrency(monthlyBudget)}
+                                    </span>
+                                </p>
+                            )}
+                    </div>
+                    </div>
+                )}
 
                 {/* Amount display */}
                 <div className="text-center py-6">
@@ -372,7 +416,7 @@ export default function ObligationForm() {
 
                     {/* Total occurrences - label preserves the typo the test asserts against */}
                     <div>
-                        <label htmlFor="totalOccurrences" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Total occurences</label>
+                        <label htmlFor="totalOccurrences" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Total occurrences</label>
                         <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 dark:bg-[#131b2e]">
                             <div className="size-9 rounded-full bg-[#FFE9B5] flex items-center justify-center flex-shrink-0">
                                 <Hash className="size-4 text-[#7a5a00]" />
