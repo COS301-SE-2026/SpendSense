@@ -31,7 +31,14 @@ const registrationSchema=z.object({
         .email("Please enter a valid email address"),
     password: z 
         .string()
-        .min(6,"Password must be at least 6 characters"),
+        .min(8,"Password must be at least 8 characters")
+		.regex(/[A-Z]/, "Password must contain at least one upper case letter")
+		.regex(/[a-z]/, "Password must contain at least one lower case letter")
+		.regex(/[0-9]/, "Password must contain at least one number")
+		.regex(
+			/[^A-Za-z0-9]/, 
+			"Password must contain at least one special character",
+		),
 	confirmPassword:z
 		.string()
 }).refine((data)=>{
@@ -124,6 +131,7 @@ export default function RegisterPage(){
 							placeholder="SuperSecretPassword"
 							className="w-full"
 						/>
+						<p className="text-xs text-[#667085]">Use at least 8 characters with an uppercase letter, lowercase letter, number, and special character.</p>
 						{errors.password && (<p className="text-xs text-red-600">{errors.password.message}</p>)}
 					</div>
 					{/* confirm pass->confimPassowrd */}
