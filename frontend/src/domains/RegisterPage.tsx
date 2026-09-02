@@ -154,20 +154,6 @@ export default function RegisterPage(){
 							{isLoading ? "Loading...":"JOIN THE QUEST"}
 						</LongButton>
 					</div>
-					{/* line break thingy */}
-					<div className="flex items-center gap-2">
-						<div className="flex-1 h-px bg-[#B0B7C3]" />
-							<span className="text-[10px] tracking-widest text-[#667085] font-medium uppercase">
-								Or continue with
-							</span>
-						<div className="flex-1 h-px bg-[#B0B7C3]" />
-					</div>
-					{/* login with google butt */}
-					<div>
-						<LongButton type="submit" LongVariant="outline"  disabled fullWidth>
-							{isLoading ? "Loading...":"Sign up with Google"}
-						</LongButton>
-					</div>
 					<div className="text-center text-[#44474C]">
 						Already have an account?{" "}
 						<Link to="/login" className="text-[#AC2A5D] text-princple hover:underline">
