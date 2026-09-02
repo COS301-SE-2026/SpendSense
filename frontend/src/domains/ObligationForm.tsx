@@ -154,13 +154,13 @@ export default function ObligationForm() {
     };
 
     const { user } = useUserProfile();
-    const { occurences, loading: budgetLoading } = useCalendarOccurrences();
-    const paidThisMonth = occurences.reduce((total, occurences) => {
+    const { occurrences, loading: budgetLoading } = useCalendarOccurrences();
+    const paidThisMonth = occurrences.reduce((total, occurrences) => {
         if (
-            occurences.status === "PAID" ||
-            occurences.status === "PAID_LATE"
+            occurrences.status === "PAID" ||
+            occurrences.status === "PAID_LATE"
         ) {
-            return total + occurences.amountDue;
+            return total + occurrences.amountDue;
         }
 
         return total
@@ -416,7 +416,7 @@ export default function ObligationForm() {
 
                     {/* Total occurrences - label preserves the typo the test asserts against */}
                     <div>
-                        <label htmlFor="totalOccurrences" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Total occurences</label>
+                        <label htmlFor="totalOccurrences" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Total occurrences</label>
                         <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 dark:bg-[#131b2e]">
                             <div className="size-9 rounded-full bg-[#FFE9B5] flex items-center justify-center flex-shrink-0">
                                 <Hash className="size-4 text-[#7a5a00]" />

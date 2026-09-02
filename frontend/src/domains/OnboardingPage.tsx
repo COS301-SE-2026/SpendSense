@@ -31,9 +31,9 @@ export default function OnboardingPage(){
     const [reminderDaysBefore, setReminderDaysBefore] = React.useState(3)
     const [inAppEnabled, setInAppEnabled] = React.useState(true)
     const [error, setError] = React.useState(false)
-    const [monthlyBudget, setMonthlyBudget] = React.userState("")
-    const [budgetError, setBudgetError] = React.userState<string | null>(null)
-    const [isSaving, setIsSaving] = React.userState(false)
+    const [monthlyBudget, setMonthlyBudget] = React.useState("")
+    const [budgetError, setBudgetError] = React.useState<string | null>(null)
+    const [isSaving, setIsSaving] = React.useState(false)
 
 
     const interacted = React.useRef(false)
@@ -169,7 +169,7 @@ export default function OnboardingPage(){
                                 What is your budget for each month?
                             </p>
                             <div className="mt-3 flex items-center gap-2">
-                                <span className="text-sm font-bold, text-[#091828]">
+                                <span className="text-sm font-bold text-[#091828]">
                                     R
                                 </span>
                                 <input
