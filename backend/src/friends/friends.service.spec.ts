@@ -1,5 +1,6 @@
-import { FriendRequestStatus } from '@prisma/client';
+import { FriendRequestStatus, NotificationType } from '@prisma/client';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { FriendsService } from './friends.service';
 
@@ -20,9 +21,18 @@ describe('FriendsService', () => {
       findUnique: jest.fn(),
       updateMany: jest.fn(),
     },
-    user: { findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn() },
+    user: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      count: jest.fn(),
+    },
   };
-  const service = new FriendsService(prisma as unknown as PrismaService);
+  const notificationsService = { create: jest.fn() };
+  const service = new FriendsService(
+    prisma as unknown as PrismaService,
+    notificationsService as unknown as NotificationsService,
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -69,6 +79,7 @@ describe('FriendsService', () => {
   it('creates a pending request for an active user without a request or friendship', async () => {
     const createdAt = new Date('2026-08-21T10:00:00.000Z');
     prisma.user.findFirst.mockResolvedValue({ id: 'receiver-id' });
+    prisma.user.findUnique.mockResolvedValue({ displayName: 'Sender' });
     prisma.friendRequest.findFirst.mockReturnValue(Promise.resolve(null));
     prisma.friendship.findFirst.mockReturnValue(Promise.resolve(null));
     prisma.$transaction.mockResolvedValue([null, null]);
@@ -79,12 +90,21 @@ describe('FriendsService', () => {
       status: FriendRequestStatus.PENDING,
       createdAt,
     });
+    notificationsService.create.mockResolvedValue(undefined);
 
     await expect(
       service.createRequest('sender-id', 'receiver-id'),
     ).resolves.toMatchObject({
       id: 'request-id',
       status: FriendRequestStatus.PENDING,
+    });
+
+    expect(notificationsService.create).toHaveBeenCalledWith({
+      userId: 'receiver-id',
+      type: NotificationType.SYSTEM,
+      title: 'New friend request',
+      message: 'Sender sent you a friend request.',
+      sourceId: 'request-id',
     });
   });
 
@@ -178,6 +198,7 @@ describe('FriendsService', () => {
       senderId: 'sender-id',
       receiverId: 'receiver-id',
       status: FriendRequestStatus.PENDING,
+      receiver: { displayName: 'Receiver' },
     });
     prisma.$transaction.mockImplementation((operation: unknown) => {
       const callback = operation as (
@@ -203,6 +224,16 @@ describe('FriendsService', () => {
       ],
       skipDuplicates: true,
     });
+    expect(notificationsService.create).toHaveBeenCalledWith(
+      {
+        userId: 'sender-id',
+        type: NotificationType.SYSTEM,
+        title: 'Friend request accepted',
+        message: 'Receiver accepted your friend request.',
+        sourceId: 'request-id',
+      },
+      transactionClient,
+    );
   });
 
   it('declines incoming requests and cancels outgoing requests', async () => {

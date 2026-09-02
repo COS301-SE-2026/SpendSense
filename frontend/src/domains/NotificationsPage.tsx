@@ -223,7 +223,21 @@ export default function NotificationsPage(){
             return
         }
 
-        if(notification.readAt||markingId!==null){
+        let destination:string|null=null
+        if(notification.type==="SYSTEM"&&notification.title==="New friend request"){
+            destination="/friends"
+        }else if(notification.type==="WAGER_INVITE"&&notification.sourceId){
+            destination=`/wagers/${notification.sourceId}`
+        }
+
+        if(markingId!==null){
+            return
+        }
+
+        if(notification.readAt){
+            if(destination){
+                nav(destination)
+            }
             return
         }
 
@@ -262,6 +276,10 @@ export default function NotificationsPage(){
                         }
                         :item,
                 ))
+            }
+
+            if(destination){
+                nav(destination)
             }
         }catch(error){
             if(isAuthenticationError(error)){
@@ -787,6 +805,7 @@ const ICON_TYPE:Record<NotifType,React.ReactNode>={
     SCORE_CHANGE:<TrendingUp className="size-4"/>,
     REMINDER:<Calendar className="size-4"/>,
     BADGE_EARNED:<Award className="size-4"/>,
+    WAGER_INVITE:<Award className="size-4"/>,
 }
 
 const TONE_TYPE:Record<NotifType,string>={
@@ -796,6 +815,7 @@ const TONE_TYPE:Record<NotifType,string>={
     SCORE_CHANGE:"bg-[#dcefe8] text-[#091828] dark:bg-[#1c263c] dark:text-[#ffffff]",
     REMINDER:"bg-[#ffe9b5] text-[#7a5a00] dark:bg-[#3f2e00] dark:text-[#ffdf9b]",
     BADGE_EARNED:"bg-[#ffd8e6] text-[#ac2a5d] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]",
+    WAGER_INVITE:"bg-[#e8e4f4] text-[#5b4d8b] dark:bg-[#1c263c] dark:text-[#c5b3f0]",
 }
 
 function NotificationRow({
