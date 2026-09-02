@@ -54,7 +54,7 @@ export default function EditProfilePage(){
         try{
             await updateMe({
                 displayName: trimmed,
-                ...(budgetValue !== null && {montlyBudget: budgetValue}),
+                ...(budgetValue !== null && {monthlyBudget: budgetValue}),
             })
             setFeedback({kind: "success", message: "Profile updated successfully!"})
             refetch()
