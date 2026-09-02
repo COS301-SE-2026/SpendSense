@@ -2,8 +2,8 @@ import*as React from "react"
 import{ Link, useNavigate } from "react-router-dom"
 import{
 	CalendarCheck,
+	ChevronLeft,
 	Mountain,
-	Trophy,
 	AlertTriangle,
 	Coins,
 } from "lucide-react"
@@ -113,9 +113,13 @@ export default function QuestsPage(){
 		<div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
 			<div className="mx-auto w-full max-w-md px-5 pt-6">
 				<header className="flex items-center gap-3">
-					<div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#ffb1c5]">
-						<Trophy className="size-5 text-[#6E0034] dark:text-[#650030]"/>
-					</div>
+					<Link
+						to="/"
+						aria-label="Go back"
+						className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#ffb1c5]"
+					>
+						<ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]"/>
+					</Link>
 					<div className="flex flex-1 items-center justify-center">
                         <div
                             className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"

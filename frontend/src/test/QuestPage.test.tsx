@@ -364,4 +364,11 @@ describe("QuestsPage",()=>{
 		expect(home).not.toHaveAttribute("aria-current")
 		expect(within(nav).getByTestId("add-transaction-button")).toBeInTheDocument()
 	})
+	it("renders a back arrow link to the home page",async ()=>{
+		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
+		renderPage()
+
+		expect(await screen.findByRole("link",{name:"Go back"})).toHaveAttribute("href","/")
+	})
 })
