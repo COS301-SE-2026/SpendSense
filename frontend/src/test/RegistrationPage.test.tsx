@@ -66,8 +66,8 @@ describe("RegisterPage Component",()=>{
         renderComponent();
         const user=userEvent.setup();
         await user.type(screen.getByLabelText(/email address/i),"test@example.com");
-        await user.type(screen.getByLabelText(/^password$/i),"SuperSecret123");
-        await user.type(screen.getByLabelText(/confirm password/i),"DifferentSecret123");
+        await user.type(screen.getByLabelText(/^password$/i),"SuperSecret123!");
+        await user.type(screen.getByLabelText(/confirm password/i),"DifferentSecret123!");
         await user.click(screen.getByRole("button",{name:/join the quest/i}));
         expect(await screen.findByText("Passwords do not match")).toBeInTheDocument();
    });
@@ -90,11 +90,11 @@ describe("RegisterPage Component",()=>{
         //form fields
         await user.type(screen.getByLabelText(/display name/i),"Morgie Walrus");
         await user.type(screen.getByLabelText(/email address/i),"morgie@tuks.co.za");
-        await user.type(screen.getByLabelText(/^password$/i),"Password123");
-        await user.type(screen.getByLabelText(/confirm password/i),"Password123");
+        await user.type(screen.getByLabelText(/^password$/i),"Password123!");
+        await user.type(screen.getByLabelText(/confirm password/i),"Password123!");
         await user.click(screen.getByRole("button",{name:/join the quest/i}));
         await waitFor(()=>{
-            expect(signUp).toHaveBeenCalledWith("morgie@tuks.co.za","Password123","Morgie Walrus");
+            expect(signUp).toHaveBeenCalledWith("morgie@tuks.co.za","Password123!","Morgie Walrus");
             expect(mockNavigate).toHaveBeenCalledWith("/onboarding");
        });
    });
@@ -111,8 +111,8 @@ describe("RegisterPage Component",()=>{
         const user=userEvent.setup();
         await user.type(screen.getByLabelText(/display name/i),"Morgie Walrus");
         await user.type(screen.getByLabelText(/email address/i),"duplicate@tuks.co.za");
-        await user.type(screen.getByLabelText(/^password$/i),"Password123");
-        await user.type(screen.getByLabelText(/confirm password/i),"Password123");
+        await user.type(screen.getByLabelText(/^password$/i),"Password123!");
+        await user.type(screen.getByLabelText(/confirm password/i),"Password123!");
         await user.click(screen.getByRole("button",{name:/join the quest/i}));
         expect(await screen.findByText("Email already in use.")).toBeInTheDocument();
         expect(mockNavigate).not.toHaveBeenCalled();

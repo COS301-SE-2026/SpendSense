@@ -36,18 +36,21 @@ function renderRegisterPage() {
 function fillForm({
     displayName = "Morgie Walrus",
     email = "morgie@tuks.co.za",
-    password = "SecurePass123",
-    confirmPassword = "SecurePass123",
+    password = "SecurePass123!",
+    confirmPassword = "SecurePass123!",
 } = {}) {
-    fireEvent.change(screen.getByPlaceholderText("Morgie Walrus"), {
+    fireEvent.change(screen.getByLabelText(/display name/i), {
         target: {value: displayName},
     });
-    fireEvent.change(screen.getByPlaceholderText("morgie@tuks.co.za"), {
+    fireEvent.change(screen.getByLabelText(/email address/i), {
         target: {value: email},
     });
-    const [passwordInput, confirmInput] = screen.getAllByPlaceholderText("SuperSecretPassword");
-    fireEvent.change(passwordInput, { target: {value: password} });
-    fireEvent.change(confirmInput, { target: {value: confirmPassword} });
+    fireEvent.change(screen.getByLabelText(/^password$/i), {
+        target: {value: password},
+    });
+    fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: {value: confirmPassword},
+    });
 }
 
 function mockSuccessfulSignUp(mockToken = "mock.jwt.token") {
@@ -147,7 +150,7 @@ describe("Register page integration", () => {
         const signUpSpy = vi.spyOn(supabase.auth, "signUp");
 
         renderRegisterPage();
-        fillForm({ password: "SecurePass123", confirmPassword: "DifferentPass456" });
+        fillForm({ password: "SecurePass123!", confirmPassword: "DifferentPass456!" });
         fireEvent.click(screen.getByRole("button", {name: /join the quest/i}));
 
         await waitFor(() => {
