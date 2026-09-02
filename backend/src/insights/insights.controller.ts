@@ -29,11 +29,7 @@ export class InsightsController {
   @ApiResponse({ status: 401, description: 'Unauthorised' })
   async getInsights(@CurrentAuthUser() authUser: AuthUser) {
     const user = await this.usersService.findOrCreateUser(authUser);
-    console.log('INSIGHTS AUTH CHECK:', {
-      supabaseAuthId: authUser.supabaseAuthId,
-      email: authUser.email,
-      internalUserId: user.id,
-    });
+
     return this.insightsService.getInsights(user.id);
   }
 }

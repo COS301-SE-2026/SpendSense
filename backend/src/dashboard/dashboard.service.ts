@@ -183,9 +183,6 @@ export class DashboardService {
       },
     });
 
-    console.log('Looking up user with ID:', userId);
-    console.log('User summary returned:', userSummary);
-
     const today = new Date();
 
     const upcomingPayments = await this.prisma.paymentOccurrence.findMany({
@@ -216,8 +213,6 @@ export class DashboardService {
         },
       },
     });
-
-    console.log('Upcoming Payments for User :', upcomingPayments);
 
     return {
       userSummary,
