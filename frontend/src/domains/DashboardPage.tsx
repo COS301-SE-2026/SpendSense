@@ -102,8 +102,8 @@ export default function DashboardPage() {
 		}
 	}
 
-	const stickersCollected = 5
-	const stickersTotal = 5
+	const stickersCollected = dashboard?.stickerStats?.collected
+	const stickersTotal = dashboard?.stickerStats?.total
 
 	return (
 		<div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
@@ -151,12 +151,12 @@ export default function DashboardPage() {
 
 				</CustomCard>
 
-				<CreditStatsSection creditScore={creditScore} />
-
 				<DashboardCarousel
 					stickersCollected={stickersCollected}
 					stickersTotal={stickersTotal}
 				/>
+
+				<CreditStatsSection creditScore={creditScore} />
 
 
 				<section aria-label="Experience progress" className="mt-5" >
@@ -186,4 +186,3 @@ export default function DashboardPage() {
 		</div>
 	)
 }
-
