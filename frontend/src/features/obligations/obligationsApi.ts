@@ -1,4 +1,5 @@
 import {apiFetch} from '../../lib/api'
+import type {ApiResponse} from '../../types'
 
 export type ObligationType =
     | 'RENT'
@@ -41,6 +42,15 @@ export type CreateObligationRequest = {
     }
 }
 
+export type CreateObligationResponse = ApiResponse<{
+    rewards: {
+        xpAwarded: number
+        xp: number
+        mascotLevel: number
+        leveledUp: boolean
+    }
+}>
+
 // obligationsApi: financial obligation CRUD
 // POST creates the obligation, schedule, payment occurrences, reminders, & a UserEvent
 // all in a single backend transaction (never userId in the request body)
@@ -53,9 +63,9 @@ export type CreateObligationRequest = {
 // PATCH /api/v1/obligations/:id
 // DELETE /api/v1/obligations/:id
 
-export async function createObligation(body: CreateObligationRequest)
+export async function createObligation(body: CreateObligationRequest): Promise<CreateObligationResponse>
 {
-    return apiFetch('/obligations', {method: 'POST', body: JSON.stringify(body)})
+    return apiFetch<CreateObligationResponse>('/obligations', {method: 'POST', body: JSON.stringify(body)})
 }
 
 export async function getObligations(params?: {page?: number; perPage?: number}){

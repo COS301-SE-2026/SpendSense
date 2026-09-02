@@ -19,14 +19,17 @@ import { CreateObligationDto } from './dto/create-obligation.dto';
 import { ListObligationsDto } from './dto/list-obligations.dto';
 import { UpdateObligationDto } from './dto/update-obligation.dto';
 import { BadgeEngineService } from '../gamification/badge-engine.service';
+import { RewardService } from '../rewards/reward.service';
 
 const OCCURRENCE_HORIZON_MONTHS = 6;
+const OBLIGATION_LOG_XP = 15;
 
 @Injectable()
 export class ObligationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly badgeEngineService: BadgeEngineService,
+    private readonly rewardService: RewardService,
   ) {}
 
   async create(
@@ -163,6 +166,11 @@ export class ObligationsService {
           sourceId: obligation.id,
         },
       });
+      const settlement = await this.rewardService.settleAction(tx, {
+        userId,
+        sourceEventId: event.id,
+        xp: { amount: OBLIGATION_LOG_XP },
+      });
       await this.badgeEngineService.evaluateObligationBadges(
         {
           userId,
@@ -194,6 +202,12 @@ export class ObligationsService {
           type: event.eventType,
           sourceType: event.sourceType,
           sourceId: event.sourceId,
+        },
+        rewards: {
+          xpAwarded: OBLIGATION_LOG_XP,
+          xp: settlement.xp ?? 0,
+          mascotLevel: settlement.mascotLevel ?? 0,
+          leveledUp: settlement.leveledUp ?? false,
         },
       };
     });

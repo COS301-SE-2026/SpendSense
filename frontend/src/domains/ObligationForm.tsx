@@ -94,6 +94,7 @@ const TYPE_TO_CATEGORY: Record<string, string> = {
 export default function ObligationForm() {
     const navigate = useNavigate();
     const [showPopup, setShowPopup] = useState(false);
+    const [xpAwarded, setXpAwarded] = useState(15);
     const [isSubmitting, setSubmitting] = useState(false);
     const [categories, setCategories] = useState<Category[]>([]);
     const [activeIconId, setActiveIconId] = useState("subscription");
@@ -133,7 +134,7 @@ export default function ObligationForm() {
         setSubmitting(true);
         try {
             const isFixedInstallment = formData.schedule.frequency === "FIXED_INSTALLMENT";
-            await createObligation({
+            const response = await createObligation({
                 name: formData.name,
                 description: formData.description,
                 type: formData.type,
@@ -155,6 +156,7 @@ export default function ObligationForm() {
                     channels: formData.reminders.channels as ReminderChannel[],
                 } : undefined,
             });
+            setXpAwarded(response.data.rewards.xpAwarded);
             setShowPopup(true);
             setTimeout(() => {setShowPopup(false); reset(); navigate("/");}, 5000);
         } catch (error) {
@@ -527,7 +529,7 @@ export default function ObligationForm() {
                 <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-[#FF6B9D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-[#091828] dark:border-[#060e20] dark:bg-[#ff6b9d] dark:text-[#6e0035]">
                     <div className="flex flex-col">
                         <span className="text-sm font-bold">Added new obligation!</span>
-                        <CustomBadge variant="xp">+10 xp</CustomBadge>
+                        <CustomBadge variant="xp">+{xpAwarded} xp</CustomBadge>
                     </div>
                 </div>
             )}
