@@ -13,6 +13,7 @@ export class DashboardService {
       overduePayments,
       recentBadges,
       unreadNotifications,
+      stickerStats,
     ] = await Promise.all([
       this.prisma.scoreEvent.findMany({
         where: {
@@ -166,7 +167,25 @@ export class DashboardService {
           createdAt: true,
         },
       }),
+
+      Promise.all([
+        this.prisma.userBadge.count({
+          where: {
+            userId,
+            earnedAt: {
+              not: null,
+            },
+          },
+        }),
+        this.prisma.badgeDefinition.count({
+          where: {
+            isActive: true,
+          },
+        }),
+      ]),
     ]);
+
+    const [collected, total] = stickerStats;
 
     const userSummary = await this.prisma.user.findFirst({
       where: {
@@ -222,6 +241,10 @@ export class DashboardService {
       overduePayments,
       recentBadges,
       unreadNotifications,
+      stickerStats: {
+        collected,
+        total,
+      },
     };
   }
 }
