@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useNavigate } from "react-router-dom"
 import {
-	LogOut,
+	User,
 	BookOpen,
 	CalendarCheck,
 } from "lucide-react"
@@ -18,8 +18,6 @@ import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { UpcomingPaymentsCard } from "@/components/dashboard/UpcomingPaymentsCard"
 import { CreditStatsSection } from "@/components/dashboard/CreditStats"
 import { getDashboard } from "@/features/dashboard/dashboardApi"
-import { signOut } from "@/features/auth/auth.service"
-import { useNotifications } from "@/features/notifications/useNotifications"
 
 import type { DashboardData } from "@/types/DashboardTypes"
 import type { CreditScore } from "@/types/credit-scoreTypes"
@@ -30,7 +28,6 @@ import { DashboardCarousel } from "@/components/dashboard/DashbordCarousel"
 
 export default function DashboardPage() {
 	const navigate = useNavigate()
-	const { clearUnreadCount } = useNotifications()
 
 	const [dashboard, setDashboard] = React.useState<DashboardData | null>(null)
 	const [creditScore, setCreditScore] = React.useState<CreditScore | null>(null)
@@ -92,15 +89,6 @@ export default function DashboardPage() {
 		nextLevel: (gamificationProfile?.mascotLevel ?? 1) + 1,
 	}
 
-	async function handleSignOut() {
-		try {
-			await signOut()
-			clearUnreadCount()
-			navigate("/login")
-		} catch (error) {
-			console.error("Failed to sign out:", error)
-		}
-	}
 
 	const stickersCollected = dashboard?.stickerStats?.collected
 	const stickersTotal = dashboard?.stickerStats?.total
@@ -120,11 +108,11 @@ export default function DashboardPage() {
 						<NotificationBell />
 						<button
 							type="button"
-							aria-label="Sign out"
-							onClick={handleSignOut}
+							aria-label="Profile"
+							onClick={() => navigate("/profile")}
 							className="flex size-10 items-center justify-center rounded-full bg-[#FFD9E1] text-[#AC2A5D] transition hover:bg-[#FFB3C6] active:translate-y-px dark:bg-[#ff6b9d]/20 dark:text-[#ff6b9d] dark:hover:bg-[#ff6b9d]/30"
 						>
-							<LogOut className="size-5" />
+							<User className="size-5" />
 						</button>
 					</div>
 				</header>

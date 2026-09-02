@@ -17,7 +17,7 @@ vi.mock('@/hooks/useUserProfile', () => ({
 
 //stub bottom nav
 vi.mock('@/components/common/BottomNav', ()=> ({
-    BottomNav: ({active}: {active: string})=> <nav data-testid="bottom-nav" data-active={active}/>
+    BottomNav: ({active}: {active?: string})=> <nav data-testid="bottom-nav" data-active={active}/>
 
 }))
 
@@ -64,14 +64,14 @@ describe('ProfilePage', ()=> {
         expect(refetch).toHaveBeenCalledTimes(1)
     })
 
-    it('renders real identity, tier, streak and coins when populated', ()=>{
+    it('renders real identity and tier when populated', ()=>{
         mockedUseUserProfile.mockReturnValue({user: populatedUser, loading: false, error:null, refetch:vi.fn()})
         renderProfile()
 
         expect(screen.getByText('Rachel C')).toBeInTheDocument()
         expect(screen.getByText(/level 6 - good/i)).toBeInTheDocument()
-        expect(screen.getByText(/28 day streak/i)).toBeInTheDocument()
-        expect(screen.getByText(/1,250 coins/i)).toBeInTheDocument()
+        expect(screen.queryByText(/28 day streak/i)).not.toBeInTheDocument()
+        expect(screen.queryByText(/1,250 coins/i)).not.toBeInTheDocument()
         expect(screen.getByText(/member since march 2026/i)).toBeInTheDocument()
     })
 
@@ -97,7 +97,8 @@ describe('ProfilePage', ()=> {
     it('links every enabled menu row to its route(wrapped routed to /wrapped)', ()=> {
         renderProfile()
         expect(screen.getByRole('link', {name: /edit profile/i})).toHaveAttribute('href', '/edit-profile')
-        expect(screen.getByRole('link', {name: /settings/i})).toHaveAttribute('href', '/settings')
+        expect(screen.queryByRole('link', {name: /settings/i})).not.toBeInTheDocument()
+        expect(screen.getByRole('button', {name: /settings/i})).toBeInTheDocument()
         expect(screen.getByRole('link', {name: /friends & social/i})).toHaveAttribute('href', '/friends')
         expect(screen.getByRole('link', {name: /sticker album/i})).toHaveAttribute('href', '/stickers')
         expect(screen.getByRole('link', {name: /wrapped/i})).toHaveAttribute('href', '/wrapped')
@@ -106,9 +107,9 @@ describe('ProfilePage', ()=> {
 
     })
 
-    it('marks the profile tab active on nav bar', ()=> {
+    it('does not mark a bottom nav tab active on the profile page', ()=> {
         mockedUseUserProfile.mockReturnValue({user: populatedUser, loading: false, error: null, refetch: vi.fn()})
         renderProfile()
-        expect(screen.getByTestId('bottom-nav')).toHaveAttribute('data-active', 'profile')
+        expect(screen.getByTestId('bottom-nav')).not.toHaveAttribute('data-active')
     })
 })
