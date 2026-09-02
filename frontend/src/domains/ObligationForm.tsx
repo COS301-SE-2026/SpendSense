@@ -19,7 +19,7 @@ import {
     Calendar as CalendarIcon, ChevronDown,
 } from "lucide-react";
 import {getCategories, type Category} from "../features/categories/categoriesApi";
-import {createObligation, type ScheduleFrequency, type ReminderChannel} from "../features/obligations/obligationsApi";
+import {createObligation, type ReminderChannel} from "../features/obligations/obligationsApi";
 
 const obligationSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -32,7 +32,7 @@ const obligationSchema = z.object({
     startDate: z.date({message: "A start date is required."}),
     endDate: z.date().nullable().optional(),
     schedule: z.object({
-        frequency: z.enum(['ONCE', 'WEEKLY', 'MONTHLY', 'FIXED_INSTALLMENTS']),
+        frequency: z.enum(['ONCE', 'WEEKLY', 'MONTHLY', 'FIXED_INSTALLMENT']),
         interval: z.coerce.number().default(1),
         dayOfMonth: z.coerce.number().optional(),
         totalOccurrences: z.coerce.number().nullable().optional(),
@@ -42,7 +42,18 @@ const obligationSchema = z.object({
         daysBefore: z.array(z.number()),
         channels: z.array(z.string()),
     }).optional(),
-});
+}).superRefine((data, ctx) => {
+    if (
+        data.schedule.frequency === 'FIXED_INSTALLMENT' &&
+        !data.schedule.totalOccurrences
+    ) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['schedule', 'totalOccurrences'],
+            message: 'Total occurrences must be a positive whole number'
+        })
+    }
+})
 
 type ObligationFormData = z.infer<typeof obligationSchema>;
 
@@ -68,7 +79,7 @@ const FREQUENCY_OPTIONS = [
     {value: "ONCE" as const, label: "Once off"},
     {value: "WEEKLY" as const, label: "Weekly"},
     {value: "MONTHLY" as const, label: "Monthly"},
-    {value: "FIXED_INSTALLMENTS" as const, label: "Fixed Installments"},
+    {value: "FIXED_INSTALLMENT" as const, label: "Fixed Installments"},
 ];
 
 const TYPE_TO_CATEGORY: Record<string, string> = {
@@ -121,7 +132,7 @@ export default function ObligationForm() {
     const onSubmit = async (formData: ObligationFormData) => {
         setSubmitting(true);
         try {
-            const isFixedInstallment = formData.schedule.frequency === "FIXED_INSTALLMENTS";
+            const isFixedInstallment = formData.schedule.frequency === "FIXED_INSTALLMENT";
             await createObligation({
                 name: formData.name,
                 description: formData.description,
@@ -133,9 +144,9 @@ export default function ObligationForm() {
                 startDate: formData.startDate.toISOString(),
                 endDate: formData.endDate ? formData.endDate.toISOString() : null,
                 schedule: {
-                    frequency: formData.schedule.frequency as ScheduleFrequency,
+                    frequency: formData.schedule.frequency,
                     interval: formData.schedule.interval,
-                    dayOfMonth: formData.startDate.getDate(),
+                    dayOfMonth: Math.min(formData.startDate.getDate(), 28),
                     totalOccurrences: isFixedInstallment ? (formData.schedule.totalOccurrences ?? null) : null,
                 },
                 reminders: formData.reminders ? {
@@ -428,6 +439,11 @@ export default function ObligationForm() {
                                 className="flex-1 text-sm text-[#091828] bg-transparent outline-none placeholder:text-[#9b96a8] dark:text-white dark:placeholder:text-[#a0aec0]"
                             />
                         </div>
+                        {errors.schedule?.totalOccurrences && (
+                            <p className="text-xs text-red-500 mt-1 ml-1 dark:text-[#ffb4ab]">
+                                {errors.schedule.totalOccurrences.message}
+                            </p>
+                        )}
                     </div>
 
                     {/* Description */}
