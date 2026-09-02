@@ -452,6 +452,7 @@ export class UsersService {
             supabaseAuthId,
             email: email ?? `${supabaseAuthId}@unknown.spendsense`,
             displayName,
+            avatarUrl: `https://api.dicebear.com/9.x/personas/svg?seed=${encodeURIComponent(supabaseAuthId)}`,
             preference: { create: {} },
             notificationPreference: { create: {} },
             creditProfile: {

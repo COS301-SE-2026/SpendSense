@@ -96,6 +96,7 @@ describe('UsersService', () => {
       id: 'usr_existing',
       supabaseAuthId: 'test-supabase-user-1',
       email: 'test-user-1@example.com',
+      avatarUrl: null,
       monthlyBudget: null,
       createdAt: new Date('2026-05-01'),
       updatedAt: new Date('2026-05-01'),
@@ -217,6 +218,7 @@ describe('UsersService', () => {
           supabaseAuthId: authUser.supabaseAuthId,
           email: authUser.email,
           displayName: authUser.displayName,
+          avatarUrl: `https://api.dicebear.com/9.x/personas/svg?seed=${encodeURIComponent(authUser.supabaseAuthId)}`,
           preference: { create: {} },
           notificationPreference: { create: {} },
           creditProfile: {
