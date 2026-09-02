@@ -197,4 +197,100 @@ describe("ObligationForm Component", () => {
 		expect(screen.getByText(/R.*10.?000/)).toBeInTheDocument()
 		expect(screen.getByText(/monthly budget left/i)).toBeInTheDocument()
 	})
+
+	it("total occurrences is needed for fixed installments", async () => {
+		renderComponent()
+
+		await waitFor(() => {
+			expect(
+				apiMocks.getCategories
+			).toHaveBeenCalledWith("OBLIGATION")
+		})
+		await userEvent.click(
+			screen.getByRole("button", {
+				name: /subs/i,
+			}),
+		)
+		await userEvent.type(
+			screen.getByLabelText(/what is this for/i),
+			"Laptop",
+		)
+		await userEvent.type(
+			screen.getByLabelText(/amount/i),
+			"1000",
+		)
+
+		const frequency = screen.getByLabelText(/frequency/i)
+		await userEvent.selectOptions(
+			frequency,
+			"FIXED_INSTALLMENT",
+		)
+		expect(frequency).toHaveValue("FIXED_INSTALLMENT")
+
+		await userEvent.click(
+			screen.getByRole("button", {
+				name: /log obligation/i,
+			}),
+		)
+
+		expect(
+			await screen.findByText(
+				/total occurrences must be a positive whole number/i,
+			),
+		).toBeInTheDocument()
+		expect(apiMocks.createObligation).not.toHaveBeenCalled()
+	})
+
+	it("submits the fixed installments with the total occurrences", async () => {
+		renderComponent()
+
+		await waitFor(() => {
+			expect(
+				apiMocks.getCategories
+			).toHaveBeenCalledWith("OBLIGATION")
+		})
+		await userEvent.click(
+			screen.getByRole("button", {
+				name: /subs/i,
+			}),
+		)
+		await userEvent.type(
+			screen.getByLabelText(/what is this for/i),
+			"Laptop",
+		)
+		await userEvent.type(
+			screen.getByLabelText(/amount/i),
+			"1000",
+		)
+		await userEvent.type(
+			screen.getByLabelText(/total occurrences/i),
+			"13",
+		)
+
+		const frequency = screen.getByLabelText(/frequency/i)
+		await userEvent.selectOptions(
+			frequency,
+			"FIXED_INSTALLMENT",
+		)
+		expect(frequency).toHaveValue("FIXED_INSTALLMENT")
+
+		await userEvent.click(
+			screen.getByRole("button", {
+				name: /log obligation/i,
+			}),
+		)
+
+		await waitFor(() => {
+			expect(
+				apiMocks.createObligation,
+			).toHaveBeenCalledWith(
+				expect.objectContaining({
+					schedule: expect.objectContaining({
+						frequency: "FIXED_INSTALLMENT",
+						totalOccurrences: 13,
+					}),
+				}),
+			)
+		})
+	})
 });
