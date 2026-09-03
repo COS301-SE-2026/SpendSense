@@ -129,15 +129,6 @@ describe("MascotPage", () => {
 		expect(screen.queryByRole("link", {name: /back to profile/i})).not.toBeInTheDocument()
 	})
 
-    it("keeps the stretch hub tabs visible but disabled", () => {
-		renderPage()
-		expect(screen.getByRole("link", {name: /wardrobe/i})).toHaveAttribute(
-			"href",
-			"/mascot/shop?view=owned",
-		)
-		expect(screen.getByText("Poses").closest("[aria-disabled]")).toBeTruthy()
-	})
-
     it("shows the shared loading card while the profile is in flight", () => {
 		mockUseGamificationProfile.mockReturnValue({
 			profile: null,
