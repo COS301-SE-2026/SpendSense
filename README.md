@@ -45,6 +45,16 @@ _COS 301 Capstone 2026 · Team MARK2 · EPI-USE Labs & Advance · University of 
 
 <br>
 
+<br>
+
+## Live Demo
+
+**[https://d33z1c39vjhkej.cloudfront.net](https://d33z1c39vjhkej.cloudfront.net)**
+
+<img src="docs/assets/qr.png" width="150" alt="QR code to live demo" />
+
+<br>
+
 ---
 
 # Table of contents
@@ -113,7 +123,16 @@ Track what you owe and when it is due. See exactly how your payment behaviour wo
 
 <details>
 <summary> <b> Demo 3</b> </summary>
-Watch this space !
+
+* [Software Requirements Specification (SRS)](./docs/Demo3/SRS.md)
+* [Software Architecture Specification (SAS)](./docs/Demo3/SAS.md)
+* [Updated Brand Style Guide](https://cos301-se-2026.github.io/SpendSense/)
+* [Coding Standards Document](./docs/Demo3/Coding-Standards-Document.md)
+* [User Manual Document](./docs/Demo3/User-Manual-Document.md)
+* [Testing Policy Document](./docs/Demo3/Testing-Policy-Document.md)
+* [Demo 3 Video](https://drive.google.com/drive/folders/1RXFea81VvkyAPmqBhXl9xXfcXl81wNEq?usp=sharing)
+
+
 </details>
 
 <details>
