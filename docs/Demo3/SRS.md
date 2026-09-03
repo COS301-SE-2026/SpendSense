@@ -1,5 +1,21 @@
 # SpendSense: Software Requirements Specification (SRS)
 
+## Table of Contents
+
+- [1. Introduction](#1-introduction)
+- [2. User Stories](#2-user-stories)
+- [3. Use Cases](#3-use-cases)
+- [4. Functional Requirements](#4-funtional-requirements)
+- [5. Non-Functional Requirements](#5-non-functional-requirements)
+  - [NFR1 Security](#nfr1-security)
+  - [NFR2 Portability](#nfr2-portability)
+  - [NFR3 Maintainability](#nfr3-maintainability)
+  - [NFR4 Availability](#nfr4-availability)
+  - [NFR5 Usability](#nfr5-usability)
+  - [Quantified Non-Functional Requirements](#quantified-non-functional-requirements)
+  - [Traceability Matrix](#tracability-matrix)
+- [6. Domain Model](#6-domain-model)
+
 ## 1. Introduction
 SpendSense is a gamified financial management and financial literacy system intended to assist individuals to manage their financial commitments, learn about their payment behavior, and create better financial habits.
 
@@ -449,6 +465,297 @@ Given financial insight data is available for my account
 When I select the insights option from my profile page  
 Then I can access my available financial statistics and insights based on my obligations and payment patterns  
 
+### US9: Friends and Wagers
+#### US9.1: Search for users
+###### User story
+As a User  
+I want to search for other users  
+So that I can find people I know and connect with them through the application  
+
+###### Acceptance criteria
+Given I am logged into the application  
+When I enter information identifying another user into the user search  
+Then I can see users matching the entered search information  
+
+#### US9.2: Send a friend request
+###### User story
+As a User  
+I want to send a friend request to another user  
+So that I can add them as a friend and interact with them through the application  
+
+###### Acceptance criteria
+Given I have found another user who is not currently my friend  
+When I select the option to send them a friend request  
+Then the friend request is created and made available for the receiving user to accept or decline  
+
+#### US9.3: View friend requests
+###### User story
+As a User  
+I want to view my friend requests  
+So that I can see which users have requested to become my friend  
+
+###### Acceptance criteria
+Given I am logged into the application  
+When I open my friend requests  
+Then I can see the pending friend requests that have been sent to me  
+
+#### US9.4: Accept friend request
+###### User story
+As a User  
+I want to accept a friend request  
+So that the requesting user is added to my friends list  
+
+###### Acceptance criteria
+Given I have received a pending friend request  
+When I select the option to accept the friend request  
+Then the request is accepted and the requesting user is added to my friends list  
+
+#### US9.5: Decline friend request
+###### User story
+As a User  
+I want to decline a friend request  
+So that I can reject a request from a user I do not want to add as a friend  
+
+###### Acceptance criteria
+Given I have received a pending friend request  
+When I select the option to decline the friend request  
+Then the request is declined and the requesting user is not added to my friends list  
+
+#### US9.6: Cancel friend request
+###### User story
+As a User  
+I want to cancel a friend request that I have sent  
+So that I can withdraw a request that I no longer want to remain pending  
+
+###### Acceptance criteria
+Given I have sent a friend request that has not yet been accepted or declined  
+When I select the option to cancel the friend request  
+Then the pending friend request is removed and can no longer be accepted by the receiving user  
+
+#### US9.7: View friends list
+###### User story
+As a User  
+I want to view my friends list  
+So that I can see the users that I am currently friends with  
+
+###### Acceptance criteria
+Given I am logged into the application  
+When I open my friends list  
+Then I can see the users that are currently my friends  
+
+#### US9.8: View friend profile
+###### User story
+As a User  
+I want to view a friend's profile  
+So that I can see the information and progress they have made available to their friends  
+
+###### Acceptance criteria
+Given another user is currently on my friends list  
+When I select the friend from my friends list  
+Then I can see the profile information that is available for that friend  
+
+#### US9.9: Remove friend
+###### User story
+As a User  
+I want to remove an existing friend  
+So that a user I no longer want as a friend does not remain on my friends list  
+
+###### Acceptance criteria
+Given another user is currently on my friends list  
+When I select the option to remove the friend and confirm the action  
+Then the friendship is removed and the user no longer appears on my friends list  
+
+#### US9.10: View friends leaderboard
+###### User story
+As a User  
+I want to view the friends leaderboard  
+So that I can compare my progress and performance with my friends  
+
+###### Acceptance criteria
+Given I am logged into the application  
+When I open the friends leaderboard  
+Then I can see myself and my friends ranked according to the applicable leaderboard information  
+
+#### US9.11: View wagers
+###### User story
+As a User  
+I want to view my wagers  
+So that I can see the wagers involving myself and my friends and their current statuses  
+
+###### Acceptance criteria
+Given I am logged into the application  
+When I open the wagers page  
+Then I can see the wagers associated with my account together with their relevant information and statuses  
+
+#### US9.12: Create wager
+###### User story
+As a User  
+I want to create a wager with a friend  
+So that we can compete against each other through a financial challenge  
+
+###### Acceptance criteria
+Given I have selected a friend with whom I can create a wager  
+When I enter the required wager information and create the wager  
+Then the wager is stored and made available for the selected friend to accept or decline  
+
+#### US9.13: View wager details
+###### User story
+As a User  
+I want to view the details of a wager  
+So that I can understand the conditions and current status of the wager  
+
+###### Acceptance criteria
+Given a wager is associated with my account  
+When I select the wager  
+Then I can see the stored information, conditions, and current status of the wager  
+
+#### US9.14: Accept wager
+###### User story
+As a User  
+I want to accept a wager sent to me by a friend  
+So that I can participate in the proposed challenge  
+
+###### Acceptance criteria
+Given I have received a pending wager from a friend  
+When I select the option to accept the wager  
+Then the wager is accepted and becomes active between myself and the friend  
+
+#### US9.15: Decline wager
+###### User story
+As a User  
+I want to decline a wager sent to me by a friend  
+So that I do not participate in a wager that I do not want to accept  
+
+###### Acceptance criteria
+Given I have received a pending wager from a friend  
+When I select the option to decline the wager  
+Then the wager is declined and does not become active  
+
+#### US9.16: Cancel wager
+###### User story
+As a User  
+I want to cancel a wager that I have created  
+So that a wager I no longer want does not remain pending  
+
+###### Acceptance criteria
+Given I have created a wager that is still eligible to be cancelled  
+When I select the option to cancel the wager  
+Then the wager is cancelled and can no longer be accepted by the receiving user  
+
+
+### US10: Mascot
+#### US10.1: View mascot home
+###### User story
+As a User  
+I want to view my mascot home  
+So that I can interact with my mascot and see its current information  
+
+###### Acceptance criteria
+Given I am logged into the application  
+When I open the mascot home  
+Then I can see my mascot together with its current information and available options  
+
+#### US10.2: View mascot mood
+###### User story
+As a User  
+I want to view my mascot's mood  
+So that I can see how my activity and financial behaviour are affecting my mascot  
+
+###### Acceptance criteria
+Given I have opened my mascot home  
+When I view my mascot's current mood  
+Then I can see the mood assigned to my mascot based on the applicable user activity and financial behaviour  
+
+#### US10.3: View mascot level
+###### User story
+As a User  
+I want to view my mascot's level  
+So that I can see the progress I have made with my mascot
+
+###### Acceptance criteria
+Given I have opened my mascot home  
+When I view my mascot's level information  
+Then I can see its current level and applicable progress information  
+
+#### US10.4: View cosmetics shop
+###### User story
+As a User  
+I want to view the cosmetics shop  
+So that I can browse cosmetic items that can be used to customise my mascot  
+
+###### Acceptance criteria
+Given I am logged into the application  
+When I open the cosmetics shop  
+Then I can see the cosmetic items that are available for my mascot  
+
+#### US10.5: View cosmetic item
+###### User story
+As a User  
+I want to view a cosmetic item  
+So that I can see its information before using it on my mascot  
+
+###### Acceptance criteria
+Given I am viewing the cosmetics shop  
+When I select a cosmetic item  
+Then I can see the information associated with the selected cosmetic item  
+
+#### US10.6: Dress mascot with cosmetic item
+###### User story
+As a User  
+I want to dress my mascot with a cosmetic item  
+So that I can customise the appearance of my mascot  
+
+###### Acceptance criteria
+Given I have access to a cosmetic item that can be worn by my mascot  
+When I select the cosmetic item and choose to equip it  
+Then the cosmetic item is applied to my mascot and its appearance is updated  
+
+### US11: Monthly Wrapped
+#### US11.1: View wrapped
+###### User story
+As a User  
+I want to view my monthly wrapped  
+So that I can see a summary of my financial progress, achievements, and activity for the month  
+
+###### Acceptance criteria
+Given a monthly wrapped is available for my account  
+When I open the wrapped feature  
+Then I can see my financial progress, achievements, and applicable activity for that month  
+
+#### US11.2: Click through wrapped
+###### User story
+As a User  
+I want to click through the different sections of my wrapped  
+So that I can view the different highlights and statistics from the month  
+
+###### Acceptance criteria
+Given I am viewing my monthly wrapped  
+When I progress through the wrapped  
+Then I can view each wrapped section in its intended sequence until I reach the end  
+
+#### US11.3: Re-watch wrapped
+###### User story
+As a User  
+I want to re-watch my monthly wrapped  
+So that I can view my monthly financial highlights and achievements again  
+
+###### Acceptance criteria
+Given I have previously viewed a monthly wrapped that is still available  
+When I choose to view the wrapped again  
+Then the wrapped restarts and I can progress through its sections again  
+
+#### US11.4: Share wrapped
+###### User story
+As a User  
+I want to share my monthly wrapped  
+So that I can share my financial achievements and progress with others  
+
+###### Acceptance criteria
+Given I am viewing a monthly wrapped that can be shared  
+When I select the option to share my wrapped  
+Then I can use the available sharing option to share my wrapped information with others  
+
+
 ## 3. Use Cases
 
 ### UC1: Financial Obligation Management
@@ -641,6 +948,119 @@ Then I can access my available financial statistics and insights based on my obl
 **This use case begins with** the authorised user clicking on the insights link from their profile page.
 **This use case ends with** the user being able to access their financial statistics and insights according to their obligations and payment patterns.
 
+### UC9: Friends and Wagers
+<img width="600" alt="UC9: Friends and Wagers" src="./images/UC-friends.jpg" />
+
+#### UC9.1: Search for users
+**This use case begins with** the authorised user accessing the user search and entering information used to identify another user.  
+**This use case ends with** the application displaying the users that match the supplied search information.  
+
+#### UC9.2: Send a friend request
+**This use case begins with** the authorised user finding another user and selecting the option to send them a friend request.  
+**This use case ends with** the friend request being created and becoming available for the receiving user to accept or decline.  
+
+#### UC9.3: View friend requests
+**This use case begins with** the authorised user accessing their friend requests.  
+**This use case ends with** the user being able to see the friend requests that have been sent to them and their current statuses.  
+
+#### UC9.4: Accept friend request
+**This use case begins with** the authorised user selecting a pending friend request that has been sent to them.  
+**This use case ends with** the friend request being accepted and the requesting user being added to the user's friends list.  
+
+#### UC9.5: Decline friend request
+**This use case begins with** the authorised user selecting a pending friend request that has been sent to them.  
+**This use case ends with** the friend request being declined and the requesting user not being added to the user's friends list.  
+
+#### UC9.6: Cancel friend request
+**This use case begins with** the authorised user selecting a pending friend request that they previously sent to another user.  
+**This use case ends with** the request being cancelled and no longer being available for the receiving user to accept.  
+
+#### UC9.7: View friends list
+**This use case begins with** the authorised user accessing their friends list.  
+**This use case ends with** the application displaying all users that are currently friends with the user.  
+
+#### UC9.8: View friend profile
+**This use case begins with** the authorised user selecting a friend from their friends list.  
+**This use case ends with** the application displaying the available profile information and progress of the selected friend.  
+
+#### UC9.9: Remove friend
+**This use case begins with** the authorised user selecting an existing friend and choosing the option to remove them.  
+**This use case ends with** the friendship being removed and the selected user no longer appearing on the user's friends list.  
+
+#### UC9.10: View friends leaderboard
+**This use case begins with** the authorised user accessing the friends leaderboard.  
+**This use case ends with** the user being able to see and compare their position and performance with those of their friends.  
+
+#### UC9.11: View wagers
+**This use case begins with** the authorised user accessing the wagers page.  
+**This use case ends with** the user being able to see the wagers associated with their account together with their information and current statuses.  
+
+#### UC9.12: Create wager
+**This use case begins with** the authorised user selecting a friend and supplying the required information for a new wager.  
+**This use case ends with** the wager being created and becoming available for the selected friend to accept or decline.  
+
+#### UC9.13: View wager details
+**This use case begins with** the authorised user selecting one of the wagers associated with their account.  
+**This use case ends with** the application displaying the stored information, conditions, and current status of the selected wager.  
+
+#### UC9.14: Accept wager
+**This use case begins with** the authorised user selecting a pending wager that has been sent to them by a friend.  
+**This use case ends with** the wager being accepted and becoming active between the two users.  
+
+#### UC9.15: Decline wager
+**This use case begins with** the authorised user selecting a pending wager that has been sent to them by a friend.  
+**This use case ends with** the wager being declined and not becoming active between the two users.  
+
+#### UC9.16: Cancel wager
+**This use case begins with** the authorised user selecting a wager that they previously created and choosing the option to cancel it.  
+**This use case ends with** the wager being cancelled and no longer being available for the receiving user to accept.  
+
+### UC10: Mascot
+<img width="600" alt="UC10: Mascot" src="./images/UC-mascot.jpg" />
+
+#### UC10.1: View mascot home
+**This use case begins with** the authorised user accessing the mascot home.  
+**This use case ends with** the application displaying the user's mascot together with the information and options associated with it.  
+
+#### UC10.2: View mascot mood
+**This use case begins with** the authorised user accessing their mascot and viewing its current mood.  
+**This use case ends with** the application displaying the mascot's current mood based on the applicable user activity and financial behaviour.  
+
+#### UC10.3: View mascot level
+**This use case begins with** the authorised user accessing the level information of their mascot.  
+**This use case ends with** the application displaying the mascot's current level and its applicable progress information.  
+
+#### UC10.4: View cosmetics shop
+**This use case begins with** the authorised user accessing the cosmetics shop.  
+**This use case ends with** the application displaying the cosmetic items that are available for the user's mascot.  
+
+#### UC10.5: View cosmetic item
+**This use case begins with** the authorised user selecting a cosmetic item from the cosmetics shop.  
+**This use case ends with** the application displaying the relevant information associated with the selected cosmetic item.  
+
+#### UC10.6: Dress mascot with cosmetic item
+**This use case begins with** the authorised user selecting an available cosmetic item that can be worn by their mascot.  
+**This use case ends with** the cosmetic item being equipped and the appearance of the user's mascot being updated.  
+
+### UC11: Monthly Wrapped
+<img width="600" alt="UC11: Monthly Wrapped" src="./images/UC-wrapped.jpg" />
+
+#### UC11.1: View wrapped
+**This use case begins with** the authorised user accessing a monthly wrapped that is available for their account.  
+**This use case ends with** the application displaying the user's financial progress, achievements, and applicable activity for that month.  
+
+#### UC11.2: Click through wrapped
+**This use case begins with** the authorised user viewing their monthly wrapped and progressing through its different sections.  
+**This use case ends with** the user reaching the final section of the wrapped after viewing the applicable monthly highlights and statistics.  
+
+#### UC11.3: Re-watch wrapped
+**This use case begins with** the authorised user selecting a previously viewed monthly wrapped and choosing to view it again.  
+**This use case ends with** the wrapped restarting and the user being able to progress through its sections again.  
+
+#### UC11.4: Share wrapped
+**This use case begins with** the authorised user viewing their monthly wrapped and selecting the option to share it.  
+**This use case ends with** the application providing the available method for the user to share their wrapped information with others.
+
 ## 4. Funtional Requirements
 
 * FR1 Onboarding and Account Access
@@ -761,9 +1181,82 @@ Then I can access my available financial statistics and insights based on my obl
   * FR9.5 The system shall display the user's sticker album.
   * FR9.6 The system shall provide access to financial insights.
 
+* FR9 Friends and Wagers
+  * FR9.1 The system shall allow authorised users to search for other users.
+    * FR9.1.1 The system shall allow users to enter information identifying another user.
+    * FR9.1.2 The system shall display users matching the entered search information.
+  * FR9.2 The system shall allow authorised users to send friend requests.
+    * FR9.2.1 The system shall create a pending friend request for the selected user.
+    * FR9.2.2 The system shall make the friend request available for the receiving user to accept or decline.
+  * FR9.3 The system shall allow authorised users to view friend requests.
+    * FR9.3.1 The system shall display pending friend requests received by the user.
+    * FR9.3.2 The system shall display the status of friend requests.
+  * FR9.4 The system shall allow authorised users to accept friend requests.
+    * FR9.4.1 The system shall add the requesting user to the user's friends list when a friend request is accepted.
+  * FR9.5 The system shall allow authorised users to decline friend requests.
+    * FR9.5.1 The system shall prevent the requesting user from being added to the user's friends list when a friend request is declined.
+  * FR9.6 The system shall allow authorised users to cancel friend requests that they have sent.
+    * FR9.6.1 The system shall remove the pending friend request when it is cancelled.
+  * FR9.7 The system shall allow authorised users to view their friends list.
+    * FR9.7.1 The system shall display users who are currently friends with the authorised user.
+  * FR9.8 The system shall allow authorised users to view a friend's profile.
+    * FR9.8.1 The system shall display the profile information available for the selected friend.
+  * FR9.9 The system shall allow authorised users to remove friends.
+    * FR9.9.1 The system shall remove the selected user from the user's friends list.
+  * FR9.10 The system shall allow authorised users to view the friends leaderboard.
+    * FR9.10.1 The system shall display the authorised user and their friends on the leaderboard.
+    * FR9.10.2 The system shall rank users according to the applicable leaderboard information.
+  * FR9.11 The system shall allow authorised users to view their wagers.
+    * FR9.11.1 The system shall display wagers associated with the user's account.
+    * FR9.11.2 The system shall display the current status of each wager.
+  * FR9.12 The system shall allow authorised users to create wagers with friends.
+    * FR9.12.1 The system shall allow users to enter the required wager information.
+    * FR9.12.2 The system shall store the created wager.
+    * FR9.12.3 The system shall make the wager available for the selected friend to accept or decline.
+  * FR9.13 The system shall allow authorised users to view wager details.
+    * FR9.13.1 The system shall display the stored information and conditions of the selected wager.
+    * FR9.13.2 The system shall display the current status of the selected wager.
+  * FR9.14 The system shall allow authorised users to accept wagers sent to them.
+    * FR9.14.1 The system shall activate the wager when it is accepted.
+  * FR9.15 The system shall allow authorised users to decline wagers sent to them.
+    * FR9.15.1 The system shall prevent a declined wager from becoming active.
+  * FR9.16 The system shall allow authorised users to cancel wagers that they have created.
+    * FR9.16.1 The system shall prevent a cancelled wager from being accepted by the receiving user.
+
+* FR10 Mascot
+  * FR10.1 The system shall allow authorised users to view their mascot home.
+    * FR10.1.1 The system shall display the user's mascot.
+    * FR10.1.2 The system shall display the current information and available options associated with the mascot.
+  * FR10.2 The system shall allow authorised users to view their mascot's mood.
+    * FR10.2.1 The system shall determine the mascot's mood based on applicable user activity and financial behaviour.
+    * FR10.2.2 The system shall display the mascot's current mood.
+  * FR10.3 The system shall allow authorised users to view their mascot's level.
+    * FR10.3.1 The system shall display the mascot's current level.
+    * FR10.3.2 The system shall display the applicable progress information for the mascot.
+  * FR10.4 The system shall allow authorised users to view the cosmetics shop.
+    * FR10.4.1 The system shall display cosmetic items available for the user's mascot.
+  * FR10.5 The system shall allow authorised users to view cosmetic item details.
+    * FR10.5.1 The system shall display the information associated with the selected cosmetic item.
+  * FR10.6 The system shall allow authorised users to dress their mascot with cosmetic items.
+    * FR10.6.1 The system shall allow users to select an available cosmetic item.
+    * FR10.6.2 The system shall apply the selected cosmetic item to the mascot.
+    * FR10.6.3 The system shall update the appearance of the mascot to reflect the equipped cosmetic item.
+
+* FR11 Monthly Wrapped
+  * FR11.1 The system shall allow authorised users to view their monthly wrapped.
+    * FR11.1.1 The system shall display the user's financial progress for the applicable month.
+    * FR11.1.2 The system shall display the user's achievements for the applicable month.
+    * FR11.1.3 The system shall display the user's applicable financial and gamification activity for the month.
+  * FR11.2 The system shall allow authorised users to click through the sections of their monthly wrapped.
+    * FR11.2.1 The system shall display the wrapped sections in their intended sequence.
+    * FR11.2.2 The system shall allow the user to progress through the wrapped until the final section is reached.
+  * FR11.3 The system shall allow authorised users to re-watch an available monthly wrapped.
+    * FR11.3.1 The system shall allow users to access a previously viewed monthly wrapped.
+    * FR11.3.2 The system shall restart the wrapped from its first section when the user chooses to re-watch it.
+  * FR11.4 The system shall allow authorised users to share their monthly wrapped.
+    * FR11.4.1 The system shall provide an available method for sharing the user's wrapped information.
 
 ## 5. Non-Functional Requirements
-
 
 **NFR1 Security**
 
@@ -853,6 +1346,30 @@ During a 2.5-week monitoring period (25,200 minutes), AWS CloudWatch recorded on
   * All observed pauses, misclicks, and requests for assistance shall be documented.
 
 These usability requirements ensure that users can quickly learn the application, navigate its features confidently, and complete common tasks with minimal difficulty.
+
+### Quantified Non Functional Requirements
+
+| ID        | Quantified Requirement                                                                                                                                             | Tactic / Architectural Decision in SAS                                                                           | Test / Tool                                                | Target / Actual                                                                                                      |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **QR-01** | Core user-facing pages shall achieve an acceptable accessibility score on desktop and mobile.                                                                      | MVVM, reusable React components, consistent presentation patterns                                                | **Google Lighthouse**                                      | **≥ 90 accessibility score** / _TBD_                                                                                 |
+| **QR-02** | Production source code shall maintain acceptable static-analysis quality and contain no linting errors.                                                            | Modular monolith, layered architecture, refactoring, coding standards and CI quality gates                       | **SonarQube + ESLint**                                     | **≤ 3% duplicated code and 0 lint errors** / _TBD_                                                                   |
+| **QR-03** | The deployed SpendSense system shall remain operational for at least 99.9% of the monitored period during the 7 days preceding Demo 3.                             | AWS deployment, CloudWatch monitoring, Docker-managed services and health monitoring                             | **AWS CloudWatch / uptime monitor**                        | **≥ 99.9% uptime** / _TBD_                                                                                           |
+| **QR-04** | The backend shall recover from a service restart without loss of persisted financial data.                                                                         | Docker containerisation, persistent PostgreSQL storage, health checks and separation of application/data layers  | **Docker Compose + health request + DB verification**      | **0 records lost** / _TBD_                                                                  |
+| **QR-05** | Protected API endpoints shall reject requests that do not contain valid authentication without exposing protected user data.                                       | Supabase Authentication, JWT validation in the Access Layer and server-side authorisation                        | **OpenAPI contract / API tests**               | **100% of tested protected endpoints reject invalid or missing authentication; 0 protected records exposed** / _TBD_ |
+| **QR-06** | A release candidate shall successfully pass all automated quality checks defined by the CI/CD pipeline before being eligible for deployment.                       | Automated CI/CD quality gates, unit testing, E2E testing, linting, builds, secret scanning and Docker validation | **GitHub Actions + Jest + Playwright + Gitleaks + ESLint** | **100% required CI jobs pass and 0 required checks fail** / _TBD_                                                    |
+| **QR-07** | SpendSense shall be deployable using its Docker configuration without modification to application source code, and all required services shall start successfully. | Docker images, Docker Compose, environment variables and `/api/v1/health`                                        | **Docker Compose + health endpoint**                       | **0 Compose configuration errors, 100% required services start** / _TBD_      |
+
+### Tracability Matrix 
+
+| QR        | NFR1 (Security) | NFR2 (Portability) | NFR3 (Maintainability) | NFR4 (Availability) | NFR5 (Usability) |
+| --------- | ------------: | ---------------: | -------------------: | ----------------: | -------------: |
+| **QR-01** |               |                  |                      |                   |              x |
+| **QR-02** |               |                  |                    x |                   |                |
+| **QR-03** |               |                  |                      |                 x |                |
+| **QR-04** |               |                x |                      |                 x |                |
+| **QR-05** |             x |                  |                      |                   |                |
+| **QR-06** |               |                  |                    x |                 x |                |
+| **QR-07** |               |                x |                      |                   |                |
 
 ## 6. Domain Model
 <img width="2000" alt="Domain Mode;l" src="./images/Domain Model.png" />
