@@ -11,6 +11,48 @@ import {apiFetch} from '../../lib/api'
 // POST /api/v1/payments/log
 // GET /api/v1/payments
 
+export interface OccurrenceDetail{
+    occurrence:{
+        id: string
+        dueDate: string
+        amountDue: number
+        currency: string
+        status: string
+        sequenceNumber: number
+        paidAt: string|null
+        overdueAt: string|null
+        missedAt: string|null
+    }
+    obligation:{
+        id: string
+        name: string
+        type: string
+        priority: string
+    }
+    paymentRecord: null|unknown
+    scoreRisk:{
+        estimatedPenaltyIfMissed: number
+        estimatedPenaltyIfLate: number
+        explanation: string
+    }
+    reminders: unknown[]
+}
+ 
+// GET /payment-occurrences/:id
+export async function getOccurrenceDetail(id: string): Promise<OccurrenceDetail>{
+    const response = await apiFetch<{data:{data: OccurrenceDetail}}>(`/payment-occurrences/${id}`)
+    const detail = response?.data?.data
+    if(!detail) throw new Error('Unexpected response shape from /payment-occurrences/:id')
+ 
+    return{
+        ...detail,
+        occurrence:{
+            ...detail.occurrence,
+            amountDue: Number(detail.occurrence.amountDue),
+        },
+    }
+}
+
 export async function getUpcomingOccurrences(params?:{
     from?: string
     to?: string

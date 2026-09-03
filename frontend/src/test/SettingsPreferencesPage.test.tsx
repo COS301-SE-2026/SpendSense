@@ -47,6 +47,8 @@ function renderPage(){
 describe('SettingsPreferencesPage', ()=> {
     beforeEach(()=> {
         vi.clearAllMocks()
+        localStorage.clear()
+        document.documentElement.classList.remove('reduce-motion')
     })
 
 
@@ -99,5 +101,27 @@ describe('SettingsPreferencesPage', ()=> {
         fireEvent.click(screen.getByRole('button', {name: /save preferences/i}))
 
         expect(await screen.findByText(/couldn't save preferences/i)).toBeInTheDocument()
+    })
+
+
+    it('applies the loaded reducedMotion preference to the document', ()=> {
+        mockedProfile.user.preferences.reducedMotion=true
+        renderPage()
+        expect(document.documentElement).toHaveClass('reduce-motion')
+
+        mockedProfile.user.preferences.reducedMotion=false
+    })
+
+    it('applies reduced motion on toggle, before the preferences are saved', ()=> {
+        renderPage()
+        expect(document.documentElement).not.toHaveClass('reduce-motion')
+
+        fireEvent.click(screen.getByRole('switch', {name: /reduced motion/i}))
+
+        expect(document.documentElement).toHaveClass('reduce-motion')
+        expect(mockedUpdatePreferences).not.toHaveBeenCalled()
+
+        fireEvent.click(screen.getByRole('switch', {name: /reduced motion/i}))
+        expect(document.documentElement).not.toHaveClass('reduce-motion')
     })
 })

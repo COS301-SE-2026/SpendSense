@@ -94,7 +94,7 @@ export default function FriendsPage() {
 			</div>
 
 			{/* Friends sits under Profile in the nav map, so Profile stays lit */}
-			<BottomNav active="profile" />
+			<BottomNav active="friends" />
 		</div>
 	)
 }

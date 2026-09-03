@@ -1,6 +1,8 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,6 +17,11 @@ import {
 import type { AuthUser } from '../auth/types/auth-user.type';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 import type { UpdatePreferencesDto } from './dto/update-preferences.dto';
+import {
+  getDisplayNameViolation,
+  getDisplayNameViolationMessage,
+  normalizeDisplayName,
+} from './display-name-policy';
 
 // UsersService: manages internal user records
 // bridges supabaseAuthId with the internal user table & default related records
@@ -63,6 +70,24 @@ const userProfileInclude = {
     },
   },
 } satisfies Prisma.UserInclude;
+
+function isDisplayNameUniqueConstraintError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const prismaError = error as {
+    code?: unknown;
+    meta?: { target?: unknown };
+  };
+
+  if (prismaError.code !== 'P2002') {
+    return false;
+  }
+
+  const target = prismaError.meta?.target;
+  return Array.isArray(target) && target.includes('displayName');
+}
 
 const userExportSelect = {
   id: true,
@@ -350,6 +375,12 @@ type UserExportResult = {
   quizSessions: UserExportData['quizSessions'];
 };
 
+export type UserDataDeletionResult = {
+  deleted: true;
+  deletedAt: Date;
+  recordsDeleted: Record<string, number>;
+};
+
 export type InternalUserProfile = Prisma.UserGetPayload<{
   include: typeof userProfileInclude;
 }>;
@@ -366,6 +397,25 @@ export type UserPreferenceResult = Prisma.UserPreferenceGetPayload<{
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async checkDisplayName(displayName: string): Promise<{
+    available: boolean;
+    reason?: 'taken' | 'prohibited';
+  }> {
+    const normalizedDisplayName = normalizeDisplayName(displayName);
+    if (getDisplayNameViolation(normalizedDisplayName) === 'prohibited') {
+      return { available: false, reason: 'prohibited' };
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { displayName: normalizedDisplayName },
+      select: { id: true },
+    });
+
+    return existing === null
+      ? { available: true }
+      : { available: false, reason: 'taken' };
+  }
 
   // find/create the internal user for given supabase auth identity
   // on the first login, this creates User + UserPreference + NotificationPreference + CreditProfile + GamificationProfile in a single transactoin
@@ -387,39 +437,57 @@ export class UsersService {
       return existing;
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          supabaseAuthId,
-          email: email ?? `${supabaseAuthId}@unknown.spendsense`,
-          preference: { create: {} },
-          notificationPreference: { create: {} },
-          creditProfile: {
-            create: {
-              currentScore: 600,
-              previousScore: 600,
-              scoreTier: ScoreTier.GOOD,
+    const displayName = normalizeDisplayName(authUser.displayName);
+    const displayNameViolation = getDisplayNameViolation(displayName);
+    if (displayNameViolation) {
+      throw new BadRequestException(
+        getDisplayNameViolationMessage(displayNameViolation),
+      );
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            supabaseAuthId,
+            email: email ?? `${supabaseAuthId}@unknown.spendsense`,
+            displayName,
+            avatarUrl: `https://api.dicebear.com/9.x/personas/svg?seed=${encodeURIComponent(supabaseAuthId)}`,
+            preference: { create: {} },
+            notificationPreference: { create: {} },
+            creditProfile: {
+              create: {
+                currentScore: 600,
+                previousScore: 600,
+                scoreTier: ScoreTier.GOOD,
+              },
+            },
+            gamificationProfile: { create: {} },
+          },
+          include: userProfileInclude,
+        });
+
+        await tx.userEvent.create({
+          data: {
+            userId: user.id,
+            eventType: UserEventType.USER_CREATED,
+            sourceType: UserEventSourceType.USER,
+            sourceId: user.id,
+            metadata: {
+              supabaseAuthId,
             },
           },
-          gamificationProfile: { create: {} },
-        },
-        include: userProfileInclude,
-      });
+        });
 
-      await tx.userEvent.create({
-        data: {
-          userId: user.id,
-          eventType: UserEventType.USER_CREATED,
-          sourceType: UserEventSourceType.USER,
-          sourceId: user.id,
-          metadata: {
-            supabaseAuthId,
-          },
-        },
+        return user;
       });
+    } catch (error) {
+      if (isDisplayNameUniqueConstraintError(error)) {
+        throw new ConflictException('Display name is already taken');
+      }
 
-      return user;
-    });
+      throw error;
+    }
   }
 
   async updateProfile(
@@ -431,25 +499,45 @@ export class UsersService {
     }
 
     const currentUser = await this.findOrCreateUser(authUser);
+    const displayName =
+      updates.displayName !== undefined
+        ? normalizeDisplayName(updates.displayName)
+        : undefined;
+    const displayNameViolation =
+      displayName !== undefined ? getDisplayNameViolation(displayName) : null;
 
-    return this.prisma.user.update({
-      where: { id: currentUser.id },
-      data: {
-        ...(updates.displayName !== undefined && {
-          displayName: updates.displayName,
-        }),
-        ...(updates.avatarUrl !== undefined && {
-          avatarUrl: updates.avatarUrl,
-        }),
-        ...(updates.monthlyBudget !== undefined && {
-          monthlyBudget: updates.monthlyBudget,
-        }),
-        ...(updates.onboardingCompleted !== undefined && {
-          onboardingCompleted: updates.onboardingCompleted,
-        }),
-      },
-      include: userProfileInclude,
-    });
+    if (displayNameViolation) {
+      throw new BadRequestException(
+        getDisplayNameViolationMessage(displayNameViolation),
+      );
+    }
+
+    try {
+      return await this.prisma.user.update({
+        where: { id: currentUser.id },
+        data: {
+          ...(displayName !== undefined && {
+            displayName,
+          }),
+          ...(updates.avatarUrl !== undefined && {
+            avatarUrl: updates.avatarUrl,
+          }),
+          ...(updates.monthlyBudget !== undefined && {
+            monthlyBudget: updates.monthlyBudget,
+          }),
+          ...(updates.onboardingCompleted !== undefined && {
+            onboardingCompleted: updates.onboardingCompleted,
+          }),
+        },
+        include: userProfileInclude,
+      });
+    } catch (error) {
+      if (isDisplayNameUniqueConstraintError(error)) {
+        throw new ConflictException('Display name is already taken');
+      }
+
+      throw error;
+    }
   }
 
   async updatePreferences(
@@ -503,6 +591,94 @@ export class UsersService {
       deactivated: true,
       deactivatedAt,
     };
+  }
+
+  async deleteAllUserData(authUser: AuthUser): Promise<UserDataDeletionResult> {
+    const userIdentity = await this.prisma.user.findUnique({
+      where: { supabaseAuthId: authUser.supabaseAuthId },
+      select: { id: true },
+    });
+
+    if (!userIdentity) {
+      throw new NotFoundException('User account was not found');
+    }
+
+    const userId = userIdentity.id;
+    const deletedAt = new Date();
+
+    const recordsDeleted = await this.prisma.$transaction(async (tx) => {
+      const scoreEvents = await tx.scoreEvent.deleteMany({ where: { userId } });
+      const reminders = await tx.reminder.deleteMany({ where: { userId } });
+      const paymentRecords = await tx.paymentRecord.deleteMany({
+        where: { userId },
+      });
+      const paymentOccurrences = await tx.paymentOccurrence.deleteMany({
+        where: { userId },
+      });
+      const paymentSchedules = await tx.paymentSchedule.deleteMany({
+        where: { obligation: { userId } },
+      });
+      const obligations = await tx.financialObligation.deleteMany({
+        where: { userId },
+      });
+      const notifications = await tx.notification.deleteMany({
+        where: { userId },
+      });
+      const rewardTransactions = await tx.rewardTransaction.deleteMany({
+        where: { userId },
+      });
+      const userEvents = await tx.userEvent.deleteMany({ where: { userId } });
+      const badges = await tx.userBadge.deleteMany({ where: { userId } });
+      const quizAnswers = await tx.quizSessionAnswer.deleteMany({
+        where: { session: { userId } },
+      });
+      const quizSessions = await tx.quizSession.deleteMany({
+        where: { userId },
+      });
+      const inventoryItems = await tx.userInventoryItem.deleteMany({
+        where: { userId },
+      });
+      const creditProfile = await tx.creditProfile.deleteMany({
+        where: { userId },
+      });
+      const gamificationProfile = await tx.gamificationProfile.deleteMany({
+        where: { userId },
+      });
+      const notificationPreference = await tx.notificationPreference.deleteMany(
+        { where: { userId } },
+      );
+      const preference = await tx.userPreference.deleteMany({
+        where: { userId },
+      });
+
+      await tx.user.delete({ where: { id: userId } });
+
+      return {
+        scoreEvents: scoreEvents.count,
+        reminders: reminders.count,
+        paymentRecords: paymentRecords.count,
+        paymentOccurrences: paymentOccurrences.count,
+        paymentSchedules: paymentSchedules.count,
+        obligations: obligations.count,
+        notifications: notifications.count,
+        rewardTransactions: rewardTransactions.count,
+        userEvents: userEvents.count,
+        badges: badges.count,
+        quizAnswers: quizAnswers.count,
+        quizSessions: quizSessions.count,
+        inventoryItems: inventoryItems.count,
+        creditProfile: creditProfile.count,
+        gamificationProfile: gamificationProfile.count,
+        notificationPreference: notificationPreference.count,
+        preference: preference.count,
+        user: 1,
+      };
+    });
+
+    // TODO: the Supabase auth identity (email + credentials) still exists and
+    // has to be removed with a service-role admin client for the erasure to be
+    // complete under POPIA. That client does not exist in this codebase yet.
+    return { deleted: true, deletedAt, recordsDeleted };
   }
 
   async exportUserData(authUser: AuthUser): Promise<UserExportResult> {

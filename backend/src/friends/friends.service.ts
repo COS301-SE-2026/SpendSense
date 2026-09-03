@@ -4,7 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { FriendRequestStatus, Prisma, ScoreTier } from '@prisma/client';
+import {
+  FriendRequestStatus,
+  NotificationType,
+  Prisma,
+  ScoreTier,
+} from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { FriendRequestDirection } from './dto/list-friend-requests-query.dto';
 import type { LeaderboardMetric } from './dto/list-leaderboard-query.dto';
@@ -13,7 +19,10 @@ const leaderboardPageSize = 20;
 
 @Injectable()
 export class FriendsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async searchUsers(userId: string, query: string) {
     const [friendships, pendingRequests] = await this.prisma.$transaction([
@@ -72,6 +81,11 @@ export class FriendsService {
       throw new NotFoundException('User not found');
     }
 
+    const sender = await this.prisma.user.findUnique({
+      where: { id: senderId },
+      select: { displayName: true },
+    });
+
     const [existingRequest, existingFriendship] =
       await this.prisma.$transaction([
         this.prisma.friendRequest.findFirst({
@@ -103,7 +117,7 @@ export class FriendsService {
       );
     }
 
-    return this.prisma.friendRequest.create({
+    const request = await this.prisma.friendRequest.create({
       data: { senderId, receiverId },
       select: {
         id: true,
@@ -113,6 +127,16 @@ export class FriendsService {
         createdAt: true,
       },
     });
+
+    await this.notificationsService.create({
+      userId: receiverId,
+      type: NotificationType.SYSTEM,
+      title: 'New friend request',
+      message: `${sender?.displayName ?? 'Someone'} sent you a friend request.`,
+      sourceId: request.id,
+    });
+
+    return request;
   }
 
   async listRequests(userId: string, direction: FriendRequestDirection) {
@@ -197,6 +221,17 @@ export class FriendsService {
       ) {
         throw new NotFoundException('User not found');
       }
+
+      await this.notificationsService.create(
+        {
+          userId: request.senderId,
+          type: NotificationType.SYSTEM,
+          title: 'Friend request accepted',
+          message: `${request.receiver.displayName ?? 'A friend'} accepted your friend request.`,
+          sourceId: request.id,
+        },
+        tx,
+      );
 
       return {
         request: {
@@ -334,7 +369,13 @@ export class FriendsService {
   ) {
     const request = await this.prisma.friendRequest.findUnique({
       where: { id: requestId },
-      select: { id: true, senderId: true, receiverId: true, status: true },
+      select: {
+        id: true,
+        senderId: true,
+        receiverId: true,
+        status: true,
+        receiver: { select: { displayName: true } },
+      },
     });
 
     if (!request) {

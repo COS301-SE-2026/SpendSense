@@ -16,20 +16,29 @@ import { Link, useNavigate} from "react-router-dom";
 import logo from "../components/SpendSenseLogoLight.svg";
 import { LongButton } from "../components/common/LongButton";
 import { CustomInput } from "../components/common/CustomInput";
-import { getMe } from "../features/users/usersApi";
+import { checkDisplayName, getMe } from "../features/users/usersApi";
 
 //validation rules
 const registrationSchema=z.object({
     displayName:z
 		.string()
-		.min(1,"Full name is required."),
+		.trim()
+		.min(1,"Display name is required.")
+		.max(80,"Display name must be 80 characters or fewer."),
     email: z
         .string()
         .min(1,"Email is required.")
         .email("Please enter a valid email address"),
     password: z 
         .string()
-        .min(6,"Password must be at least 6 characters"),
+        .min(8,"Password must be at least 8 characters")
+		.regex(/[A-Z]/, "Password must contain at least one upper case letter")
+		.regex(/[a-z]/, "Password must contain at least one lower case letter")
+		.regex(/[0-9]/, "Password must contain at least one number")
+		.regex(
+			/[^A-Za-z0-9]/, 
+			"Password must contain at least one special character",
+		),
 	confirmPassword:z
 		.string()
 }).refine((data)=>{
@@ -55,6 +64,16 @@ export default function RegisterPage(){
 		setIsLoading(true);
 		setError(null);
 		try{
+			const displayNameCheck = await checkDisplayName(data.displayName);
+			if (!displayNameCheck.available) {
+				setError(
+					displayNameCheck.reason === "prohibited"
+						? "This display name contains prohibited language."
+						: "That display name is already taken."
+				);
+				return;
+			}
+
 			const result = await signUp(data.email, data.password, data.displayName);
 			if (result.session) {
 				await getMe();
@@ -79,9 +98,9 @@ export default function RegisterPage(){
 				</div> 
 				<form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
 						{/* inputs */}
-					{/* fullname->displayName */}
+					{/* display name */}
 					<div className="space-y-1">
-						<label htmlFor="displayName" className="text-xs font-semibold text-[#091828]">Full name</label>
+						<label htmlFor="displayName" className="text-xs font-semibold text-[#091828]">Display name</label>
 						<CustomInput
 							id="displayName"
 							variant="regLog"
@@ -112,6 +131,7 @@ export default function RegisterPage(){
 							placeholder="SuperSecretPassword"
 							className="w-full"
 						/>
+						<p className="text-xs text-[#667085]">Use at least 8 characters with an uppercase letter, lowercase letter, number, and special character.</p>
 						{errors.password && (<p className="text-xs text-red-600">{errors.password.message}</p>)}
 					</div>
 					{/* confirm pass->confimPassowrd */}
@@ -132,20 +152,6 @@ export default function RegisterPage(){
 					<div>
 						<LongButton type="submit" LongVariant="primaryDark" disabled={isLoading} fullWidth>
 							{isLoading ? "Loading...":"JOIN THE QUEST"}
-						</LongButton>
-					</div>
-					{/* line break thingy */}
-					<div className="flex items-center gap-2">
-						<div className="flex-1 h-px bg-[#B0B7C3]" />
-							<span className="text-[10px] tracking-widest text-[#667085] font-medium uppercase">
-								Or continue with
-							</span>
-						<div className="flex-1 h-px bg-[#B0B7C3]" />
-					</div>
-					{/* login with google butt */}
-					<div>
-						<LongButton type="submit" LongVariant="outline"  disabled fullWidth>
-							{isLoading ? "Loading...":"Sign up with Google"}
 						</LongButton>
 					</div>
 					<div className="text-center text-[#44474C]">

@@ -44,7 +44,7 @@ describe("RegisterPage Component",()=>{
     it("should render all form inputs,buttons, and matching static text labels",()=>{
         renderComponent();
         expect(screen.getByText("Create Account")).toBeInTheDocument();
-        expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe("RegisterPage Component",()=>{
         const submitButton=screen.getByRole("button",{name:/join the quest/i});
         await user.click(submitButton);
         //trigger Zod messages
-        expect(await screen.findByText("Full name is required.")).toBeInTheDocument();
+        expect(await screen.findByText("Display name is required.")).toBeInTheDocument();
         expect(await screen.findByText("Email is required.")).toBeInTheDocument();
    });
 
@@ -66,8 +66,8 @@ describe("RegisterPage Component",()=>{
         renderComponent();
         const user=userEvent.setup();
         await user.type(screen.getByLabelText(/email address/i),"test@example.com");
-        await user.type(screen.getByLabelText(/^password$/i),"SuperSecret123");
-        await user.type(screen.getByLabelText(/confirm password/i),"DifferentSecret123");
+        await user.type(screen.getByLabelText(/^password$/i),"SuperSecret123!");
+        await user.type(screen.getByLabelText(/confirm password/i),"DifferentSecret123!");
         await user.click(screen.getByRole("button",{name:/join the quest/i}));
         expect(await screen.findByText("Passwords do not match")).toBeInTheDocument();
    });
@@ -80,32 +80,39 @@ describe("RegisterPage Component",()=>{
         });
         vi.spyOn(globalThis,"fetch").mockResolvedValueOnce({
             ok: true,
+            json: async () => ({ data: { available: true } }),
+        } as Response).mockResolvedValueOnce({
+            ok: true,
             json: async () => ({ data: { user: { id: "u1" } } }),
         } as Response);
         renderComponent();
         const user=userEvent.setup();
         //form fields
-        await user.type(screen.getByLabelText(/full name/i),"Morgie Walrus");
+        await user.type(screen.getByLabelText(/display name/i),"Morgie Walrus");
         await user.type(screen.getByLabelText(/email address/i),"morgie@tuks.co.za");
-        await user.type(screen.getByLabelText(/^password$/i),"Password123");
-        await user.type(screen.getByLabelText(/confirm password/i),"Password123");
+        await user.type(screen.getByLabelText(/^password$/i),"Password123!");
+        await user.type(screen.getByLabelText(/confirm password/i),"Password123!");
         await user.click(screen.getByRole("button",{name:/join the quest/i}));
         await waitFor(()=>{
-            expect(signUp).toHaveBeenCalledWith("morgie@tuks.co.za","Password123","Morgie Walrus");
+            expect(signUp).toHaveBeenCalledWith("morgie@tuks.co.za","Password123!","Morgie Walrus");
             expect(mockNavigate).toHaveBeenCalledWith("/onboarding");
        });
    });
 
     // path interation
     it("should catch auth exceptions and render backend errors inline",async ()=>{
+        vi.spyOn(globalThis,"fetch").mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ data: { available: true } }),
+        } as Response);
         //Mock rejected promise representing custom API fails
         vi.mocked(signUp).mockRejectedValueOnce(new Error("Email already in use."));
         renderComponent();
         const user=userEvent.setup();
-        await user.type(screen.getByLabelText(/full name/i),"Morgie Walrus");
+        await user.type(screen.getByLabelText(/display name/i),"Morgie Walrus");
         await user.type(screen.getByLabelText(/email address/i),"duplicate@tuks.co.za");
-        await user.type(screen.getByLabelText(/^password$/i),"Password123");
-        await user.type(screen.getByLabelText(/confirm password/i),"Password123");
+        await user.type(screen.getByLabelText(/^password$/i),"Password123!");
+        await user.type(screen.getByLabelText(/confirm password/i),"Password123!");
         await user.click(screen.getByRole("button",{name:/join the quest/i}));
         expect(await screen.findByText("Email already in use.")).toBeInTheDocument();
         expect(mockNavigate).not.toHaveBeenCalled();

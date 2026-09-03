@@ -1,13 +1,9 @@
 import * as React from "react"
 import {Link} from "react-router-dom"
 import {
-    Heart,
     Home,
-    Package,
-    Palette,
     Shirt,
     ShoppingBag,
-    Smile
 } from "lucide-react"
 import {cn} from "@/lib/utils"
 import {CustomCard} from "@/components/ui/CustomCard"
@@ -45,10 +41,10 @@ const HUB_ITEMS: HubItem[] = [
 		to: "/mascot/shop",
 		enabled: true,
 	},
-	{key: "customise", label: "Customise", icon: <Palette className="size-5" />, enabled: false},
+	/*{key: "customise", label: "Customise", icon: <Palette className="size-5" />, enabled: false},
 	{key: "poses", label: "Poses", icon: <Smile className="size-5" />, enabled: false},
 	{key: "inventory", label: "Inventory", icon: <Package className="size-5" />, enabled: false},
-	{key: "mood", label: "Mood", icon: <Heart className="size-5" />, enabled: false},
+	{key: "mood", label: "Mood", icon: <Heart className="size-5" />, enabled: false},*/
 ]
 
 export function MascotHubNav({active}: Readonly<{active: MascotHubTab}>){
@@ -64,9 +60,11 @@ export function MascotHubNav({active}: Readonly<{active: MascotHubTab}>){
                 </ul>
             </nav>
 
+{/*
             <p className="mt-1 px-2 text-[10px] font-semibold text-[#6B6375] dark:text-[#A0AEC0]">
                 Customise, Poses, Inventory and Mood open up later.
             </p>
+*/}
         </CustomCard>
     )
 }

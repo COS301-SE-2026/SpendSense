@@ -3,14 +3,19 @@ import { render, screen, fireEvent, } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import CalendarPage from '../domains/CalendarPage'
+import { useUserProfile } from "@/hooks/useUserProfile"
+import { useCalendarOccurrences } from '../hooks/useCalendarOccurrences'
 import '@testing-library/jest-dom'
  
 // mock the hook so unit tests don't make real API calls
 vi.mock('../hooks/useCalendarOccurrences', () => ({
 	useCalendarOccurrences: vi.fn(),
 }))
- 
-import { useCalendarOccurrences } from '../hooks/useCalendarOccurrences'
+
+vi.mock("@/hooks/useUserProfile", () => ({
+	useUserProfile: vi.fn(),
+}))
+
  
 const mockGoToPreviousMonth = vi.fn()
 const mockGoToNextMonth = vi.fn()
@@ -55,6 +60,19 @@ const paidOccurrence ={
 	reminders: [],
 }
  
+const missedOccurrence ={
+	id: 'occ-4',
+	dueDate: '2026-05-10T00:00:00.000Z',
+	amountDue: 430,
+	currency: 'ZAR',
+	status: 'MISSED' as const,
+	sequenceNumber: 3,
+	daysUntilDue: -30,
+	riskLevel: 'CRITICAL' as const,
+	obligation: {id: 'obl-4', name: 'Gym Membership', type: 'SUBSCRIPTION', priority: 'LOW'},
+	reminders: [],
+}
+ 
 function defaultHookState(overrides = {}){
 	return{
 		occurrences: [pendingOccurrence, overdueOccurrence, paidOccurrence],
@@ -81,6 +99,23 @@ describe('CalendarPage', ()=>{
 	beforeEach(() => {
 		vi.clearAllMocks()
 		vi.mocked(useCalendarOccurrences).mockReturnValue(defaultHookState())
+		vi.mocked(useUserProfile).mockReturnValue({
+			user: {
+				displayName: "TestUser",
+				email: "testuser@example.com",
+				avatarUrl: null,
+				memberSince: "September 2026",
+				monthlyBudget: 10000,
+				level: 1,
+				tier: "Building",
+				coins: 0,
+				paymentStreak: 0,
+				preferences: null,
+			},
+			loading: false,
+			error: null,
+			refetch: vi.fn(),
+		})
 	})
  
 	afterEach(()=>{
@@ -311,5 +346,49 @@ describe('CalendarPage', ()=>{
 	it('back button links to home', ()=>{
 		renderCalendar()
 		expect(screen.getByRole('link', {name: /go back/i })).toHaveAttribute('href', '/')
+	})
+ 
+	it('menu button opens the full scheduled payments list', ()=>{
+		renderCalendar()
+		expect(
+			screen.getByRole('link', {name: /all scheduled payments/i}),
+		).toHaveAttribute('href', '/calendar/scheduled')
+	})
+ 
+	it('counts MISSED occurrences in the missed total alongside OVERDUE', ()=>{
+		vi.mocked(useCalendarOccurrences).mockReturnValue(
+			defaultHookState({occurrences: [overdueOccurrence, missedOccurrence]}) as never
+		)
+		renderCalendar()
+ 
+		expect(screen.getAllByText(/R.*1.?050/).length).toBeGreaterThan(0)
+	})
+ 
+	it('labels a MISSED occurrence as MISSED, not DUE SOON', ()=>{
+		vi.mocked(useCalendarOccurrences).mockReturnValue(
+			defaultHookState({occurrences: [missedOccurrence]}) as never
+		)
+		renderCalendar()
+ 
+		const card = screen.getByRole('button', {name: /gym membership/i})
+		expect(card).toHaveTextContent('MISSED')
+		expect(card).not.toHaveTextContent('DUE SOON')
+	})
+ 
+	it('does not offer tap to pay on a MISSED occurrence', ()=>{
+		vi.mocked(useCalendarOccurrences).mockReturnValue(
+			defaultHookState({occurrences: [missedOccurrence]}) as never
+		)
+		renderCalendar()
+ 
+		expect(screen.queryByText(/tap to pay/i)).not.toBeInTheDocument()
+		expect(screen.getByRole('button', {name: /gym membership, missed/i})).toBeDisabled()
+	})
+
+	it('shows the remaining monthly budget', () => {
+		renderCalendar()
+		expect(screen.getByText(/R.*4.?800/)).toBeInTheDocument()
+		expect(screen.getByText(/R.*10.?000/)).toBeInTheDocument()
+		expect(screen.getByText(/monthly budget left/i)).toBeInTheDocument()
 	})
 })

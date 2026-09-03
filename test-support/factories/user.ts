@@ -30,7 +30,7 @@ export async function createUser(
     data: {
       supabaseAuthId: overrides.supabaseAuthId ?? identifier,
       email: overrides.email ?? `e2e-${identifier}@example.test`,
-      displayName: overrides.displayName ?? 'E2E Test User',
+      displayName: overrides.displayName ?? `E2E Test User ${identifier}`,
       onboardingCompleted: overrides.onboardingCompleted ?? true,
     },
   });

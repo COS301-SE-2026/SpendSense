@@ -52,7 +52,6 @@ export async function createUserWithProfileProgress(
 
 ){
     const user= await createUser(prisma, {
-        displayName: 'E2E Profile User',
         ...userOverrides,
     });
     const progress=await addProfileProgressForUser(

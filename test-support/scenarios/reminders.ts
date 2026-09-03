@@ -39,7 +39,6 @@ export async function createUserWithReminderPreferences(
   preferenceOverrides: Partial<ReminderPreferences> = {},
 ) {
   const user = await createUser(prisma, {
-    displayName: 'E2E Reminders User',
     ...userOverrides,
   });
   const preferences = await addReminderPreferencesForUser(

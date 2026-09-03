@@ -110,9 +110,9 @@ describe('StickerDetailPage', ()=>{
 		expect(screen.getByText(/tier/i)).toBeInTheDocument()
 	})
 
-	it('renders the share the win button', ()=>{
+	it('renders the save image button', ()=>{
 		renderWithState()
-		expect(screen.getByText(/share the win/i)).toBeInTheDocument()
+		expect(screen.getByRole('button', {name: /save image/i})).toBeInTheDocument()
 	})
 
 	it('renders the back to album button', ()=>{

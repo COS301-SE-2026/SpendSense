@@ -37,6 +37,9 @@ describe('WagersService', () => {
     stakeAmount: 50,
     status: WagerStatus.PENDING,
     durationDays: 7,
+    opponent: {
+      displayName: 'Opponent',
+    },
     ...overrides,
   });
   const createWagerTransactionClient = (
@@ -456,6 +459,16 @@ describe('WagersService', () => {
         endDate: expect.any(Date) as Date,
       },
     });
+    expect(notificationsService.create).toHaveBeenCalledWith(
+      {
+        userId: 'creator-id',
+        type: NotificationType.SYSTEM,
+        title: 'Wager started',
+        message: 'Opponent accepted your wager. The challenge has started.',
+        sourceId: 'wager-id',
+      },
+      transactionClient,
+    );
     expect(result).toMatchObject({
       id: 'wager-id',
       status: WagerStatus.ACTIVE,

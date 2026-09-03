@@ -159,6 +159,11 @@ export class WagersService {
           stakeAmount: true,
           status: true,
           durationDays: true,
+          opponent: {
+            select: {
+              displayName: true,
+            },
+          },
         },
       });
       if (!wager) {
@@ -230,6 +235,16 @@ export class WagersService {
         amount: wager.stakeAmount,
         reason: 'Wager stake',
       });
+      await this.notificationsService.create(
+        {
+          userId: wager.creatorId,
+          type: NotificationType.SYSTEM,
+          title: 'Wager started',
+          message: `${wager.opponent.displayName ?? 'Your friend'} accepted your wager. The challenge has started.`,
+          sourceId: wager.id,
+        },
+        tx,
+      );
       return {
         id: wager.id,
         status: WagerStatus.ACTIVE,

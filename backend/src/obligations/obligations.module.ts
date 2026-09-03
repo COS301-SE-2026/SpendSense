@@ -4,9 +4,10 @@ import { ObligationsService } from './obligations.service';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { GamificationModule } from '../gamification/gamification.module';
+import { RewardModule } from '../rewards/reward.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, GamificationModule],
+  imports: [AuthModule, UsersModule, GamificationModule, RewardModule],
   controllers: [ObligationsController],
   providers: [ObligationsService],
   exports: [ObligationsService],

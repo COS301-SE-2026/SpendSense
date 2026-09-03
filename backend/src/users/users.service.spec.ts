@@ -41,6 +41,7 @@ describe('UsersService', () => {
   const authUser: AuthUser = {
     supabaseAuthId: 'test-supabase-user-1',
     email: 'test-user-1@example.com',
+    displayName: 'Test User',
   };
 
   beforeEach(() => {
@@ -61,11 +62,41 @@ describe('UsersService', () => {
     service = new UsersService(prisma as unknown as PrismaService);
   });
 
+  it('reports whether a display name can be used', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.checkDisplayName('  New User  ')).resolves.toEqual({
+      available: true,
+    });
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { displayName: 'New User' },
+      select: { id: true },
+    });
+  });
+
+  it('reports a display name as taken when it already exists', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'usr_existing' } as never);
+
+    await expect(service.checkDisplayName('Existing User')).resolves.toEqual({
+      available: false,
+      reason: 'taken',
+    });
+  });
+
+  it('reports prohibited language before checking the database', async () => {
+    await expect(service.checkDisplayName('Ash0le')).resolves.toEqual({
+      available: false,
+      reason: 'prohibited',
+    });
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
   it('returns the existing internal user profile when one already exists', async () => {
     const existingUser = {
       id: 'usr_existing',
       supabaseAuthId: 'test-supabase-user-1',
       email: 'test-user-1@example.com',
+      avatarUrl: null,
       monthlyBudget: null,
       createdAt: new Date('2026-05-01'),
       updatedAt: new Date('2026-05-01'),
@@ -186,6 +217,8 @@ describe('UsersService', () => {
         data: expect.objectContaining({
           supabaseAuthId: authUser.supabaseAuthId,
           email: authUser.email,
+          displayName: authUser.displayName,
+          avatarUrl: `https://api.dicebear.com/9.x/personas/svg?seed=${encodeURIComponent(authUser.supabaseAuthId)}`,
           preference: { create: {} },
           notificationPreference: { create: {} },
           creditProfile: {
@@ -251,12 +284,109 @@ describe('UsersService', () => {
     );
   });
 
+  it('rejects creation when the authenticated user has no display name', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.findOrCreateUser({
+        ...authUser,
+        displayName: null,
+      }),
+    ).rejects.toThrow('A display name is required');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('trims the display name before creating the internal user', async () => {
+    const createdUser = {} as InternalUserProfile;
+    const tx = {
+      user: {
+        create: jest
+          .fn<Promise<InternalUserProfile>, [unknown]>()
+          .mockResolvedValue(createdUser),
+      },
+      userEvent: {
+        create: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+      },
+    };
+
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.$transaction.mockImplementation((callback) => callback(tx));
+
+    await service.findOrCreateUser({
+      ...authUser,
+      displayName: '  Trimmed User  ',
+    });
+
+    expect(tx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          displayName: 'Trimmed User',
+        }) as unknown,
+      }),
+    );
+  });
+
+  it('turns a display name race into a conflict error during signup bootstrap', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.$transaction.mockRejectedValue({
+      code: 'P2002',
+      meta: { target: ['displayName'] },
+    });
+
+    await expect(service.findOrCreateUser(authUser)).rejects.toThrow(
+      'Display name is already taken',
+    );
+  });
+
+  it('rejects prohibited language during signup bootstrap', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.findOrCreateUser({
+        ...authUser,
+        displayName: 'Ash0le',
+      }),
+    ).rejects.toThrow('This display name contains prohibited language.');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects prohibited language when updating a display name', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'usr_authenticated',
+      supabaseAuthId: authUser.supabaseAuthId,
+      deletedAt: null,
+    } as InternalUserProfile);
+
+    await expect(
+      service.updateProfile(authUser, { displayName: 'Ash0le' }),
+    ).rejects.toThrow('This display name contains prohibited language.');
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
   it('rejects an empty profile update', async () => {
     await expect(service.updateProfile(authUser, {})).rejects.toThrow(
       'At least one profile field is required',
     );
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('turns duplicate display names into a conflict error', async () => {
+    const existingUser = {
+      id: 'usr_authenticated',
+      supabaseAuthId: authUser.supabaseAuthId,
+      deletedAt: null,
+    } as InternalUserProfile;
+
+    prisma.user.findUnique.mockResolvedValue(existingUser);
+    prisma.user.update.mockRejectedValue({
+      code: 'P2002',
+      meta: { target: ['displayName'] },
+    });
+
+    await expect(
+      service.updateProfile(authUser, { displayName: 'Taken Name' }),
+    ).rejects.toThrow('Display name is already taken');
   });
 
   it('rejects a deactivated account during profile resolution', async () => {
@@ -410,5 +540,205 @@ describe('UsersService', () => {
         }) as unknown,
       }),
     );
+  });
+});
+
+const DELETE_MANY_MODELS = [
+  'scoreEvent',
+  'reminder',
+  'paymentRecord',
+  'paymentOccurrence',
+  'paymentSchedule',
+  'financialObligation',
+  'notification',
+  'rewardTransaction',
+  'userEvent',
+  'userBadge',
+  'quizSessionAnswer',
+  'quizSession',
+  'userInventoryItem',
+  'creditProfile',
+  'gamificationProfile',
+  'notificationPreference',
+  'userPreference',
+] as const;
+
+type DeletionModel = (typeof DELETE_MANY_MODELS)[number];
+
+type DeletionTx = Record<
+  DeletionModel,
+  { deleteMany: jest.Mock<Promise<{ count: number }>, [{ where: unknown }]> }
+> & {
+  user: { delete: jest.Mock<Promise<unknown>, [{ where: { id: string } }]> };
+};
+
+describe('UsersService data deletion', () => {
+  let service: UsersService;
+  let prisma: {
+    user: { findUnique: jest.Mock<Promise<unknown>, [unknown]> };
+    $transaction: jest.Mock<
+      Promise<unknown>,
+      [(tx: DeletionTx) => Promise<unknown>]
+    >;
+  };
+  let tx: DeletionTx;
+  let callOrder: string[];
+  let whereByModel: Partial<Record<string, unknown>>;
+
+  const authUser: AuthUser = {
+    supabaseAuthId: 'test-supabase-user-1',
+    email: 'test-user-1@example.com',
+  };
+
+  const userId = 'usr_authenticated';
+
+  beforeEach(() => {
+    callOrder = [];
+    whereByModel = {};
+
+    tx = {
+      user: {
+        delete: jest.fn((args: { where: { id: string } }) => {
+          callOrder.push('user.delete');
+          whereByModel['user.delete'] = args.where;
+          return Promise.resolve({});
+        }),
+      },
+    } as DeletionTx;
+
+    DELETE_MANY_MODELS.forEach((model, index) => {
+      tx[model] = {
+        deleteMany: jest.fn((args: { where: unknown }) => {
+          callOrder.push(model);
+          whereByModel[model] = args.where;
+          // distinct counts so the receipt cannot pass by coincidence
+          return Promise.resolve({ count: index + 1 });
+        }),
+      };
+    });
+
+    prisma = {
+      user: { findUnique: jest.fn<Promise<unknown>, [unknown]>() },
+      $transaction: jest.fn((callback: (t: DeletionTx) => Promise<unknown>) =>
+        callback(tx),
+      ),
+    };
+
+    service = new UsersService(prisma as unknown as PrismaService);
+  });
+
+  it('deletes every user-owned table and the user record itself', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    DELETE_MANY_MODELS.forEach((model) => {
+      expect(tx[model].deleteMany).toHaveBeenCalledTimes(1);
+    });
+    expect(tx.user.delete).toHaveBeenCalledTimes(1);
+    expect(whereByModel['user.delete']).toEqual({ id: userId });
+  });
+
+  it('scopes every delete to the authenticated user', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      where: { supabaseAuthId: authUser.supabaseAuthId },
+      select: { id: true },
+    });
+
+    expect(whereByModel.paymentSchedule).toEqual({ obligation: { userId } });
+    expect(whereByModel.quizSessionAnswer).toEqual({ session: { userId } });
+
+    DELETE_MANY_MODELS.filter(
+      (model) => model !== 'paymentSchedule' && model !== 'quizSessionAnswer',
+    ).forEach((model) => {
+      expect(whereByModel[model]).toEqual({ userId });
+    });
+  });
+
+  it('deletes restricted children before their parents', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    const before = (child: string, parent: string) => {
+      expect(callOrder.indexOf(child)).toBeGreaterThanOrEqual(0);
+      expect(callOrder.indexOf(parent)).toBeGreaterThanOrEqual(0);
+      expect(callOrder.indexOf(child)).toBeLessThan(callOrder.indexOf(parent));
+    };
+
+    before('scoreEvent', 'creditProfile');
+    before('scoreEvent', 'paymentRecord');
+    before('reminder', 'paymentOccurrence');
+    before('paymentRecord', 'paymentOccurrence');
+    before('paymentOccurrence', 'paymentSchedule');
+    before('paymentSchedule', 'financialObligation');
+    before('rewardTransaction', 'userEvent');
+    before('quizSessionAnswer', 'quizSession');
+
+    expect(callOrder[callOrder.length - 1]).toBe('user.delete');
+  });
+
+  it('runs the whole erasure in a single transaction', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a per-table receipt of what was destroyed', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    const result = await service.deleteAllUserData(authUser);
+
+    expect(result.deleted).toBe(true);
+    expect(result.deletedAt).toBeInstanceOf(Date);
+    expect(result.recordsDeleted.scoreEvents).toBe(1);
+    expect(result.recordsDeleted.preference).toBe(DELETE_MANY_MODELS.length);
+    expect(result.recordsDeleted.user).toBe(1);
+  });
+
+  it('leaves shared reference data untouched', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    ['category', 'badgeDefinition', 'quizQuestion', 'cosmeticItem'].forEach(
+      (model) => {
+        expect(callOrder).not.toContain(model);
+      },
+    );
+  });
+
+  it('writes no audit event that would recreate the deleted personal data', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await service.deleteAllUserData(authUser);
+
+    expect(tx.userEvent.deleteMany).toHaveBeenCalledTimes(1);
+    expect(
+      (tx as unknown as { userEvent: { create?: jest.Mock } }).userEvent.create,
+    ).toBeUndefined();
+  });
+
+  it('still erases an account that was deactivated first', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: userId });
+
+    await expect(service.deleteAllUserData(authUser)).resolves.toEqual(
+      expect.objectContaining({ deleted: true }),
+    );
+  });
+
+  it('rejects deletion when no user exists for the identity', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.deleteAllUserData(authUser)).rejects.toThrow(
+      'User account was not found',
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

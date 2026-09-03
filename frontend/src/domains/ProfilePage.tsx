@@ -1,7 +1,7 @@
 import * as React from "react"
 import {useNavigate, Link} from "react-router-dom"
-import { CustomCard } from "@/components/ui/CustomCard"
-import { CustomBadge } from "@/components/common/CustomBadges"
+import {CustomCard} from "@/components/ui/CustomCard"
+import {CustomBadge} from "@/components/common/CustomBadges"
 
 import {
     Settings,
@@ -13,12 +13,10 @@ import {
     ChevronRight,
     ChevronLeft,
     Smile,
-    Flame,
-    Coins,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useUserProfile, initialsFor } from "@/hooks/useUserProfile"
-import { BottomNav } from "@/components/common/BottomNav"
+import {cn} from "@/lib/utils"
+import {useUserProfile, initialsFor} from "@/hooks/useUserProfile"
+import {BottomNav} from "@/components/common/BottomNav"
 
 
 type MenuItem={
@@ -32,7 +30,6 @@ type MenuItem={
 
 const menuItems: MenuItem[]=[
     {label: "Edit Profile", icon: <User className="size-5"/>, to: "/edit-profile", enabled: true},
-    {label: "Settings", icon: <Settings className="size-5"/>, to: "/settings", enabled: true},
     {label: "Friends & Social", icon: <Users className="size-5"/>, to: "/friends", enabled: true, state: {from: "profile"}},
     {label: "Sticker Album", icon: <Star className="size-5"/>, to: "/stickers", enabled: true},
     {label: "Wrapped", icon: <Gift className="size-5"/>, to: "/wrapped", enabled: true},
@@ -105,21 +102,6 @@ export default function ProfilePage(){
                                 Level {user.level} - {user.tier}
                             </CustomBadge>
 
-                            <div className="mt-3 flex items-center justify-center gap-2">
-                                <StatChip
-                                    tone="streak"
-                                    icon={<Flame className="size-3.5"/>}
-                                    label={`${user.paymentStreak} day streak`}
-                                />
-
-                                <StatChip
-                                    tone="coins"
-                                    icon={<Coins className="size-3.5"/>}
-                                    label={`${user.coins.toLocaleString()} coins`}
-                                />
-
-                            </div>
-
                             <p className="mt-2 text-xs text-[#6b6375] dark:text-[#ddbfc5]">
                                 Member since {user.memberSince}
                             </p>
@@ -134,32 +116,9 @@ export default function ProfilePage(){
                 </CustomCard>
 
             </div>
-            <BottomNav active ="profile"/>
+            <BottomNav/>
         </div>
 
-    )
-}
-
-//light mode is one shared amber chip; dark mode splits streak/coins the way the design does
-const statChipTones={
-    streak: "dark:bg-[#ffb59b] dark:text-[#5f1600]",
-    coins: "dark:bg-[#edc157] dark:text-[#3f2e00]",
-}
-
-function StatChip({
-    icon, 
-    label,
-    tone="coins"
-}: Readonly<{
-    icon: React.ReactNode,
-    label: string
-    tone?: keyof typeof statChipTones
-}>){
-    return(
-        <span className={cn("flex items-center gap-1 rounded-full bg-[#FFE9B5] px-2.5 py-1 text-xs font-bold text-[#7A5A00]", statChipTones[tone])}>
-            {icon}
-            {label}
-        </span>
     )
 }
 

@@ -3,20 +3,20 @@ import {Link} from "react-router-dom"
 import {
 	Home,
 	Calendar as CalendarIcon,
-	Trophy,
-	User,
+	Users,
+	Sparkles,
 } from "lucide-react"
  
 import {AddTransactionButton} from "@/components/common/AddTransactionButton"
 import {cn} from "@/lib/utils"
 
 
-export type BottomNavTab = "home"|"calendar"|"quests"|"profile"
+export type BottomNavTab = "home"|"calendar"|"friends"|"mascot"
  
 export function BottomNav({
     active
 }: Readonly<{
-    active: BottomNavTab 
+    active?: BottomNavTab 
 }>) {
 	return (
 		<nav
@@ -31,8 +31,8 @@ export function BottomNav({
 				{/* floating + action */}
 				<AddTransactionButton />
  
-				<BottomNavItem to="/quests" icon={<Trophy className="size-5" />} label="Quests" active={active === "quests"} />
-				<BottomNavItem to="/profile" icon={<User className="size-5" />} label="Profile" active={active === "profile"} disabled={false} />
+				<BottomNavItem to="/friends" icon={<Users className="size-5" />} label="Friends" active={active === "friends"} />
+				<BottomNavItem to="/mascot" icon={<Sparkles className="size-5" />} label="Mascot" active={active === "mascot"} disabled={false} />
 			</div>
 		</nav>
 	)

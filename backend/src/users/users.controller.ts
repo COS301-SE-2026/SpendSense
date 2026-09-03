@@ -1,6 +1,14 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -188,6 +196,39 @@ export class UsersController {
   @Patch('me/deactivate')
   async deactivateMe(@CurrentAuthUser() authUser: AuthUser) {
     return this.usersService.deactivateAccount(authUser);
+  }
+
+  @ApiOperation({
+    summary: 'Permanently delete all data for the authenticated user',
+    description:
+      'Fulfils a POPIA s24 deletion request. Irreversibly destroys every record SpendSense holds for the authenticated user, including the user record itself. Unlike deactivation, no financial, score, gamification, or quiz history is retained. Shared reference data such as categories and badge definitions is not affected.',
+  })
+  @ApiOkResponse({
+    description: 'All data for the authenticated user was deleted.',
+    schema: {
+      example: {
+        data: {
+          deleted: true,
+          deletedAt: '2026-07-21T10:00:00.000Z',
+          recordsDeleted: {
+            obligations: 4,
+            paymentOccurrences: 26,
+            paymentRecords: 18,
+            user: 1,
+          },
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({
+    description: 'No SpendSense user exists for this Supabase identity.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, or invalid Supabase Bearer token.',
+  })
+  @Delete('me/data')
+  async deleteMyData(@CurrentAuthUser() authUser: AuthUser) {
+    return this.usersService.deleteAllUserData(authUser);
   }
 
   @ApiOperation({
