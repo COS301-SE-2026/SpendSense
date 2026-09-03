@@ -15,7 +15,7 @@ import {Calendar} from "@/components/ui/calendar";
 const paymentSchema=z.object({
     occurrenceId:z 
         .string()
-        .min(1, "OccurenceID is required."),
+        .min(1, "OccurrenceID is required."),
     amountPaid: z
         .coerce.number()
         .positive("Amount must be greater than 0"),
@@ -110,10 +110,10 @@ export default function ObligationForm(){
                 {/* header -> cancel button(IconVariant="iconCancel"),heading*/}
                 <div className="flex items-center justify-between gap-3 mb-2">
                     <div className="flex-shrink-0">
-                        <IconButton 
+                        <IconButton
                             type="button" IconVariant="iconCancel"
                             aria-label="Clear form"
-                            onClick={()=>navigate("/")}/>    
+                            onClick={()=>navigate(-1)}/>
                     </div>   
                     <h1 className="text-center text-[#091828] text-3xl font-bold dark:text-white">Add Payment</h1>
                     <div className="size-10 flex-shrink-0" aria-hidden="true"/>
@@ -139,7 +139,7 @@ export default function ObligationForm(){
                     ) : (
                         <>
                             <div className="space-y-1">
-                                <label htmlFor="occurrenceId" className="text-xs font-semibold text-[#091828] dark:text-white">Occurence id</label>
+                                <label htmlFor="occurrenceId" className="text-xs font-semibold text-[#091828] dark:text-white">Occurrence id</label>
                                 <CustomInput
                                     variant="form"
                                     id="occurrenceId"

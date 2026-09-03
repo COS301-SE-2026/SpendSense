@@ -14,6 +14,7 @@ describe('UsersController', () => {
       | 'findOrCreateUser'
       | 'updateProfile'
       | 'deactivateAccount'
+      | 'deleteAllUserData'
       | 'exportUserData'
       | 'updatePreferences'
     >
@@ -24,6 +25,7 @@ describe('UsersController', () => {
       findOrCreateUser: jest.fn(),
       updateProfile: jest.fn(),
       deactivateAccount: jest.fn(),
+      deleteAllUserData: jest.fn(),
       exportUserData: jest.fn(),
       updatePreferences: jest.fn(),
     };
@@ -220,6 +222,24 @@ describe('UsersController', () => {
 
     await expect(controller.exportMe(authUser)).resolves.toEqual(result);
     expect(usersService.exportUserData).toHaveBeenCalledWith(authUser);
+  });
+
+  it('delegates the POPIA deletion request for the authenticated user only', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'test-supabase-user-1',
+      email: 'test-user-1@example.com',
+    };
+    const receipt = {
+      deleted: true as const,
+      deletedAt: new Date('2026-07-21T10:00:00.000Z'),
+      recordsDeleted: { obligations: 4, user: 1 },
+    };
+
+    usersService.deleteAllUserData.mockResolvedValue(receipt);
+
+    await expect(controller.deleteMyData(authUser)).resolves.toEqual(receipt);
+    expect(usersService.deleteAllUserData).toHaveBeenCalledWith(authUser);
+    expect(usersService.deactivateAccount).not.toHaveBeenCalled();
   });
 
   it('will update preferences and return the preferences response shape', async () => {

@@ -121,6 +121,19 @@ describe('InsightsPage', ()=>{
         renderPage()
         expect(screen.getByText(/no insights available yet/i)).toBeInTheDocument()
     })
+    
+    it('renders the Wrapped promo link',()=>{
+        mockedUseInsights.mockReturnValue({
+            asOf:'2026-07-22T00:00:00Z',
+            insights:sampleInsights,
+            loading:false,
+            error:null,
+            refetch:vi.fn(),
+        })
+        renderPage()
+        const wrappedLink=screen.getByRole('link',{name:/monthly wrapped/i})
+        expect(wrappedLink).toHaveAttribute('href','/wrapped')
+    })
 
     it('wraps a card in a link when the server provides a link, and does not otherwise', ()=> {
         mockedUseInsights.mockReturnValue({

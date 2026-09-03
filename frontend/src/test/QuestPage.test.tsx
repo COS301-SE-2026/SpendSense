@@ -124,6 +124,7 @@ vi.mock("@/components/common/AddTransactionButton",()=>({
 vi.mock("@/hooks/useGamificationProfile",()=>({
 	useGamificationProfile:()=>({
 		profile:{
+			coins:145,
 			knowledgeStreak:4,
 		},
 		loading:false,
@@ -256,7 +257,7 @@ describe("QuestsPage",()=>{
 		expect(screen.getByRole("heading",{ level:1,name:"Quests" })).toBeInTheDocument()
 		expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0)
 		expect(screen.queryByText("Check in")).not.toBeInTheDocument()
-		expect(screen.queryByText("Financial Topic Quizes")).not.toBeInTheDocument()
+		expect(screen.queryByText("Financial Topic Quizzes")).not.toBeInTheDocument()
 	})
 	it("renders the default 'Check in' state when the daily quiz hasn't been started",async ()=>{
 		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
@@ -300,19 +301,19 @@ describe("QuestsPage",()=>{
 		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
 		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
-		expect(await screen.findByText("Financial Topic Quizes")).toBeInTheDocument()
+		expect(await screen.findByText("Financial Topic Quizzes")).toBeInTheDocument()
 		const progressBar=screen.getByRole("progressbar")
 		expect(progressBar).toHaveAttribute("aria-valuenow","50")
 		expect(screen.getByText(/2 of/)).toBeInTheDocument()
 		expect(screen.getByText(/4 topics unlocked/)).toBeInTheDocument()
-		await userEvent.click(screen.getByRole("button",{name:/Financial Topic Quizes/i}))
+		await userEvent.click(screen.getByRole("button",{name:/Financial Topic Quizzes/i}))
 		expect(mockNavigate).toHaveBeenCalledWith("/quiz/topics")
 	})
 	it("handles an empty topics list without dividing by zero",async ()=>{
 		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
 		mockedGetQuizTopics.mockResolvedValue([])
 		renderPage()
-		await screen.findByText("Financial Topic Quizes")
+		await screen.findByText("Financial Topic Quizzes")
 		const progressBar=screen.getByRole("progressbar")
 		expect(progressBar).toHaveAttribute("aria-valuenow","0")
 		expect(screen.getByText(/0 of/)).toBeInTheDocument()
@@ -342,33 +343,48 @@ describe("QuestsPage",()=>{
 		mockedGetDailyQuiz.mockRejectedValueOnce(abortError)
 		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
-		await screen.findByText("Financial Topic Quizes")
+		await screen.findByText("Financial Topic Quizzes")
 		expect(screen.queryByText(/AbortError/)).not.toBeInTheDocument()
 		expect(screen.queryByRole("button",{name:"Retry"})).not.toBeInTheDocument()
 	})
-	it("renders the Rewards row as a static entry point",async ()=>{
+	it("renders bottom navigation with the correct links",async ()=>{
 		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
 		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
 		renderPage()
-		expect(await screen.findByText("Rewards")).toBeInTheDocument()
-		expect(screen.getByText("Redeem your coins and claim exclusive perks.")).toBeInTheDocument()
-	})
-	it("renders bottom navigation with Quests marked active and correct links",async ()=>{
-		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
-		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
-		renderPage()
-		await screen.findByText("Financial Topic Quizes")
+		await screen.findByText("Financial Topic Quizzes")
 		const nav=screen.getByRole("navigation",{name:"Primary"})
 		const home=within(nav).getByRole("link",{name:/Home/i})
 		const calendar=within(nav).getByRole("link",{name:/Calendar/i})
-		const quests=within(nav).getByRole("link",{name:/Quests/i})
-		const profile=within(nav).getByRole("link",{name:/Profile/i})
+		const friends=within(nav).getByRole("link",{name:/Friends/i})
+		const mascot=within(nav).getByRole("link",{name:/Mascot/i})
 		expect(home).toHaveAttribute("href","/")
 		expect(calendar).toHaveAttribute("href","/calendar")
-		expect(quests).toHaveAttribute("href","/quests")
-		expect(profile).toHaveAttribute("href","/profile")
-		expect(quests).toHaveAttribute("aria-current","page")
+		expect(friends).toHaveAttribute("href","/friends")
+		expect(mascot).toHaveAttribute("href","/mascot")
 		expect(home).not.toHaveAttribute("aria-current")
+		expect(calendar).not.toHaveAttribute("aria-current")
+		expect(friends).not.toHaveAttribute("aria-current")
+		expect(mascot).not.toHaveAttribute("aria-current")
 		expect(within(nav).getByTestId("add-transaction-button")).toBeInTheDocument()
+	})
+	it("renders a back arrow link to the home page",async ()=>{
+		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
+		renderPage()
+
+		expect(await screen.findByRole("link",{name:"Go back"})).toHaveAttribute("href","/")
+	})
+	it("shows the current coin balance in a popup",async ()=>{
+		mockedGetDailyQuiz.mockResolvedValue(notStartedDaily)
+		mockedGetQuizTopics.mockResolvedValue(topicsFixture)
+		renderPage()
+
+		const coinButton=await screen.findByRole("button",{name:"Show coin balance"})
+		expect(screen.queryByRole("dialog",{name:"Coin balance"})).not.toBeInTheDocument()
+		await userEvent.click(coinButton)
+		expect(screen.getByRole("dialog",{name:"Coin balance"})).toHaveTextContent("145 coins")
+		expect(coinButton).toHaveAttribute("aria-expanded","true")
+		await userEvent.click(coinButton)
+		expect(screen.queryByRole("dialog",{name:"Coin balance"})).not.toBeInTheDocument()
 	})
 })

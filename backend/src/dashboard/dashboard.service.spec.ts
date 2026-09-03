@@ -13,7 +13,11 @@ describe('DashboardService', () => {
     scoreEvent: { findMany: jest.fn<() => Promise<any>>() },
     gamificationProfile: { findFirst: jest.fn<() => Promise<any>>() },
     paymentOccurrence: { findMany: jest.fn<() => Promise<any>>() },
-    userBadge: { findMany: jest.fn<() => Promise<any>>() },
+    userBadge: {
+      findMany: jest.fn<() => Promise<any>>(),
+      count: jest.fn<() => Promise<number>>(),
+    },
+    badgeDefinition: { count: jest.fn<() => Promise<number>>() },
     notification: { findMany: jest.fn<() => Promise<any>>() },
   };
   const userId = 'user-1';
@@ -204,6 +208,8 @@ describe('DashboardService', () => {
         .mockResolvedValueOnce(mockUpcomingPayments);
 
       mockPrismaService.userBadge.findMany.mockResolvedValue(mockRecentBadges);
+      mockPrismaService.userBadge.count.mockResolvedValue(1);
+      mockPrismaService.badgeDefinition.count.mockResolvedValue(7);
       mockPrismaService.notification.findMany.mockResolvedValue(
         mockUnreadNotifications,
       );
@@ -218,6 +224,7 @@ describe('DashboardService', () => {
         overduePayments: mockOverduePayments,
         recentBadges: mockRecentBadges,
         unreadNotifications: mockUnreadNotifications,
+        stickerStats: { collected: 1, total: 7 },
       });
     });
 
@@ -233,6 +240,8 @@ describe('DashboardService', () => {
         .mockResolvedValueOnce(mockOverduePayments)
         .mockResolvedValueOnce(mockUpcomingPayments);
       mockPrismaService.userBadge.findMany.mockResolvedValue(mockRecentBadges);
+      mockPrismaService.userBadge.count.mockResolvedValue(1);
+      mockPrismaService.badgeDefinition.count.mockResolvedValue(7);
       mockPrismaService.notification.findMany.mockResolvedValue(
         mockUnreadNotifications,
       );

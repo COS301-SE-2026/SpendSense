@@ -9,7 +9,6 @@ import {
   PaymentOccurrenceStatus,
   PaymentRecordStatus,
   Prisma,
-  RewardTransactionType,
   ScoreEventType,
   ScoreTier,
   UserEventSourceType,
@@ -19,13 +18,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LogPaymentDto } from './dto/log-payment.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BadgeEngineService } from '../gamification/badge-engine.service';
+import { RewardService } from '../rewards/reward.service';
+import { CreditScoreService } from '../credit-score/credit-score.service';
 
-const ON_TIME_SCORE_DELTA = 8;
-const LATE_SCORE_DELTA = -8;
 const ON_TIME_COINS = 15;
 const ON_TIME_XP = 10;
-const MIN_SCORE = 0;
-const MAX_SCORE = 850;
 
 type LogPaymentResult = {
   message: string;
@@ -78,6 +75,8 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly badgeEngineService: BadgeEngineService,
+    private readonly rewardService: RewardService,
+    private readonly creditScoreService: CreditScoreService,
   ) {}
 
   async logPayment(
@@ -188,60 +187,27 @@ export class PaymentsService {
         },
       });
 
-      const creditProfile = await tx.creditProfile.upsert({
-        where: { userId },
-        update: {},
-        create: {
-          userId,
-          currentScore: 600,
-          previousScore: 600,
-          scoreTier: ScoreTier.GOOD,
-        },
+      const {
+        scoreEventId,
+        scoreBefore,
+        scoreAfter,
+        scoreDelta,
+        tierBefore,
+        tierAfter,
+        explanation,
+        onTimePaymentCount,
+      } = await this.creditScoreService.recalculateAfterPayment(tx, {
+        userId,
+        occurrenceId: occurrence.id,
+        paymentRecordId: paymentRecord.id,
+        eventType: isLate
+          ? ScoreEventType.PAYMENT_LATE
+          : ScoreEventType.PAYMENT_ON_TIME,
+        explanation: isLate
+          ? `Paid ${occurrence.obligation.name} ${daysLate} day${daysLate === 1 ? '' : 's'} late.`
+          : `Paid ${occurrence.obligation.name} on time.`,
       });
 
-      const scoreBefore = creditProfile.currentScore;
-      const scoreDelta = isLate ? LATE_SCORE_DELTA : ON_TIME_SCORE_DELTA;
-      const scoreAfter = clampScore(scoreBefore + scoreDelta);
-      const tierBefore = creditProfile.scoreTier;
-      const tierAfter = resolveScoreTier(scoreAfter);
-
-      await tx.creditProfile.update({
-        where: { id: creditProfile.id },
-        data: {
-          previousScore: scoreBefore,
-          currentScore: scoreAfter,
-          scoreTier: tierAfter,
-          lastCalculatedAt: new Date(),
-          onTimePaymentCount: isLate
-            ? creditProfile.onTimePaymentCount
-            : creditProfile.onTimePaymentCount + 1,
-          latePaymentCount: isLate
-            ? creditProfile.latePaymentCount + 1
-            : creditProfile.latePaymentCount,
-        },
-      });
-
-      const scoreEvent = await tx.scoreEvent.create({
-        data: {
-          userId,
-          creditProfileId: creditProfile.id,
-          occurrenceId: occurrence.id,
-          paymentRecordId: paymentRecord.id,
-          eventType: isLate
-            ? ScoreEventType.PAYMENT_LATE
-            : ScoreEventType.PAYMENT_ON_TIME,
-          pointsDelta: scoreDelta,
-          scoreBefore,
-          scoreAfter,
-          explanation: isLate
-            ? `Paid ${occurrence.obligation.name} ${daysLate} day${daysLate === 1 ? '' : 's'} late.`
-            : `Paid ${occurrence.obligation.name} on time.`,
-          calculationMetadata: {
-            daysLate,
-            simulatedInterest: simulatedInterestCalculation,
-          },
-        },
-      });
       if (scoreAfter !== scoreBefore) {
         await this.notificationsService.create(
           {
@@ -266,46 +232,31 @@ export class PaymentsService {
 
       const coinsAwarded = isLate ? 0 : ON_TIME_COINS;
       const xpAwarded = isLate ? 0 : ON_TIME_XP;
-      const currentPaymentStreak = isLate
-        ? 0
-        : gamificationProfile.currentPaymentStreak + 1;
-      const longestPaymentStreak = Math.max(
-        gamificationProfile.longestPaymentStreak,
-        currentPaymentStreak,
-      );
-      const coinBalance = gamificationProfile.coinBalance + coinsAwarded;
-      const xp = gamificationProfile.xp + xpAwarded;
+      const mascotMood = isLate ? MascotMood.STRESSED : MascotMood.HAPPY;
 
-      await tx.gamificationProfile.update({
-        where: { id: gamificationProfile.id },
-        data: {
-          coinBalance,
-          xp,
-          currentPaymentStreak,
-          longestPaymentStreak,
-          mascotMood: isLate ? MascotMood.STRESSED : MascotMood.HAPPY,
+      const settlement = await this.rewardService.settleAction(tx, {
+        userId,
+        sourceEventId: paymentEvent.id,
+        coins: { amount: coinsAwarded, reason: 'On-time payment reward' },
+        xp: { amount: xpAwarded },
+        streak: { field: 'currentPaymentStreak', advance: !isLate },
+        mood: {
+          value: mascotMood,
+          reason: isLate ? 'Late payment' : 'On-time payment',
         },
       });
 
-      if (coinsAwarded > 0) {
-        await tx.rewardTransaction.create({
-          data: {
-            userId,
-            sourceEventId: paymentEvent.id,
-            type: RewardTransactionType.EARNED,
-            amount: coinsAwarded,
-            balanceAfter: coinBalance,
-            reason: 'On-time payment reward',
-          },
-        });
-      }
+      const coinBalance =
+        settlement.coinBalance ?? gamificationProfile.coinBalance;
+      const xp = settlement.xp ?? gamificationProfile.xp;
+      const currentPaymentStreak = settlement.streak?.current ?? 0;
+      const longestPaymentStreak = settlement.streak?.longest ?? 0;
+
       const badgesEarned = await this.badgeEngineService.evaluatePaymentBadges(
         {
           userId,
           sourceEventId: paymentEvent.id,
-          onTimePaymentCount: isLate
-            ? creditProfile.onTimePaymentCount
-            : creditProfile.onTimePaymentCount + 1,
+          onTimePaymentCount,
           currentPaymentStreak,
           currentScore: scoreAfter,
         },
@@ -331,13 +282,13 @@ export class PaymentsService {
           paidAt: updateOccurrence.paidAt,
         },
         scoreImpact: {
-          scoreEventId: scoreEvent.id,
+          scoreEventId: scoreEventId,
           previousScore: scoreBefore,
           currentScore: scoreAfter,
           delta: scoreDelta,
           tierBefore,
           tierAfter,
-          explanation: scoreEvent.explanation,
+          explanation: explanation,
         },
         rewards: {
           coinsAwarded,
@@ -346,7 +297,7 @@ export class PaymentsService {
           xp,
           currentPaymentStreak,
           longestPaymentStreak,
-          mascotMood: isLate ? MascotMood.STRESSED : MascotMood.HAPPY,
+          mascotMood,
           badgesEarned,
         },
         paymentImpact: {
@@ -357,18 +308,6 @@ export class PaymentsService {
       };
     });
   }
-}
-
-function clampScore(score: number): number {
-  return Math.max(MIN_SCORE, Math.min(MAX_SCORE, score));
-}
-
-function resolveScoreTier(score: number): ScoreTier {
-  if (score >= 800) return ScoreTier.ELITE;
-  if (score >= 700) return ScoreTier.EXCELLENT;
-  if (score >= 600) return ScoreTier.GOOD;
-  if (score >= 500) return ScoreTier.FAIR;
-  return ScoreTier.BUILDING;
 }
 
 /**

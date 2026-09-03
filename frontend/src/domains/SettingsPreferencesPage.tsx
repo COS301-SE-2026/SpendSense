@@ -6,6 +6,7 @@ import {SubPageShell} from "@/components/common/SubPageShell"
 import {useUserProfile} from "@/hooks/useUserProfile"
 import {updatePreferences, type UserPreferences} from "@/features/profile/profileApi"
 import {setTheme} from "@/lib/theme"
+import {setReducedMotion} from "@/lib/motion"
 
 
 const THEMES: UserPreferences["theme"][]=["SYSTEM", "LIGHT", "DARK"]
@@ -31,6 +32,7 @@ export default function SettingsPreferencesPage(){
                 reducedMotion: user.preferences.reducedMotion,
             })
             setTheme(savedTheme)
+            setReducedMotion(user.preferences.reducedMotion)
         }
     }, [user])
 
@@ -128,7 +130,11 @@ export default function SettingsPreferencesPage(){
                                     <p className="text-xs text-[#6B6375] dark:text-[#ddbfc5]">Reduce animations</p>
                                     <Toggle
                                         checked={prefs.reducedMotion}
-                                        onChange={()=> setPrefs({...prefs, reducedMotion: !prefs.reducedMotion})}
+                                        onChange={()=> {
+                                            const next = !prefs.reducedMotion
+                                            setPrefs({...prefs, reducedMotion: next})
+                                            setReducedMotion(next)
+                                        }}
                                         label="Reduced Motion"
                                     />
                                 </div>

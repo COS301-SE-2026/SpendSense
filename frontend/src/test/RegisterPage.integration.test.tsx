@@ -36,18 +36,21 @@ function renderRegisterPage() {
 function fillForm({
     displayName = "Morgie Walrus",
     email = "morgie@tuks.co.za",
-    password = "SecurePass123",
-    confirmPassword = "SecurePass123",
+    password = "SecurePass123!",
+    confirmPassword = "SecurePass123!",
 } = {}) {
-    fireEvent.change(screen.getByPlaceholderText("Morgie Walrus"), {
+    fireEvent.change(screen.getByLabelText(/display name/i), {
         target: {value: displayName},
     });
-    fireEvent.change(screen.getByPlaceholderText("morgie@tuks.co.za"), {
+    fireEvent.change(screen.getByLabelText(/email address/i), {
         target: {value: email},
     });
-    const [passwordInput, confirmInput] = screen.getAllByPlaceholderText("SuperSecretPassword");
-    fireEvent.change(passwordInput, { target: {value: password} });
-    fireEvent.change(confirmInput, { target: {value: confirmPassword} });
+    fireEvent.change(screen.getByLabelText(/^password$/i), {
+        target: {value: password},
+    });
+    fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: {value: confirmPassword},
+    });
 }
 
 function mockSuccessfulSignUp(mockToken = "mock.jwt.token") {
@@ -58,7 +61,12 @@ function mockSuccessfulSignUp(mockToken = "mock.jwt.token") {
         },
         error: null,
     } as never);
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(mockUserResponse);
+    vi.spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce({
+            ok: true,
+            json: async() => ({data: {available: true}}),
+        } as Response)
+        .mockResolvedValueOnce(mockUserResponse);
 }
 
 describe("Register page integration", () => {
@@ -95,6 +103,10 @@ describe("Register page integration", () => {
     });
 
     it("shows a confirmation message when email verification is required", async() => {
+        vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+            ok: true,
+            json: async() => ({data: {available: true}}),
+        } as Response);
         vi.spyOn(supabase.auth, "signUp").mockResolvedValueOnce({
             data: {
                 user: {email: "morgie@tuks.co.za"} as never,
@@ -116,6 +128,10 @@ describe("Register page integration", () => {
     });
 
     it("shows an error message and does not store a token when sign up fails", async() => {
+        vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+            ok: true,
+            json: async() => ({data: {available: true}}),
+        } as Response);
         vi.spyOn(supabase.auth, "signUp").mockRejectedValueOnce(
             new Error("Email already registered")
         );
@@ -134,7 +150,7 @@ describe("Register page integration", () => {
         const signUpSpy = vi.spyOn(supabase.auth, "signUp");
 
         renderRegisterPage();
-        fillForm({ password: "SecurePass123", confirmPassword: "DifferentPass456" });
+        fillForm({ password: "SecurePass123!", confirmPassword: "DifferentPass456!" });
         fireEvent.click(screen.getByRole("button", {name: /join the quest/i}));
 
         await waitFor(() => {
@@ -159,6 +175,40 @@ describe("Register page integration", () => {
                 options: {data: { display_name: "Morgie Walrus"} },
             })
         );
+    });
+
+    it("does not call Supabase when the display name is unavailable", async () => {
+        vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+            ok: true,
+            json: async() => ({data: {available: false}}),
+        } as Response);
+        const signUpSpy = vi.spyOn(supabase.auth, "signUp");
+
+        renderRegisterPage();
+        fillForm({ displayName: "Taken Name" });
+        fireEvent.click(screen.getByRole("button", {name: /join the quest/i}));
+
+        await waitFor(() => {
+            expect(screen.getByText("That display name is already taken.")).toBeInTheDocument();
+        });
+        expect(signUpSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not call Supabase when the display name contains prohibited language", async () => {
+        vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+            ok: true,
+            json: async() => ({data: {available: false, reason: "prohibited"}}),
+        } as Response);
+        const signUpSpy = vi.spyOn(supabase.auth, "signUp");
+
+        renderRegisterPage();
+        fillForm({ displayName: "Ash0le" });
+        fireEvent.click(screen.getByRole("button", {name: /join the quest/i}));
+
+        await waitFor(() => {
+            expect(screen.getByText("This display name contains prohibited language.")).toBeInTheDocument();
+        });
+        expect(signUpSpy).not.toHaveBeenCalled();
     });
 
     it("navigates to the login page via the 'Log in' link", () => {

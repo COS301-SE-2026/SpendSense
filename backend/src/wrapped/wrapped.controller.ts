@@ -1,0 +1,62 @@
+import {
+  Controller,
+  Get,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
+import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
+import type { AuthUser } from '../auth/types/auth-user.type';
+import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
+import { UsersService } from '../users/users.service';
+import { MonthlyWrappedService } from './wrapped.service';
+@ApiTags('wrapped')
+@ApiBearerAuth()
+@UseGuards(SupabaseJwtGuard)
+@Controller('wrapped')
+export class MonthlyWrappedController {
+  constructor(
+    private readonly monthlyWrappedService: MonthlyWrappedService,
+    private readonly usersService: UsersService,
+  ) {}
+
+  @Get('latest')
+  @ApiOperation({ summary: "Get the previous UTC calendar month's Wrapped" })
+  @ApiResponse({
+    status: 200,
+    description: 'Monthly Wrapped was returned successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid year or month',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorised',
+  })
+  async getMonthlyWrapped(@CurrentAuthUser() authUser: AuthUser) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    const currentDate = new Date();
+    const previousMonth = new Date(
+      Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth() - 1, 1),
+    );
+    const year = previousMonth.getUTCFullYear();
+    const month = previousMonth.getUTCMonth() + 1;
+    const yearMonth = `${year}-${String(month).padStart(2, '0')}`;
+
+    if (
+      !Number.isInteger(year) ||
+      !Number.isInteger(month) ||
+      month < 1 ||
+      month > 12
+    ) {
+      throw new BadRequestException('Invalid year or month');
+    }
+    return this.monthlyWrappedService.getWrappedResponse(user.id, yearMonth);
+  }
+}

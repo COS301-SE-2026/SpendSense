@@ -6,11 +6,15 @@ import '@testing-library/jest-dom'
 import InsightsPage from '../domains/InsightsPage'
 import ProfilePage from '../domains/ProfilePage'
 import WrappedPage from '../domains/WrappedPage'
-import {apiFetch} from '../lib/api'
+import {apiDataFetch,apiFetch} from '../lib/api'
 
-vi.mock('../lib/api', ()=> ({
-    apiFetch: vi.fn(),
+vi.mock('../lib/api',()=>({
+    apiFetch:vi.fn(),
+    apiDataFetch:vi.fn(),
 }))
+
+const mockedApiFetch=vi.mocked(apiFetch)
+const mockedApiDataFetch=vi.mocked(apiDataFetch)
 
 vi.mock('../hooks/useUserProfile', ()=> {
     const stableUser={
@@ -40,8 +44,6 @@ vi.mock('../hooks/useUserProfile', ()=> {
 vi.mock('@/components/common/BottomNav', ()=> ({
     BottomNav: ()=> <nav data-testid="bottom-nav"/>
 }))
-
-const mockedApiFetch =vi.mocked(apiFetch)
 
 const sampleInsightsResponse={
     data: {
@@ -73,6 +75,27 @@ const sampleInsightsResponse={
             },
         ],
     },
+}
+
+const sampleWrappedResponse={
+    month:8,
+    monthLabel:'August',
+    scoreStart:642,
+    scoreEnd:681,
+    scoreDelta:39,
+    scoreTierEnd:'GOOD',
+    onTimePayments:3,
+    latePayments:1,
+    missedPayments:1,
+    onTimePaymentRate:0.6,
+    longestPaymentStreakThisMonth:2,
+    numberBadgesEarned:2,
+    arrayBadgesEarned:[],
+    coinsEarned:85,
+    coinEvents:[],
+    quizzesCompleted:2,
+    knowledgeStreakEnd:0,
+    hasData:true,
 }
 
 function renderInsightsRoute(){
@@ -188,6 +211,7 @@ describe('Insights integration', ()=>{
     })
 
     it('navigates from the Profile "Wrapped" row to /wrapped', async()=> {
+        mockedApiDataFetch.mockResolvedValueOnce(sampleWrappedResponse)
         renderProfileAndWrappedRoutes()
 
         const wrappedRow=screen.getByRole('link', {name: /wrapped/i})
@@ -196,7 +220,7 @@ describe('Insights integration', ()=>{
         fireEvent.click(wrappedRow)
 
         await waitFor(()=> {
-            expect(screen.getByText('Your monthly highlights')).toBeInTheDocument()
+            expect(screen.getByText('August')).toBeInTheDocument()
         })
     })
 

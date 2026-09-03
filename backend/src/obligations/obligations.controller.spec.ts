@@ -71,6 +71,12 @@ const mockObligationResult = {
     sourceType: 'FINANCIAL_OBLIGATION',
     sourceId: 'obl-1',
   },
+  rewards: {
+    xpAwarded: 15,
+    xp: 15,
+    mascotLevel: 1,
+    leveledUp: false,
+  },
 } as Awaited<ReturnType<ObligationsService['create']>>;
 
 describe('ObligationsController', () => {

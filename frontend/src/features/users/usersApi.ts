@@ -12,6 +12,14 @@ export async function getMe(){
     return apiFetch('/users/me')
 }
 
-export async function updateMe(body: {displayName?: string; avatarUrl?: string | null; onboardingCompleted?: boolean}) {
+export async function checkDisplayName(displayName: string) {
+    const query = encodeURIComponent(displayName.trim())
+    const response = await apiFetch<{data: {available: boolean; reason?: 'taken' | 'prohibited'}}>(
+        `/users/display-name/availability?displayName=${query}`
+    )
+    return response.data
+}
+
+export async function updateMe(body: {displayName?: string; avatarUrl?: string | null; onboardingCompleted?: boolean; monthlyBudget?: number;}) {
     return apiFetch('/users/me', {method: 'PATCH', body: JSON.stringify(body)})
 }

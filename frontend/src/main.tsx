@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.tsx'
 import DashboardPage from '@/domains/DashboardPage.tsx'
 import CalendarPage from '@/domains/CalendarPage.tsx'
+import ScheduledPaymentsPage from '@/domains/ScheduledPaymentsPage.tsx'
 import LoginPage from './domains/LoginPage'
 import RegisterPage from './domains/RegisterPage.tsx'
 import ObligationForm from './domains/ObligationForm.tsx'
@@ -12,10 +13,18 @@ import StickerAlbumPage from './domains/StickerAlbumPage'
 import StickerDetailPage from './domains/StickerDetailPage'
 import {initAuthListener} from './features/auth/auth.service'
 import {initTheme} from './lib/theme'
+import {initReducedMotion} from './lib/motion'
 import QuestsPage from './domains/QuestsPage'
 import QuizPage from './domains/QuizPage'
 import FriendsPage from './domains/FriendsPage'
-import { FriendsListPage, AddFriendPage, FriendProfilePage, FriendActivityPage, LeaderboardPage } from './domains/FriendsSubPages'
+import LeaderboardPage from './domains/LeaderboardPage'
+import FriendsListPage from './domains/FriendsListPage'
+import AddFriendPage from './domains/AddFriendPage'
+import FriendProfilePage from './domains/FriendProfilePage'
+import FriendActivityPage from './domains/FriendActivityPage'
+import WagersPage from './domains/WagersPage'
+import NewWagerPage from './domains/NewWagerPage'
+import WagerDetailPage from './domains/WagerDetailPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import InsightsPage from './domains/InsightsPage.tsx'
 import ProfilePage from './domains/ProfilePage.tsx'
@@ -30,6 +39,7 @@ import QuizQuestionPage from './domains/QuizQuestionPage.tsx'
 import QuizAnswerFeedbackPage from './domains/QuizAnswerFeedbackPage.tsx'
 import QuizResultsPage from './domains/QuizResultsPage.tsx'
 import MascotPage from './domains/MascotPage.tsx'
+import MascotShopPage from './domains/MascotShopPage.tsx'
 import WrappedPage from './domains/WrappedPage.tsx'
 import SettingsPage from './domains/SettingsPage.tsx'
 import SettingsPreferencesPage from './domains/SettingsPreferencesPage.tsx'
@@ -38,14 +48,17 @@ import SettingsAccountPage from './domains/SettingsAccountPage.tsx'
 import EditProfilePage from './domains/EditProfilePage.tsx'
 import HelpPage from './domains/HelpPage.tsx'
 import HomeRoute from './components/HomeRoute'
+import ScrollToTop from './components/common/ScrollToTop.tsx'
 
 initAuthListener()
 initTheme()
+initReducedMotion()
 import PaymentForm from './domains/PaymentForm.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
+      <ScrollToTop/>
       <NotificationsProvider>
         <NotificationListener/>
         <Routes>
@@ -53,6 +66,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dev" element={<App />} />
           <Route path="/calendar" element={<CalendarPage />}/>
+          <Route path="/calendar/scheduled" element={<ProtectedRoute><ScheduledPaymentsPage/></ProtectedRoute>}/>
           <Route path="/login" element={<LoginPage />}/>
           <Route path="/register" element={<RegisterPage/>}/>
           <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm/></ProtectedRoute>}/>
@@ -77,7 +91,11 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
           <Route path="/friends/activity" element={<FriendActivityPage/>}/>
           <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
+          <Route path="/wagers" element={<WagersPage/>}/>
+          <Route path="/wagers/new" element={<NewWagerPage/>}/>
+          <Route path="/wagers/:wagerId" element={<WagerDetailPage/>}/>
           <Route path="/mascot" element={<MascotPage/>}/>
+          <Route path="/mascot/shop" element={<MascotShopPage/>}/>
           <Route path="/wrapped" element={<WrappedPage/>}/>
           <Route path="/settings" element={<SettingsPage/>}/>
           <Route path="/settings/preferences" element={<SettingsPreferencesPage/>}/>

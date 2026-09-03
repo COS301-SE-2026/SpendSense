@@ -22,6 +22,8 @@ import {
   UpcomingPressureStats,
 } from './insights.types';
 
+import type { CurrentMonthPaymentStats } from './insights.types';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const UPCOMING_WINDOW_DAYS = 7;
 const RECENT_MONTH_COUNT = 3;
@@ -125,7 +127,7 @@ export class InsightsService {
     };
   }
 
-  private async getOnTimePaymentRate(
+  async getOnTimePaymentRate(
     userId: string,
     asOf: Date,
   ): Promise<OnTimePaymentStats> {
@@ -392,7 +394,7 @@ export class InsightsService {
     };
   }
 
-  private async getPaymentStreak(
+  async getPaymentStreak(
     userId: string,
     asOf: Date,
   ): Promise<PaymentStreakStats> {
@@ -418,10 +420,14 @@ export class InsightsService {
 
     let currentOnTimeStreak = 0;
     let longestOnTimeStreak = 0;
-    let currentMonthOnTimeCount = 0;
-    let currentMonthLateCount = 0;
-    let currentMonthMissedCount = 0;
-    let currentMonthOverdueCount = 0;
+    const currentMonthStats = {
+      onTimeCount: 0,
+      lateCount: 0,
+      missedCount: 0,
+      overdueCount: 0,
+      currentOnTimeStreak: 0,
+      longestOnTimeStreak: 0,
+    };
 
     for (const occurrence of occurrences) {
       const isOnTime =
@@ -440,27 +446,69 @@ export class InsightsService {
       } else {
         currentOnTimeStreak = 0;
       }
-
       const isCurrentMonth =
         occurrence.dueDate >= currentStart && occurrence.dueDate < currentEnd;
 
-      if (isCurrentMonth) {
-        if (isOnTime) currentMonthOnTimeCount += 1;
-        else if (isLate) currentMonthLateCount += 1;
-        else if (isMissed) currentMonthMissedCount += 1;
-        else if (isOverdue) currentMonthOverdueCount += 1;
+      if (!isCurrentMonth) {
+        continue;
       }
+      this.updateCurrentMonthPaymentStats(
+        currentMonthStats,
+        isOnTime,
+        isLate,
+        isMissed,
+        isOverdue,
+      );
     }
+
+    const eligiblePaymentCount =
+      currentMonthStats.onTimeCount +
+      currentMonthStats.lateCount +
+      currentMonthStats.missedCount;
+    const currentMonthOnTimeRate =
+      eligiblePaymentCount === 0
+        ? 0
+        : currentMonthStats.onTimeCount / eligiblePaymentCount;
 
     return {
       currentOnTimeStreak,
       longestOnTimeStreak,
       resolvedOutcomeCount: occurrences.length,
-      currentMonthOnTimeCount,
-      currentMonthLateCount,
-      currentMonthMissedCount,
-      currentMonthOverdueCount,
+      currentMonthOnTimeCount: currentMonthStats.onTimeCount,
+      currentMonthLateCount: currentMonthStats.lateCount,
+      currentMonthMissedCount: currentMonthStats.missedCount,
+      currentMonthOverdueCount: currentMonthStats.overdueCount,
+      longestCurrentMonthOnTimeStreak: currentMonthStats.longestOnTimeStreak,
+      currentMonthOnTimeRate,
       hasEnoughData: occurrences.length > 0,
     };
+  }
+
+  private updateCurrentMonthPaymentStats(
+    stats: CurrentMonthPaymentStats,
+    isOnTime: boolean,
+    isLate: boolean,
+    isMissed: boolean,
+    isOverdue: boolean,
+  ) {
+    if (isOnTime) {
+      stats.onTimeCount += 1;
+      stats.currentOnTimeStreak += 1;
+      stats.longestOnTimeStreak = Math.max(
+        stats.longestOnTimeStreak,
+        stats.currentOnTimeStreak,
+      );
+      return;
+    }
+
+    stats.currentOnTimeStreak = 0;
+
+    if (isLate) {
+      stats.lateCount += 1;
+    } else if (isMissed) {
+      stats.missedCount += 1;
+    } else if (isOverdue) {
+      stats.overdueCount += 1;
+    }
   }
 }

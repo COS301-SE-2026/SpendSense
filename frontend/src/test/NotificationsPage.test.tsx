@@ -64,6 +64,28 @@ const rewardNotification:Notification={
     createdAt:'2026-07-26T08:00:00.000Z',
 }
 
+const friendRequestNotification:Notification={
+    id:'notification-friend-1',
+    type:'SYSTEM',
+    title:'New friend request',
+    message:'Ally sent you a friend request.',
+    sourceType:null,
+    sourceId:'request-1',
+    readAt:null,
+    createdAt:'2026-09-02T16:00:00.000Z',
+}
+
+const wagerInviteNotification:Notification={
+    id:'notification-wager-1',
+    type:'WAGER_INVITE',
+    title:'New wager invite',
+    message:'Ally invited you to a wager.',
+    sourceType:null,
+    sourceId:'wager-1',
+    readAt:null,
+    createdAt:'2026-09-02T16:00:00.000Z',
+}
+
 function createResponse(
     notifications:Notification[],
     paginationOverrides:Partial<NotificationPagination>={},
@@ -122,6 +144,14 @@ function renderPage(){
                     <Route
                         path="/login"
                         element={<div>Login page</div>}
+                    />
+                    <Route
+                        path="/friends"
+                        element={<div>Friends page</div>}
+                    />
+                    <Route
+                        path="/wagers/:id"
+                        element={<div>Wager page</div>}
                     />
                 </Routes>
             </NotificationsProvider>
@@ -506,6 +536,54 @@ describe('NotificationsPage',()=>{
                 name:'Score improved',
             }),
         ).toHaveClass('bg-white')
+    })
+    it('marks a friend request as read and navigates to friends',async()=>{
+        const user=userEvent.setup()
+        mockDefaultRequests([friendRequestNotification],1)
+        vi.mocked(markAsRead).mockResolvedValue({
+            data:{
+                ...friendRequestNotification,
+                readAt:'2026-09-02T16:01:00.000Z',
+            },
+        })
+        renderPage()
+        await user.click(
+            await screen.findByRole('button',{
+                name:'New friend request, unread',
+            }),
+        )
+        await waitFor(()=>{
+            expect(markAsRead).toHaveBeenCalledWith(
+                'notification-friend-1',
+            )
+        })
+        expect(
+            await screen.findByText('Friends page'),
+        ).toBeInTheDocument()
+    })
+    it('marks a wager invite as read and navigates to the wager',async()=>{
+        const user=userEvent.setup()
+        mockDefaultRequests([wagerInviteNotification],1)
+        vi.mocked(markAsRead).mockResolvedValue({
+            data:{
+                ...wagerInviteNotification,
+                readAt:'2026-09-02T16:01:00.000Z',
+            },
+        })
+        renderPage()
+        await user.click(
+            await screen.findByRole('button',{
+                name:'New wager invite, unread',
+            }),
+        )
+        await waitFor(()=>{
+            expect(markAsRead).toHaveBeenCalledWith(
+                'notification-wager-1',
+            )
+        })
+        expect(
+            await screen.findByText('Wager page'),
+        ).toBeInTheDocument()
     })
     it('prevents repeated read actions while the request is pending',async()=>{
         const user=userEvent.setup()

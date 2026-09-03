@@ -6,6 +6,7 @@ import {
 } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import { BadgeEngineService } from '../gamification/badge-engine.service';
+import { RewardService } from '../rewards/reward.service';
 import { CreateObligationDto } from './dto/create-obligation.dto';
 import { ObligationsService } from './obligations.service';
 
@@ -17,6 +18,9 @@ describe('ObligationsService', () => {
   let service: ObligationsService;
   let badgeEngineService: {
     evaluateObligationBadges: jest.Mock;
+  };
+  let rewardService: {
+    settleAction: jest.Mock;
   };
   let transaction: {
     paymentOccurrence: { create: jest.Mock };
@@ -41,6 +45,10 @@ describe('ObligationsService', () => {
 
   const userId = 'user-1';
 
+  // Far enough out that dueDate minus the largest daysBefore used below
+  // (7) is still in the future no matter when this suite runs.
+  const occurrenceDueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
   beforeEach(() => {
     transaction = {
       paymentOccurrence: {
@@ -49,7 +57,7 @@ describe('ObligationsService', () => {
           amountDue: 99,
           sequenceNum: 1,
           status: 'PENDING',
-          dueDate: new Date('2026-08-20'),
+          dueDate: occurrenceDueDate,
         }),
       },
       paymentSchedule: {
@@ -98,9 +106,17 @@ describe('ObligationsService', () => {
     badgeEngineService = {
       evaluateObligationBadges: jest.fn().mockResolvedValue([]),
     };
+    rewardService = {
+      settleAction: jest.fn().mockResolvedValue({
+        xp: 15,
+        mascotLevel: 1,
+        leveledUp: false,
+      }),
+    };
     service = new ObligationsService(
       prisma as unknown as PrismaService,
       badgeEngineService as unknown as BadgeEngineService,
+      rewardService as unknown as RewardService,
     );
   });
 
@@ -157,6 +173,16 @@ describe('ObligationsService', () => {
       },
       transaction,
     );
+  });
+
+  it('awards 15 XP after creating an obligation', async () => {
+    await service.create(userId, baseDto as CreateObligationDto, 7);
+
+    expect(rewardService.settleAction).toHaveBeenCalledWith(transaction, {
+      userId,
+      sourceEventId: 'obligation-event-1',
+      xp: { amount: 15 },
+    });
   });
 
   it('does not evaluate obligation badges when obligation creation fails', async () => {
