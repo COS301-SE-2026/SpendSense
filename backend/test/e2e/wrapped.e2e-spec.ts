@@ -11,6 +11,7 @@ type ApiResponse<T> = {
 describe('Monthly Wrapped E2E', () => {
   it('E2E for getBadgesForMonth() - badges earned by the authenticated user during the requested month', async () => {
     const fixture = await createApiE2eFixture();
+    try {
     const scenario = await createMonthlyWrappedScenario(fixture.prisma, {
       year: 2026,
       month: 8,
@@ -60,10 +61,14 @@ describe('Monthly Wrapped E2E', () => {
     expect(wrapped.arrayBadgesEarned[1].earnedAt).toBe(
       secondEarnedAt.toISOString(),
     );
+    } finally {
+      await fixture.close();
+    }
   });
 
   it('E2E for getScoreMovementForMonth() - tracks the usersscore movement for the month', async () => {
     const fixture = await createApiE2eFixture();
+    try {
     const scenario = await createMonthlyWrappedScenario(fixture.prisma, {
       year: 2026,
       month: 8,
@@ -90,5 +95,8 @@ describe('Monthly Wrapped E2E', () => {
     expect(wrapped.scoreEnd).toBe(660);
     expect(wrapped.scoreDelta).toBe(60);
     expect(wrapped.scoreTierEnd).toBe('GOOD');
+    } finally {
+      await fixture.close();
+    }
   });
 });

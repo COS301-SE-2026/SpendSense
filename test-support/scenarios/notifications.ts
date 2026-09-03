@@ -18,7 +18,6 @@ export async function createUserWithNotifications(
   userOverrides: E2eUserInput = {},
 ) {
   const user = await createUser(prisma, {
-    displayName: 'E2E Notifications User',
     ...userOverrides,
   });
 
@@ -45,4 +44,3 @@ export async function addNotificationsForUser(
   }
   return notifications;
 }
-

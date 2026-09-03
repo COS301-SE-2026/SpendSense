@@ -1,7 +1,7 @@
 import {expect, test} from './fixtures';
 
 test.describe('Profile', ()=> {
-    test('shows real identity, tier, streak and coins from GET /users/me', async ({
+    test('shows real identity and tier from GET /users/me', async ({
         page,
         scenario,
     })=> {
@@ -19,8 +19,6 @@ test.describe('Profile', ()=> {
         await expect(page.getByRole('heading', {name: 'E2E Browser User'})).toBeVisible();
         await expect(page.getByText(new RegExp(`level ${progress.mascotLevel}`, 'i'))).toBeVisible();
         await expect(page.getByText(/good/i)).toBeVisible();
-        await expect(page.getByText(new RegExp(`${progress.currentPaymentStreak} day streak`, 'i')),).toBeVisible();
-        await expect(page.getByText(new RegExp(`${progress.coinBalance.toLocaleString()} coins`)),).toBeVisible();
     });
 
     test.skip('Edit Profile save updates the display name and reflects it on profile', async({

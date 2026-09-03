@@ -1,11 +1,14 @@
 import { expect, test } from './fixtures';
+import { randomUUID } from 'node:crypto';
 
 test('shows a scenario-created payment on the dashboard', async ({
   page,
   scenario,
 }) => {
+  const label = `dashboard-${randomUUID()}`;
+
   const payment = await scenario.payments.userWithUpcomingPayment({
-    label: 'dashboard',
+    label,
   });
 
   await page.goto('/');
