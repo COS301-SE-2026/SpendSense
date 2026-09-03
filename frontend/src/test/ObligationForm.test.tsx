@@ -46,7 +46,11 @@ describe("ObligationForm Component", () => {
 			],
 		});
 		apiMocks.createObligation.mockResolvedValue({
-			data: {obligation: {id: "obl_1", name: "Gym Membership"}, generatedOccurrences: []},
+			data: {
+				obligation: {id: "obl_1", name: "Gym Membership"},
+				generatedOccurrences: [],
+				rewards: {xpAwarded: 15, xp: 15, mascotLevel: 1, leveledUp: false},
+			},
 		});
 		vi.mocked(useUserProfile).mockReturnValue({
 			user: {
@@ -115,7 +119,7 @@ describe("ObligationForm Component", () => {
 		await userEvent.click(screen.getByRole("button", {name: /log obligation/i}));
 		await waitFor(() => {
 			expect(screen.getByText(/added new obligation!/i)).toBeInTheDocument();
-			expect(screen.getByText(/\+10 xp/i)).toBeInTheDocument();
+			expect(screen.getByText(/^\+15 xp$/i)).toBeInTheDocument();
 		});
 		expect(apiMocks.createObligation).toHaveBeenCalledWith(
 			expect.objectContaining({
