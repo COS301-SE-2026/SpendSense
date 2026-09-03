@@ -41,8 +41,6 @@ export class CreditScoreService {
       CREDIT_SCORE_COMPONENT_WEIGHTS.SAVINGS_BUFFER *
       (await this.calculateSavingsBuffer(userId, db));
 
-    const monthlySavingAmount = await this.calculateSavingsBuffer(userId, db);
-
     const historyLength =
       CREDIT_SCORE_COMPONENT_WEIGHTS.HISTORY_LENGTH *
       (await this.calculateHistoryLengthScore(userId, db));
@@ -83,15 +81,6 @@ export class CreditScoreService {
     }
 
     const missedPaymentCount = await this.countMissedPayments(userId, db);
-
-    console.log('Returning credit score service', {
-      paymentH_: paymentH,
-      budgetPressure_: budgetPressure,
-      monthlySavingAmount_: monthlySavingAmount,
-      historyLength_: historyLength,
-      obligationDiveristy_: obligationDiveristy,
-      calculateScore_: calculateScore,
-    });
 
     return {
       applicableRisks,
@@ -161,18 +150,6 @@ export class CreditScoreService {
       weightedHistoryScore +=
         historyScore * PRIORITY_WEIGHTS[occurrence.obligation.priority];
       priorityWeightTotal += PRIORITY_WEIGHTS[occurrence.obligation.priority];
-
-      // console.log('Payment history calculation:', {
-      //   userId: occurrence.user.id,
-      //   name: occurrence.user.displayName,
-      //   occurrenceId: occurrence.id,
-      //   status: occurrence.status,
-      //   daysLate,
-      //   priority: occurrence.obligation.priority,
-      //   historyScore,
-      //   weightedHistoryScore,
-      //   priorityWeightTotal,
-      // });
     }
 
     if (priorityWeightTotal === 0) {
@@ -265,15 +242,6 @@ export class CreditScoreService {
     const budgetPressureRatio = monthlyCommittedObligations / monthlyBudget;
     const budgetPressureRatioScore =
       this.getBudgetPressureScore(budgetPressureRatio);
-
-    console.log('calculateBudgetPressureScore', {
-      Budget: monthlyBudget,
-      AmountDue: result._sum.amountDue,
-      monthlyCommittedObligations_: monthlyCommittedObligations,
-      budgetPressureRatio_: budgetPressureRatio,
-      budgetPressureRatioScore_: budgetPressureRatioScore,
-    });
-
     return budgetPressureRatioScore;
   }
 
@@ -344,13 +312,6 @@ export class CreditScoreService {
       monthlyBudget,
     );
 
-    console.log('calculateSavingsBiffer', {
-      Budget: monthlyBudget,
-      AmountDue: result._sum.amountDue,
-      monthlyCommittedObligations_: monthlyCommittedObligations,
-      savingsBufferRatio_: savingsBufferRatio,
-    });
-
     return savingsBufferRatio;
   }
 
@@ -361,9 +322,6 @@ export class CreditScoreService {
     const numerator = MonthlyBudget - commitedObligationAmount;
     const savingsBufferRatio = numerator / MonthlyBudget;
 
-    console.log('calculateSavingsBiffer', {
-      savingsBufferRatio_: savingsBufferRatio,
-    });
     if (savingsBufferRatio >= 0.2) {
       return SAVINGS_BUFFER.GT_20;
     }
@@ -410,10 +368,6 @@ export class CreditScoreService {
     }
 
     const monthsWithPaymentHistory = distinctMonths.size;
-    console.log('calculateSavingsBiffer', {
-      distinctMonths_: distinctMonths,
-      monthsWithPaymentHistory_: monthsWithPaymentHistory,
-    });
 
     return Math.min(
       monthsWithPaymentHistory / HISTORY_LENGTH_CONFIG.MONTHS_FOR_MAX_SCORE,

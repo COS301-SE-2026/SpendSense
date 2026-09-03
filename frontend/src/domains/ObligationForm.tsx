@@ -7,6 +7,9 @@ import {useNavigate} from "react-router-dom";
 import {CustomBadge} from "@/components/common/CustomBadges";
 import {Popover, PopoverContent, PopoverTrigger} from "../components/ui/popover";
 import {Calendar} from "@/components/ui/calendar";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useCalendarOccurrences } from "@/hooks/useCalendarOccurrences";
+import { formatCurrency } from "@/features/payments/occurrenceDisplay";
 import {cn} from "@/lib/utils";
 import {
     X, RefreshCw,
@@ -16,7 +19,7 @@ import {
     Calendar as CalendarIcon, ChevronDown,
 } from "lucide-react";
 import {getCategories, type Category} from "../features/categories/categoriesApi";
-import {createObligation, type ScheduleFrequency, type ReminderChannel} from "../features/obligations/obligationsApi";
+import {createObligation, type ReminderChannel} from "../features/obligations/obligationsApi";
 
 const obligationSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -29,7 +32,7 @@ const obligationSchema = z.object({
     startDate: z.date({message: "A start date is required."}),
     endDate: z.date().nullable().optional(),
     schedule: z.object({
-        frequency: z.enum(['ONCE', 'WEEKLY', 'MONTHLY', 'FIXED_INSTALLMENTS']),
+        frequency: z.enum(['ONCE', 'WEEKLY', 'MONTHLY', 'FIXED_INSTALLMENT']),
         interval: z.coerce.number().default(1),
         dayOfMonth: z.coerce.number().optional(),
         totalOccurrences: z.coerce.number().nullable().optional(),
@@ -39,7 +42,18 @@ const obligationSchema = z.object({
         daysBefore: z.array(z.number()),
         channels: z.array(z.string()),
     }).optional(),
-});
+}).superRefine((data, ctx) => {
+    if (
+        data.schedule.frequency === 'FIXED_INSTALLMENT' &&
+        !data.schedule.totalOccurrences
+    ) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['schedule', 'totalOccurrences'],
+            message: 'Total occurrences must be a positive whole number'
+        })
+    }
+})
 
 type ObligationFormData = z.infer<typeof obligationSchema>;
 
@@ -65,7 +79,7 @@ const FREQUENCY_OPTIONS = [
     {value: "ONCE" as const, label: "Once off"},
     {value: "WEEKLY" as const, label: "Weekly"},
     {value: "MONTHLY" as const, label: "Monthly"},
-    {value: "FIXED_INSTALLMENTS" as const, label: "Fixed Installments"},
+    {value: "FIXED_INSTALLMENT" as const, label: "Fixed Installments"},
 ];
 
 const TYPE_TO_CATEGORY: Record<string, string> = {
@@ -80,6 +94,7 @@ const TYPE_TO_CATEGORY: Record<string, string> = {
 export default function ObligationForm() {
     const navigate = useNavigate();
     const [showPopup, setShowPopup] = useState(false);
+    const [xpAwarded, setXpAwarded] = useState(15);
     const [isSubmitting, setSubmitting] = useState(false);
     const [categories, setCategories] = useState<Category[]>([]);
     const [activeIconId, setActiveIconId] = useState("subscription");
@@ -118,8 +133,8 @@ export default function ObligationForm() {
     const onSubmit = async (formData: ObligationFormData) => {
         setSubmitting(true);
         try {
-            const isFixedInstallment = formData.schedule.frequency === "FIXED_INSTALLMENTS";
-            await createObligation({
+            const isFixedInstallment = formData.schedule.frequency === "FIXED_INSTALLMENT";
+            const response = await createObligation({
                 name: formData.name,
                 description: formData.description,
                 type: formData.type,
@@ -130,9 +145,9 @@ export default function ObligationForm() {
                 startDate: formData.startDate.toISOString(),
                 endDate: formData.endDate ? formData.endDate.toISOString() : null,
                 schedule: {
-                    frequency: formData.schedule.frequency as ScheduleFrequency,
+                    frequency: formData.schedule.frequency,
                     interval: formData.schedule.interval,
-                    dayOfMonth: formData.startDate.getDate(),
+                    dayOfMonth: Math.min(formData.startDate.getDate(), 28),
                     totalOccurrences: isFixedInstallment ? (formData.schedule.totalOccurrences ?? null) : null,
                 },
                 reminders: formData.reminders ? {
@@ -141,6 +156,7 @@ export default function ObligationForm() {
                     channels: formData.reminders.channels as ReminderChannel[],
                 } : undefined,
             });
+            setXpAwarded(response.data.rewards.xpAwarded);
             setShowPopup(true);
             setTimeout(() => {setShowPopup(false); reset(); navigate("/");}, 5000);
         } catch (error) {
@@ -150,6 +166,26 @@ export default function ObligationForm() {
         }
     };
 
+    const { user } = useUserProfile();
+    const { occurrences, loading: budgetLoading } = useCalendarOccurrences();
+    const paidThisMonth = occurrences.reduce((total, occurrences) => {
+        if (
+            occurrences.status === "PAID" ||
+            occurrences.status === "PAID_LATE"
+        ) {
+            return total + occurrences.amountDue;
+        }
+
+        return total
+    }, 0);
+
+    const monthlyBudget = user?.monthlyBudget ?? null;
+
+    const remainingBudget = 
+        monthlyBudget !== null 
+            ? Math.max(monthlyBudget - paidThisMonth, 0) 
+            : null;
+    
     return (
         <div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
@@ -159,7 +195,7 @@ export default function ObligationForm() {
                     <button
                         type="button"
                         aria-label="Cancel"
-                        onClick={() => navigate("/")}
+                        onClick={() => navigate(-1)}
                         className="size-11 rounded-full bg-[#FF6B9D] flex items-center justify-center text-[#091828] flex-shrink-0 border-none dark:bg-[#ffb1c5] dark:text-[#650030]"
                     >
                         <X className="size-5" />
@@ -174,6 +210,27 @@ export default function ObligationForm() {
                         <RefreshCw className="size-4" />
                     </button>
                 </div>
+
+                {monthlyBudget !== null && (
+                    <div className="mt-6">
+                        <div className="rounded-3xl border-2 border-[#091828] bg-white px-5 py-4 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20]">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
+                                MONTHLY BUDGET LEFT
+                            </p>
+                
+                            {budgetLoading ? (
+                                <div className="mt-2 h-7 w-36 animate-pulse rounded-full bg-[#E3EAE6] dark:bg-[#1c263c]"/>
+                            ) : (
+                                <p className="mt-1 text-2xl font-extrabold text-[#091828] dark:text-white">
+                                    {formatCurrency(remainingBudget ?? 0)}
+                                    <span className="ml-2 text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
+                                        of {formatCurrency(monthlyBudget)}
+                                    </span>
+                                </p>
+                            )}
+                    </div>
+                    </div>
+                )}
 
                 {/* Amount display */}
                 <div className="text-center py-6">
@@ -193,14 +250,14 @@ export default function ObligationForm() {
 
                 <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
 
-                    {/* Type - icon picker + labeled overlay select for test accessibility */}
+                    {/* Type - icon picker */}
                     <Controller
                         control={control}
                         name="type"
                         render={({field}) => (
                             <div>
                                 <p className="text-sm font-medium text-[#091828] mb-3 ml-1 dark:text-white">Pick a type</p>
-                                <div className="flex gap-4 overflow-x-auto pb-4">
+                                <div className="flex gap-4 overflow-x-auto pt-1.5 pl-1.5 pr-1.5 pb-4 -mt-1.5 -ml-1.5 -mr-1.5">
                                     {TYPE_OPTIONS.map(opt => (
                                         <button
                                             key={opt.id}
@@ -222,23 +279,6 @@ export default function ObligationForm() {
                                             )}>{opt.label}</span>
                                         </button>
                                     ))}
-                                </div>
-                                <label htmlFor="type" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Type</label>
-                                <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 relative dark:bg-[#131b2e]">
-                                    <span className="flex-1 text-sm text-[#091828] dark:text-white">
-                                        {TYPE_OPTIONS.find(t => t.value === field.value)?.label ?? "Subscription"}
-                                    </span>
-                                    <ChevronDown className="size-4 text-[#6b6375] dark:text-[#a0aec0]" />
-                                    <select
-                                        id="type"
-                                        value={field.value}
-                                        onChange={e => field.onChange(e.target.value)}
-                                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                                    >
-                                        {TYPE_OPTIONS.map(opt => (
-                                            <option key={opt.id} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
                                 </div>
                             </div>
                         )}
@@ -389,7 +429,7 @@ export default function ObligationForm() {
 
                     {/* Total occurrences - label preserves the typo the test asserts against */}
                     <div>
-                        <label htmlFor="totalOccurrences" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Total occurences</label>
+                        <label htmlFor="totalOccurrences" className="block text-xs font-medium text-[#091828] mb-1.5 ml-1 dark:text-white">Total occurrences</label>
                         <div className="bg-white rounded-2xl px-3 py-2.5 flex items-center gap-3 dark:bg-[#131b2e]">
                             <div className="size-9 rounded-full bg-[#FFE9B5] flex items-center justify-center flex-shrink-0">
                                 <Hash className="size-4 text-[#7a5a00]" />
@@ -401,6 +441,11 @@ export default function ObligationForm() {
                                 className="flex-1 text-sm text-[#091828] bg-transparent outline-none placeholder:text-[#9b96a8] dark:text-white dark:placeholder:text-[#a0aec0]"
                             />
                         </div>
+                        {errors.schedule?.totalOccurrences && (
+                            <p className="text-xs text-red-500 mt-1 ml-1 dark:text-[#ffb4ab]">
+                                {errors.schedule.totalOccurrences.message}
+                            </p>
+                        )}
                     </div>
 
                     {/* Description */}
@@ -484,7 +529,7 @@ export default function ObligationForm() {
                 <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-[#FF6B9D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-[#091828] dark:border-[#060e20] dark:bg-[#ff6b9d] dark:text-[#6e0035]">
                     <div className="flex flex-col">
                         <span className="text-sm font-bold">Added new obligation!</span>
-                        <CustomBadge variant="xp">+10 xp</CustomBadge>
+                        <CustomBadge variant="xp">+{xpAwarded} xp</CustomBadge>
                     </div>
                 </div>
             )}

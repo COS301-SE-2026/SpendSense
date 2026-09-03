@@ -1,4 +1,4 @@
-export type NotifType = "REMINDER"|"SCORE_CHANGE"|"BADGE_EARNED"|"SYSTEM"|"PAYMENT_STATUS"|"REWARD"
+export type NotifType = "REMINDER"|"SCORE_CHANGE"|"BADGE_EARNED"|"SYSTEM"|"PAYMENT_STATUS"|"REWARD"|"WAGER_INVITE"
 
 export interface Notification{
     id: string

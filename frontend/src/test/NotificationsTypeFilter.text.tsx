@@ -94,6 +94,11 @@ describe('NotificationTypeFilter',()=>{
                 name:'System',
             }),
         ).toBeInTheDocument()
+        expect(
+            screen.getByRole('button',{
+                name:'Wager invites',
+            }),
+        ).toBeInTheDocument()
     })
     it('calls onChange and closes when a type is selected',async()=>{
         const user=userEvent.setup()

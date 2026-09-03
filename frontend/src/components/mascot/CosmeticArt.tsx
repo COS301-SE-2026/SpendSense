@@ -1,7 +1,7 @@
 import * as React from "react"
 import {Crown, Glasses, Medal, PartyPopper, Shirt, Sparkles} from "lucide-react"
 import {cn} from "@/lib/utils"
-import {cosmeticArtFor} from "./MascotAssets"
+import {cosmeticStoreArtFor} from "./MascotAssets"
 import type {CosmeticSlot} from "@/features/cosmetics/cosmeticsTypes"
  
 //thumbnail for a single cosmetic, used on shop cards and the item sheet.
@@ -43,7 +43,7 @@ export function CosmeticArt({
     className,
     ...props
 }: CosmeticArtProps){
-    const art=cosmeticArtFor(code)
+    const art = cosmeticStoreArtFor(code)
     const placeholder = (iconKey && PLACEHOLDER_ICONS[iconKey]) ?? <Sparkles className="size-6"/>
 
     return(

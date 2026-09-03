@@ -2,10 +2,8 @@ import*as React from "react"
 import{ Link, useNavigate } from "react-router-dom"
 import{
 	CalendarCheck,
+	ChevronLeft,
 	Mountain,
-	Gift,
-	ChevronRight,
-	Trophy,
 	AlertTriangle,
 	Coins,
 } from "lucide-react"
@@ -66,6 +64,8 @@ function useQuestsOverview(){
 
 export default function QuestsPage(){
 	const navigate=useNavigate()
+	const [isCoinBalanceOpen,setIsCoinBalanceOpen]=useState(false)
+	const [isCoinBalanceFading,setIsCoinBalanceFading]=useState(false)
 	const [isDailyQuizConfirmOpen,setIsDailyQuizConfirmOpen]=useState(false)
 	const [dailyQuizConfirmMode,setDailyQuizConfirmMode]=useState<"START"|"RESUME">("START")
 	const{ daily, topics, loading, error, reload }=useQuestsOverview()
@@ -88,6 +88,29 @@ export default function QuestsPage(){
 	const availableTopics=topics?.filter((t)=>t.available).length??0
 	const totalTopics=topics?.length??0
 	const topicsProgress=totalTopics>0?(availableTopics/totalTopics)*100:0
+	useEffect(()=>{
+		if(!isCoinBalanceOpen){
+			return
+		}
+		const fadeTimer=window.setTimeout(()=>setIsCoinBalanceFading(true),700)
+		const closeTimer=window.setTimeout(()=>{
+			setIsCoinBalanceOpen(false)
+			setIsCoinBalanceFading(false)
+		},1100)
+		return()=>{
+			window.clearTimeout(fadeTimer)
+			window.clearTimeout(closeTimer)
+		}
+	},[isCoinBalanceOpen])
+	const handleCoinBalanceToggle=()=>{
+		if(isCoinBalanceOpen){
+			setIsCoinBalanceOpen(false)
+			setIsCoinBalanceFading(false)
+			return
+		}
+		setIsCoinBalanceFading(false)
+		setIsCoinBalanceOpen(true)
+	}
 	const handleDailyQuizAction=()=>{
 		if(daily?.status==="IN_PROGRESS"){
 			clearDailyQuizStartError()
@@ -114,20 +137,47 @@ export default function QuestsPage(){
 	return(
 		<div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
 			<div className="mx-auto w-full max-w-md px-5 pt-6">
-				<header className="flex items-center gap-3">
-					<div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#ffb1c5]">
-						<Trophy className="size-5 text-[#6E0034] dark:text-[#650030]"/>
-					</div>
+				<header className="relative flex items-center gap-3">
+					<Link
+						to="/"
+						aria-label="Go back"
+						className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#ffb1c5]"
+					>
+						<ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]"/>
+					</Link>
 					<div className="flex flex-1 items-center justify-center">
-                        <div
-                            className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
-                            style={{transform: "rotate(-3deg)"}}>
-                                
-                            <h1 className="text-base font-bold text-[#091828] dark:text-[#091828]">Quests</h1>
-                        </div>
-                    </div>
-					<div className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFE9B5] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#ffd166]/20">
-						<Coins className="size-5 text-[#7A5A00] dark:text-[#ffd166]"/>
+						<div className="relative">
+							<div
+								className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
+								style={{transform: "rotate(-3deg)"}}>
+								<h1 className="text-base font-bold text-[#091828] dark:text-[#091828]">Quests</h1>
+							</div>
+							{isCoinBalanceOpen&&(
+								<div
+									id="quest-coin-balance"
+									role="dialog"
+									aria-label="Coin balance"
+									className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center whitespace-nowrap rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 text-center shadow-[4px_4px_0_#091828] transition-opacity duration-300 ease-out dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d] ${isCoinBalanceFading?"opacity-0":"opacity-100"}`}
+									style={{transform:"rotate(-3deg)"}}
+								>
+									<p className="text-base font-bold text-[#7A5A00] dark:text-[#5a4300]">
+										{gamificationLoading?"Loading...":`${(gamificationProfile?.coins??0).toLocaleString("en-ZA")} coins`}
+									</p>
+								</div>
+							)}
+						</div>
+					</div>
+					<div className="relative shrink-0">
+						<button
+							type="button"
+							aria-label="Show coin balance"
+							aria-expanded={isCoinBalanceOpen}
+							aria-controls="quest-coin-balance"
+							onClick={handleCoinBalanceToggle}
+							className="flex size-12 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFE9B5] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#ffd166]/20"
+						>
+							<Coins className="size-5 text-[#7A5A00] dark:text-[#ffd166]"/>
+						</button>
 					</div>
 				</header>
 				<div className="mt-8 rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] dark:bg-[#2d1b2e]">
@@ -183,25 +233,17 @@ export default function QuestsPage(){
 						<QuizQuestCard
 							icon={<Mountain className="size-5"/>}
 							tone="lilac"
-							title="Financial Topic Quizes"
+							title="Financial Topic Quizzes"
 							eyebrow="Choose your subject"
 							description="Explore focused lessons and take a quiz when you're ready."
 							progress={topicsProgress}
 							progressLabel={`${availableTopics} of ${totalTopics} topics unlocked`}
 							actionLabel="Explore topics"
-							actionAriaLabel="Financial Topic Quizes"
+							actionAriaLabel="Financial Topic Quizzes"
 							onAction={()=>navigate("/quiz/topics")}
 						/>
 					)}
 				</section>
-				<button type="button" className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-dashed border-[#B8CBBF] bg-white/70 px-4 py-3 text-left dark:border-[#a0aec0]/40 dark:bg-[#131b2e]/70">
-					<QuestIcon tone="yellow"><Gift className="size-5"/></QuestIcon>
-					<span className="min-w-0 flex-1">
-						<span className="block text-sm font-bold text-[#091828] dark:text-white">Rewards</span>
-						<span className="block text-xs text-[#6b6375] dark:text-[#a0aec0]">Redeem your coins and claim exclusive perks.</span>
-					</span>
-					<ChevronRight className="size-4 shrink-0 text-[#6b6375] dark:text-[#a0aec0]"/>
-				</button>
 			</div>
 			<DailyQuizConfirmDialog
 				open={isDailyQuizConfirmOpen}
@@ -216,7 +258,7 @@ export default function QuestsPage(){
 				mode={dailyQuizConfirmMode}
 				progress={daily?.status==="IN_PROGRESS"?daily.session.progress:undefined}
 			/>
-			<BottomNav active="quests"/>
+			<BottomNav/>
 		</div>
 	)
 }

@@ -481,10 +481,10 @@ describe('PaymentsService', () => {
 
   //////////////////////////////////////////////////////////////////////////////
 
-  it('should throw NotFoundExpectuon when occurenceId does not exist', async () => {
+  it('should throw NotFoundExpectuon when occurrenceId does not exist', async () => {
     const dto = {
       ...baseDto,
-      occurrenceId: 'non-existing-occurence-id',
+      occurrenceId: 'non-existing-occurrence-id',
     };
 
     mockPrismaService.paymentOccurrence.findFirst.mockResolvedValue(null);
