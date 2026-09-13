@@ -457,6 +457,7 @@ describe('UsersService', () => {
       userEvents: [],
       rewardTransactions: [],
       quizSessions: [],
+      simulationSessions: [],
     };
 
     prisma.user.findUnique
@@ -471,6 +472,7 @@ describe('UsersService', () => {
     expect(result.preferences).toBeDefined();
     expect(result.notificationPreferences).toBeDefined();
     expect(result.obligations).toEqual([]);
+    expect(result.simulationSessions).toEqual([]);
     expect(prisma.user.update).not.toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.user.findUnique).toHaveBeenCalledTimes(2);
@@ -556,6 +558,7 @@ const DELETE_MANY_MODELS = [
   'userBadge',
   'quizSessionAnswer',
   'quizSession',
+  'simulationSession',
   'userInventoryItem',
   'creditProfile',
   'gamificationProfile',

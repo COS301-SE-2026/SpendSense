@@ -334,6 +334,94 @@ const userExportSelect = {
       },
     },
   },
+  simulationSessions: {
+    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true,
+      status: true,
+      scenarioVersion: true,
+      scenarioSnapshot: true,
+      timedMode: true,
+      currentDay: true,
+      daysInMonth: true,
+      startingBudget: true,
+      currentBalance: true,
+      savingsBalance: true,
+      savingsRetentionMultiplier: true,
+      score: true,
+      nextDayAt: true,
+      pausedAt: true,
+      pausedDecisionSeconds: true,
+      presentationHold: true,
+      completionRewardGrantedAt: true,
+      completedAt: true,
+      abandonedAt: true,
+      expiresAt: true,
+      createdAt: true,
+      updatedAt: true,
+      obligations: {
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          templateCode: true,
+          name: true,
+          category: true,
+          amountDue: true,
+          dueDay: true,
+          introducedByEventId: true,
+          status: true,
+          paidAt: true,
+          currentUsed: true,
+          savingsUsed: true,
+          pointsAwarded: true,
+          consequenceSnapshot: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+      events: {
+        orderBy: { triggerDay: 'asc' },
+        select: {
+          id: true,
+          templateCode: true,
+          triggerDay: true,
+          status: true,
+          eventSnapshot: true,
+          revealedAt: true,
+          decisionExpiresAt: true,
+          selectedOptionId: true,
+          resolvedAt: true,
+          resolutionSnapshot: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+      scoreEntries: {
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          sourceType: true,
+          sourceId: true,
+          simulatedDay: true,
+          pointsDelta: true,
+          reason: true,
+          calculationData: true,
+          createdAt: true,
+        },
+      },
+      actions: {
+        orderBy: { committedAt: 'asc' },
+        select: {
+          id: true,
+          actionType: true,
+          idempotencyKey: true,
+          payloadHash: true,
+          responseSnapshot: true,
+          committedAt: true,
+        },
+      },
+    },
+  },
 } satisfies Prisma.UserSelect;
 
 type UserExportData = Prisma.UserGetPayload<{
@@ -358,6 +446,7 @@ type UserExportResult = {
     | 'userEvents'
     | 'rewardTransactions'
     | 'quizSessions'
+    | 'simulationSessions'
   >;
   preferences: UserExportData['preference'];
   notificationPreferences: UserExportData['notificationPreference'];
@@ -373,6 +462,7 @@ type UserExportResult = {
   userEvents: UserExportData['userEvents'];
   rewardTransactions: UserExportData['rewardTransactions'];
   quizSessions: UserExportData['quizSessions'];
+  simulationSessions: UserExportData['simulationSessions'];
 };
 
 export type UserDataDeletionResult = {
@@ -635,6 +725,9 @@ export class UsersService {
       const quizSessions = await tx.quizSession.deleteMany({
         where: { userId },
       });
+      const simulationSessions = await tx.simulationSession.deleteMany({
+        where: { userId },
+      });
       const inventoryItems = await tx.userInventoryItem.deleteMany({
         where: { userId },
       });
@@ -666,6 +759,7 @@ export class UsersService {
         badges: badges.count,
         quizAnswers: quizAnswers.count,
         quizSessions: quizSessions.count,
+        simulationSessions: simulationSessions.count,
         inventoryItems: inventoryItems.count,
         creditProfile: creditProfile.count,
         gamificationProfile: gamificationProfile.count,
@@ -715,6 +809,7 @@ export class UsersService {
       userEvents,
       rewardTransactions,
       quizSessions,
+      simulationSessions,
       ...user
     } = userData;
 
@@ -735,6 +830,7 @@ export class UsersService {
       userEvents,
       rewardTransactions,
       quizSessions,
+      simulationSessions,
     };
   }
 }
