@@ -715,6 +715,41 @@ model UserInventoryItem {
   @@index([userId, equipped])
 }
 
+model SimulationObligationTemplate {
+  id                         String   @id @default(uuid())
+  code                       String   @unique
+  contentVersion             String   @default("v1")
+  name                       String
+  category                   String
+  amountDue                  Decimal  @db.Decimal(12, 2)
+  dueDay                     Int
+  basePoints                 Decimal  @db.Decimal(12, 2)
+  savingsPointsFactor        Decimal  @default(0.8) @db.Decimal(5, 2)
+  selectionWeight            Int      @default(1)
+  eligibleForEventIntroduction Boolean @default(false)
+  isActive                   Boolean  @default(true)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@index([isActive, selectionWeight])
+  @@index([isActive, dueDay])
+}
+
+model SimulationEventTemplate {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  contentVersion  String   @default("v1")
+  triggerDay      Int
+  eventSnapshot   Json
+  selectionWeight Int      @default(1)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isActive, selectionWeight])
+  @@index([isActive, triggerDay])
+}
+
 model SimulationSession {
   id                         String                     @id @default(uuid())
   userId                     String
