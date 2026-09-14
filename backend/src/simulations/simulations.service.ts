@@ -4,7 +4,11 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { SimulationActionType, SimulationSessionStatus } from '@prisma/client';
+import {
+  Prisma,
+  SimulationActionType,
+  SimulationSessionStatus,
+} from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { isUUID } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,6 +23,22 @@ const resumableStatuses = [
   SimulationSessionStatus.ACTIVE,
   SimulationSessionStatus.PAUSED,
 ];
+
+const simulationSummarySelect = {
+  id: true,
+  status: true,
+  timedMode: true,
+  currentDay: true,
+  daysInMonth: true,
+  nextDayAt: true,
+  startingBudget: true,
+  currentBalance: true,
+  savingsBalance: true,
+  score: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+} satisfies Prisma.SimulationSessionSelect;
 
 type StoredCreationAction = {
   payloadHash: string;
@@ -54,6 +74,27 @@ type BriefingResponse = {
     surpriseEventCount: number;
   };
   replayed: boolean;
+};
+
+type SimulationSummary = {
+  id: string;
+  status: SimulationSessionStatus;
+  timedMode: boolean;
+  currentDay: number;
+  daysInMonth: number;
+  nextDayAt: string | null;
+  startingBudget: string;
+  currentBalance: string;
+  savingsBalance: string;
+  score: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+};
+
+type ActiveSimulationResponse = {
+  active: SimulationSummary | null;
+  latestCompleted: SimulationSummary | null;
 };
 
 @Injectable()
@@ -164,6 +205,28 @@ export class SimulationsService {
         payloadHash,
       );
     }
+  }
+
+  async getActiveSession(userId: string): Promise<ActiveSimulationResponse> {
+    const [active, latestCompleted] = await Promise.all([
+      this.prisma.simulationSession.findFirst({
+        where: { userId, status: { in: resumableStatuses } },
+        orderBy: { updatedAt: 'desc' },
+        select: simulationSummarySelect,
+      }),
+      this.prisma.simulationSession.findFirst({
+        where: { userId, status: SimulationSessionStatus.COMPLETED },
+        orderBy: { completedAt: 'desc' },
+        select: simulationSummarySelect,
+      }),
+    ]);
+
+    return {
+      active: active ? this.toSimulationSummary(active) : null,
+      latestCompleted: latestCompleted
+        ? this.toSimulationSummary(latestCompleted)
+        : null,
+    };
   }
 
   private validateIdempotencyKey(
@@ -297,6 +360,38 @@ export class SimulationsService {
         surpriseEventCount: session.events.length,
       },
       replayed,
+    };
+  }
+
+  private toSimulationSummary(session: {
+    id: string;
+    status: SimulationSessionStatus;
+    timedMode: boolean;
+    currentDay: number;
+    daysInMonth: number;
+    nextDayAt: Date | null;
+    startingBudget: unknown;
+    currentBalance: unknown;
+    savingsBalance: unknown;
+    score: unknown;
+    createdAt: Date;
+    updatedAt: Date;
+    completedAt: Date | null;
+  }): SimulationSummary {
+    return {
+      id: session.id,
+      status: session.status,
+      timedMode: session.timedMode,
+      currentDay: session.currentDay,
+      daysInMonth: session.daysInMonth,
+      nextDayAt: session.nextDayAt?.toISOString() ?? null,
+      startingBudget: this.money(session.startingBudget),
+      currentBalance: this.money(session.currentBalance),
+      savingsBalance: this.money(session.savingsBalance),
+      score: this.money(session.score),
+      createdAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
+      completedAt: session.completedAt?.toISOString() ?? null,
     };
   }
 

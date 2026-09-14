@@ -8,7 +8,10 @@ import { SimulationsService } from './simulations.service';
 describe('SimulationsController', () => {
   let controller: SimulationsController;
   const usersService = { findOrCreateUser: jest.fn() };
-  const simulationsService = { createBriefing: jest.fn() };
+  const simulationsService = {
+    createBriefing: jest.fn(),
+    getActiveSession: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -44,5 +47,22 @@ describe('SimulationsController', () => {
       dto,
       idempotencyKey,
     );
+  });
+
+  it('finds the authenticated application user before loading active state', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'supabase-user-1',
+      email: 'player@example.com',
+    };
+    const response = { active: null, latestCompleted: null };
+    usersService.findOrCreateUser.mockResolvedValue({ id: 'user-1' });
+    simulationsService.getActiveSession.mockResolvedValue(response);
+
+    await expect(controller.getActiveSimulation(authUser)).resolves.toEqual(
+      response,
+    );
+
+    expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
+    expect(simulationsService.getActiveSession).toHaveBeenCalledWith('user-1');
   });
 });

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Headers,
   HttpCode,
   HttpStatus,
@@ -13,6 +14,7 @@ import {
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -64,5 +66,23 @@ export class SimulationsController {
   ) {
     const user = await this.usersService.findOrCreateUser(authUser);
     return this.simulationsService.createBriefing(user.id, dto, idempotencyKey);
+  }
+
+  @Get('active')
+  @ApiOperation({
+    summary: 'Get the authenticated player’s resumable simulation summary',
+    description:
+      'Returns the current briefing, active, or paused fictional simulation when one exists, along with a link summary for the latest completed simulation. It does not create a session or expose game content.',
+  })
+  @ApiOkResponse({
+    description:
+      'Active and latest-completed simulation summaries, wrapped by the global response envelope.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, or invalid Supabase Bearer token.',
+  })
+  async getActiveSimulation(@CurrentAuthUser() authUser: AuthUser) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.simulationsService.getActiveSession(user.id);
   }
 }

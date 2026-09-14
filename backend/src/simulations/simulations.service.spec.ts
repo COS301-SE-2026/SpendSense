@@ -148,7 +148,7 @@ describe('SimulationsService', () => {
       findFirst: jest.Mock<Promise<CreationAction | null>, [unknown]>;
     };
     simulationSession: {
-      findFirst: jest.Mock<Promise<{ id: string } | null>, [unknown]>;
+      findFirst: jest.Mock<Promise<unknown>, [unknown]>;
     };
     simulationObligationTemplate: {
       findMany: jest.Mock<Promise<CatalogueObligation[]>, [unknown]>;
@@ -171,7 +171,7 @@ describe('SimulationsService', () => {
       },
       simulationSession: {
         findFirst: jest
-          .fn<Promise<{ id: string } | null>, [unknown]>()
+          .fn<Promise<unknown>, [unknown]>()
           .mockResolvedValue(null),
       },
       simulationObligationTemplate: {
@@ -304,5 +304,84 @@ describe('SimulationsService', () => {
       service.createBriefing('user-1', { timedMode: true }, 'not-a-uuid'),
     ).rejects.toThrow(BadRequestException);
     expect(prisma.simulationAction.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('returns only safe summaries for a resumable session and latest completed session', async () => {
+    prisma.simulationSession.findFirst
+      .mockResolvedValueOnce({
+        id: 'active-session',
+        status: 'PAUSED',
+        timedMode: true,
+        currentDay: 7,
+        daysInMonth: 30,
+        nextDayAt: null,
+        startingBudget: '6000.00',
+        currentBalance: '2200.00',
+        savingsBalance: '1500.00',
+        score: '140.50',
+        createdAt,
+        updatedAt: new Date('2026-09-14T12:05:00.000Z'),
+        completedAt: null,
+        scenarioSnapshot: { shouldNotBeReturned: true },
+      })
+      .mockResolvedValueOnce({
+        id: 'completed-session',
+        status: 'COMPLETED',
+        timedMode: false,
+        currentDay: 30,
+        daysInMonth: 30,
+        nextDayAt: null,
+        startingBudget: '5000.00',
+        currentBalance: '900.00',
+        savingsBalance: '1100.00',
+        score: '311.25',
+        createdAt,
+        updatedAt: new Date('2026-09-13T12:05:00.000Z'),
+        completedAt: new Date('2026-09-13T12:00:00.000Z'),
+        scenarioSnapshot: { shouldNotBeReturned: true },
+      });
+
+    const result = await service.getActiveSession('user-1');
+
+    expect(result).toEqual({
+      active: {
+        id: 'active-session',
+        status: 'PAUSED',
+        timedMode: true,
+        currentDay: 7,
+        daysInMonth: 30,
+        nextDayAt: null,
+        startingBudget: '6000.00',
+        currentBalance: '2200.00',
+        savingsBalance: '1500.00',
+        score: '140.50',
+        createdAt: '2026-09-14T12:00:00.000Z',
+        updatedAt: '2026-09-14T12:05:00.000Z',
+        completedAt: null,
+      },
+      latestCompleted: {
+        id: 'completed-session',
+        status: 'COMPLETED',
+        timedMode: false,
+        currentDay: 30,
+        daysInMonth: 30,
+        nextDayAt: null,
+        startingBudget: '5000.00',
+        currentBalance: '900.00',
+        savingsBalance: '1100.00',
+        score: '311.25',
+        createdAt: '2026-09-14T12:00:00.000Z',
+        updatedAt: '2026-09-13T12:05:00.000Z',
+        completedAt: '2026-09-13T12:00:00.000Z',
+      },
+    });
+    expect(prisma.simulationSession.findFirst).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns null summaries when the player has no resumable or completed simulation', async () => {
+    await expect(service.getActiveSession('user-1')).resolves.toEqual({
+      active: null,
+      latestCompleted: null,
+    });
   });
 });
