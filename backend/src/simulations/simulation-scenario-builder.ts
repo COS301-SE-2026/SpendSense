@@ -2,14 +2,16 @@ export type CatalogueObligation = {
   code: string;
   name: string;
   category: string;
-  amountDue: number | string;
+  amountDue: MoneyInput;
   dueDay: number;
-  basePoints: number | string;
-  savingsPointsFactor?: number | string;
+  basePoints: MoneyInput;
+  savingsPointsFactor?: MoneyInput;
   selectionWeight: number;
   isActive: boolean;
   eligibleForEventIntroduction: boolean;
 };
+
+type MoneyInput = number | string | { toString(): string };
 
 export type CatalogueEvent = {
   code: string;
@@ -386,7 +388,7 @@ function requiredMoney(value: unknown, label: string): string {
   return centsToMoney(moneyToCents(value));
 }
 
-function moneyToCents(value: number | string): number {
+function moneyToCents(value: MoneyInput): number {
   const amount = Number(value);
   if (!Number.isFinite(amount)) {
     throw new Error('Money values must be finite.');

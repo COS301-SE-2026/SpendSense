@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ConflictException,
+  GoneException,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { SimulationActionType } from '@prisma/client';
@@ -383,5 +385,145 @@ describe('SimulationsService', () => {
       active: null,
       latestCompleted: null,
     });
+  });
+
+  it('returns safe owned session state without future event or hidden option-score content', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000010';
+    prisma.simulationSession.findFirst.mockResolvedValue({
+      id: sessionId,
+      status: 'ACTIVE',
+      timedMode: true,
+      currentDay: 7,
+      daysInMonth: 30,
+      nextDayAt: new Date('2026-09-14T12:00:15.000Z'),
+      startingBudget: '6000.00',
+      currentBalance: '2200.00',
+      savingsBalance: '1500.00',
+      score: '140.50',
+      createdAt,
+      updatedAt: new Date('2026-09-14T12:05:00.000Z'),
+      completedAt: null,
+      presentationHold: 'EVENT_REVEAL',
+      scenarioSnapshot: {
+        allocationOptions: [
+          {
+            id: 'current_80_savings_20',
+            label: '80% Current / 20% Savings',
+            currentAmount: '4800.00',
+            savingsAmount: '1200.00',
+          },
+        ],
+        customAllocation: {
+          enabled: true,
+          minCurrentAmount: '0.00',
+          maxCurrentAmount: '6000.00',
+          increment: '50.00',
+        },
+        events: [{ title: 'Future event that must stay hidden' }],
+      },
+      obligations: [
+        {
+          id: 'obligation-1',
+          templateCode: 'SIM_OBL_RENT',
+          name: 'Rent',
+          category: 'Housing',
+          amountDue: '1800.00',
+          dueDay: 3,
+          status: 'PAID',
+          paidAt: new Date('2026-09-14T12:00:00.000Z'),
+          currentUsed: '1800.00',
+          savingsUsed: '0.00',
+          pointsAwarded: '60.00',
+        },
+      ],
+      events: [
+        {
+          id: 'event-1',
+          triggerDay: 7,
+          decisionExpiresAt: new Date('2026-09-14T12:00:30.000Z'),
+          eventSnapshot: {
+            title: 'Urgent car repair',
+            context: 'Choose a fictional response.',
+            options: [
+              {
+                id: 'pay_now',
+                label: 'Pay now',
+                immediateCost: '600.00',
+                feeOrDebt: '0.00',
+                scoreDelta: '12.00',
+              },
+            ],
+          },
+        },
+      ],
+      scoreEntries: [
+        {
+          id: 'score-1',
+          sourceType: 'OBLIGATION_PAYMENT',
+          sourceId: 'obligation-1',
+          simulatedDay: 3,
+          pointsDelta: '60.00',
+          reason: 'Paid on time',
+          createdAt,
+        },
+      ],
+    });
+
+    const result = await service.getSession('user-1', sessionId);
+
+    expect(result.session).toEqual(
+      expect.objectContaining({
+        id: sessionId,
+        pending: { type: 'EVENT_REVEAL', id: 'event-1' },
+      }),
+    );
+    expect(result.allocation.options).toHaveLength(1);
+    expect(result.allocation.selected).toBeNull();
+    expect(result.obligations[0]).toEqual(
+      expect.objectContaining({ id: 'obligation-1', pointsAwarded: '60.00' }),
+    );
+    expect(result.currentEvent).toEqual({
+      id: 'event-1',
+      triggerDay: 7,
+      title: 'Urgent car repair',
+      context: 'Choose a fictional response.',
+      options: [
+        {
+          id: 'pay_now',
+          label: 'Pay now',
+          immediateCost: '600.00',
+          feeOrDebt: '0.00',
+        },
+      ],
+      decisionExpiresAt: '2026-09-14T12:00:30.000Z',
+    });
+    expect(JSON.stringify(result)).not.toContain('scoreDelta');
+    expect(JSON.stringify(result)).not.toContain(
+      'Future event that must stay hidden',
+    );
+    expect(result.allowedActions).toEqual([]);
+  });
+
+  it('returns not found for a missing or foreign simulation', async () => {
+    await expect(
+      service.getSession('user-1', '00000000-0000-4000-8000-000000000011'),
+    ).rejects.toThrow(new NotFoundException('SIMULATION_NOT_FOUND'));
+  });
+
+  it('returns gone only for the caller’s expired simulation', async () => {
+    prisma.simulationSession.findFirst.mockResolvedValue({
+      status: 'EXPIRED',
+    });
+
+    await expect(
+      service.getSession('user-1', '00000000-0000-4000-8000-000000000012'),
+    ).rejects.toThrow(new GoneException('SIMULATION_EXPIRED'));
+  });
+
+  it('rejects a malformed simulation ID before querying session data', async () => {
+    await expect(service.getSession('user-1', 'not-a-uuid')).rejects.toThrow(
+      new BadRequestException('SIMULATION_ID_INVALID'),
+    );
+    expect(prisma.simulationSession.findFirst).not.toHaveBeenCalled();
   });
 });

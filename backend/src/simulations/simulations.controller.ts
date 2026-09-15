@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Param,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -15,6 +16,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiOkResponse,
+  ApiNotFoundResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -84,5 +86,30 @@ export class SimulationsController {
   async getActiveSimulation(@CurrentAuthUser() authUser: AuthUser) {
     const user = await this.usersService.findOrCreateUser(authUser);
     return this.simulationsService.getActiveSession(user.id);
+  }
+
+  @Get(':sessionId')
+  @ApiOperation({
+    summary: 'Get an owned simulation for refresh or resume',
+    description:
+      'Returns only the authenticated player’s safe fictional session state. Future event content and unrevealed event score values are never returned.',
+  })
+  @ApiOkResponse({
+    description:
+      'Safe authoritative simulation state, wrapped by the global response envelope.',
+  })
+  @ApiBadRequestResponse({ description: 'The simulation ID is malformed.' })
+  @ApiNotFoundResponse({
+    description: 'The simulation does not exist or is not owned by the caller.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing, malformed, or invalid Supabase Bearer token.',
+  })
+  async getSimulation(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('sessionId') sessionId: string,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.simulationsService.getSession(user.id, sessionId);
   }
 }
