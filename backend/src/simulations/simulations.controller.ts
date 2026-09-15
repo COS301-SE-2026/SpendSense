@@ -26,6 +26,7 @@ import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorato
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { UsersService } from '../users/users.service';
 import { CreateSimulationDto } from './dto/create-simulation.dto';
+import { SetupSimulationDto } from './dto/setup-simulation.dto';
 import { SimulationsService } from './simulations.service';
 
 @ApiTags('simulations')
@@ -111,5 +112,41 @@ export class SimulationsController {
   ) {
     const user = await this.usersService.findOrCreateUser(authUser);
     return this.simulationsService.getSession(user.id, sessionId);
+  }
+
+  @Post(':sessionId/setup')
+  @ApiOperation({
+    summary: 'Confirm a fictional Current and Savings allocation',
+    description:
+      'Activates an owned simulation briefing with exactly one saved default allocation or a valid custom fictional Current amount. No real money moves.',
+  })
+  @ApiBody({ type: SetupSimulationDto })
+  @ApiCreatedResponse({
+    description:
+      'The activated fictional allocation and session state, wrapped by the global response envelope.',
+  })
+  @ApiBadRequestResponse({
+    description: 'The session ID, body, or Idempotency-Key header is invalid.',
+  })
+  @ApiConflictResponse({
+    description:
+      'Setup was already confirmed, or the idempotency key was reused with different data.',
+  })
+  @ApiNotFoundResponse({
+    description: 'The simulation does not exist or is not owned by the caller.',
+  })
+  async setupSimulation(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('sessionId') sessionId: string,
+    @Body() dto: SetupSimulationDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.simulationsService.setupSession(
+      user.id,
+      sessionId,
+      dto,
+      idempotencyKey,
+    );
   }
 }

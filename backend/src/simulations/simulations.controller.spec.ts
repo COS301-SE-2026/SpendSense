@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import { UsersService } from '../users/users.service';
 import { CreateSimulationDto } from './dto/create-simulation.dto';
+import { SetupSimulationDto } from './dto/setup-simulation.dto';
 import { SimulationsController } from './simulations.controller';
 import { SimulationsService } from './simulations.service';
 
@@ -12,6 +13,7 @@ describe('SimulationsController', () => {
     createBriefing: jest.fn(),
     getActiveSession: jest.fn(),
     getSession: jest.fn(),
+    setupSession: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -85,6 +87,33 @@ describe('SimulationsController', () => {
     expect(simulationsService.getSession).toHaveBeenCalledWith(
       'user-1',
       sessionId,
+    );
+  });
+
+  it('finds the authenticated application user before confirming setup', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'supabase-user-1',
+      email: 'player@example.com',
+    };
+    const sessionId = '00000000-0000-4000-8000-000000000020';
+    const idempotencyKey = '00000000-0000-4000-8000-000000000021';
+    const dto: SetupSimulationDto = {
+      allocationId: 'current_70_savings_30',
+    };
+    const response = { session: { id: sessionId, status: 'ACTIVE' } };
+    usersService.findOrCreateUser.mockResolvedValue({ id: 'user-1' });
+    simulationsService.setupSession.mockResolvedValue(response);
+
+    await expect(
+      controller.setupSimulation(authUser, sessionId, dto, idempotencyKey),
+    ).resolves.toEqual(response);
+
+    expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
+    expect(simulationsService.setupSession).toHaveBeenCalledWith(
+      'user-1',
+      sessionId,
+      dto,
+      idempotencyKey,
     );
   });
 });

@@ -15,6 +15,7 @@ import { createHash } from 'node:crypto';
 import { isUUID } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSimulationDto } from './dto/create-simulation.dto';
+import { SetupSimulationDto } from './dto/setup-simulation.dto';
 import {
   buildSimulationScenario,
   type SimulationScenario,
@@ -200,6 +201,14 @@ type ReadableScenarioSnapshot = {
   customAllocation: SimulationScenario['customAllocation'];
   selectedAllocation: AllocationOption | null;
 };
+
+type SetupResponse = {
+  session: SimulationSummary & { pending: { type: string; id: null } };
+  allocation: AllocationOption;
+  replayed: boolean;
+};
+
+const TIMED_DAY_DURATION_MS = 15_000;
 
 @Injectable()
 export class SimulationsService {
@@ -398,6 +407,118 @@ export class SimulationsService {
     };
   }
 
+  async setupSession(
+    userId: string,
+    sessionId: string,
+    dto: SetupSimulationDto,
+    idempotencyKey: string | undefined,
+  ): Promise<SetupResponse> {
+    if (!isUUID(sessionId)) {
+      throw new BadRequestException('SIMULATION_ID_INVALID');
+    }
+    this.validateIdempotencyKey(idempotencyKey);
+    this.validateSetupRequest(dto);
+    const payloadHash = this.hashPayload({
+      allocationId: dto.allocationId ?? null,
+      currentAmount: dto.currentAmount ?? null,
+    });
+
+    const session = await this.prisma.simulationSession.findFirst({
+      where: { id: sessionId, userId },
+      select: {
+        id: true,
+        status: true,
+        timedMode: true,
+        startingBudget: true,
+        scenarioSnapshot: true,
+      },
+    });
+    if (!session) {
+      throw new NotFoundException('SIMULATION_NOT_FOUND');
+    }
+
+    const priorAction = await this.findSetupAction(sessionId, idempotencyKey);
+    if (priorAction) {
+      return this.replaySetup(priorAction, payloadHash);
+    }
+    if (session.status !== SimulationSessionStatus.BRIEFING) {
+      throw new ConflictException('SETUP_ALREADY_CONFIRMED');
+    }
+
+    const scenario = this.readScenarioSnapshot(session.scenarioSnapshot);
+    if (!scenario) {
+      throw new ServiceUnavailableException('SIMULATION_SETUP_UNAVAILABLE');
+    }
+    const allocation = this.resolveSetupAllocation(
+      dto,
+      scenario,
+      this.money(session.startingBudget),
+    );
+    const scenarioSnapshot = this.withSelectedAllocation(
+      session.scenarioSnapshot,
+      allocation,
+    );
+    return this.prisma.$transaction(async (tx) => {
+      const update = await tx.simulationSession.updateMany({
+        where: {
+          id: sessionId,
+          userId,
+          status: SimulationSessionStatus.BRIEFING,
+        },
+        data: {
+          status: SimulationSessionStatus.ACTIVE,
+          scenarioSnapshot,
+          currentBalance: allocation.currentAmount,
+          savingsBalance: allocation.savingsAmount,
+          nextDayAt: session.timedMode
+            ? new Date(Date.now() + TIMED_DAY_DURATION_MS)
+            : null,
+        },
+      });
+
+      if (update.count === 0) {
+        const racedAction = await tx.simulationAction.findFirst({
+          where: {
+            sessionId,
+            actionType: SimulationActionType.SETUP,
+            idempotencyKey,
+          },
+          select: { payloadHash: true, responseSnapshot: true },
+        });
+        if (racedAction) {
+          return this.replaySetup(racedAction, payloadHash);
+        }
+        throw new ConflictException('SETUP_ALREADY_CONFIRMED');
+      }
+
+      const updatedSession = await tx.simulationSession.findUniqueOrThrow({
+        where: { id: sessionId },
+        select: {
+          ...simulationSummarySelect,
+          presentationHold: true,
+        },
+      });
+      const response: SetupResponse = {
+        session: {
+          ...this.toSimulationSummary(updatedSession),
+          pending: { type: updatedSession.presentationHold, id: null },
+        },
+        allocation,
+        replayed: false,
+      };
+      await tx.simulationAction.create({
+        data: {
+          sessionId,
+          actionType: SimulationActionType.SETUP,
+          idempotencyKey,
+          payloadHash,
+          responseSnapshot: response,
+        },
+      });
+      return response;
+    });
+  }
+
   private validateIdempotencyKey(
     idempotencyKey: string | undefined,
   ): asserts idempotencyKey is string {
@@ -407,9 +528,109 @@ export class SimulationsService {
   }
 
   private payloadHash(dto: CreateSimulationDto): string {
-    return createHash('sha256')
-      .update(JSON.stringify({ timedMode: dto.timedMode }))
-      .digest('hex');
+    return this.hashPayload({ timedMode: dto.timedMode });
+  }
+
+  private hashPayload(payload: object): string {
+    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  }
+
+  private validateSetupRequest(dto: SetupSimulationDto): void {
+    if (
+      (dto.allocationId === undefined && dto.currentAmount === undefined) ||
+      (dto.allocationId !== undefined && dto.currentAmount !== undefined)
+    ) {
+      throw new BadRequestException('EXACTLY_ONE_ALLOCATION_REQUIRED');
+    }
+  }
+
+  private async findSetupAction(
+    sessionId: string,
+    idempotencyKey: string,
+  ): Promise<StoredCreationAction | null> {
+    return this.prisma.simulationAction.findFirst({
+      where: {
+        sessionId,
+        actionType: SimulationActionType.SETUP,
+        idempotencyKey,
+      },
+      select: { payloadHash: true, responseSnapshot: true },
+    });
+  }
+
+  private replaySetup(
+    action: StoredCreationAction,
+    payloadHash: string,
+  ): SetupResponse {
+    if (action.payloadHash !== payloadHash) {
+      throw new ConflictException('IDEMPOTENCY_KEY_REUSED');
+    }
+    if (!this.isSetupResponse(action.responseSnapshot)) {
+      throw new ServiceUnavailableException('SIMULATION_REPLAY_UNAVAILABLE');
+    }
+    return { ...action.responseSnapshot, replayed: true };
+  }
+
+  private resolveSetupAllocation(
+    dto: SetupSimulationDto,
+    scenario: ReadableScenarioSnapshot,
+    startingBudget: string,
+  ): AllocationOption {
+    if (dto.allocationId !== undefined) {
+      const allocation = scenario.allocationOptions.find(
+        (option) => option.id === dto.allocationId,
+      );
+      if (!allocation) {
+        throw new BadRequestException('SIMULATION_ALLOCATION_INVALID');
+      }
+      return allocation;
+    }
+
+    const currentCents = this.moneyToCents(dto.currentAmount);
+    const budgetCents = this.moneyToCents(startingBudget);
+    const minimumCents = this.moneyToCents(
+      scenario.customAllocation.minCurrentAmount,
+    );
+    const maximumCents = this.moneyToCents(
+      scenario.customAllocation.maxCurrentAmount,
+    );
+    const incrementCents = this.moneyToCents(
+      scenario.customAllocation.increment,
+    );
+    if (
+      currentCents === null ||
+      budgetCents === null ||
+      minimumCents === null ||
+      maximumCents === null ||
+      incrementCents === null ||
+      currentCents < minimumCents ||
+      currentCents > maximumCents ||
+      currentCents > budgetCents ||
+      incrementCents <= 0 ||
+      (currentCents - minimumCents) % incrementCents !== 0
+    ) {
+      throw new BadRequestException('SIMULATION_ALLOCATION_INVALID');
+    }
+
+    const currentAmount = this.centsToMoney(currentCents);
+    const savingsAmount = this.centsToMoney(budgetCents - currentCents);
+    return {
+      id: `custom_current_${currentAmount.replace('.', '_')}`,
+      label: `Custom: R${currentAmount} Current / R${savingsAmount} Savings`,
+      currentAmount,
+      savingsAmount,
+    };
+  }
+
+  private withSelectedAllocation(
+    snapshot: unknown,
+    allocation: AllocationOption,
+  ): Prisma.InputJsonValue {
+    const record = this.record(snapshot);
+    if (!record) {
+      throw new ServiceUnavailableException('SIMULATION_SETUP_UNAVAILABLE');
+    }
+    return { ...record, selectedAllocation: allocation };
   }
 
   private async reconcileConcurrentCreation(
@@ -684,6 +905,19 @@ export class SimulationsService {
     return Number(value).toFixed(2);
   }
 
+  private moneyToCents(value: unknown): number | null {
+    if (typeof value !== 'string' || !/^\d+\.\d{2}$/.test(value)) {
+      return null;
+    }
+    const [whole, cents] = value.split('.');
+    const parsed = Number(whole) * 100 + Number(cents);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+
+  private centsToMoney(cents: number): string {
+    return (cents / 100).toFixed(2);
+  }
+
   private isUniqueConstraintError(error: unknown): boolean {
     return (
       typeof error === 'object' &&
@@ -699,6 +933,16 @@ export class SimulationsService {
       value !== null &&
       'id' in value &&
       'briefing' in value &&
+      'replayed' in value
+    );
+  }
+
+  private isSetupResponse(value: unknown): value is SetupResponse {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'session' in value &&
+      'allocation' in value &&
       'replayed' in value
     );
   }
