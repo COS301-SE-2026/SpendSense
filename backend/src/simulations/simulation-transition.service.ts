@@ -32,8 +32,19 @@ export class SimulationTransitionService {
 
   async advanceOneDay(sessionId: string): Promise<SimulationTransitionResult> {
     return this.prisma.$transaction((tx) =>
-      this.resolveInTransaction(tx, sessionId, true),
+      this.advanceOneDayInTransaction(tx, sessionId),
     );
+  }
+
+  /**
+   * Allows a state-changing route to include the day transition and its
+   * idempotency action snapshot in one database transaction.
+   */
+  async advanceOneDayInTransaction(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+  ): Promise<SimulationTransitionResult> {
+    return this.resolveInTransaction(tx, sessionId, true);
   }
 
   private async resolveInTransaction(
@@ -77,7 +88,7 @@ export class SimulationTransitionService {
             resolutionSnapshot: this.expirySnapshot(
               revealed.eventSnapshot,
               debit.uncoveredAmount,
-            ),
+            ) as Prisma.InputJsonValue,
           },
         });
         if (expiryOutcome?.introducedObligation) {

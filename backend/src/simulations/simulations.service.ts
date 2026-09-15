@@ -10,6 +10,9 @@ import {
 import {
   Prisma,
   SimulationActionType,
+  SimulationEventStatus,
+  SimulationObligationStatus,
+  SimulationPresentationHold,
   SimulationSessionStatus,
 } from '@prisma/client';
 import { createHash } from 'node:crypto';
@@ -94,6 +97,10 @@ const simulationDetailSelect = {
 type StoredCreationAction = {
   payloadHash: string;
   responseSnapshot: unknown;
+};
+
+type StoredAdvanceAction = StoredCreationAction & {
+  actionType: SimulationActionType;
 };
 
 type BriefingResponse = {
@@ -209,6 +216,32 @@ type SetupResponse = {
   allocation: AllocationOption;
   replayed: boolean;
 };
+
+type AdvanceResponse = SimulationDetailResponse & { replayed: boolean };
+
+type AdvanceableSession = {
+  id: string;
+  status: SimulationSessionStatus;
+  timedMode: boolean;
+  presentationHold: SimulationPresentationHold;
+  obligations: Array<{ id: string }>;
+  events: Array<{ id: string }>;
+};
+
+const advanceableSessionSelect = {
+  id: true,
+  status: true,
+  timedMode: true,
+  presentationHold: true,
+  obligations: {
+    where: { status: SimulationObligationStatus.PAYABLE },
+    select: { id: true },
+  },
+  events: {
+    where: { status: SimulationEventStatus.REVEALED },
+    select: { id: true },
+  },
+} satisfies Prisma.SimulationSessionSelect;
 
 const TIMED_DAY_DURATION_MS = 15_000;
 
@@ -389,6 +422,125 @@ export class SimulationsService {
       }
     }
 
+    return this.toSimulationDetailResponse(session);
+  }
+
+  async advanceSession(
+    userId: string,
+    sessionId: string,
+    idempotencyKey: string | undefined,
+  ): Promise<AdvanceResponse> {
+    if (!isUUID(sessionId)) {
+      throw new BadRequestException('SIMULATION_ID_INVALID');
+    }
+    this.validateIdempotencyKey(idempotencyKey);
+    const payloadHash = this.hashPayload({});
+
+    const session = await this.prisma.simulationSession.findFirst({
+      where: { id: sessionId, userId },
+      select: advanceableSessionSelect,
+    });
+    if (!session) {
+      throw new NotFoundException('SIMULATION_NOT_FOUND');
+    }
+
+    const priorAction = await this.findAdvanceAction(sessionId, idempotencyKey);
+    if (priorAction) {
+      return this.replayAdvance(priorAction, payloadHash);
+    }
+    this.assertManualAdvanceAllowed(session);
+    if (!this.transitionService) {
+      throw new ServiceUnavailableException('SIMULATION_ADVANCE_UNAVAILABLE');
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const lockedSession = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: advanceableSessionSelect,
+        });
+        this.assertManualAdvanceAllowed(lockedSession);
+        await this.transitionService!.advanceOneDayInTransaction(tx, sessionId);
+
+        const refreshedSession = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: simulationDetailSelect,
+        });
+        const response: AdvanceResponse = {
+          ...this.toSimulationDetailResponse(refreshedSession),
+          replayed: false,
+        };
+        await tx.simulationAction.create({
+          data: {
+            sessionId,
+            actionType: SimulationActionType.ADVANCE_DAY,
+            idempotencyKey,
+            payloadHash,
+            responseSnapshot: response,
+          },
+        });
+        return response;
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+      const racedAction = await this.findAdvanceAction(
+        sessionId,
+        idempotencyKey,
+      );
+      if (racedAction) {
+        return this.replayAdvance(racedAction, payloadHash);
+      }
+      throw new ConflictException('SIMULATION_ADVANCE_CONFLICT');
+    }
+  }
+
+  private toSimulationDetailResponse(session: {
+    status: SimulationSessionStatus;
+    presentationHold: SimulationPresentationHold;
+    scenarioSnapshot: unknown;
+    events: Array<{
+      id: string;
+      triggerDay: number;
+      eventSnapshot: unknown;
+      decisionExpiresAt: Date | null;
+    }>;
+    obligations: Array<{
+      id: string;
+      templateCode: string;
+      name: string;
+      category: string;
+      amountDue: unknown;
+      dueDay: number;
+      status: string;
+      paidAt: Date | null;
+      currentUsed: unknown;
+      savingsUsed: unknown;
+      pointsAwarded: unknown;
+    }>;
+    scoreEntries: Array<{
+      id: string;
+      sourceType: string;
+      sourceId: string | null;
+      simulatedDay: number;
+      pointsDelta: unknown;
+      reason: string;
+      createdAt: Date;
+    }>;
+    id: string;
+    timedMode: boolean;
+    currentDay: number;
+    daysInMonth: number;
+    nextDayAt: Date | null;
+    startingBudget: unknown;
+    currentBalance: unknown;
+    savingsBalance: unknown;
+    score: unknown;
+    createdAt: Date;
+    updatedAt: Date;
+    completedAt: Date | null;
+  }): SimulationDetailResponse {
     const scenario = this.readScenarioSnapshot(session.scenarioSnapshot);
     const currentEvent = session.events[0]
       ? this.toSafeRevealedEvent(session.events[0])
@@ -430,7 +582,7 @@ export class SimulationsService {
         reason: entry.reason,
         createdAt: entry.createdAt.toISOString(),
       })),
-      allowedActions: this.allowedActions(session.status),
+      allowedActions: this.allowedActions(session),
     };
   }
 
@@ -593,6 +745,48 @@ export class SimulationsService {
       throw new ConflictException('IDEMPOTENCY_KEY_REUSED');
     }
     if (!this.isSetupResponse(action.responseSnapshot)) {
+      throw new ServiceUnavailableException('SIMULATION_REPLAY_UNAVAILABLE');
+    }
+    return { ...action.responseSnapshot, replayed: true };
+  }
+
+  private assertManualAdvanceAllowed(session: AdvanceableSession): void {
+    if (session.timedMode) {
+      throw new ConflictException('TIMED_MODE_ACTIVE');
+    }
+    if (session.status !== SimulationSessionStatus.ACTIVE) {
+      throw new ConflictException('SIMULATION_NOT_ACTIVE');
+    }
+    if (
+      session.presentationHold !== SimulationPresentationHold.NONE ||
+      session.obligations.length > 0 ||
+      session.events.length > 0
+    ) {
+      throw new ConflictException('SIMULATION_ACTION_PENDING');
+    }
+  }
+
+  private async findAdvanceAction(
+    sessionId: string,
+    idempotencyKey: string,
+  ): Promise<StoredAdvanceAction | null> {
+    return this.prisma.simulationAction.findFirst({
+      where: { sessionId, idempotencyKey },
+      select: { actionType: true, payloadHash: true, responseSnapshot: true },
+    });
+  }
+
+  private replayAdvance(
+    action: StoredAdvanceAction,
+    payloadHash: string,
+  ): AdvanceResponse {
+    if (
+      action.actionType !== SimulationActionType.ADVANCE_DAY ||
+      action.payloadHash !== payloadHash
+    ) {
+      throw new ConflictException('IDEMPOTENCY_KEY_REUSED');
+    }
+    if (!this.isAdvanceResponse(action.responseSnapshot)) {
       throw new ServiceUnavailableException('SIMULATION_REPLAY_UNAVAILABLE');
     }
     return { ...action.responseSnapshot, replayed: true };
@@ -882,8 +1076,29 @@ export class SimulationsService {
     return { id, label, immediateCost, feeOrDebt };
   }
 
-  private allowedActions(status: SimulationSessionStatus): string[] {
-    return status === SimulationSessionStatus.BRIEFING ? ['SETUP'] : [];
+  private allowedActions(session: {
+    status: SimulationSessionStatus;
+    timedMode: boolean;
+    presentationHold: SimulationPresentationHold;
+    obligations: Array<{ status: string }>;
+    events: unknown[];
+  }): string[] {
+    if (session.status === SimulationSessionStatus.BRIEFING) {
+      return ['SETUP'];
+    }
+    if (
+      session.status === SimulationSessionStatus.ACTIVE &&
+      !session.timedMode &&
+      session.presentationHold === SimulationPresentationHold.NONE &&
+      !session.obligations.some(
+        (obligation) =>
+          obligation.status === SimulationObligationStatus.PAYABLE,
+      ) &&
+      session.events.length === 0
+    ) {
+      return ['ADVANCE_DAY'];
+    }
+    return [];
   }
 
   private record(value: unknown): Record<string, unknown> | null {
@@ -970,6 +1185,16 @@ export class SimulationsService {
       value !== null &&
       'session' in value &&
       'allocation' in value &&
+      'replayed' in value
+    );
+  }
+
+  private isAdvanceResponse(value: unknown): value is AdvanceResponse {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'session' in value &&
+      'obligations' in value &&
       'replayed' in value
     );
   }

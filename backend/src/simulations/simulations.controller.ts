@@ -149,4 +149,38 @@ export class SimulationsController {
       idempotencyKey,
     );
   }
+
+  @Post(':sessionId/advance')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Advance one fictional day in accessibility mode',
+    description:
+      'Runs exactly one server-owned simulated-day boundary for an owned accessibility-mode session. Timed sessions and pending decisions cannot be advanced manually.',
+  })
+  @ApiCreatedResponse({
+    description:
+      'The refreshed safe fictional session state, wrapped by the global response envelope.',
+  })
+  @ApiBadRequestResponse({
+    description: 'The session ID or Idempotency-Key header is invalid.',
+  })
+  @ApiConflictResponse({
+    description:
+      'Timed mode is active, a decision/result is pending, the session is not active, or the idempotency key was reused.',
+  })
+  @ApiNotFoundResponse({
+    description: 'The simulation does not exist or is not owned by the caller.',
+  })
+  async advanceSimulation(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('sessionId') sessionId: string,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.simulationsService.advanceSession(
+      user.id,
+      sessionId,
+      idempotencyKey,
+    );
+  }
 }
