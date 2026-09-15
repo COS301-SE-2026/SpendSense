@@ -4,6 +4,7 @@ import {
   GoneException,
   Injectable,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
@@ -16,6 +17,7 @@ import { isUUID } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSimulationDto } from './dto/create-simulation.dto';
 import { SetupSimulationDto } from './dto/setup-simulation.dto';
+import { SimulationTransitionService } from './simulation-transition.service';
 import {
   buildSimulationScenario,
   type SimulationScenario,
@@ -212,7 +214,11 @@ const TIMED_DAY_DURATION_MS = 15_000;
 
 @Injectable()
 export class SimulationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    private readonly transitionService?: SimulationTransitionService,
+  ) {}
 
   async createBriefing(
     userId: string,
@@ -321,18 +327,27 @@ export class SimulationsService {
   }
 
   async getActiveSession(userId: string): Promise<ActiveSimulationResponse> {
-    const [active, latestCompleted] = await Promise.all([
-      this.prisma.simulationSession.findFirst({
+    let active = await this.prisma.simulationSession.findFirst({
+      where: { userId, status: { in: resumableStatuses } },
+      orderBy: { updatedAt: 'desc' },
+      select: simulationSummarySelect,
+    });
+    if (
+      active?.status === SimulationSessionStatus.ACTIVE &&
+      this.transitionService
+    ) {
+      await this.transitionService.resolveDueTransitions(active.id);
+      active = await this.prisma.simulationSession.findFirst({
         where: { userId, status: { in: resumableStatuses } },
         orderBy: { updatedAt: 'desc' },
         select: simulationSummarySelect,
-      }),
-      this.prisma.simulationSession.findFirst({
-        where: { userId, status: SimulationSessionStatus.COMPLETED },
-        orderBy: { completedAt: 'desc' },
-        select: simulationSummarySelect,
-      }),
-    ]);
+      });
+    }
+    const latestCompleted = await this.prisma.simulationSession.findFirst({
+      where: { userId, status: SimulationSessionStatus.COMPLETED },
+      orderBy: { completedAt: 'desc' },
+      select: simulationSummarySelect,
+    });
 
     return {
       active: active ? this.toSimulationSummary(active) : null,
@@ -350,8 +365,7 @@ export class SimulationsService {
       throw new BadRequestException('SIMULATION_ID_INVALID');
     }
 
-    // Roadmap item 7 will resolve timed transitions before this owner-scoped read.
-    const session = await this.prisma.simulationSession.findFirst({
+    let session = await this.prisma.simulationSession.findFirst({
       where: { id: sessionId, userId },
       select: simulationDetailSelect,
     });
@@ -360,6 +374,19 @@ export class SimulationsService {
     }
     if (session.status === SimulationSessionStatus.EXPIRED) {
       throw new GoneException('SIMULATION_EXPIRED');
+    }
+    if (
+      session.status === SimulationSessionStatus.ACTIVE &&
+      this.transitionService
+    ) {
+      await this.transitionService.resolveDueTransitions(session.id);
+      session = await this.prisma.simulationSession.findFirst({
+        where: { id: sessionId, userId },
+        select: simulationDetailSelect,
+      });
+      if (!session) {
+        throw new NotFoundException('SIMULATION_NOT_FOUND');
+      }
     }
 
     const scenario = this.readScenarioSnapshot(session.scenarioSnapshot);
