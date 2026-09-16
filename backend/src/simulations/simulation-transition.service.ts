@@ -47,6 +47,14 @@ export class SimulationTransitionService {
     return this.resolveInTransaction(tx, sessionId, true);
   }
 
+  /** Allows another simulation action to settle timed state atomically first. */
+  async resolveDueTransitionsInTransaction(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+  ): Promise<SimulationTransitionResult> {
+    return this.resolveInTransaction(tx, sessionId, false);
+  }
+
   private async resolveInTransaction(
     tx: Prisma.TransactionClient,
     sessionId: string,

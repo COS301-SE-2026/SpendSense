@@ -13,6 +13,7 @@ import {
   SimulationEventStatus,
   SimulationObligationStatus,
   SimulationPresentationHold,
+  SimulationScoreSourceType,
   SimulationSessionStatus,
 } from '@prisma/client';
 import { createHash } from 'node:crypto';
@@ -219,6 +220,20 @@ type SetupResponse = {
 
 type AdvanceResponse = SimulationDetailResponse & { replayed: boolean };
 
+type PaymentResponse = SimulationDetailResponse & {
+  payment: {
+    obligationId: string;
+    currentUsed: string;
+    savingsUsed: string;
+    pointsAwarded: string;
+  };
+  replayed: boolean;
+};
+
+type StoredPaymentAction = StoredCreationAction & {
+  actionType: SimulationActionType;
+};
+
 type AdvanceableSession = {
   id: string;
   status: SimulationSessionStatus;
@@ -240,6 +255,24 @@ const advanceableSessionSelect = {
   events: {
     where: { status: SimulationEventStatus.REVEALED },
     select: { id: true },
+  },
+} satisfies Prisma.SimulationSessionSelect;
+
+const paymentSessionSelect = {
+  id: true,
+  status: true,
+  currentDay: true,
+  currentBalance: true,
+  savingsBalance: true,
+  presentationHold: true,
+  obligations: {
+    select: {
+      id: true,
+      name: true,
+      amountDue: true,
+      status: true,
+      consequenceSnapshot: true,
+    },
   },
 } satisfies Prisma.SimulationSessionSelect;
 
@@ -494,6 +527,248 @@ export class SimulationsService {
       }
       throw new ConflictException('SIMULATION_ADVANCE_CONFLICT');
     }
+  }
+
+  async payObligation(
+    userId: string,
+    sessionId: string,
+    obligationId: string,
+    idempotencyKey: string | undefined,
+  ): Promise<PaymentResponse> {
+    if (!isUUID(sessionId)) {
+      throw new BadRequestException('SIMULATION_ID_INVALID');
+    }
+    if (!isUUID(obligationId)) {
+      throw new BadRequestException('SIMULATION_OBLIGATION_ID_INVALID');
+    }
+    this.validateIdempotencyKey(idempotencyKey);
+    const payloadHash = this.hashPayload({ obligationId });
+
+    const ownedSession = await this.prisma.simulationSession.findFirst({
+      where: { id: sessionId, userId },
+      select: { id: true },
+    });
+    if (!ownedSession) {
+      throw new NotFoundException('SIMULATION_NOT_FOUND');
+    }
+    const priorAction = await this.findPaymentAction(sessionId, idempotencyKey);
+    if (priorAction) {
+      return this.replayPayment(priorAction, payloadHash);
+    }
+    if (!this.transitionService) {
+      throw new ServiceUnavailableException('SIMULATION_PAYMENT_UNAVAILABLE');
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await this.transitionService!.resolveDueTransitionsInTransaction(
+          tx,
+          sessionId,
+        );
+        const session = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: paymentSessionSelect,
+        });
+        const obligation = session.obligations.find(
+          (candidate) => candidate.id === obligationId,
+        );
+        this.assertPaymentAllowed(session, obligation);
+        const payment = this.calculatePayment(session, obligation);
+        if (payment.remainingAmount !== '0.00') {
+          throw new ConflictException({
+            message: 'INSUFFICIENT_SIMULATION_FUNDS',
+            currentBalance: this.money(session.currentBalance),
+            savingsBalance: this.money(session.savingsBalance),
+            remainingAmount: payment.remainingAmount,
+          });
+        }
+
+        const now = new Date();
+        await tx.simulationObligation.update({
+          where: { id: obligation.id },
+          data: {
+            status: SimulationObligationStatus.PAID,
+            paidAt: now,
+            currentUsed: payment.currentUsed,
+            savingsUsed: payment.savingsUsed,
+            pointsAwarded: payment.pointsAwarded,
+          },
+        });
+        await tx.simulationScoreEntry.create({
+          data: {
+            sessionId,
+            sourceType: SimulationScoreSourceType.OBLIGATION_PAYMENT,
+            sourceId: obligation.id,
+            simulatedDay: session.currentDay,
+            pointsDelta: payment.pointsAwarded,
+            reason:
+              payment.savingsUsed === '0.00'
+                ? `Paid on time: ${obligation.name}`
+                : `Paid using Savings: ${obligation.name}`,
+            calculationData: {
+              amountDue: payment.amountDue,
+              currentUsed: payment.currentUsed,
+              savingsUsed: payment.savingsUsed,
+              basePoints: payment.basePoints,
+              savingsPointsFactor: payment.savingsPointsFactor,
+            },
+          },
+        });
+        await tx.simulationSession.update({
+          where: { id: sessionId },
+          data: {
+            currentBalance: payment.currentBalance,
+            savingsBalance: payment.savingsBalance,
+            score: { increment: payment.pointsAwarded },
+            nextDayAt: null,
+            presentationHold: SimulationPresentationHold.PAYMENT_RESULT,
+          },
+        });
+
+        const refreshedSession = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: simulationDetailSelect,
+        });
+        const response: PaymentResponse = {
+          ...this.toSimulationDetailResponse(refreshedSession),
+          payment: {
+            obligationId: obligation.id,
+            currentUsed: payment.currentUsed,
+            savingsUsed: payment.savingsUsed,
+            pointsAwarded: payment.pointsAwarded,
+          },
+          replayed: false,
+        };
+        await tx.simulationAction.create({
+          data: {
+            sessionId,
+            actionType: SimulationActionType.PAY_OBLIGATION,
+            idempotencyKey,
+            payloadHash,
+            responseSnapshot: response,
+          },
+        });
+        return response;
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+      const racedAction = await this.findPaymentAction(
+        sessionId,
+        idempotencyKey,
+      );
+      if (racedAction) {
+        return this.replayPayment(racedAction, payloadHash);
+      }
+      throw new ConflictException('SIMULATION_PAYMENT_CONFLICT');
+    }
+  }
+
+  private assertPaymentAllowed(
+    session: {
+      status: SimulationSessionStatus;
+      presentationHold: SimulationPresentationHold;
+    },
+    obligation:
+      | {
+          id: string;
+          name: string;
+          amountDue: unknown;
+          status: SimulationObligationStatus;
+          consequenceSnapshot: unknown;
+        }
+      | undefined,
+  ): asserts obligation is {
+    id: string;
+    name: string;
+    amountDue: unknown;
+    status: SimulationObligationStatus;
+    consequenceSnapshot: unknown;
+  } {
+    if (session.status !== SimulationSessionStatus.ACTIVE) {
+      throw new ConflictException('SIMULATION_NOT_ACTIVE');
+    }
+    if (session.presentationHold !== SimulationPresentationHold.NONE) {
+      throw new ConflictException('SIMULATION_ACTION_PENDING');
+    }
+    if (
+      !obligation ||
+      obligation.status !== SimulationObligationStatus.PAYABLE
+    ) {
+      throw new ConflictException('SIMULATION_OBLIGATION_NOT_PAYABLE');
+    }
+  }
+
+  private calculatePayment(
+    session: { currentBalance: unknown; savingsBalance: unknown },
+    obligation: {
+      amountDue: unknown;
+      consequenceSnapshot: unknown;
+    },
+  ): {
+    amountDue: string;
+    currentUsed: string;
+    savingsUsed: string;
+    currentBalance: string;
+    savingsBalance: string;
+    remainingAmount: string;
+    pointsAwarded: string;
+    basePoints: string;
+    savingsPointsFactor: string;
+  } {
+    const amountDue = this.money(obligation.amountDue);
+    const currentBalance = this.money(session.currentBalance);
+    const savingsBalance = this.money(session.savingsBalance);
+    const amountDueCents = this.moneyToCents(amountDue);
+    const currentBalanceCents = this.moneyToCents(currentBalance);
+    const savingsBalanceCents = this.moneyToCents(savingsBalance);
+    const consequence = this.record(obligation.consequenceSnapshot);
+    const basePoints = this.string(consequence?.basePoints);
+    const savingsPointsFactor = this.string(consequence?.savingsPointsFactor);
+    const basePointsCents = this.moneyToCents(basePoints);
+    const savingsFactorCents = this.moneyToCents(savingsPointsFactor);
+    if (
+      amountDueCents === null ||
+      amountDueCents <= 0 ||
+      currentBalanceCents === null ||
+      currentBalanceCents < 0 ||
+      savingsBalanceCents === null ||
+      savingsBalanceCents < 0 ||
+      !basePoints ||
+      basePointsCents === null ||
+      basePointsCents < 0 ||
+      !savingsPointsFactor ||
+      savingsFactorCents === null ||
+      savingsFactorCents < 0 ||
+      savingsFactorCents > 100
+    ) {
+      throw new ServiceUnavailableException('SIMULATION_PAYMENT_UNAVAILABLE');
+    }
+
+    const currentUsedCents = Math.min(currentBalanceCents, amountDueCents);
+    const savingsUsedCents = Math.min(
+      savingsBalanceCents,
+      amountDueCents - currentUsedCents,
+    );
+    const remainingCents = amountDueCents - currentUsedCents - savingsUsedCents;
+    const pointsMultiplierCents =
+      savingsUsedCents > 0 ? savingsFactorCents : 100;
+    const pointsAwardedCents = Math.round(
+      (basePointsCents * pointsMultiplierCents) / 100,
+    );
+
+    return {
+      amountDue,
+      currentUsed: this.centsToMoney(currentUsedCents),
+      savingsUsed: this.centsToMoney(savingsUsedCents),
+      currentBalance: this.centsToMoney(currentBalanceCents - currentUsedCents),
+      savingsBalance: this.centsToMoney(savingsBalanceCents - savingsUsedCents),
+      remainingAmount: this.centsToMoney(remainingCents),
+      pointsAwarded: this.centsToMoney(pointsAwardedCents),
+      basePoints,
+      savingsPointsFactor,
+    };
   }
 
   private toSimulationDetailResponse(session: {
@@ -787,6 +1062,32 @@ export class SimulationsService {
       throw new ConflictException('IDEMPOTENCY_KEY_REUSED');
     }
     if (!this.isAdvanceResponse(action.responseSnapshot)) {
+      throw new ServiceUnavailableException('SIMULATION_REPLAY_UNAVAILABLE');
+    }
+    return { ...action.responseSnapshot, replayed: true };
+  }
+
+  private async findPaymentAction(
+    sessionId: string,
+    idempotencyKey: string,
+  ): Promise<StoredPaymentAction | null> {
+    return this.prisma.simulationAction.findFirst({
+      where: { sessionId, idempotencyKey },
+      select: { actionType: true, payloadHash: true, responseSnapshot: true },
+    });
+  }
+
+  private replayPayment(
+    action: StoredPaymentAction,
+    payloadHash: string,
+  ): PaymentResponse {
+    if (
+      action.actionType !== SimulationActionType.PAY_OBLIGATION ||
+      action.payloadHash !== payloadHash
+    ) {
+      throw new ConflictException('IDEMPOTENCY_KEY_REUSED');
+    }
+    if (!this.isPaymentResponse(action.responseSnapshot)) {
       throw new ServiceUnavailableException('SIMULATION_REPLAY_UNAVAILABLE');
     }
     return { ...action.responseSnapshot, replayed: true };
@@ -1088,12 +1389,18 @@ export class SimulationsService {
     }
     if (
       session.status === SimulationSessionStatus.ACTIVE &&
-      !session.timedMode &&
       session.presentationHold === SimulationPresentationHold.NONE &&
-      !session.obligations.some(
+      session.obligations.some(
         (obligation) =>
           obligation.status === SimulationObligationStatus.PAYABLE,
-      ) &&
+      )
+    ) {
+      return ['PAY_OBLIGATION'];
+    }
+    if (
+      session.status === SimulationSessionStatus.ACTIVE &&
+      !session.timedMode &&
+      session.presentationHold === SimulationPresentationHold.NONE &&
       session.events.length === 0
     ) {
       return ['ADVANCE_DAY'];
@@ -1195,6 +1502,17 @@ export class SimulationsService {
       value !== null &&
       'session' in value &&
       'obligations' in value &&
+      'replayed' in value
+    );
+  }
+
+  private isPaymentResponse(value: unknown): value is PaymentResponse {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'session' in value &&
+      'obligations' in value &&
+      'payment' in value &&
       'replayed' in value
     );
   }

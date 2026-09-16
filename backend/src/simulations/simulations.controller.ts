@@ -183,4 +183,41 @@ export class SimulationsController {
       idempotencyKey,
     );
   }
+
+  @Post(':sessionId/obligations/:obligationId/pay')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Pay one currently payable fictional obligation in full',
+    description:
+      'Uses fictional Current funds first and fictional Savings only for the remainder. It never creates a partial payment or changes real financial records.',
+  })
+  @ApiCreatedResponse({
+    description:
+      'The fictional payment result and refreshed safe session state, wrapped by the global response envelope.',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'A session ID, obligation ID, or Idempotency-Key header is invalid.',
+  })
+  @ApiConflictResponse({
+    description:
+      'The session is not at a payable-obligation hold, fictional funds are insufficient, or the idempotency key was reused.',
+  })
+  @ApiNotFoundResponse({
+    description: 'The simulation does not exist or is not owned by the caller.',
+  })
+  async paySimulationObligation(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('sessionId') sessionId: string,
+    @Param('obligationId') obligationId: string,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.simulationsService.payObligation(
+      user.id,
+      sessionId,
+      obligationId,
+      idempotencyKey,
+    );
+  }
 }
