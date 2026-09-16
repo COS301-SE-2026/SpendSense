@@ -5,19 +5,15 @@ export default function ReceiptScanPage(){
     const navigate=useNavigate()
     const uploadInputRef=useRef<HTMLInputElement>(null)
     const cameraInputRef=useRef<HTMLInputElement>(null)
-    const [image,setImage]=useState<File|null>(null)
+    const previewUrlRef=useRef<string|null>(null)
     const [previewUrl,setPreviewUrl]=useState<string|null>(null)
     const [error,setError]=useState<string|null>(null)
 
     useEffect(()=>{
-        if(!image){
-            setPreviewUrl(null)
-            return
+        return()=>{
+            if(previewUrlRef.current)URL.revokeObjectURL(previewUrlRef.current)
         }
-        const url=URL.createObjectURL(image)
-        setPreviewUrl(url)
-        return()=>URL.revokeObjectURL(url)
-    },[image])
+    },[])
 
     function selectImage(file:File|undefined){
         if(!file)return
@@ -25,8 +21,11 @@ export default function ReceiptScanPage(){
             setError('Please choose a JPEG or PNG image.')
             return
         }
+        if(previewUrlRef.current)URL.revokeObjectURL(previewUrlRef.current)
+        const url=URL.createObjectURL(file)
+        previewUrlRef.current=url
+        setPreviewUrl(url)
         setError(null)
-        setImage(file)
     }
 
     function handleUpload(event:React.ChangeEvent<HTMLInputElement>){
@@ -35,7 +34,9 @@ export default function ReceiptScanPage(){
     }
 
     function removeImage(){
-        setImage(null)
+        if(previewUrlRef.current)URL.revokeObjectURL(previewUrlRef.current)
+        previewUrlRef.current=null
+        setPreviewUrl(null)
         setError(null)
     }
 

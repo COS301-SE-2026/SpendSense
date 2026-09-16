@@ -18,6 +18,10 @@ vi.mock('react-router-dom',async()=>{
 describe('ReceiptScanPage',()=>{
     beforeEach(()=>{
         navigate.mockClear()
+        vi.stubGlobal('URL',{
+            createObjectURL:vi.fn(()=>'blob:receipt-preview'),
+            revokeObjectURL:vi.fn(),
+        })
     })
     it('renders the receipt scan page',()=>{
         render(
@@ -37,13 +41,50 @@ describe('ReceiptScanPage',()=>{
         expect(screen.getByRole('button',{name:'Take photo'})).toBeInTheDocument()
         expect(screen.getByRole('button',{name:'Upload image'})).toBeInTheDocument()
     })
-    it('shows the supported image formats',()=>{
+    it('shows a preview after selecting a jpeg',()=>{
         render(
             <MemoryRouter>
                 <ReceiptScanPage/>
             </MemoryRouter>
         )
-        expect(screen.getByText(/JPEG and PNG images are supported/i)).toBeInTheDocument()
+        const file=new File(['receipt'],'receipt.jpg',{type:'image/jpeg'})
+        fireEvent.change(screen.getByLabelText('Upload receipt image'),{target:{files:[file]}})
+        expect(screen.getByAltText('Receipt preview')).toBeInTheDocument()
+        expect(screen.getByRole('button',{name:'Replace image'})).toBeInTheDocument()
+        expect(screen.getByRole('button',{name:'Remove image'})).toBeInTheDocument()
+    })
+    it('shows a preview after selecting a png',()=>{
+        render(
+            <MemoryRouter>
+                <ReceiptScanPage/>
+            </MemoryRouter>
+        )
+        const file=new File(['receipt'],'receipt.png',{type:'image/png'})
+        fireEvent.change(screen.getByLabelText('Upload receipt image'),{target:{files:[file]}})
+        expect(screen.getByAltText('Receipt preview')).toBeInTheDocument()
+    })
+    it('rejects unsupported image formats',()=>{
+        render(
+            <MemoryRouter>
+                <ReceiptScanPage/>
+            </MemoryRouter>
+        )
+        const file=new File(['receipt'],'receipt.gif',{type:'image/gif'})
+        fireEvent.change(screen.getByLabelText('Upload receipt image'),{target:{files:[file]}})
+        expect(screen.getByRole('alert')).toHaveTextContent('Please choose a JPEG or PNG image.')
+        expect(screen.queryByAltText('Receipt preview')).not.toBeInTheDocument()
+    })
+    it('removes a selected image',()=>{
+        render(
+            <MemoryRouter>
+                <ReceiptScanPage/>
+            </MemoryRouter>
+        )
+        const file=new File(['receipt'],'receipt.jpg',{type:'image/jpeg'})
+        fireEvent.change(screen.getByLabelText('Upload receipt image'),{target:{files:[file]}})
+        fireEvent.click(screen.getByRole('button',{name:'Remove image'}))
+        expect(screen.queryByAltText('Receipt preview')).not.toBeInTheDocument()
+        expect(screen.getByRole('button',{name:'Upload image'})).toBeInTheDocument()
     })
     it('navigates back when the back button is selected',()=>{
         render(
@@ -53,13 +94,5 @@ describe('ReceiptScanPage',()=>{
         )
         fireEvent.click(screen.getByRole('button',{name:'Go back'}))
         expect(navigate).toHaveBeenCalledWith(-1)
-    })
-    it('explains that the receipt is previewed before processing',()=>{
-        render(
-            <MemoryRouter>
-                <ReceiptScanPage/>
-            </MemoryRouter>
-        )
-        expect(screen.getByText(/You will preview the receipt first/i)).toBeInTheDocument()
     })
 })
