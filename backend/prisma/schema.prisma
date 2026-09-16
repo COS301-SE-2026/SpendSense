@@ -216,6 +216,13 @@ enum BadgeCriteriaType {
   KNOWLEDGE_STREAK_COUNT
 }
 
+enum GuidanceWalkthroughStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
 model User {
   id                     String                  @id @default(uuid())
   supabaseAuthId         String                  @unique
@@ -231,6 +238,7 @@ model User {
   notificationPreference NotificationPreference?
   creditProfile          CreditProfile?
   gamificationProfile    GamificationProfile?
+  guidanceState          GuidanceState?
   obligations            FinancialObligation[]
   paymentOccurrences     PaymentOccurrence[]
   paymentRecords         PaymentRecord[]
@@ -263,6 +271,21 @@ model UserPreference {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GuidanceState {
+  id                    String                    @id @default(uuid())
+  userId                String                    @unique
+  tipsEnabled           Boolean                   @default(true)
+  dailyExpansionEnabled Boolean                   @default(true)
+  walkthroughStatus     GuidanceWalkthroughStatus @default(NOT_STARTED)
+  walkthroughStep       Int                       @default(0)
+  dismissedTipIds       Json                      @default("[]")
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  user                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([updatedAt])
 }
 
 model NotificationPreference {
