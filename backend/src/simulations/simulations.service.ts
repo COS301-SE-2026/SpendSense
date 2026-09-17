@@ -21,6 +21,7 @@ import { isUUID } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSimulationDto } from './dto/create-simulation.dto';
 import { SetupSimulationDto } from './dto/setup-simulation.dto';
+import { ResolveSimulationEventDto } from './dto/resolve-simulation-event.dto';
 import { SimulationTransitionService } from './simulation-transition.service';
 import {
   buildSimulationScenario,
@@ -234,6 +235,45 @@ type StoredPaymentAction = StoredCreationAction & {
   actionType: SimulationActionType;
 };
 
+type StoredEventResolutionAction = StoredCreationAction & {
+  actionType: SimulationActionType;
+};
+
+type EventResolutionOption = {
+  id: string;
+  label: string;
+  immediateCost: string;
+  feeOrDebt: string;
+  scoreDelta: string;
+  explanation: string;
+  introducedObligation: {
+    templateCode: string;
+    name: string;
+    category: string;
+    amountDue: string;
+    dueDay: number;
+    basePoints: string;
+    savingsPointsFactor: string;
+  } | null;
+};
+
+type EventResolutionResponse = SimulationDetailResponse & {
+  event: {
+    id: string;
+    optionId: string;
+    label: string;
+    explanation: string;
+    immediateCost: string;
+    feeOrDebt: string;
+    currentUsed: string;
+    savingsUsed: string;
+    uncoveredAmount: string;
+    pointsAwarded: string;
+    introducedObligationId: string | null;
+  };
+  replayed: boolean;
+};
+
 type AdvanceableSession = {
   id: string;
   status: SimulationSessionStatus;
@@ -272,6 +312,24 @@ const paymentSessionSelect = {
       amountDue: true,
       status: true,
       consequenceSnapshot: true,
+    },
+  },
+} satisfies Prisma.SimulationSessionSelect;
+
+const eventResolutionSessionSelect = {
+  id: true,
+  status: true,
+  timedMode: true,
+  currentDay: true,
+  currentBalance: true,
+  savingsBalance: true,
+  presentationHold: true,
+  events: {
+    select: {
+      id: true,
+      status: true,
+      eventSnapshot: true,
+      decisionExpiresAt: true,
     },
   },
 } satisfies Prisma.SimulationSessionSelect;
@@ -663,6 +721,329 @@ export class SimulationsService {
       }
       throw new ConflictException('SIMULATION_PAYMENT_CONFLICT');
     }
+  }
+
+  async resolveEvent(
+    userId: string,
+    sessionId: string,
+    eventId: string,
+    dto: ResolveSimulationEventDto,
+    idempotencyKey: string | undefined,
+  ): Promise<EventResolutionResponse> {
+    if (!isUUID(sessionId)) {
+      throw new BadRequestException('SIMULATION_ID_INVALID');
+    }
+    if (!isUUID(eventId)) {
+      throw new BadRequestException('SIMULATION_EVENT_ID_INVALID');
+    }
+    this.validateIdempotencyKey(idempotencyKey);
+    const payloadHash = this.hashPayload({ eventId, optionId: dto.optionId });
+
+    const ownedSession = await this.prisma.simulationSession.findFirst({
+      where: { id: sessionId, userId },
+      select: { id: true },
+    });
+    if (!ownedSession) {
+      throw new NotFoundException('SIMULATION_NOT_FOUND');
+    }
+    const priorAction = await this.findEventResolutionAction(
+      sessionId,
+      idempotencyKey,
+    );
+    if (priorAction) {
+      return this.replayEventResolution(priorAction, payloadHash);
+    }
+    if (!this.transitionService) {
+      throw new ServiceUnavailableException('SIMULATION_EVENT_UNAVAILABLE');
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await this.transitionService!.resolveDueTransitionsInTransaction(
+          tx,
+          sessionId,
+        );
+        const session = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: eventResolutionSessionSelect,
+        });
+        const event = session.events.find(
+          (candidate) => candidate.id === eventId,
+        );
+        this.assertEventResolutionAllowed(session, event);
+        const option = this.readEventResolutionOption(
+          event.eventSnapshot,
+          dto.optionId,
+        );
+        const effect = this.calculateEventEffect(session, option);
+        const now = new Date();
+
+        await tx.simulationEvent.update({
+          where: { id: event.id },
+          data: {
+            status: SimulationEventStatus.RESOLVED,
+            selectedOptionId: option.id,
+            resolvedAt: now,
+            resolutionSnapshot: {
+              optionId: option.id,
+              immediateCost: option.immediateCost,
+              feeOrDebt: option.feeOrDebt,
+              currentUsed: effect.currentUsed,
+              savingsUsed: effect.savingsUsed,
+              uncoveredAmount: effect.uncoveredAmount,
+              scoreDelta: option.scoreDelta,
+            },
+          },
+        });
+
+        const introducedObligation = option.introducedObligation
+          ? await tx.simulationObligation.create({
+              data: {
+                sessionId,
+                introducedByEventId: event.id,
+                templateCode: option.introducedObligation.templateCode,
+                name: option.introducedObligation.name,
+                category: option.introducedObligation.category,
+                amountDue: option.introducedObligation.amountDue,
+                dueDay: option.introducedObligation.dueDay,
+                consequenceSnapshot: {
+                  basePoints: option.introducedObligation.basePoints,
+                  savingsPointsFactor:
+                    option.introducedObligation.savingsPointsFactor,
+                },
+              },
+              select: { id: true },
+            })
+          : null;
+
+        await tx.simulationScoreEntry.create({
+          data: {
+            sessionId,
+            sourceType: SimulationScoreSourceType.EVENT_DECISION,
+            sourceId: event.id,
+            simulatedDay: session.currentDay,
+            pointsDelta: option.scoreDelta,
+            reason: `Event decision: ${option.label}`,
+            calculationData: {
+              optionId: option.id,
+              immediateCost: option.immediateCost,
+              feeOrDebt: option.feeOrDebt,
+              currentUsed: effect.currentUsed,
+              savingsUsed: effect.savingsUsed,
+              uncoveredAmount: effect.uncoveredAmount,
+            },
+          },
+        });
+        await tx.simulationSession.update({
+          where: { id: sessionId },
+          data: {
+            currentBalance: effect.currentBalance,
+            savingsBalance: effect.savingsBalance,
+            score: { increment: option.scoreDelta },
+            nextDayAt: null,
+            presentationHold: SimulationPresentationHold.EVENT_RESULT,
+          },
+        });
+
+        const refreshedSession = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: simulationDetailSelect,
+        });
+        const response: EventResolutionResponse = {
+          ...this.toSimulationDetailResponse(refreshedSession),
+          event: {
+            id: event.id,
+            optionId: option.id,
+            label: option.label,
+            explanation: option.explanation,
+            immediateCost: option.immediateCost,
+            feeOrDebt: option.feeOrDebt,
+            currentUsed: effect.currentUsed,
+            savingsUsed: effect.savingsUsed,
+            uncoveredAmount: effect.uncoveredAmount,
+            pointsAwarded: option.scoreDelta,
+            introducedObligationId: introducedObligation?.id ?? null,
+          },
+          replayed: false,
+        };
+        await tx.simulationAction.create({
+          data: {
+            sessionId,
+            actionType: SimulationActionType.RESOLVE_EVENT,
+            idempotencyKey,
+            payloadHash,
+            responseSnapshot: response,
+          },
+        });
+        return response;
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+      const racedAction = await this.findEventResolutionAction(
+        sessionId,
+        idempotencyKey,
+      );
+      if (racedAction) {
+        return this.replayEventResolution(racedAction, payloadHash);
+      }
+      throw new ConflictException('SIMULATION_EVENT_RESOLUTION_CONFLICT');
+    }
+  }
+
+  private assertEventResolutionAllowed(
+    session: {
+      status: SimulationSessionStatus;
+      presentationHold: SimulationPresentationHold;
+    },
+    event:
+      | {
+          id: string;
+          status: SimulationEventStatus;
+          eventSnapshot: unknown;
+          decisionExpiresAt: Date | null;
+        }
+      | undefined,
+  ): asserts event is {
+    id: string;
+    status: SimulationEventStatus;
+    eventSnapshot: unknown;
+    decisionExpiresAt: Date | null;
+  } {
+    if (event?.status === SimulationEventStatus.EXPIRED) {
+      throw new ConflictException('EVENT_DECISION_EXPIRED');
+    }
+    if (session.status !== SimulationSessionStatus.ACTIVE) {
+      throw new ConflictException('SIMULATION_NOT_ACTIVE');
+    }
+    if (!event || event.status !== SimulationEventStatus.REVEALED) {
+      throw new ConflictException('SIMULATION_EVENT_NOT_REVEALED');
+    }
+    if (session.presentationHold !== SimulationPresentationHold.EVENT_REVEAL) {
+      throw new ConflictException('SIMULATION_ACTION_PENDING');
+    }
+  }
+
+  private readEventResolutionOption(
+    eventSnapshot: unknown,
+    optionId: string,
+  ): EventResolutionOption {
+    const snapshot = this.record(eventSnapshot);
+    if (!snapshot || !Array.isArray(snapshot.options)) {
+      throw new ServiceUnavailableException(
+        'SIMULATION_EVENT_CONTENT_UNAVAILABLE',
+      );
+    }
+    const options: unknown[] = snapshot.options;
+    const candidate = options.find(
+      (item: unknown) => this.record(item)?.id === optionId,
+    );
+    if (!candidate) {
+      throw new BadRequestException('SIMULATION_EVENT_OPTION_INVALID');
+    }
+    const option = this.record(candidate);
+    const id = this.string(option?.id);
+    const label = this.string(option?.label);
+    const immediateCost = this.normalizedMoney(option?.immediateCost);
+    const feeOrDebt = this.normalizedMoney(option?.feeOrDebt);
+    const scoreDelta = this.normalizedSignedMoney(option?.scoreDelta);
+    const explanation = this.string(option?.explanation);
+    if (
+      !id ||
+      !label ||
+      !immediateCost ||
+      !feeOrDebt ||
+      !scoreDelta ||
+      !explanation
+    ) {
+      throw new ServiceUnavailableException(
+        'SIMULATION_EVENT_CONTENT_UNAVAILABLE',
+      );
+    }
+
+    const introduced = this.record(option?.introducedObligation);
+    const templateCode = this.string(introduced?.templateCode);
+    const name = this.string(introduced?.name);
+    const category = this.string(introduced?.category);
+    const amountDue = this.normalizedMoney(introduced?.amountDue);
+    const dueDay = introduced?.dueDay;
+    const basePoints = this.normalizedMoney(introduced?.basePoints);
+    const savingsPointsFactor = this.normalizedMoney(
+      introduced?.savingsPointsFactor,
+    );
+    const hasIntroducedObligation = introduced !== null;
+    if (
+      hasIntroducedObligation &&
+      (!templateCode ||
+        !name ||
+        !category ||
+        !amountDue ||
+        typeof dueDay !== 'number' ||
+        !Number.isInteger(dueDay) ||
+        !basePoints ||
+        !savingsPointsFactor)
+    ) {
+      throw new ServiceUnavailableException(
+        'SIMULATION_EVENT_CONTENT_UNAVAILABLE',
+      );
+    }
+
+    return {
+      id,
+      label,
+      immediateCost,
+      feeOrDebt,
+      scoreDelta,
+      explanation,
+      introducedObligation: hasIntroducedObligation
+        ? {
+            templateCode: templateCode!,
+            name: name!,
+            category: category!,
+            amountDue: amountDue!,
+            dueDay: dueDay as number,
+            basePoints: basePoints!,
+            savingsPointsFactor: savingsPointsFactor!,
+          }
+        : null,
+    };
+  }
+
+  private calculateEventEffect(
+    session: { currentBalance: unknown; savingsBalance: unknown },
+    option: EventResolutionOption,
+  ): {
+    currentBalance: string;
+    savingsBalance: string;
+    currentUsed: string;
+    savingsUsed: string;
+    uncoveredAmount: string;
+  } {
+    const currentBalance = this.normalizedMoney(session.currentBalance);
+    const savingsBalance = this.normalizedMoney(session.savingsBalance);
+    const currentCents = this.moneyToCents(currentBalance);
+    const savingsCents = this.moneyToCents(savingsBalance);
+    const immediateCostCents = this.moneyToCents(option.immediateCost);
+    const feeOrDebtCents = this.moneyToCents(option.feeOrDebt);
+    if (
+      currentCents === null ||
+      savingsCents === null ||
+      immediateCostCents === null ||
+      feeOrDebtCents === null
+    ) {
+      throw new ServiceUnavailableException('SIMULATION_EVENT_UNAVAILABLE');
+    }
+    const totalCost = immediateCostCents + feeOrDebtCents;
+    const currentUsed = Math.min(currentCents, totalCost);
+    const savingsUsed = Math.min(savingsCents, totalCost - currentUsed);
+    return {
+      currentBalance: this.centsToMoney(currentCents - currentUsed),
+      savingsBalance: this.centsToMoney(savingsCents - savingsUsed),
+      currentUsed: this.centsToMoney(currentUsed),
+      savingsUsed: this.centsToMoney(savingsUsed),
+      uncoveredAmount: this.centsToMoney(totalCost - currentUsed - savingsUsed),
+    };
   }
 
   private assertPaymentAllowed(
@@ -1093,6 +1474,32 @@ export class SimulationsService {
     return { ...action.responseSnapshot, replayed: true };
   }
 
+  private async findEventResolutionAction(
+    sessionId: string,
+    idempotencyKey: string,
+  ): Promise<StoredEventResolutionAction | null> {
+    return this.prisma.simulationAction.findFirst({
+      where: { sessionId, idempotencyKey },
+      select: { actionType: true, payloadHash: true, responseSnapshot: true },
+    });
+  }
+
+  private replayEventResolution(
+    action: StoredEventResolutionAction,
+    payloadHash: string,
+  ): EventResolutionResponse {
+    if (
+      action.actionType !== SimulationActionType.RESOLVE_EVENT ||
+      action.payloadHash !== payloadHash
+    ) {
+      throw new ConflictException('IDEMPOTENCY_KEY_REUSED');
+    }
+    if (!this.isEventResolutionResponse(action.responseSnapshot)) {
+      throw new ServiceUnavailableException('SIMULATION_REPLAY_UNAVAILABLE');
+    }
+    return { ...action.responseSnapshot, replayed: true };
+  }
+
   private resolveSetupAllocation(
     dto: SetupSimulationDto,
     scenario: ReadableScenarioSnapshot,
@@ -1389,6 +1796,13 @@ export class SimulationsService {
     }
     if (
       session.status === SimulationSessionStatus.ACTIVE &&
+      session.presentationHold === SimulationPresentationHold.EVENT_REVEAL &&
+      session.events.length === 1
+    ) {
+      return ['RESOLVE_EVENT'];
+    }
+    if (
+      session.status === SimulationSessionStatus.ACTIVE &&
       session.presentationHold === SimulationPresentationHold.NONE &&
       session.obligations.some(
         (obligation) =>
@@ -1463,6 +1877,36 @@ export class SimulationsService {
     return Number.isSafeInteger(parsed) ? parsed : null;
   }
 
+  private normalizedMoney(value: unknown): string | null {
+    const cents = this.moneyToCents(
+      typeof value === 'string' || typeof value === 'number'
+        ? String(value)
+        : value instanceof Prisma.Decimal
+          ? value.toString()
+          : null,
+    );
+    return cents === null ? null : this.centsToMoney(cents);
+  }
+
+  private normalizedSignedMoney(value: unknown): string | null {
+    const candidate =
+      typeof value === 'string' || typeof value === 'number'
+        ? String(value)
+        : value instanceof Prisma.Decimal
+          ? value.toString()
+          : null;
+    if (!candidate || !/^-?\d+\.\d{2}$/.test(candidate)) {
+      return null;
+    }
+    const sign = candidate.startsWith('-') ? -1 : 1;
+    const unsignedCents = this.moneyToCents(
+      sign < 0 ? candidate.slice(1) : candidate,
+    );
+    return unsignedCents === null
+      ? null
+      : this.centsToMoney(sign * unsignedCents);
+  }
+
   private centsToMoney(cents: number): string {
     return (cents / 100).toFixed(2);
   }
@@ -1513,6 +1957,19 @@ export class SimulationsService {
       'session' in value &&
       'obligations' in value &&
       'payment' in value &&
+      'replayed' in value
+    );
+  }
+
+  private isEventResolutionResponse(
+    value: unknown,
+  ): value is EventResolutionResponse {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'session' in value &&
+      'obligations' in value &&
+      'event' in value &&
       'replayed' in value
     );
   }

@@ -27,6 +27,7 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 import { UsersService } from '../users/users.service';
 import { CreateSimulationDto } from './dto/create-simulation.dto';
 import { SetupSimulationDto } from './dto/setup-simulation.dto';
+import { ResolveSimulationEventDto } from './dto/resolve-simulation-event.dto';
 import { SimulationsService } from './simulations.service';
 
 @ApiTags('simulations')
@@ -217,6 +218,45 @@ export class SimulationsController {
       user.id,
       sessionId,
       obligationId,
+      idempotencyKey,
+    );
+  }
+
+  @Post(':sessionId/events/:eventId/resolve')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Resolve one revealed fictional surprise event',
+    description:
+      'Applies exactly one persisted fictional event option. If a timed decision has expired, the server commits the authored expiry outcome instead.',
+  })
+  @ApiBody({ type: ResolveSimulationEventDto })
+  @ApiCreatedResponse({
+    description:
+      'The fictional event result and refreshed safe session state, wrapped by the global response envelope.',
+  })
+  @ApiBadRequestResponse({
+    description: 'A session ID, event ID, body, or Idempotency-Key is invalid.',
+  })
+  @ApiConflictResponse({
+    description:
+      'The event is not currently revealed, its timed decision expired, the session is not active, or the idempotency key was reused.',
+  })
+  @ApiNotFoundResponse({
+    description: 'The simulation does not exist or is not owned by the caller.',
+  })
+  async resolveSimulationEvent(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('sessionId') sessionId: string,
+    @Param('eventId') eventId: string,
+    @Body() dto: ResolveSimulationEventDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.simulationsService.resolveEvent(
+      user.id,
+      sessionId,
+      eventId,
+      dto,
       idempotencyKey,
     );
   }

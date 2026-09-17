@@ -501,7 +501,7 @@ describe('SimulationsService', () => {
     expect(JSON.stringify(result)).not.toContain(
       'Future event that must stay hidden',
     );
-    expect(result.allowedActions).toEqual([]);
+    expect(result.allowedActions).toEqual(['RESOLVE_EVENT']);
   });
 
   it('returns not found for a missing or foreign simulation', async () => {

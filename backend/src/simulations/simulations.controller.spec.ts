@@ -3,6 +3,7 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 import { UsersService } from '../users/users.service';
 import { CreateSimulationDto } from './dto/create-simulation.dto';
 import { SetupSimulationDto } from './dto/setup-simulation.dto';
+import { ResolveSimulationEventDto } from './dto/resolve-simulation-event.dto';
 import { SimulationsController } from './simulations.controller';
 import { SimulationsService } from './simulations.service';
 
@@ -16,6 +17,7 @@ describe('SimulationsController', () => {
     setupSession: jest.fn(),
     advanceSession: jest.fn(),
     payObligation: jest.fn(),
+    resolveEvent: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -168,6 +170,39 @@ describe('SimulationsController', () => {
       'user-1',
       sessionId,
       obligationId,
+      idempotencyKey,
+    );
+  });
+
+  it('finds the authenticated application user before resolving a fictional event', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'supabase-user-1',
+      email: 'player@example.com',
+    };
+    const sessionId = '00000000-0000-4000-8000-000000000050';
+    const eventId = '00000000-0000-4000-8000-000000000051';
+    const idempotencyKey = '00000000-0000-4000-8000-000000000052';
+    const dto: ResolveSimulationEventDto = { optionId: 'payment_plan' };
+    const response = { event: { id: eventId, optionId: dto.optionId } };
+    usersService.findOrCreateUser.mockResolvedValue({ id: 'user-1' });
+    simulationsService.resolveEvent.mockResolvedValue(response);
+
+    await expect(
+      controller.resolveSimulationEvent(
+        authUser,
+        sessionId,
+        eventId,
+        dto,
+        idempotencyKey,
+      ),
+    ).resolves.toEqual(response);
+
+    expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
+    expect(simulationsService.resolveEvent).toHaveBeenCalledWith(
+      'user-1',
+      sessionId,
+      eventId,
+      dto,
       idempotencyKey,
     );
   });
