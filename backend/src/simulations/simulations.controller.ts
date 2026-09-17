@@ -260,4 +260,38 @@ export class SimulationsController {
       idempotencyKey,
     );
   }
+
+  @Post(':sessionId/continue')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Acknowledge a fictional payment or event result',
+    description:
+      'Clears an owned fictional result hold and resumes only the timed game clock. It does not change balances, score, obligations, events, or real records.',
+  })
+  @ApiCreatedResponse({
+    description:
+      'The refreshed safe fictional session state, wrapped by the global response envelope.',
+  })
+  @ApiBadRequestResponse({
+    description: 'The session ID or Idempotency-Key header is invalid.',
+  })
+  @ApiConflictResponse({
+    description:
+      'The session is not active, has no payment/event result to acknowledge, or the idempotency key was reused.',
+  })
+  @ApiNotFoundResponse({
+    description: 'The simulation does not exist or is not owned by the caller.',
+  })
+  async continueSimulation(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('sessionId') sessionId: string,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.simulationsService.continueSession(
+      user.id,
+      sessionId,
+      idempotencyKey,
+    );
+  }
 }

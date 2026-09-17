@@ -239,6 +239,10 @@ type StoredEventResolutionAction = StoredCreationAction & {
   actionType: SimulationActionType;
 };
 
+type StoredContinueAction = StoredCreationAction & {
+  actionType: SimulationActionType;
+};
+
 type EventResolutionOption = {
   id: string;
   label: string;
@@ -273,6 +277,8 @@ type EventResolutionResponse = SimulationDetailResponse & {
   };
   replayed: boolean;
 };
+
+type ContinueResponse = SimulationDetailResponse & { replayed: boolean };
 
 type AdvanceableSession = {
   id: string;
@@ -332,6 +338,13 @@ const eventResolutionSessionSelect = {
       decisionExpiresAt: true,
     },
   },
+} satisfies Prisma.SimulationSessionSelect;
+
+const continueSessionSelect = {
+  id: true,
+  status: true,
+  timedMode: true,
+  presentationHold: true,
 } satisfies Prisma.SimulationSessionSelect;
 
 const TIMED_DAY_DURATION_MS = 15_000;
@@ -889,6 +902,126 @@ export class SimulationsService {
         return this.replayEventResolution(racedAction, payloadHash);
       }
       throw new ConflictException('SIMULATION_EVENT_RESOLUTION_CONFLICT');
+    }
+  }
+
+  async continueSession(
+    userId: string,
+    sessionId: string,
+    idempotencyKey: string | undefined,
+  ): Promise<ContinueResponse> {
+    if (!isUUID(sessionId)) {
+      throw new BadRequestException('SIMULATION_ID_INVALID');
+    }
+    this.validateIdempotencyKey(idempotencyKey);
+    const payloadHash = this.hashPayload({});
+
+    const ownedSession = await this.prisma.simulationSession.findFirst({
+      where: { id: sessionId, userId },
+      select: { id: true },
+    });
+    if (!ownedSession) {
+      throw new NotFoundException('SIMULATION_NOT_FOUND');
+    }
+    const priorAction = await this.findContinueAction(
+      sessionId,
+      idempotencyKey,
+    );
+    if (priorAction) {
+      return this.replayContinue(priorAction, payloadHash);
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const session = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: continueSessionSelect,
+        });
+        this.assertContinueAllowed(session);
+
+        const update = await tx.simulationSession.updateMany({
+          where: {
+            id: sessionId,
+            status: SimulationSessionStatus.ACTIVE,
+            presentationHold: {
+              in: [
+                SimulationPresentationHold.PAYMENT_RESULT,
+                SimulationPresentationHold.EVENT_RESULT,
+              ],
+            },
+          },
+          data: {
+            presentationHold: SimulationPresentationHold.NONE,
+            nextDayAt: session.timedMode
+              ? new Date(Date.now() + TIMED_DAY_DURATION_MS)
+              : null,
+          },
+        });
+        if (update.count === 0) {
+          const racedAction = await tx.simulationAction.findFirst({
+            where: {
+              sessionId,
+              actionType: SimulationActionType.CONTINUE,
+              idempotencyKey,
+            },
+            select: {
+              actionType: true,
+              payloadHash: true,
+              responseSnapshot: true,
+            },
+          });
+          if (racedAction) {
+            return this.replayContinue(racedAction, payloadHash);
+          }
+          throw new ConflictException('SIMULATION_CONTINUE_NOT_ALLOWED');
+        }
+
+        const refreshedSession = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: simulationDetailSelect,
+        });
+        const response: ContinueResponse = {
+          ...this.toSimulationDetailResponse(refreshedSession),
+          replayed: false,
+        };
+        await tx.simulationAction.create({
+          data: {
+            sessionId,
+            actionType: SimulationActionType.CONTINUE,
+            idempotencyKey,
+            payloadHash,
+            responseSnapshot: response,
+          },
+        });
+        return response;
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+      const racedAction = await this.findContinueAction(
+        sessionId,
+        idempotencyKey,
+      );
+      if (racedAction) {
+        return this.replayContinue(racedAction, payloadHash);
+      }
+      throw new ConflictException('SIMULATION_CONTINUE_CONFLICT');
+    }
+  }
+
+  private assertContinueAllowed(session: {
+    status: SimulationSessionStatus;
+    presentationHold: SimulationPresentationHold;
+  }): void {
+    if (session.status !== SimulationSessionStatus.ACTIVE) {
+      throw new ConflictException('SIMULATION_NOT_ACTIVE');
+    }
+    if (
+      session.presentationHold !== SimulationPresentationHold.PAYMENT_RESULT &&
+      session.presentationHold !== SimulationPresentationHold.EVENT_RESULT
+    ) {
+      throw new ConflictException('SIMULATION_CONTINUE_NOT_ALLOWED');
     }
   }
 
@@ -1500,6 +1633,32 @@ export class SimulationsService {
     return { ...action.responseSnapshot, replayed: true };
   }
 
+  private async findContinueAction(
+    sessionId: string,
+    idempotencyKey: string,
+  ): Promise<StoredContinueAction | null> {
+    return this.prisma.simulationAction.findFirst({
+      where: { sessionId, idempotencyKey },
+      select: { actionType: true, payloadHash: true, responseSnapshot: true },
+    });
+  }
+
+  private replayContinue(
+    action: StoredContinueAction,
+    payloadHash: string,
+  ): ContinueResponse {
+    if (
+      action.actionType !== SimulationActionType.CONTINUE ||
+      action.payloadHash !== payloadHash
+    ) {
+      throw new ConflictException('IDEMPOTENCY_KEY_REUSED');
+    }
+    if (!this.isContinueResponse(action.responseSnapshot)) {
+      throw new ServiceUnavailableException('SIMULATION_REPLAY_UNAVAILABLE');
+    }
+    return { ...action.responseSnapshot, replayed: true };
+  }
+
   private resolveSetupAllocation(
     dto: SetupSimulationDto,
     scenario: ReadableScenarioSnapshot,
@@ -1796,6 +1955,13 @@ export class SimulationsService {
     }
     if (
       session.status === SimulationSessionStatus.ACTIVE &&
+      (session.presentationHold === SimulationPresentationHold.PAYMENT_RESULT ||
+        session.presentationHold === SimulationPresentationHold.EVENT_RESULT)
+    ) {
+      return ['CONTINUE'];
+    }
+    if (
+      session.status === SimulationSessionStatus.ACTIVE &&
       session.presentationHold === SimulationPresentationHold.EVENT_REVEAL &&
       session.events.length === 1
     ) {
@@ -1970,6 +2136,16 @@ export class SimulationsService {
       'session' in value &&
       'obligations' in value &&
       'event' in value &&
+      'replayed' in value
+    );
+  }
+
+  private isContinueResponse(value: unknown): value is ContinueResponse {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'session' in value &&
+      'obligations' in value &&
       'replayed' in value
     );
   }

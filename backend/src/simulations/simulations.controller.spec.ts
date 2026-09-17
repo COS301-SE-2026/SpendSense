@@ -18,6 +18,7 @@ describe('SimulationsController', () => {
     advanceSession: jest.fn(),
     payObligation: jest.fn(),
     resolveEvent: jest.fn(),
+    continueSession: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -203,6 +204,29 @@ describe('SimulationsController', () => {
       sessionId,
       eventId,
       dto,
+      idempotencyKey,
+    );
+  });
+
+  it('finds the authenticated application user before continuing after a result', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'supabase-user-1',
+      email: 'player@example.com',
+    };
+    const sessionId = '00000000-0000-4000-8000-000000000060';
+    const idempotencyKey = '00000000-0000-4000-8000-000000000061';
+    const response = { session: { id: sessionId, pending: { type: 'NONE' } } };
+    usersService.findOrCreateUser.mockResolvedValue({ id: 'user-1' });
+    simulationsService.continueSession.mockResolvedValue(response);
+
+    await expect(
+      controller.continueSimulation(authUser, sessionId, idempotencyKey),
+    ).resolves.toEqual(response);
+
+    expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
+    expect(simulationsService.continueSession).toHaveBeenCalledWith(
+      'user-1',
+      sessionId,
       idempotencyKey,
     );
   });
