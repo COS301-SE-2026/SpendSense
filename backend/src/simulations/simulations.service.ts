@@ -22,6 +22,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSimulationDto } from './dto/create-simulation.dto';
 import { SetupSimulationDto } from './dto/setup-simulation.dto';
 import { ResolveSimulationEventDto } from './dto/resolve-simulation-event.dto';
+import { UpdateSimulationStatusDto } from './dto/update-simulation-status.dto';
 import { SimulationTransitionService } from './simulation-transition.service';
 import {
   buildSimulationScenario,
@@ -243,6 +244,10 @@ type StoredContinueAction = StoredCreationAction & {
   actionType: SimulationActionType;
 };
 
+type StoredStatusAction = StoredCreationAction & {
+  actionType: SimulationActionType;
+};
+
 type EventResolutionOption = {
   id: string;
   label: string;
@@ -279,6 +284,8 @@ type EventResolutionResponse = SimulationDetailResponse & {
 };
 
 type ContinueResponse = SimulationDetailResponse & { replayed: boolean };
+
+type PauseResponse = SimulationDetailResponse & { replayed: boolean };
 
 type AdvanceableSession = {
   id: string;
@@ -345,6 +352,18 @@ const continueSessionSelect = {
   status: true,
   timedMode: true,
   presentationHold: true,
+} satisfies Prisma.SimulationSessionSelect;
+
+const pauseSessionSelect = {
+  id: true,
+  status: true,
+  timedMode: true,
+  nextDayAt: true,
+  presentationHold: true,
+  events: {
+    where: { status: SimulationEventStatus.REVEALED },
+    select: { id: true, decisionExpiresAt: true },
+  },
 } satisfies Prisma.SimulationSessionSelect;
 
 const TIMED_DAY_DURATION_MS = 15_000;
@@ -1010,6 +1029,169 @@ export class SimulationsService {
     }
   }
 
+  async pauseSession(
+    userId: string,
+    sessionId: string,
+    dto: UpdateSimulationStatusDto,
+    idempotencyKey: string | undefined,
+  ): Promise<PauseResponse> {
+    if (!isUUID(sessionId)) {
+      throw new BadRequestException('SIMULATION_ID_INVALID');
+    }
+    this.validateIdempotencyKey(idempotencyKey);
+    if (dto.action !== 'pause') {
+      throw new BadRequestException('SIMULATION_STATUS_ACTION_INVALID');
+    }
+    const payloadHash = this.hashPayload({ action: dto.action });
+
+    const ownedSession = await this.prisma.simulationSession.findFirst({
+      where: { id: sessionId, userId },
+      select: { id: true },
+    });
+    if (!ownedSession) {
+      throw new NotFoundException('SIMULATION_NOT_FOUND');
+    }
+    const priorAction = await this.findStatusAction(sessionId, idempotencyKey);
+    if (priorAction) {
+      return this.replayPause(priorAction, payloadHash);
+    }
+    if (!this.transitionService) {
+      throw new ServiceUnavailableException('SIMULATION_PAUSE_UNAVAILABLE');
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await this.transitionService!.resolveDueTransitionsInTransaction(
+          tx,
+          sessionId,
+        );
+        const session = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: pauseSessionSelect,
+        });
+        this.assertPauseAllowed(session);
+        const now = new Date();
+        const deadline =
+          session.presentationHold === SimulationPresentationHold.EVENT_REVEAL
+            ? session.events[0]?.decisionExpiresAt
+            : session.nextDayAt;
+        const pausedDecisionSeconds = this.remainingWholeSeconds(
+          session.timedMode,
+          deadline,
+          now,
+        );
+        const update = await tx.simulationSession.updateMany({
+          where: {
+            id: sessionId,
+            status: SimulationSessionStatus.ACTIVE,
+            presentationHold: {
+              in: [
+                SimulationPresentationHold.NONE,
+                SimulationPresentationHold.EVENT_REVEAL,
+              ],
+            },
+          },
+          data: {
+            status: SimulationSessionStatus.PAUSED,
+            pausedAt: now,
+            pausedDecisionSeconds,
+            nextDayAt: null,
+          },
+        });
+        if (update.count === 0) {
+          const racedAction = await tx.simulationAction.findFirst({
+            where: {
+              sessionId,
+              actionType: SimulationActionType.CHANGE_STATUS,
+              idempotencyKey,
+            },
+            select: {
+              actionType: true,
+              payloadHash: true,
+              responseSnapshot: true,
+            },
+          });
+          if (racedAction) {
+            return this.replayPause(racedAction, payloadHash);
+          }
+          throw new ConflictException('SIMULATION_PAUSE_NOT_ALLOWED');
+        }
+        if (
+          session.presentationHold === SimulationPresentationHold.EVENT_REVEAL
+        ) {
+          await tx.simulationEvent.update({
+            where: { id: session.events[0].id },
+            data: { decisionExpiresAt: null },
+          });
+        }
+
+        const refreshedSession = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: simulationDetailSelect,
+        });
+        const response: PauseResponse = {
+          ...this.toSimulationDetailResponse(refreshedSession),
+          replayed: false,
+        };
+        await tx.simulationAction.create({
+          data: {
+            sessionId,
+            actionType: SimulationActionType.CHANGE_STATUS,
+            idempotencyKey,
+            payloadHash,
+            responseSnapshot: response,
+          },
+        });
+        return response;
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+      const racedAction = await this.findStatusAction(
+        sessionId,
+        idempotencyKey,
+      );
+      if (racedAction) {
+        return this.replayPause(racedAction, payloadHash);
+      }
+      throw new ConflictException('SIMULATION_PAUSE_CONFLICT');
+    }
+  }
+
+  private assertPauseAllowed(session: {
+    status: SimulationSessionStatus;
+    presentationHold: SimulationPresentationHold;
+    events: Array<{ id: string; decisionExpiresAt: Date | null }>;
+  }): void {
+    if (session.status !== SimulationSessionStatus.ACTIVE) {
+      throw new ConflictException('SIMULATION_NOT_ACTIVE');
+    }
+    if (
+      session.presentationHold !== SimulationPresentationHold.NONE &&
+      session.presentationHold !== SimulationPresentationHold.EVENT_REVEAL
+    ) {
+      throw new ConflictException('SIMULATION_PAUSE_NOT_ALLOWED');
+    }
+    if (
+      session.presentationHold === SimulationPresentationHold.EVENT_REVEAL &&
+      session.events.length !== 1
+    ) {
+      throw new ConflictException('SIMULATION_PAUSE_NOT_ALLOWED');
+    }
+  }
+
+  private remainingWholeSeconds(
+    timedMode: boolean,
+    deadline: Date | null | undefined,
+    now: Date,
+  ): number | null {
+    if (!timedMode || !deadline) {
+      return null;
+    }
+    return Math.max(0, Math.floor((deadline.getTime() - now.getTime()) / 1000));
+  }
+
   private assertContinueAllowed(session: {
     status: SimulationSessionStatus;
     presentationHold: SimulationPresentationHold;
@@ -1659,6 +1841,32 @@ export class SimulationsService {
     return { ...action.responseSnapshot, replayed: true };
   }
 
+  private async findStatusAction(
+    sessionId: string,
+    idempotencyKey: string,
+  ): Promise<StoredStatusAction | null> {
+    return this.prisma.simulationAction.findFirst({
+      where: { sessionId, idempotencyKey },
+      select: { actionType: true, payloadHash: true, responseSnapshot: true },
+    });
+  }
+
+  private replayPause(
+    action: StoredStatusAction,
+    payloadHash: string,
+  ): PauseResponse {
+    if (
+      action.actionType !== SimulationActionType.CHANGE_STATUS ||
+      action.payloadHash !== payloadHash
+    ) {
+      throw new ConflictException('IDEMPOTENCY_KEY_REUSED');
+    }
+    if (!this.isPauseResponse(action.responseSnapshot)) {
+      throw new ServiceUnavailableException('SIMULATION_REPLAY_UNAVAILABLE');
+    }
+    return { ...action.responseSnapshot, replayed: true };
+  }
+
   private resolveSetupAllocation(
     dto: SetupSimulationDto,
     scenario: ReadableScenarioSnapshot,
@@ -2141,6 +2349,16 @@ export class SimulationsService {
   }
 
   private isContinueResponse(value: unknown): value is ContinueResponse {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'session' in value &&
+      'obligations' in value &&
+      'replayed' in value
+    );
+  }
+
+  private isPauseResponse(value: unknown): value is PauseResponse {
     return (
       typeof value === 'object' &&
       value !== null &&

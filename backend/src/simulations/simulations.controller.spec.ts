@@ -4,6 +4,7 @@ import { UsersService } from '../users/users.service';
 import { CreateSimulationDto } from './dto/create-simulation.dto';
 import { SetupSimulationDto } from './dto/setup-simulation.dto';
 import { ResolveSimulationEventDto } from './dto/resolve-simulation-event.dto';
+import { UpdateSimulationStatusDto } from './dto/update-simulation-status.dto';
 import { SimulationsController } from './simulations.controller';
 import { SimulationsService } from './simulations.service';
 
@@ -19,6 +20,7 @@ describe('SimulationsController', () => {
     payObligation: jest.fn(),
     resolveEvent: jest.fn(),
     continueSession: jest.fn(),
+    pauseSession: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -227,6 +229,36 @@ describe('SimulationsController', () => {
     expect(simulationsService.continueSession).toHaveBeenCalledWith(
       'user-1',
       sessionId,
+      idempotencyKey,
+    );
+  });
+
+  it('finds the authenticated application user before pausing a fictional session', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'supabase-user-1',
+      email: 'player@example.com',
+    };
+    const sessionId = '00000000-0000-4000-8000-000000000070';
+    const idempotencyKey = '00000000-0000-4000-8000-000000000071';
+    const dto: UpdateSimulationStatusDto = { action: 'pause' };
+    const response = { session: { id: sessionId, status: 'PAUSED' } };
+    usersService.findOrCreateUser.mockResolvedValue({ id: 'user-1' });
+    simulationsService.pauseSession.mockResolvedValue(response);
+
+    await expect(
+      controller.updateSimulationStatus(
+        authUser,
+        sessionId,
+        dto,
+        idempotencyKey,
+      ),
+    ).resolves.toEqual(response);
+
+    expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
+    expect(simulationsService.pauseSession).toHaveBeenCalledWith(
+      'user-1',
+      sessionId,
+      dto,
       idempotencyKey,
     );
   });
