@@ -63,6 +63,7 @@ enum PaymentOccurrenceStatus {
   OVERDUE
   MISSED
   CANCELLED
+  PARTIALLY_PAID
 }
 
 enum PaymentRecordStatus {
@@ -223,6 +224,22 @@ enum GuidanceWalkthroughStatus {
   SKIPPED
 }
 
+enum PaymentContributionSource {
+  MANUAL
+  RECEIPT_SCAN
+}
+
+enum PaymentContributionState {
+  POSTED
+  VOIDED
+}
+
+enum ReceiptScanStatus {
+  READY_FOR_REVIEW
+  CONSUMED
+  EXPIRED
+}
+
 model User {
   id                     String                  @id @default(uuid())
   supabaseAuthId         String                  @unique
@@ -242,6 +259,8 @@ model User {
   obligations            FinancialObligation[]
   paymentOccurrences     PaymentOccurrence[]
   paymentRecords         PaymentRecord[]
+  paymentContributions   PaymentContribution[]
+  receiptScans           ReceiptScan[]
   reminders              Reminder[]
   notifications          Notification[]
   scoreEvents            ScoreEvent[]
@@ -319,26 +338,27 @@ model Category {
 }
 
 model FinancialObligation {
-  id          String              @id @default(uuid())
-  userId      String
-  categoryId  String
-  name        String
-  description String?
-  type        ObligationType
-  status      ObligationStatus    @default(ACTIVE)
-  amount      Decimal             @db.Decimal(12, 2)
-  currency    Currency            @default(ZAR)
-  priority    ObligationPriority  @default(MEDIUM)
-  startDate   DateTime
-  endDate     DateTime?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  deletedAt   DateTime?
-  user        User                @relation(fields: [userId], references: [id], onDelete: Restrict)
-  category    Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  schedules   PaymentSchedule[]
-  occurrences PaymentOccurrence[]
-  payments    PaymentRecord[]
+  id                   String                @id @default(uuid())
+  userId               String
+  categoryId           String
+  name                 String
+  description          String?
+  type                 ObligationType
+  status               ObligationStatus      @default(ACTIVE)
+  amount               Decimal               @db.Decimal(12, 2)
+  currency             Currency              @default(ZAR)
+  priority             ObligationPriority    @default(MEDIUM)
+  startDate            DateTime
+  endDate              DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  deletedAt            DateTime?
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  category             Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  schedules            PaymentSchedule[]
+  occurrences          PaymentOccurrence[]
+  payments             PaymentRecord[]
+  paymentContributions PaymentContribution[]
 
   @@index([userId, deletedAt])
   @@index([userId, type])
@@ -369,33 +389,91 @@ model PaymentSchedule {
 }
 
 model PaymentOccurrence {
-  id             String                  @id @default(uuid())
-  userId         String
-  obligationId   String
-  scheduleId     String
-  dueDate        DateTime
-  amountDue      Decimal                 @db.Decimal(12, 2)
-  currency       Currency                @default(ZAR)
-  status         PaymentOccurrenceStatus @default(PENDING)
-  sequenceNumber Int
-  paidAt         DateTime?
-  overdueAt      DateTime?
-  missedAt       DateTime?
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
-  deletedAt      DateTime?
-  user           User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  obligation     FinancialObligation     @relation(fields: [obligationId], references: [id], onDelete: Restrict)
-  schedule       PaymentSchedule         @relation(fields: [scheduleId], references: [id], onDelete: Restrict)
-  payment        PaymentRecord?
-  reminders      Reminder[]
-  scoreEvents    ScoreEvent[]
+  id                       String                  @id @default(uuid())
+  userId                   String
+  obligationId             String
+  scheduleId               String
+  dueDate                  DateTime
+  amountDue                Decimal                 @db.Decimal(12, 2)
+  amountPaid               Decimal                 @default(0) @db.Decimal(12, 2)
+  currency                 Currency                @default(ZAR)
+  status                   PaymentOccurrenceStatus @default(PENDING)
+  sequenceNumber           Int
+  paidAt                   DateTime?
+  overdueAt                DateTime?
+  missedAt                 DateTime?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  deletedAt                DateTime?
+  user                     User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  obligation               FinancialObligation     @relation(fields: [obligationId], references: [id], onDelete: Restrict)
+  schedule                 PaymentSchedule         @relation(fields: [scheduleId], references: [id], onDelete: Restrict)
+  payment                  PaymentRecord?
+  reminders                Reminder[]
+  scoreEvents              ScoreEvent[]
+  contributions            PaymentContribution[]
+  receiptScanPreselections ReceiptScan[]           @relation("ReceiptScanPreselection")
 
   @@index([userId, dueDate])
   @@index([userId, status])
   @@index([obligationId])
   @@index([scheduleId])
   @@index([deletedAt])
+}
+
+model PaymentContribution {
+  id                 String                    @id @default(uuid())
+  userId             String
+  occurrenceId       String
+  obligationId       String
+  amount             Decimal                   @db.Decimal(12, 2)
+  currency           Currency
+  paidDate           DateTime
+  source             PaymentContributionSource
+  state              PaymentContributionState  @default(POSTED)
+  receiptScanId      String?                   @unique
+  notes              String?
+  idempotencyKey     String
+  requestPayloadHash String
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  voidedAt           DateTime?
+  voidReason         String?
+  voidedByUserId     String?
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  occurrence PaymentOccurrence   @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
+  obligation FinancialObligation @relation(fields: [obligationId], references: [id], onDelete: Restrict)
+
+  receiptScan ReceiptScan? @relation("ReceiptScanContribution", fields: [receiptScanId], references: [id], onDelete: SetNull)
+
+  scoreEvents ScoreEvent[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([occurrenceId, state, createdAt])
+  @@index([userId, createdAt])
+  @@index([obligationId])
+  @@index([state])
+}
+
+model ReceiptScan {
+  id                      String            @id @default(uuid())
+  userId                  String
+  status                  ReceiptScanStatus @default(READY_FOR_REVIEW)
+  preselectedOccurrenceId String?
+  extraction              Json
+  warnings                Json?
+  expiresAt               DateTime
+  consumedAt              DateTime?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  preselectedOccurrence PaymentOccurrence?   @relation("ReceiptScanPreselection", fields: [preselectedOccurrenceId], references: [id], onDelete: SetNull)
+  contribution          PaymentContribution? @relation("ReceiptScanContribution")
+
+  @@index([userId, expiresAt])
+  @@index([status, expiresAt])
 }
 
 model PaymentRecord {
@@ -487,22 +565,24 @@ model CreditProfile {
 }
 
 model ScoreEvent {
-  id                  String             @id @default(uuid())
-  userId              String
-  creditProfileId     String
-  occurrenceId        String?
-  paymentRecordId     String?
-  eventType           ScoreEventType
-  pointsDelta         Int
-  scoreBefore         Int
-  scoreAfter          Int
-  explanation         String
-  calculationMetadata Json?
-  createdAt           DateTime           @default(now())
-  user                User               @relation(fields: [userId], references: [id], onDelete: Restrict)
-  creditProfile       CreditProfile      @relation(fields: [creditProfileId], references: [id], onDelete: Restrict)
-  occurrence          PaymentOccurrence? @relation(fields: [occurrenceId], references: [id], onDelete: SetNull)
-  paymentRecord       PaymentRecord?     @relation(fields: [paymentRecordId], references: [id], onDelete: SetNull)
+  id                    String               @id @default(uuid())
+  userId                String
+  creditProfileId       String
+  occurrenceId          String?
+  paymentRecordId       String?
+  paymentContributionId String?
+  eventType             ScoreEventType
+  pointsDelta           Int
+  scoreBefore           Int
+  scoreAfter            Int
+  explanation           String
+  calculationMetadata   Json?
+  createdAt             DateTime             @default(now())
+  user                  User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  creditProfile         CreditProfile        @relation(fields: [creditProfileId], references: [id], onDelete: Restrict)
+  occurrence            PaymentOccurrence?   @relation(fields: [occurrenceId], references: [id], onDelete: SetNull)
+  paymentRecord         PaymentRecord?       @relation(fields: [paymentRecordId], references: [id], onDelete: SetNull)
+  paymentContribution   PaymentContribution? @relation(fields: [paymentContributionId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([creditProfileId])
