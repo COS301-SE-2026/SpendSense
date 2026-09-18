@@ -553,11 +553,19 @@ export class SimulationsService {
         select: simulationSummarySelect,
       });
     }
-    const latestCompleted = await this.prisma.simulationSession.findFirst({
+    let latestCompleted = await this.prisma.simulationSession.findFirst({
       where: { userId, status: SimulationSessionStatus.COMPLETED },
       orderBy: { completedAt: 'desc' },
       select: simulationSummarySelect,
     });
+    if (latestCompleted && this.transitionService) {
+      await this.transitionService.resolveDueTransitions(latestCompleted.id);
+      latestCompleted = await this.prisma.simulationSession.findFirst({
+        where: { userId, status: SimulationSessionStatus.COMPLETED },
+        orderBy: { completedAt: 'desc' },
+        select: simulationSummarySelect,
+      });
+    }
 
     return {
       active: active ? this.toSimulationSummary(active) : null,
@@ -586,7 +594,8 @@ export class SimulationsService {
       throw new GoneException('SIMULATION_EXPIRED');
     }
     if (
-      session.status === SimulationSessionStatus.ACTIVE &&
+      (session.status === SimulationSessionStatus.ACTIVE ||
+        session.status === SimulationSessionStatus.COMPLETED) &&
       this.transitionService
     ) {
       await this.transitionService.resolveDueTransitions(session.id);
@@ -1441,7 +1450,6 @@ export class SimulationsService {
   private assertPauseAllowed(session: {
     status: SimulationSessionStatus;
     presentationHold: SimulationPresentationHold;
-    completionSnapshot: unknown;
     events: Array<{ id: string; decisionExpiresAt: Date | null }>;
   }): void {
     if (session.status !== SimulationSessionStatus.ACTIVE) {
@@ -1797,6 +1805,7 @@ export class SimulationsService {
     status: SimulationSessionStatus;
     presentationHold: SimulationPresentationHold;
     scenarioSnapshot: unknown;
+    completionSnapshot: unknown;
     events: Array<{
       id: string;
       triggerDay: number;
@@ -2553,6 +2562,17 @@ export class SimulationsService {
     const summary = this.record(value);
     const obligations = this.record(summary?.obligations);
     const events = this.record(summary?.events);
+    const completedAt = this.string(summary?.completedAt);
+    const obligationTotal = this.nonNegativeInteger(obligations?.total);
+    const obligationPaid = this.nonNegativeInteger(obligations?.paid);
+    const obligationMissed = this.nonNegativeInteger(obligations?.missed);
+    const obligationUnresolved = this.nonNegativeInteger(
+      obligations?.unresolved,
+    );
+    const eventTotal = this.nonNegativeInteger(events?.total);
+    const eventResolved = this.nonNegativeInteger(events?.resolved);
+    const eventExpired = this.nonNegativeInteger(events?.expired);
+    const eventUnresolved = this.nonNegativeInteger(events?.unresolved);
     const requiredMoney = [
       'startingBudget',
       'currentBalance',
@@ -2561,31 +2581,28 @@ export class SimulationsService {
       'weightedRemaining',
       'budgetBonus',
     ].every((key) => this.normalizedMoney(summary?.[key]) !== null);
-    const counts = [
-      obligations?.total,
-      obligations?.paid,
-      obligations?.missed,
-      obligations?.unresolved,
-      events?.total,
-      events?.resolved,
-      events?.expired,
-      events?.unresolved,
-    ];
     if (
       summary?.version !== 'v1' ||
-      !this.string(summary.completedAt) ||
+      !completedAt ||
       !this.normalizedMoney(summary.savingsRetentionMultiplier) ||
       !this.normalizedSignedMoney(summary.finalScore) ||
       typeof summary.remainingBudgetPercentage !== 'string' ||
       !/^0(?:\.\d{4})?|1\.0000$/.test(summary.remainingBudgetPercentage) ||
       !requiredMoney ||
-      counts.some((count) => !Number.isInteger(count) || count < 0)
+      obligationTotal === null ||
+      obligationPaid === null ||
+      obligationMissed === null ||
+      obligationUnresolved === null ||
+      eventTotal === null ||
+      eventResolved === null ||
+      eventExpired === null ||
+      eventUnresolved === null
     ) {
       return null;
     }
     return {
       version: 'v1',
-      completedAt: summary.completedAt,
+      completedAt,
       startingBudget: this.normalizedMoney(summary.startingBudget)!,
       currentBalance: this.normalizedMoney(summary.currentBalance)!,
       savingsBalance: this.normalizedMoney(summary.savingsBalance)!,
@@ -2598,16 +2615,16 @@ export class SimulationsService {
       budgetBonus: this.normalizedMoney(summary.budgetBonus)!,
       finalScore: this.normalizedSignedMoney(summary.finalScore)!,
       obligations: {
-        total: obligations!.total as number,
-        paid: obligations!.paid as number,
-        missed: obligations!.missed as number,
-        unresolved: obligations!.unresolved as number,
+        total: obligationTotal,
+        paid: obligationPaid,
+        missed: obligationMissed,
+        unresolved: obligationUnresolved,
       },
       events: {
-        total: events!.total as number,
-        resolved: events!.resolved as number,
-        expired: events!.expired as number,
-        unresolved: events!.unresolved as number,
+        total: eventTotal,
+        resolved: eventResolved,
+        expired: eventExpired,
+        unresolved: eventUnresolved,
       },
     };
   }
@@ -2668,20 +2685,10 @@ export class SimulationsService {
     return cents === null ? null : this.centsToMoney(cents);
   }
 
-  private normalizedSignedMoney(value: unknown): string | null {
-    const candidate =
-      typeof value === 'string' || typeof value === 'number'
-        ? String(value)
-        : value instanceof Prisma.Decimal
-          ? value.toString()
-          : null;
-    if (!candidate || !/^-?\d+\.\d{2}$/.test(candidate)) {
-      return null;
-    }
-    const sign = candidate.startsWith('-') ? -1 : 1;
-    const [whole, cents] = candidate.replace('-', '').split('.');
-    const parsed = sign * (Number(whole) * 100 + Number(cents));
-    return Number.isSafeInteger(parsed) ? this.centsToMoney(parsed) : null;
+  private nonNegativeInteger(value: unknown): number | null {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0
+      ? value
+      : null;
   }
 
   private normalizedSignedMoney(value: unknown): string | null {

@@ -13,6 +13,7 @@ type Transaction = {
     create: jest.Mock<Promise<unknown>, [ScoreEntryCreateArgs]>;
     createMany: jest.Mock<Promise<unknown>, [unknown]>;
   };
+  userEvent: { create: jest.Mock<Promise<{ id: string }>, [unknown]> };
 };
 
 type SessionUpdateManyArgs = {
@@ -28,6 +29,7 @@ type TransactionCallback = (transaction: Transaction) => Promise<unknown>;
 
 const activeSession = (overrides: Record<string, unknown> = {}) => ({
   id: 'simulation-1',
+  userId: 'user-1',
   status: 'ACTIVE',
   currentDay: 0,
   daysInMonth: 30,
@@ -48,6 +50,8 @@ describe('SimulationTransitionService', () => {
     $transaction: jest.Mock<Promise<unknown>, [TransactionCallback]>;
   };
   let transaction: Transaction;
+  let rewardService: { grantXp: jest.Mock };
+  let badgeEngineService: { evaluateSimulationBadges: jest.Mock };
   let service: SimulationTransitionService;
 
   beforeEach(() => {
@@ -75,14 +79,27 @@ describe('SimulationTransitionService', () => {
           .fn<Promise<unknown>, [unknown]>()
           .mockResolvedValue({}),
       },
+      userEvent: {
+        create: jest
+          .fn<Promise<{ id: string }>, [unknown]>()
+          .mockResolvedValue({ id: 'simulation-completed-event-1' }),
+      },
     };
     prisma = {
       $transaction: jest
         .fn<Promise<unknown>, [TransactionCallback]>()
         .mockImplementation((callback) => callback(transaction)),
     };
+    rewardService = { grantXp: jest.fn().mockResolvedValue({ xp: 15 }) };
+    badgeEngineService = {
+      evaluateSimulationBadges: jest
+        .fn()
+        .mockResolvedValue(['Month Navigator']),
+    };
     service = new SimulationTransitionService(
       prisma as unknown as PrismaService,
+      rewardService as never,
+      badgeEngineService as never,
     );
   });
 
@@ -191,7 +208,7 @@ describe('SimulationTransitionService', () => {
     });
   });
 
-  it('finalises the fictional month at day 30 without applying real rewards', async () => {
+  it('finalises the fictional month at day 30 and settles its rewards once', async () => {
     transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
       activeSession({
         currentDay: 30,
@@ -233,5 +250,31 @@ describe('SimulationTransitionService', () => {
     const scoreEntry = transaction.simulationScoreEntry.create.mock.calls[0][0];
     expect(scoreEntry.data.sourceType).toBe('FINAL_BUDGET_BONUS');
     expect(scoreEntry.data.pointsDelta).toBe('11.00');
+    expect(rewardService.grantXp).toHaveBeenCalledWith(transaction, {
+      userId: 'user-1',
+      amount: 15,
+    });
+    expect(badgeEngineService.evaluateSimulationBadges).toHaveBeenCalledWith(
+      {
+        userId: 'user-1',
+        sourceEventId: 'simulation-completed-event-1',
+      },
+      transaction,
+    );
+  });
+
+  it('does not settle completion rewards again after the guard is claimed', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+      activeSession({ status: 'COMPLETED', currentDay: 30 }),
+    );
+    transaction.simulationSession.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.resolveDueTransitions('simulation-1'),
+    ).resolves.toEqual({ currentDay: 30, stoppedFor: 'SUMMARY' });
+
+    expect(transaction.userEvent.create).not.toHaveBeenCalled();
+    expect(rewardService.grantXp).not.toHaveBeenCalled();
+    expect(badgeEngineService.evaluateSimulationBadges).not.toHaveBeenCalled();
   });
 });

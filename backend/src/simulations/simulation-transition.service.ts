@@ -7,12 +7,15 @@ import {
   SimulationScoreSourceType,
   SimulationSessionStatus,
 } from '@prisma/client';
+import { BadgeEngineService } from '../gamification/badge-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RewardService } from '../rewards/reward.service';
 
 const DAY_DURATION_MS = 15_000;
 const EVENT_DECISION_DURATION_MS = 30_000;
 const MISSED_OBLIGATION_POINTS = -20;
 const FINAL_BUDGET_BONUS_CEILING_CENTS = 3_000;
+export const SIMULATION_COMPLETION_XP = 15;
 
 export type SimulationTransitionResult = {
   currentDay: number;
@@ -21,7 +24,11 @@ export type SimulationTransitionResult = {
 
 @Injectable()
 export class SimulationTransitionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rewardService: RewardService,
+    private readonly badgeEngineService: BadgeEngineService,
+  ) {}
 
   async resolveDueTransitions(
     sessionId: string,
@@ -68,6 +75,10 @@ export class SimulationTransitionService {
         events: { orderBy: [{ triggerDay: 'asc' }, { createdAt: 'asc' }] },
       },
     });
+    if (session.status === SimulationSessionStatus.COMPLETED) {
+      await this.settleCompletionRewards(tx, session.id, session.userId);
+      return this.result(session.currentDay, 'SUMMARY');
+    }
     if (session.status !== SimulationSessionStatus.ACTIVE) {
       return this.result(session.currentDay, 'NONE');
     }
@@ -400,7 +411,47 @@ export class SimulationTransitionService {
         },
       },
     });
+    await this.settleCompletionRewards(tx, sessionId, session.userId);
     return this.result(session.currentDay, 'SUMMARY');
+  }
+
+  private async settleCompletionRewards(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+    userId: string,
+  ): Promise<void> {
+    const claimed = await tx.simulationSession.updateMany({
+      where: {
+        id: sessionId,
+        status: SimulationSessionStatus.COMPLETED,
+        completionRewardGrantedAt: null,
+      },
+      data: { completionRewardGrantedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      return;
+    }
+    const event = await tx.userEvent.create({
+      data: {
+        userId,
+        eventType: 'SIMULATION_COMPLETED',
+        sourceType: 'SIMULATION_SESSION',
+        sourceId: sessionId,
+        metadata: {
+          fictional: true,
+          xpAwarded: SIMULATION_COMPLETION_XP,
+          coinsAwarded: 0,
+        },
+      },
+    });
+    await this.rewardService.grantXp(tx, {
+      userId,
+      amount: SIMULATION_COMPLETION_XP,
+    });
+    await this.badgeEngineService.evaluateSimulationBadges(
+      { userId, sourceEventId: event.id },
+      tx,
+    );
   }
 
   private completionSummary(
