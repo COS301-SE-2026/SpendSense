@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Body, Patch } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -9,6 +9,7 @@ import {
 import { GuidanceService } from './guidance.service';
 import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
 import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
+import { UpdateGuidanceStateDto } from './dto/update-guidance-state.dto';
 import type { AuthUser } from '../auth/types/auth-user.type';
 
 @Controller('guidance')
@@ -21,7 +22,7 @@ export class GuidanceController {
   @ApiOperation({
     summary: 'Get mascot guidance state.',
     description:
-      "Returns the user's mascot walkthrough state and guidance preferences.",
+      'Returns the users mascot walkthrough state and guidance preferences.',
   })
   @ApiOkResponse({
     description: 'The current mascot guidance state.',
@@ -46,5 +47,24 @@ export class GuidanceController {
   @Get('state')
   async getState(@CurrentAuthUser() authUser: AuthUser) {
     return this.guidanceService.getState(authUser);
+  }
+
+  @ApiOperation({
+    summary: 'Update mascot guidance state.',
+    description:
+      'Updates the users mascot walkthrough state and guidance preferences.',
+  })
+  @ApiOkResponse({
+    description: 'The updated mascot guidance state.',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid Supabase Bearer token.',
+  })
+  @Patch('state')
+  async updateState(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Body() dto: UpdateGuidanceStateDto,
+  ) {
+    return this.guidanceService.updateState(authUser, dto);
   }
 }
