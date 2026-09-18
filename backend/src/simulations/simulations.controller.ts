@@ -299,9 +299,9 @@ export class SimulationsController {
 
   @Patch(':sessionId/status')
   @ApiOperation({
-    summary: 'Pause or resume an owned fictional simulation',
+    summary: 'Pause, resume, or discard an owned fictional simulation',
     description:
-      'Pauses an active fictional session or resumes a paused session using only its saved server-owned duration. It does not affect real records.',
+      'Pauses, resumes, or abandons an owned fictional session. It does not affect real records.',
   })
   @ApiBody({ type: UpdateSimulationStatusDto })
   @ApiOkResponse({
@@ -313,7 +313,7 @@ export class SimulationsController {
   })
   @ApiConflictResponse({
     description:
-      'The session cannot be paused or resumed in its current state, or the idempotency key was reused.',
+      'The session cannot be paused, resumed, or discarded in its current state, or the idempotency key was reused.',
   })
   @ApiNotFoundResponse({
     description: 'The simulation does not exist or is not owned by the caller.',
@@ -333,7 +333,15 @@ export class SimulationsController {
         idempotencyKey,
       );
     }
-    return this.simulationsService.resumeSession(
+    if (dto.action === 'resume') {
+      return this.simulationsService.resumeSession(
+        user.id,
+        sessionId,
+        dto,
+        idempotencyKey,
+      );
+    }
+    return this.simulationsService.discardSession(
       user.id,
       sessionId,
       dto,

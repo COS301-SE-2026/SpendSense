@@ -29,7 +29,7 @@ import {
   type SimulationScenario,
 } from './simulation-scenario-builder';
 
-const resumableStatuses = [
+const resumableStatuses: SimulationSessionStatus[] = [
   SimulationSessionStatus.BRIEFING,
   SimulationSessionStatus.ACTIVE,
   SimulationSessionStatus.PAUSED,
@@ -287,6 +287,15 @@ type ContinueResponse = SimulationDetailResponse & { replayed: boolean };
 
 type StatusResponse = SimulationDetailResponse & { replayed: boolean };
 
+type DiscardResponse = {
+  session: {
+    id: string;
+    status: 'ABANDONED';
+    abandonedAt: string;
+  };
+  replayed: boolean;
+};
+
 type AdvanceableSession = {
   id: string;
   status: SimulationSessionStatus;
@@ -376,6 +385,11 @@ const resumeSessionSelect = {
     where: { status: SimulationEventStatus.REVEALED },
     select: { id: true },
   },
+} satisfies Prisma.SimulationSessionSelect;
+
+const discardSessionSelect = {
+  id: true,
+  status: true,
 } satisfies Prisma.SimulationSessionSelect;
 
 const TIMED_DAY_DURATION_MS = 15_000;
@@ -1291,6 +1305,111 @@ export class SimulationsService {
     }
   }
 
+  async discardSession(
+    userId: string,
+    sessionId: string,
+    dto: UpdateSimulationStatusDto,
+    idempotencyKey: string | undefined,
+  ): Promise<DiscardResponse> {
+    if (!isUUID(sessionId)) {
+      throw new BadRequestException('SIMULATION_ID_INVALID');
+    }
+    this.validateIdempotencyKey(idempotencyKey);
+    if (dto.action !== 'discard') {
+      throw new BadRequestException('SIMULATION_STATUS_ACTION_INVALID');
+    }
+    const payloadHash = this.hashPayload({ action: dto.action });
+
+    const ownedSession = await this.prisma.simulationSession.findFirst({
+      where: { id: sessionId, userId },
+      select: { id: true },
+    });
+    if (!ownedSession) {
+      throw new NotFoundException('SIMULATION_NOT_FOUND');
+    }
+    const priorAction = await this.findStatusAction(sessionId, idempotencyKey);
+    if (priorAction) {
+      return this.replayDiscard(priorAction, payloadHash);
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const session = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: discardSessionSelect,
+        });
+        if (!resumableStatuses.includes(session.status)) {
+          throw new ConflictException('SIMULATION_DISCARD_NOT_ALLOWED');
+        }
+
+        const abandonedAt = new Date();
+        const update = await tx.simulationSession.updateMany({
+          where: {
+            id: sessionId,
+            userId,
+            status: { in: resumableStatuses },
+          },
+          data: {
+            status: SimulationSessionStatus.ABANDONED,
+            abandonedAt,
+            nextDayAt: null,
+            pausedAt: null,
+            pausedDecisionSeconds: null,
+          },
+        });
+        if (update.count === 0) {
+          const racedAction = await tx.simulationAction.findFirst({
+            where: {
+              sessionId,
+              actionType: SimulationActionType.DISCARD,
+              idempotencyKey,
+            },
+            select: {
+              actionType: true,
+              payloadHash: true,
+              responseSnapshot: true,
+            },
+          });
+          if (racedAction) {
+            return this.replayDiscard(racedAction, payloadHash);
+          }
+          throw new ConflictException('SIMULATION_DISCARD_NOT_ALLOWED');
+        }
+
+        const response: DiscardResponse = {
+          session: {
+            id: session.id,
+            status: 'ABANDONED',
+            abandonedAt: abandonedAt.toISOString(),
+          },
+          replayed: false,
+        };
+        await tx.simulationAction.create({
+          data: {
+            sessionId,
+            actionType: SimulationActionType.DISCARD,
+            idempotencyKey,
+            payloadHash,
+            responseSnapshot: response,
+          },
+        });
+        return response;
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+      const racedAction = await this.findStatusAction(
+        sessionId,
+        idempotencyKey,
+      );
+      if (racedAction) {
+        return this.replayDiscard(racedAction, payloadHash);
+      }
+      throw new ConflictException('SIMULATION_DISCARD_CONFLICT');
+    }
+  }
+
   private assertPauseAllowed(session: {
     status: SimulationSessionStatus;
     presentationHold: SimulationPresentationHold;
@@ -2045,6 +2164,22 @@ export class SimulationsService {
     return { ...action.responseSnapshot, replayed: true };
   }
 
+  private replayDiscard(
+    action: StoredStatusAction,
+    payloadHash: string,
+  ): DiscardResponse {
+    if (
+      action.actionType !== SimulationActionType.DISCARD ||
+      action.payloadHash !== payloadHash
+    ) {
+      throw new ConflictException('IDEMPOTENCY_KEY_REUSED');
+    }
+    if (!this.isDiscardResponse(action.responseSnapshot)) {
+      throw new ServiceUnavailableException('SIMULATION_REPLAY_UNAVAILABLE');
+    }
+    return { ...action.responseSnapshot, replayed: true };
+  }
+
   private resolveSetupAllocation(
     dto: SetupSimulationDto,
     scenario: ReadableScenarioSnapshot,
@@ -2542,6 +2677,19 @@ export class SimulationsService {
       value !== null &&
       'session' in value &&
       'obligations' in value &&
+      'replayed' in value
+    );
+  }
+
+  private isDiscardResponse(value: unknown): value is DiscardResponse {
+    if (typeof value !== 'object' || value === null || !('session' in value)) {
+      return false;
+    }
+    const session = this.record(value.session);
+    return (
+      session?.status === 'ABANDONED' &&
+      typeof session.id === 'string' &&
+      typeof session.abandonedAt === 'string' &&
       'replayed' in value
     );
   }
