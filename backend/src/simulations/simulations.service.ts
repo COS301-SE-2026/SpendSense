@@ -54,6 +54,7 @@ const simulationSummarySelect = {
 const simulationDetailSelect = {
   ...simulationSummarySelect,
   presentationHold: true,
+  completionSnapshot: true,
   scenarioSnapshot: true,
   obligations: {
     orderBy: [{ dueDay: 'asc' }, { createdAt: 'asc' }],
@@ -205,7 +206,34 @@ type SimulationDetailResponse = {
     reason: string;
     createdAt: string;
   }>;
+  completion: CompletionSummary | null;
   allowedActions: string[];
+};
+
+type CompletionSummary = {
+  version: 'v1';
+  completedAt: string;
+  startingBudget: string;
+  currentBalance: string;
+  savingsBalance: string;
+  totalRemaining: string;
+  weightedRemaining: string;
+  remainingBudgetPercentage: string;
+  savingsRetentionMultiplier: string;
+  budgetBonus: string;
+  finalScore: string;
+  obligations: {
+    total: number;
+    paid: number;
+    missed: number;
+    unresolved: number;
+  };
+  events: {
+    total: number;
+    resolved: number;
+    expired: number;
+    unresolved: number;
+  };
 };
 
 type ReadableScenarioSnapshot = {
@@ -1413,6 +1441,7 @@ export class SimulationsService {
   private assertPauseAllowed(session: {
     status: SimulationSessionStatus;
     presentationHold: SimulationPresentationHold;
+    completionSnapshot: unknown;
     events: Array<{ id: string; decisionExpiresAt: Date | null }>;
   }): void {
     if (session.status !== SimulationSessionStatus.ACTIVE) {
@@ -1850,6 +1879,7 @@ export class SimulationsService {
         reason: entry.reason,
         createdAt: entry.createdAt.toISOString(),
       })),
+      completion: this.readCompletionSummary(session.completionSnapshot),
       allowedActions: this.allowedActions(session),
     };
   }
@@ -2519,6 +2549,69 @@ export class SimulationsService {
     return typeof value === 'string' && value.length > 0 ? value : null;
   }
 
+  private readCompletionSummary(value: unknown): CompletionSummary | null {
+    const summary = this.record(value);
+    const obligations = this.record(summary?.obligations);
+    const events = this.record(summary?.events);
+    const requiredMoney = [
+      'startingBudget',
+      'currentBalance',
+      'savingsBalance',
+      'totalRemaining',
+      'weightedRemaining',
+      'budgetBonus',
+    ].every((key) => this.normalizedMoney(summary?.[key]) !== null);
+    const counts = [
+      obligations?.total,
+      obligations?.paid,
+      obligations?.missed,
+      obligations?.unresolved,
+      events?.total,
+      events?.resolved,
+      events?.expired,
+      events?.unresolved,
+    ];
+    if (
+      summary?.version !== 'v1' ||
+      !this.string(summary.completedAt) ||
+      !this.normalizedMoney(summary.savingsRetentionMultiplier) ||
+      !this.normalizedSignedMoney(summary.finalScore) ||
+      typeof summary.remainingBudgetPercentage !== 'string' ||
+      !/^0(?:\.\d{4})?|1\.0000$/.test(summary.remainingBudgetPercentage) ||
+      !requiredMoney ||
+      counts.some((count) => !Number.isInteger(count) || count < 0)
+    ) {
+      return null;
+    }
+    return {
+      version: 'v1',
+      completedAt: summary.completedAt,
+      startingBudget: this.normalizedMoney(summary.startingBudget)!,
+      currentBalance: this.normalizedMoney(summary.currentBalance)!,
+      savingsBalance: this.normalizedMoney(summary.savingsBalance)!,
+      totalRemaining: this.normalizedMoney(summary.totalRemaining)!,
+      weightedRemaining: this.normalizedMoney(summary.weightedRemaining)!,
+      remainingBudgetPercentage: summary.remainingBudgetPercentage,
+      savingsRetentionMultiplier: this.normalizedMoney(
+        summary.savingsRetentionMultiplier,
+      )!,
+      budgetBonus: this.normalizedMoney(summary.budgetBonus)!,
+      finalScore: this.normalizedSignedMoney(summary.finalScore)!,
+      obligations: {
+        total: obligations!.total as number,
+        paid: obligations!.paid as number,
+        missed: obligations!.missed as number,
+        unresolved: obligations!.unresolved as number,
+      },
+      events: {
+        total: events!.total as number,
+        resolved: events!.resolved as number,
+        expired: events!.expired as number,
+        unresolved: events!.unresolved as number,
+      },
+    };
+  }
+
   private toSimulationSummary(session: {
     id: string;
     status: SimulationSessionStatus;
@@ -2573,6 +2666,22 @@ export class SimulationsService {
           : null,
     );
     return cents === null ? null : this.centsToMoney(cents);
+  }
+
+  private normalizedSignedMoney(value: unknown): string | null {
+    const candidate =
+      typeof value === 'string' || typeof value === 'number'
+        ? String(value)
+        : value instanceof Prisma.Decimal
+          ? value.toString()
+          : null;
+    if (!candidate || !/^-?\d+\.\d{2}$/.test(candidate)) {
+      return null;
+    }
+    const sign = candidate.startsWith('-') ? -1 : 1;
+    const [whole, cents] = candidate.replace('-', '').split('.');
+    const parsed = sign * (Number(whole) * 100 + Number(cents));
+    return Number.isSafeInteger(parsed) ? this.centsToMoney(parsed) : null;
   }
 
   private normalizedSignedMoney(value: unknown): string | null {

@@ -769,6 +769,7 @@ model SimulationSession {
   pausedAt                   DateTime?
   pausedDecisionSeconds      Int?
   presentationHold           SimulationPresentationHold @default(NONE)
+  completionSnapshot         Json?
   completionRewardGrantedAt  DateTime?
   completedAt                DateTime?
   abandonedAt                DateTime?

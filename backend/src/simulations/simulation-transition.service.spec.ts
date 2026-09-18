@@ -5,13 +5,23 @@ type Transaction = {
   simulationSession: {
     findUniqueOrThrow: jest.Mock<Promise<unknown>, [unknown]>;
     update: jest.Mock<Promise<unknown>, [unknown]>;
+    updateMany: jest.Mock<Promise<{ count: number }>, [SessionUpdateManyArgs]>;
   };
   simulationObligation: { updateMany: jest.Mock<Promise<unknown>, [unknown]> };
   simulationEvent: { update: jest.Mock<Promise<unknown>, [unknown]> };
   simulationScoreEntry: {
-    create: jest.Mock<Promise<unknown>, [unknown]>;
+    create: jest.Mock<Promise<unknown>, [ScoreEntryCreateArgs]>;
     createMany: jest.Mock<Promise<unknown>, [unknown]>;
   };
+};
+
+type SessionUpdateManyArgs = {
+  where: Record<string, unknown>;
+  data: Record<string, unknown>;
+};
+
+type ScoreEntryCreateArgs = {
+  data: Record<string, unknown>;
 };
 
 type TransactionCallback = (transaction: Transaction) => Promise<unknown>;
@@ -25,6 +35,9 @@ const activeSession = (overrides: Record<string, unknown> = {}) => ({
   nextDayAt: null,
   currentBalance: '4000.00',
   savingsBalance: '1000.00',
+  startingBudget: '6000.00',
+  savingsRetentionMultiplier: '1.20',
+  score: '40.00',
   obligations: [],
   events: [],
   ...overrides,
@@ -42,6 +55,9 @@ describe('SimulationTransitionService', () => {
       simulationSession: {
         findUniqueOrThrow: jest.fn<Promise<unknown>, [unknown]>(),
         update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+        updateMany: jest
+          .fn<Promise<{ count: number }>, [SessionUpdateManyArgs]>()
+          .mockResolvedValue({ count: 1 }),
       },
       simulationObligation: {
         updateMany: jest
@@ -52,7 +68,9 @@ describe('SimulationTransitionService', () => {
         update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
       },
       simulationScoreEntry: {
-        create: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+        create: jest
+          .fn<Promise<unknown>, [ScoreEntryCreateArgs]>()
+          .mockResolvedValue({}),
         createMany: jest
           .fn<Promise<unknown>, [unknown]>()
           .mockResolvedValue({}),
@@ -173,15 +191,47 @@ describe('SimulationTransitionService', () => {
     });
   });
 
-  it('holds the fictional month summary at day 30 without completing rewards', async () => {
+  it('finalises the fictional month at day 30 without applying real rewards', async () => {
     transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
-      activeSession({ currentDay: 30 }),
+      activeSession({
+        currentDay: 30,
+        currentBalance: '1000.00',
+        savingsBalance: '1000.00',
+        obligations: [
+          { status: 'PAID' },
+          { status: 'MISSED' },
+          { status: 'SCHEDULED' },
+        ],
+        events: [
+          { status: 'RESOLVED' },
+          { status: 'EXPIRED' },
+          { status: 'SCHEDULED' },
+        ],
+      }),
     );
 
     await expect(service.advanceOneDay('simulation-1')).resolves.toEqual({
       currentDay: 30,
       stoppedFor: 'SUMMARY',
     });
-    expect(transaction.simulationSession.update).toHaveBeenCalledTimes(1);
+    const update = transaction.simulationSession.updateMany.mock.calls[0][0];
+    expect(update.where).toMatchObject({
+      status: 'ACTIVE',
+      currentDay: { gte: 30 },
+    });
+    expect(update.data).toMatchObject({
+      status: 'COMPLETED',
+      nextDayAt: null,
+      score: '51.00',
+    });
+    expect(update.data.completionSnapshot).toMatchObject({
+      budgetBonus: '11.00',
+      finalScore: '51.00',
+      obligations: { total: 3, paid: 1, missed: 1, unresolved: 1 },
+      events: { total: 3, resolved: 1, expired: 1, unresolved: 1 },
+    });
+    const scoreEntry = transaction.simulationScoreEntry.create.mock.calls[0][0];
+    expect(scoreEntry.data.sourceType).toBe('FINAL_BUDGET_BONUS');
+    expect(scoreEntry.data.pointsDelta).toBe('11.00');
   });
 });
