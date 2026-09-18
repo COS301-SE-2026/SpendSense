@@ -21,6 +21,7 @@ describe('SimulationsController', () => {
     resolveEvent: jest.fn(),
     continueSession: jest.fn(),
     pauseSession: jest.fn(),
+    resumeSession: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -256,6 +257,36 @@ describe('SimulationsController', () => {
 
     expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
     expect(simulationsService.pauseSession).toHaveBeenCalledWith(
+      'user-1',
+      sessionId,
+      dto,
+      idempotencyKey,
+    );
+  });
+
+  it('finds the authenticated application user before resuming a fictional session', async () => {
+    const authUser: AuthUser = {
+      supabaseAuthId: 'supabase-user-1',
+      email: 'player@example.com',
+    };
+    const sessionId = '00000000-0000-4000-8000-000000000080';
+    const idempotencyKey = '00000000-0000-4000-8000-000000000081';
+    const dto: UpdateSimulationStatusDto = { action: 'resume' };
+    const response = { session: { id: sessionId, status: 'ACTIVE' } };
+    usersService.findOrCreateUser.mockResolvedValue({ id: 'user-1' });
+    simulationsService.resumeSession.mockResolvedValue(response);
+
+    await expect(
+      controller.updateSimulationStatus(
+        authUser,
+        sessionId,
+        dto,
+        idempotencyKey,
+      ),
+    ).resolves.toEqual(response);
+
+    expect(usersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
+    expect(simulationsService.resumeSession).toHaveBeenCalledWith(
       'user-1',
       sessionId,
       dto,

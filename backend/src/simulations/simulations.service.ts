@@ -285,7 +285,7 @@ type EventResolutionResponse = SimulationDetailResponse & {
 
 type ContinueResponse = SimulationDetailResponse & { replayed: boolean };
 
-type PauseResponse = SimulationDetailResponse & { replayed: boolean };
+type StatusResponse = SimulationDetailResponse & { replayed: boolean };
 
 type AdvanceableSession = {
   id: string;
@@ -363,6 +363,18 @@ const pauseSessionSelect = {
   events: {
     where: { status: SimulationEventStatus.REVEALED },
     select: { id: true, decisionExpiresAt: true },
+  },
+} satisfies Prisma.SimulationSessionSelect;
+
+const resumeSessionSelect = {
+  id: true,
+  status: true,
+  timedMode: true,
+  pausedDecisionSeconds: true,
+  presentationHold: true,
+  events: {
+    where: { status: SimulationEventStatus.REVEALED },
+    select: { id: true },
   },
 } satisfies Prisma.SimulationSessionSelect;
 
@@ -1034,7 +1046,7 @@ export class SimulationsService {
     sessionId: string,
     dto: UpdateSimulationStatusDto,
     idempotencyKey: string | undefined,
-  ): Promise<PauseResponse> {
+  ): Promise<StatusResponse> {
     if (!isUUID(sessionId)) {
       throw new BadRequestException('SIMULATION_ID_INVALID');
     }
@@ -1053,7 +1065,7 @@ export class SimulationsService {
     }
     const priorAction = await this.findStatusAction(sessionId, idempotencyKey);
     if (priorAction) {
-      return this.replayPause(priorAction, payloadHash);
+      return this.replayStatus(priorAction, payloadHash);
     }
     if (!this.transitionService) {
       throw new ServiceUnavailableException('SIMULATION_PAUSE_UNAVAILABLE');
@@ -1112,7 +1124,7 @@ export class SimulationsService {
             },
           });
           if (racedAction) {
-            return this.replayPause(racedAction, payloadHash);
+            return this.replayStatus(racedAction, payloadHash);
           }
           throw new ConflictException('SIMULATION_PAUSE_NOT_ALLOWED');
         }
@@ -1129,7 +1141,7 @@ export class SimulationsService {
           where: { id: sessionId },
           select: simulationDetailSelect,
         });
-        const response: PauseResponse = {
+        const response: StatusResponse = {
           ...this.toSimulationDetailResponse(refreshedSession),
           replayed: false,
         };
@@ -1153,9 +1165,129 @@ export class SimulationsService {
         idempotencyKey,
       );
       if (racedAction) {
-        return this.replayPause(racedAction, payloadHash);
+        return this.replayStatus(racedAction, payloadHash);
       }
       throw new ConflictException('SIMULATION_PAUSE_CONFLICT');
+    }
+  }
+
+  async resumeSession(
+    userId: string,
+    sessionId: string,
+    dto: UpdateSimulationStatusDto,
+    idempotencyKey: string | undefined,
+  ): Promise<StatusResponse> {
+    if (!isUUID(sessionId)) {
+      throw new BadRequestException('SIMULATION_ID_INVALID');
+    }
+    this.validateIdempotencyKey(idempotencyKey);
+    if (dto.action !== 'resume') {
+      throw new BadRequestException('SIMULATION_STATUS_ACTION_INVALID');
+    }
+    const payloadHash = this.hashPayload({ action: dto.action });
+
+    const ownedSession = await this.prisma.simulationSession.findFirst({
+      where: { id: sessionId, userId },
+      select: { id: true },
+    });
+    if (!ownedSession) {
+      throw new NotFoundException('SIMULATION_NOT_FOUND');
+    }
+    const priorAction = await this.findStatusAction(sessionId, idempotencyKey);
+    if (priorAction) {
+      return this.replayStatus(priorAction, payloadHash);
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const session = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: resumeSessionSelect,
+        });
+        this.assertResumeAllowed(session);
+
+        const now = new Date();
+        const restoredDeadline = this.restoredDeadline(
+          session.timedMode,
+          session.pausedDecisionSeconds,
+          now,
+        );
+        const resumingEvent =
+          session.presentationHold === SimulationPresentationHold.EVENT_REVEAL;
+        const update = await tx.simulationSession.updateMany({
+          where: {
+            id: sessionId,
+            status: SimulationSessionStatus.PAUSED,
+            presentationHold: {
+              in: [
+                SimulationPresentationHold.NONE,
+                SimulationPresentationHold.EVENT_REVEAL,
+              ],
+            },
+          },
+          data: {
+            status: SimulationSessionStatus.ACTIVE,
+            pausedAt: null,
+            pausedDecisionSeconds: null,
+            nextDayAt: resumingEvent ? null : restoredDeadline,
+          },
+        });
+        if (update.count === 0) {
+          const racedAction = await tx.simulationAction.findFirst({
+            where: {
+              sessionId,
+              actionType: SimulationActionType.CHANGE_STATUS,
+              idempotencyKey,
+            },
+            select: {
+              actionType: true,
+              payloadHash: true,
+              responseSnapshot: true,
+            },
+          });
+          if (racedAction) {
+            return this.replayStatus(racedAction, payloadHash);
+          }
+          throw new ConflictException('SIMULATION_RESUME_NOT_ALLOWED');
+        }
+        if (resumingEvent && restoredDeadline) {
+          await tx.simulationEvent.update({
+            where: { id: session.events[0].id },
+            data: { decisionExpiresAt: restoredDeadline },
+          });
+        }
+
+        const refreshedSession = await tx.simulationSession.findUniqueOrThrow({
+          where: { id: sessionId },
+          select: simulationDetailSelect,
+        });
+        const response: StatusResponse = {
+          ...this.toSimulationDetailResponse(refreshedSession),
+          replayed: false,
+        };
+        await tx.simulationAction.create({
+          data: {
+            sessionId,
+            actionType: SimulationActionType.CHANGE_STATUS,
+            idempotencyKey,
+            payloadHash,
+            responseSnapshot: response,
+          },
+        });
+        return response;
+      });
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+      const racedAction = await this.findStatusAction(
+        sessionId,
+        idempotencyKey,
+      );
+      if (racedAction) {
+        return this.replayStatus(racedAction, payloadHash);
+      }
+      throw new ConflictException('SIMULATION_RESUME_CONFLICT');
     }
   }
 
@@ -1181,6 +1313,41 @@ export class SimulationsService {
     }
   }
 
+  private assertResumeAllowed(session: {
+    status: SimulationSessionStatus;
+    timedMode: boolean;
+    pausedDecisionSeconds: number | null;
+    presentationHold: SimulationPresentationHold;
+    events: Array<{ id: string }>;
+  }): void {
+    if (session.status !== SimulationSessionStatus.PAUSED) {
+      throw new ConflictException('SIMULATION_NOT_PAUSED');
+    }
+    if (
+      session.presentationHold !== SimulationPresentationHold.NONE &&
+      session.presentationHold !== SimulationPresentationHold.EVENT_REVEAL
+    ) {
+      throw new ConflictException('SIMULATION_RESUME_NOT_ALLOWED');
+    }
+    if (
+      session.presentationHold === SimulationPresentationHold.EVENT_REVEAL &&
+      session.events.length !== 1
+    ) {
+      throw new ConflictException('SIMULATION_RESUME_NOT_ALLOWED');
+    }
+    if (
+      session.timedMode &&
+      (session.pausedDecisionSeconds === null ||
+        !Number.isInteger(session.pausedDecisionSeconds) ||
+        session.pausedDecisionSeconds < 0)
+    ) {
+      throw new ConflictException('SIMULATION_RESUME_NOT_ALLOWED');
+    }
+    if (!session.timedMode && session.pausedDecisionSeconds !== null) {
+      throw new ConflictException('SIMULATION_RESUME_NOT_ALLOWED');
+    }
+  }
+
   private remainingWholeSeconds(
     timedMode: boolean,
     deadline: Date | null | undefined,
@@ -1190,6 +1357,17 @@ export class SimulationsService {
       return null;
     }
     return Math.max(0, Math.floor((deadline.getTime() - now.getTime()) / 1000));
+  }
+
+  private restoredDeadline(
+    timedMode: boolean,
+    pausedDecisionSeconds: number | null,
+    now: Date,
+  ): Date | null {
+    if (!timedMode) {
+      return null;
+    }
+    return new Date(now.getTime() + pausedDecisionSeconds! * 1000);
   }
 
   private assertContinueAllowed(session: {
@@ -1851,17 +2029,17 @@ export class SimulationsService {
     });
   }
 
-  private replayPause(
+  private replayStatus(
     action: StoredStatusAction,
     payloadHash: string,
-  ): PauseResponse {
+  ): StatusResponse {
     if (
       action.actionType !== SimulationActionType.CHANGE_STATUS ||
       action.payloadHash !== payloadHash
     ) {
       throw new ConflictException('IDEMPOTENCY_KEY_REUSED');
     }
-    if (!this.isPauseResponse(action.responseSnapshot)) {
+    if (!this.isStatusResponse(action.responseSnapshot)) {
       throw new ServiceUnavailableException('SIMULATION_REPLAY_UNAVAILABLE');
     }
     return { ...action.responseSnapshot, replayed: true };
@@ -2358,7 +2536,7 @@ export class SimulationsService {
     );
   }
 
-  private isPauseResponse(value: unknown): value is PauseResponse {
+  private isStatusResponse(value: unknown): value is StatusResponse {
     return (
       typeof value === 'object' &&
       value !== null &&

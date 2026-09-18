@@ -299,21 +299,21 @@ export class SimulationsController {
 
   @Patch(':sessionId/status')
   @ApiOperation({
-    summary: 'Pause an owned fictional simulation',
+    summary: 'Pause or resume an owned fictional simulation',
     description:
-      'Pauses an active fictional session and preserves only its remaining server-owned timed-day or event-decision duration. It does not affect real records.',
+      'Pauses an active fictional session or resumes a paused session using only its saved server-owned duration. It does not affect real records.',
   })
   @ApiBody({ type: UpdateSimulationStatusDto })
   @ApiOkResponse({
     description:
-      'The paused safe fictional session state, wrapped by the global response envelope.',
+      'The updated safe fictional session state, wrapped by the global response envelope.',
   })
   @ApiBadRequestResponse({
     description: 'The session ID, body, or Idempotency-Key header is invalid.',
   })
   @ApiConflictResponse({
     description:
-      'The session cannot be paused in its current state, or the idempotency key was reused.',
+      'The session cannot be paused or resumed in its current state, or the idempotency key was reused.',
   })
   @ApiNotFoundResponse({
     description: 'The simulation does not exist or is not owned by the caller.',
@@ -325,7 +325,15 @@ export class SimulationsController {
     @Headers('idempotency-key') idempotencyKey: string | undefined,
   ) {
     const user = await this.usersService.findOrCreateUser(authUser);
-    return this.simulationsService.pauseSession(
+    if (dto.action === 'pause') {
+      return this.simulationsService.pauseSession(
+        user.id,
+        sessionId,
+        dto,
+        idempotencyKey,
+      );
+    }
+    return this.simulationsService.resumeSession(
       user.id,
       sessionId,
       dto,
