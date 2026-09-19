@@ -11,6 +11,10 @@ import {
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { GuidanceWalkthroughStatus } from '@prisma/client';
+import {
+  GUIDANCE_WALKTHROUGH_MIN_STEP,
+  GUIDANCE_WALKTHROUGH_MAX_STEP,
+} from '../guidance.constants';
 
 export class UpdateWalkthroughDto {
   @ApiPropertyOptional({
@@ -28,8 +32,8 @@ export class UpdateWalkthroughDto {
   })
   @IsOptional()
   @IsInt()
-  @Min(0)
-  @Max(4)
+  @Min(GUIDANCE_WALKTHROUGH_MIN_STEP)
+  @Max(GUIDANCE_WALKTHROUGH_MAX_STEP)
   currentStep?: number;
 }
 

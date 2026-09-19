@@ -5,6 +5,7 @@ import {
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { GuidanceService } from './guidance.service';
 import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
@@ -20,7 +21,7 @@ export class GuidanceController {
   constructor(private readonly guidanceService: GuidanceService) {}
 
   @ApiOperation({
-    summary: 'Get mascot guidance state.',
+    summary: 'Get mascot guidance state',
     description:
       'Returns the users mascot walkthrough state and guidance preferences.',
   })
@@ -50,7 +51,7 @@ export class GuidanceController {
   }
 
   @ApiOperation({
-    summary: 'Update mascot guidance state.',
+    summary: 'Update mascot guidance state',
     description:
       'Updates the users mascot walkthrough state and guidance preferences.',
   })
@@ -59,6 +60,9 @@ export class GuidanceController {
   })
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid Supabase Bearer token.',
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'The guidance state update is invalid.',
   })
   @Patch('state')
   async updateState(

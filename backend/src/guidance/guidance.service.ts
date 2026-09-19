@@ -1,7 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { GuidanceWalkthroughStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import {
+  GUIDANCE_WALKTHROUGH_MIN_STEP,
+  GUIDANCE_WALKTHROUGH_MAX_STEP,
+  DISMISSIBLE_GUIDANCE_TIP_ID_SET,
+  MAX_DISMISSED_TIP_IDS,
+} from './guidance.constants';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import type { UpdateGuidanceStateDto } from './dto/update-guidance-state.dto';
 
@@ -11,6 +17,56 @@ export class GuidanceService {
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
   ) {}
+
+  private validateUpdate(dto: UpdateGuidanceStateDto): void {
+    if (Object.keys(dto).length === 0) {
+      this.invalidGuidanceState('Guidance state cannot be empty');
+    }
+
+    if (
+      dto.walkthrough?.currentStep !== undefined &&
+      (!Number.isInteger(dto.walkthrough.currentStep) ||
+        dto.walkthrough.currentStep < GUIDANCE_WALKTHROUGH_MIN_STEP ||
+        dto.walkthrough.currentStep > GUIDANCE_WALKTHROUGH_MAX_STEP)
+    ) {
+      this.invalidGuidanceState('Walkthrough step must be between 0 and 4');
+    }
+
+    if (
+      dto.replayWalkthrough === true &&
+      dto.walkthrough?.currentStep !== undefined &&
+      dto.walkthrough.currentStep !== 0
+    ) {
+      this.invalidGuidanceState(
+        'Walkthrough replay cannot be with a nonzero step',
+      );
+    }
+
+    if (
+      dto.replayWalkthrough === true &&
+      dto.walkthrough?.status !== undefined &&
+      dto.walkthrough.status !== GuidanceWalkthroughStatus.IN_PROGRESS
+    ) {
+      this.invalidGuidanceState(
+        'Walkthrough replay cannot be with a status that is conflicting',
+      );
+    }
+
+    if (
+      dto.dismissTipId !== undefined &&
+      !DISMISSIBLE_GUIDANCE_TIP_ID_SET.has(dto.dismissTipId)
+    ) {
+      this.invalidGuidanceState('Unknown guidance tip id');
+    }
+  }
+
+  private invalidGuidanceState(message: string) {
+    throw new UnprocessableEntityException({
+      code: 'INVALID_GUIDANCE_STATE',
+      message,
+      details: {},
+    });
+  }
 
   async getState(authUser: AuthUser) {
     const user = await this.usersService.findOrCreateUser(authUser);
@@ -47,6 +103,8 @@ export class GuidanceService {
   }
 
   async updateState(authUser: AuthUser, dto: UpdateGuidanceStateDto) {
+    this.validateUpdate(dto);
+
     const user = await this.usersService.findOrCreateUser(authUser);
 
     const existingState = await this.prisma.guidanceState.findUnique({
@@ -55,11 +113,20 @@ export class GuidanceService {
       },
     });
 
-    let dismissedTipIds = existingState?.dismissedTipIds ?? [];
+    const storedDismissedTipIds = existingState?.dismissedTipIds;
 
-    if (!Array.isArray(dismissedTipIds)) {
-      dismissedTipIds = [];
-    }
+    let dismissedTipIds: string[] = Array.isArray(storedDismissedTipIds)
+      ? storedDismissedTipIds.filter(
+          (tipId): tipId is string =>
+            typeof tipId === 'string' &&
+            DISMISSIBLE_GUIDANCE_TIP_ID_SET.has(tipId),
+        )
+      : [];
+
+    dismissedTipIds = [...new Set(dismissedTipIds)].slice(
+      0,
+      MAX_DISMISSED_TIP_IDS,
+    );
 
     if (dto.resetDismissedTips === true) {
       dismissedTipIds = [];
@@ -69,6 +136,12 @@ export class GuidanceService {
       dto.dismissTipId !== undefined &&
       !dismissedTipIds.includes(dto.dismissTipId)
     ) {
+      if (dismissedTipIds.length >= MAX_DISMISSED_TIP_IDS) {
+        this.invalidGuidanceState(
+          `A maximum of ${MAX_DISMISSED_TIP_IDS} guidance tips can be dismissed`,
+        );
+      }
+
       dismissedTipIds = [...dismissedTipIds, dto.dismissTipId];
     }
 
