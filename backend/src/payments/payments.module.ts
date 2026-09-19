@@ -23,9 +23,8 @@ import { PaymentContributionsService } from './payment-contributions.service';
     GamificationModule,
     RewardModule,
     CreditScoreModule,
-    PaymentContributionsService
   ],
-  controllers: [PaymentsController],
+  controllers: [PaymentsController, PaymentContributionsService],
   providers: [PaymentsService],
   exports: [
     PaymentsService,
