@@ -191,40 +191,267 @@ export class PaymentContributionsService {
             const finalStatus = isLate ? PaymentOccurrenceStatus.PAID_LATE : PaymentOccurrenceStatus.PAID;
             const daysLate = isLate ? Math.max(0, Math.ceil((input.paidDate.getTime() - occurrence.dueDate.getTime()) / (1000 * 60 * 60 * 24))) : 0;
 
-            const updatedOccurrence = await tx.paymentOccurrence.update({
-                where: {
-                    id: occurrence.id,
-                },
+            const updatedOccurrence = await tx.paymentOccurrence.update(
+                {
+                    where: {
+                        id: occurrence.id,
+                    },
 
-                data: {
-                    amountPaid: newAmountPaid,
-                    status: finalStatus,
-                    paidAt: input.paidDate,
-                },
+                    data: {
+                        amountPaid: newAmountPaid,
+                        status: finalStatus,
+                        paidAt: input.paidDate,
+                    },
+                }
+            );
+
+            const settlementEffects = await this.runSettlementEffects(tx, {
+                userId: input.userId,
+                occurrenceId: occurrence.id,
+                obligationId: occurrence.obligationId,
+                obligationName: occurrence.obligation.name,
+                contributionId: contribution.id,
+                isLate,
+                daysLate,
             });
 
             return {
+                replayed: false,
+
+                contribution: {
+                    id: contribution.id,
+                    occurrenceId: contribution.occurrenceId,
+                    obligationId: contribution.obligationId,
+                    amount: contribution.amount.toFixed(2),
+                    currency: contribution.currency,
+                    paidDate: contribution.paidDate,
+                    source: contribution.source,
+                    state: contribution.state,
+                    receiptScanId: contribution.receiptScanId,
+                    notes: contribution.notes,
+                    createdAt: contribution.createdAt,
+                },
+
                 occurrence: {
-                    id: occurrence.id,
-                    obligationId: occurrence.obligationId,
+                    id: updatedOccurrence.id,
+                    obligationId: updatedOccurrence.obligationId,
                     obligationName: occurrence.obligation.name,
-                    amountDue: occurrence.amountDue.toFixed(2),
-                    amountPaidBefore: occurrence.amountPaid.toFixed(2),
-                    amountPaidAfter: newAmountPaid.toFixed(2),
-                    amountRemainingBefore: remainingBefore.toFixed(2),
-                    amountRemainingAfter: remainingAfter.toFixed(2),
-                    currency: occurrence.currency,
-                    status: occurrence.status,
+                    dueDate: updatedOccurrence.dueDate,
+                    amountDue:updatedOccurrence.amountDue.toFixed(2),
+                    amountPaid:updatedOccurrence.amountPaid.toFixed(2),
+                    amountRemaining:remainingAfter.toFixed(2),
+                    currency: updatedOccurrence.currency,
+                    status: updatedOccurrence.status,
+                    paidAt: updatedOccurrence.paidAt,
                 },
-                requestedContribution: {
-                    amount: amount.toFixed(2),
-                    currency: input.currency,
-                    paidDate: input.paidDate,
-                    source: input.source,
+
+                settlement: {
+                    isLate,
+                    daysLate,
                 },
-                settlesOccurrence,
+
+                ...settlementEffects,
             };
         });
+    }
+
+    private async runSettlementEffects(
+        tx: Prisma.TransactionClient,
+        params: {
+            userId: string;
+            occurrenceId: string;
+            obligationId: string;
+            obligationName: string;
+            contributionId: string;
+            isLate: boolean;
+            daysLate: number;
+        },
+    ) {
+        const {
+            userId,
+            occurrenceId,
+            obligationId,
+            obligationName,
+            contributionId,
+            isLate,
+            daysLate,
+        } = params;
+
+        const simulatedInterestCalculation = daysLate * 2;
+
+        // create user evvent for the completion of a payment
+        const paymentEvent = await tx.userEvent.create(
+            {
+                data: {
+
+                    userId,
+                    eventType: isLate ? UserEventType.PAYMENT_LATE : UserEventType.PAYMENT_ON_TIME,
+                    sourceType: UserEventSourceType.PAYMENT_RECORD, // keep legacy system for the moment
+                    sourceId: contributionId,
+
+                    metadata: {
+                        occurrenceId,
+                        obligationId,
+                        contributionId,
+                        daysLate,
+                    },
+                },
+            }
+        );
+
+        // credit score relcalculation
+        const {
+            scoreEventId,
+            scoreBefore,
+            scoreAfter,
+            scoreDelta,
+            tierBefore,
+            tierAfter,
+            explanation,
+            onTimePaymentCount,
+        } = await this.creditScoreService.recalculateAfterPayment(tx, {
+
+            userId,
+            occurrenceId,
+            paymentContributionId: contributionId,
+
+            eventType: isLate ? ScoreEventType.PAYMENT_LATE : ScoreEventType.PAYMENT_ON_TIME,
+
+            explanation: isLate
+                ? `Paid ${obligationName} ${daysLate} day${daysLate === 1 ? '' : 's'} late.`
+                : `Paid ${obligationName} on time.`,
+        });
+
+        // score change user notification
+        if (scoreAfter !== scoreBefore) {
+
+            await this.notificationsService.create(
+                {
+                    userId,
+                    type: NotificationType.SCORE_CHANGE,
+                    title: 'Credit score updated',
+
+                    message: scoreAfter > scoreBefore
+                        ? `Your simulated credit score increased from ${scoreBefore} to ${scoreAfter}.`
+                        : `Your simulated credit score decreased from ${scoreBefore} to ${scoreAfter}.`,
+
+                    sourceType: UserEventSourceType.PAYMENT_RECORD, // keep lgacy system for now
+                    sourceId: contributionId,
+                },
+                tx,
+            );
+        }
+
+        // gamification profile
+        const gamificationProfile = await tx.gamificationProfile.upsert(
+            {
+                where: {
+                    userId
+                },
+
+                update: { },
+
+                create: {
+                    userId
+                },
+            }
+        );
+
+        const coinsAwarded = isLate ? 0 : ON_TIME_COINS;
+        const xpAwarded = isLate ? 0 : ON_TIME_XP;
+        const mascotMood = isLate ? MascotMood.STRESSED : MascotMood.HAPPY;
+
+        // reward service logic for coincs, streak and mascot 
+        const settlement = await this.rewardService.settleAction(tx, {
+
+            userId,
+            sourceEventId: paymentEvent.id,
+
+            coins: {
+                amount: coinsAwarded,
+                reason: 'On-time payment reward',
+            },
+
+            xp: {
+                amount: xpAwarded,
+            },
+
+            streak: {
+                field: 'currentPaymentStreak',
+                advance: !isLate,
+            },
+
+            mood: {
+                value: mascotMood,
+                reason: isLate ? 'Late payment' : 'On-time payment',
+            },
+
+        });
+
+        const coinBalance = settlement.coinBalance ?? gamificationProfile.coinBalance;
+
+        const xp = settlement.xp ?? gamificationProfile.xp;
+
+        const currentPaymentStreak = settlement.streak?.current ?? 0;
+
+        const longestPaymentStreak = settlement.streak?.longest ?? 0;
+
+        // handle the badge logic
+        const badgesEarned = await this.badgeEngineService.evaluatePaymentBadges(
+            {
+                userId,
+                sourceEventId: paymentEvent.id,
+                onTimePaymentCount,
+                currentPaymentStreak,
+                currentScore: scoreAfter,
+            },
+            tx,
+        );
+
+        // stop reminders if the occurancs is fully settled
+        await tx.reminder.updateMany(
+            {
+                where: {
+                    occurrenceId,
+                    status: ReminderStatus.SCHEDULED,
+                    deletedAt: null,
+                },
+
+                data: {
+                    status: ReminderStatus.CANCELLED,
+                },
+            }
+        );
+
+        // retunr the relevant things for the createContribution
+        return {
+            scoreImpact: {
+                scoreEventId,
+                previousScore: scoreBefore,
+                currentScore: scoreAfter,
+                delta: scoreDelta,
+                tierBefore,
+                tierAfter,
+                explanation,
+            },
+
+            rewards: {
+                coinsAwarded,
+                xpAwarded,
+                coinBalance,
+                xp,
+                currentPaymentStreak,
+                longestPaymentStreak,
+                mascotMood,
+                badgesEarned,
+            },
+
+            paymentImpact: {
+                isLate,
+                daysLate,
+                simulatedInterest: simulatedInterestCalculation,
+            },
+        };
     }
 
     private createPayloadHash(input: CreateContributionInput): string {
