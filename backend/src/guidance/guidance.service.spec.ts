@@ -296,7 +296,7 @@ describe('GuidanceService', () => {
     prisma.guidanceState.findUnique.mockResolvedValue({
       walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
       walkthroughStep: 0,
-      dismissedTipIds: ['dashboard.daily'],
+      dismissedTipIds: ['calendar.overdue.explainer'],
     });
 
     prisma.guidanceState.upsert.mockResolvedValue({
@@ -304,7 +304,7 @@ describe('GuidanceService', () => {
       dailyExpansionEnabled: true,
       walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
       walkthroughStep: 0,
-      dismissedTipIds: ['dashboard.daily', 'calendar.overdue.explainer'],
+      dismissedTipIds: ['calendar.overdue.explainer'],
       updatedAt: new Date(),
     });
 
@@ -317,7 +317,6 @@ describe('GuidanceService', () => {
     const upsertCall = prisma.guidanceState.upsert.mock.calls[0][0];
 
     expect(upsertCall.update.dismissedTipIds).toEqual([
-      'dashboard.daily',
       'calendar.overdue.explainer',
     ]);
   });
@@ -330,7 +329,7 @@ describe('GuidanceService', () => {
     prisma.guidanceState.findUnique.mockResolvedValue({
       walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
       walkthroughStep: 0,
-      dismissedTipIds: ['dashboard.daily'],
+      dismissedTipIds: ['calendar.overdue.explainer'],
     });
 
     prisma.guidanceState.upsert.mockResolvedValue({
@@ -351,5 +350,84 @@ describe('GuidanceService', () => {
     const upsertCall = prisma.guidanceState.upsert.mock.calls[0][0];
 
     expect(upsertCall.update.dismissedTipIds).toEqual([]);
+  });
+
+  it('will reject a guidance tip id that is not allowed or listed', async () => {
+    await expect(
+      service.updateState(authUser, {
+        dismissTipId: 'not-real-tip-id',
+      }),
+    ).rejects.toThrow('Unknown guidance tip id');
+
+    expect(prisma.guidanceState.upsert).not.toHaveBeenCalled();
+  });
+
+  it('will reject an empty guidance state update', async () => {
+    await expect(service.updateState(authUser, {})).rejects.toThrow(
+      'Guidance state cannot be empty',
+    );
+
+    expect(usersService.findOrCreateUser).not.toHaveBeenCalled();
+  });
+
+  it('will not add the same dismissed tip id twice', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.guidanceState.findUnique.mockResolvedValue({
+      walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
+      walkthroughStep: 0,
+      dismissedTipIds: ['calendar.overdue.explainer'],
+    });
+
+    prisma.guidanceState.upsert.mockResolvedValue({
+      tipsEnabled: true,
+      dailyExpansionEnabled: true,
+      walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
+      walkthroughStep: 0,
+      dismissedTipIds: ['calendar.overdue.explainer'],
+      updatedAt: new Date(),
+    });
+
+    await service.updateState(authUser, {
+      dismissTipId: 'calendar.overdue.explainer',
+    });
+
+    const upsertCall = prisma.guidanceState.upsert.mock.calls[0][0];
+
+    expect(upsertCall.update.dismissedTipIds).toEqual([
+      'calendar.overdue.explainer',
+    ]);
+  });
+
+  it('will reject replay with a nonzero walkthrough step', async () => {
+    await expect(
+      service.updateState(authUser, {
+        replayWalkthrough: true,
+        walkthrough: {
+          currentStep: 3,
+        },
+      }),
+    ).rejects.toThrow(
+      'Walkthrough replay cannot be combined with a nonzero step',
+    );
+
+    expect(prisma.guidanceState.upsert).not.toHaveBeenCalled();
+  });
+
+  it('will reject replay with a walkthrough status that is conflicting', async () => {
+    await expect(
+      service.updateState(authUser, {
+        replayWalkthrough: true,
+        walkthrough: {
+          status: GuidanceWalkthroughStatus.COMPLETED,
+        },
+      }),
+    ).rejects.toThrow(
+      'Walkthrough replay cannot be with a status that is conflicting',
+    );
+
+    expect(prisma.guidanceState.upsert).not.toHaveBeenCalled();
   });
 });

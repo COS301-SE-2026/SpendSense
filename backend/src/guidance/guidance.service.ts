@@ -38,7 +38,7 @@ export class GuidanceService {
       dto.walkthrough.currentStep !== 0
     ) {
       this.invalidGuidanceState(
-        'Walkthrough replay cannot be with a nonzero step',
+        'Walkthrough replay cannot be combined with a nonzero step',
       );
     }
 
