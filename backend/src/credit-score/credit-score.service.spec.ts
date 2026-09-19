@@ -87,14 +87,16 @@ describe('CreditScoreService', () => {
           id: 'occ-1',
           user: { id: 'user-1', displayName: 'Test' },
           status: 'PAID',
-          payment: { daysLate: null },
+          dueDate: new Date('2026-05-20T00:00:00.000Z'),
+          paidAt: new Date('2026-05-20T00:00:00.000Z'),
           obligation: { priority: 'CRITICAL' },
         },
         {
           id: 'occ-2',
           user: { id: 'user-1', displayName: 'Test' },
           status: 'MISSED',
-          payment: { daysLate: undefined },
+          dueDate: new Date('2026-05-20T00:00:00.000Z'),
+          paidAt: new Date('2026-05-23T00:00:00.000Z'),
           obligation: { priority: 'LOW' },
         },
       ]);
@@ -323,8 +325,7 @@ describe('CreditScoreService', () => {
 
   describe('countPaymentStatuses', () => {
     it('defaults both counts to 0 when no groups are returned', async () => {
-      prisma.paymentRecord.groupBy.mockResolvedValue([]);
-
+      prisma.paymentOccurrence.count.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
       await expect(internals.countPaymentStatuses('user-1')).resolves.toEqual({
         onTimePaymentCount: 0,
         latePaymentCount: 0,
@@ -332,10 +333,8 @@ describe('CreditScoreService', () => {
     });
 
     it('extracts on-time and late counts from grouped results', async () => {
-      prisma.paymentRecord.groupBy.mockResolvedValue([
-        { paymentStatus: 'ON_TIME', _count: { _all: 5 } },
-        { paymentStatus: 'LATE', _count: { _all: 2 } },
-      ]);
+      prisma.paymentOccurrence.count.mockResolvedValueOnce(5).mockResolvedValueOnce(2);
+
 
       await expect(internals.countPaymentStatuses('user-1')).resolves.toEqual({
         onTimePaymentCount: 5,
