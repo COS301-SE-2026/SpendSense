@@ -42,7 +42,7 @@ describe('simulation catalogue seed', () => {
       },
     };
 
-    await seedSimulationCatalogue(prisma as never);
+    await seedSimulationCatalogue(prisma);
 
     expect(obligationUpsert).toHaveBeenCalledTimes(
       simulationObligationTemplates.length,
