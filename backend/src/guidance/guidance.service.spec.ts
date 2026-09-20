@@ -41,12 +41,23 @@ describe('GuidanceService', () => {
     };
     quizSession: {
       findFirst: jest.Mock;
+      update: jest.Mock;
     };
     gamificationProfile: {
       findUnique: jest.Mock;
+      update: jest.Mock;
     };
     paymentContribution: {
       findMany: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+      deleteMany: jest.Mock;
+    };
+    userInventoryItem: {
+      update: jest.Mock;
+    };
+    rewardTransaction: {
+      create: jest.Mock;
     };
   };
 
@@ -66,12 +77,23 @@ describe('GuidanceService', () => {
       },
       quizSession: {
         findFirst: jest.fn(),
+        update: jest.fn(),
       },
       gamificationProfile: {
         findUnique: jest.fn(),
+        update: jest.fn(),
       },
       paymentContribution: {
         findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn(),
+        update: jest.fn(),
+        deleteMany: jest.fn(),
+      },
+      userInventoryItem: {
+        update: jest.fn(),
+      },
+      rewardTransaction: {
+        create: jest.fn(),
       },
     };
 
@@ -804,5 +826,130 @@ describe('GuidanceService', () => {
         userId: 'authenticated-user',
       },
     });
+  });
+
+  it('will save a walkthrough that was skipped', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.guidanceState.findUnique.mockResolvedValue({
+      walkthroughStatus: GuidanceWalkthroughStatus.IN_PROGRESS,
+      walkthroughStep: 1,
+      dismissedTipIds: [],
+    });
+
+    prisma.guidanceState.upsert.mockResolvedValue({
+      tipsEnabled: true,
+      dailyExpansionEnabled: true,
+      walkthroughStatus: GuidanceWalkthroughStatus.SKIPPED,
+      walkthroughStep: 1,
+      dismissedTipIds: [],
+      updatedAt: new Date(),
+    });
+
+    await service.updateState(authUser, {
+      walkthrough: {
+        status: GuidanceWalkthroughStatus.SKIPPED,
+      },
+    });
+
+    const upsertCall = prisma.guidanceState.upsert.mock.calls[0][0];
+
+    expect(upsertCall.update.walkthroughStatus).toBe(
+      GuidanceWalkthroughStatus.SKIPPED,
+    );
+    expect(upsertCall.update.walkthroughStep).toBe(1);
+  });
+
+  it('will save a walkthrough that is in progress', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.guidanceState.findUnique.mockResolvedValue(null);
+
+    prisma.guidanceState.upsert.mockResolvedValue({
+      tipsEnabled: true,
+      dailyExpansionEnabled: true,
+      walkthroughStatus: GuidanceWalkthroughStatus.IN_PROGRESS,
+      walkthroughStep: 3,
+      dismissedTipIds: [],
+      updatedAt: new Date(),
+    });
+
+    await service.updateState(authUser, {
+      walkthrough: {
+        status: GuidanceWalkthroughStatus.IN_PROGRESS,
+        currentStep: 3,
+      },
+    });
+
+    expect(prisma.guidanceState.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          walkthroughStatus: GuidanceWalkthroughStatus.IN_PROGRESS,
+          walkthroughStep: 3,
+        }) as unknown,
+        update: expect.objectContaining({
+          walkthroughStatus: GuidanceWalkthroughStatus.IN_PROGRESS,
+          walkthroughStep: 3,
+        }) as unknown,
+      }),
+    );
+  });
+
+  it('will resume walkthrough from the state that was saved', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.guidanceState.findUnique.mockResolvedValue({
+      walkthroughStatus: GuidanceWalkthroughStatus.IN_PROGRESS,
+      walkthroughStep: 1,
+      dismissedTipIds: [],
+    });
+
+    prisma.guidanceState.upsert.mockResolvedValue({
+      tipsEnabled: true,
+      dailyExpansionEnabled: true,
+      walkthroughStatus: GuidanceWalkthroughStatus.IN_PROGRESS,
+      walkthroughStep: 3,
+      dismissedTipIds: [],
+      updatedAt: new Date(),
+    });
+
+    await service.updateState(authUser, {
+      walkthrough: {
+        currentStep: 3,
+      },
+    });
+
+    const upsertCall = prisma.guidanceState.upsert.mock.calls[0][0];
+
+    expect(upsertCall.update.walkthroughStatus).toBe(
+      GuidanceWalkthroughStatus.IN_PROGRESS,
+    );
+    expect(upsertCall.update.walkthroughStep).toBe(3);
+  });
+
+  it('will not any gamification or financial data of the user when reading the daily guidance', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.paymentContribution.findMany.mockResolvedValue([]);
+    prisma.quizSession.findFirst.mockResolvedValue(null);
+    prisma.gamificationProfile.findUnique.mockResolvedValue(null);
+
+    await service.getDailyFacts(authUser, new Date('2026-09-20T10:00:00.000Z'));
+
+    expect(prisma.paymentContribution.create).not.toHaveBeenCalled();
+    expect(prisma.paymentContribution.update).not.toHaveBeenCalled();
+    expect(prisma.paymentContribution.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.quizSession.update).not.toHaveBeenCalled();
+    expect(prisma.gamificationProfile.update).not.toHaveBeenCalled();
+    expect(prisma.rewardTransaction.create).not.toHaveBeenCalled();
+    expect(prisma.userInventoryItem.update).not.toHaveBeenCalled();
   });
 });
