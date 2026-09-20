@@ -1,9 +1,11 @@
 
-import {useEffect,useState} from 'react'
+import {useCallback,useEffect,useState} from 'react'
 import {useLocation,useNavigate,useParams} from 'react-router-dom'
 import {ArrowLeft,CheckCircle2,FileText,RefreshCw} from 'lucide-react'
 import {getReceiptScan,type ReceiptScan} from '../features/receipts/receiptsApi'
+import type {ReceiptOccurrence} from '../features/receipts/receiptOccurrencesApi'
 import ReceiptExtractionForm from '../components/receipts/ReceiptsExtractionFrom'
+import ReceiptOccurrencePicker from '../components/receipts/ReceiptOccurencePicker'
 
 type ReviewLocationState={
     scan?:ReceiptScan
@@ -20,6 +22,7 @@ export default function ReceiptReviewPage(){
     const [loading,setLoading]=useState(Boolean(scanId&&!initialScan))
     const [error,setError]=useState<string|null>(null)
     const [retryCount,setRetryCount]=useState(0)
+    const [selectedOccurrence,setSelectedOccurrence]=useState<ReceiptOccurrence|null>(null)
     const [isExpired,setIsExpired]=useState(()=>{
         return initialScan?new Date(initialScan.expiresAt).getTime()<=Date.now():false
     })
@@ -44,6 +47,10 @@ export default function ReceiptReviewPage(){
         })
         return()=>{active=false}
     },[scanId,initialScan,retryCount])
+
+    const handleOccurrenceSelect=useCallback((occurrence:ReceiptOccurrence|null)=>{
+        setSelectedOccurrence(occurrence)
+    },[])
 
     const displayError=!scanId
         ?'This receipt scan could not be found.'
@@ -171,12 +178,18 @@ export default function ReceiptReviewPage(){
                     )}
                 </section>
                 <ReceiptExtractionForm key={scan.id} extraction={scan.extraction}/>
+                <ReceiptOccurrencePicker
+                    key={scan.id}
+                    preselectedOccurrenceId={scan.preselectedOccurrenceId}
+                    selectedOccurrence={selectedOccurrence}
+                    onSelect={handleOccurrenceSelect}
+                />
                 <section className="rounded-3xl bg-[#E8E4F4] px-5 py-4 dark:bg-[#302A43]">
                     <p className="text-xs font-extrabold uppercase tracking-widest">
                         Before payment confirmation
                     </p>
                     <p className="mt-2 text-sm leading-6 text-[#6b6375] dark:text-[#a0aec0]">
-                        Next, you will choose a payment occurrence and check the current outstanding balance before confirming anything.
+                        Check your receipt details and the selected payment balance. You will confirm the payment explicitly in the next step.
                     </p>
                 </section>
             </div>
