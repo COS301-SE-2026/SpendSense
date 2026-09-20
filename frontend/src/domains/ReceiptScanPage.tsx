@@ -1,13 +1,20 @@
+
 import React,{useEffect,useRef,useState} from 'react'
-import {useNavigate} from 'react-router-dom'
+import {useNavigate,useSearchParams} from 'react-router-dom'
+import {scanReceipt,type ReceiptScan} from '../features/receipts/receiptsApi'
 
 export default function ReceiptScanPage(){
     const navigate=useNavigate()
+    const [searchParams]=useSearchParams()
+    const occurrenceId=searchParams.get('occurrenceId')??undefined
     const uploadInputRef=useRef<HTMLInputElement>(null)
     const cameraInputRef=useRef<HTMLInputElement>(null)
     const previewUrlRef=useRef<string|null>(null)
+    const [image,setImage]=useState<File|null>(null)
     const [previewUrl,setPreviewUrl]=useState<string|null>(null)
     const [error,setError]=useState<string|null>(null)
+    const [isScanning,setIsScanning]=useState(false)
+    const [scan,setScan]=useState<ReceiptScan|null>(null)
 
     useEffect(()=>{
         return()=>{
@@ -16,7 +23,7 @@ export default function ReceiptScanPage(){
     },[])
 
     function selectImage(file:File|undefined){
-        if(!file)return
+        if(!file||isScanning)return
         if(file.type!=='image/jpeg'&&file.type!=='image/png'){
             setError('Please choose a JPEG or PNG image.')
             return
@@ -25,7 +32,9 @@ export default function ReceiptScanPage(){
         const url=URL.createObjectURL(file)
         previewUrlRef.current=url
         setPreviewUrl(url)
+        setImage(file)
         setError(null)
+        setScan(null)
     }
 
     function handleUpload(event:React.ChangeEvent<HTMLInputElement>){
@@ -34,10 +43,28 @@ export default function ReceiptScanPage(){
     }
 
     function removeImage(){
+        if(isScanning)return
         if(previewUrlRef.current)URL.revokeObjectURL(previewUrlRef.current)
         previewUrlRef.current=null
         setPreviewUrl(null)
+        setImage(null)
         setError(null)
+        setScan(null)
+    }
+
+    async function handleScan(){
+        if(!image||isScanning)return
+        setIsScanning(true)
+        setError(null)
+        setScan(null)
+        try{
+            const result=await scanReceipt(image,occurrenceId)
+            setScan(result)
+        }catch{
+            setError('Unable to scan receipt. Please try again.')
+        }finally{
+            setIsScanning(false)
+        }
     }
 
     return(
@@ -83,14 +110,16 @@ export default function ReceiptScanPage(){
                                     <button
                                         type="button"
                                         onClick={()=>cameraInputRef.current?.click()}
-                                        className="flex-1 rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-5 py-3 font-black shadow-[4px_4px_0_#091828] transition active:translate-x-1 active:translate-y-1 active:shadow-none dark:border-white dark:bg-[#4B2635] dark:shadow-[4px_4px_0_#FFFFFF]"
+                                        disabled={isScanning}
+                                        className="flex-1 rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-5 py-3 font-black shadow-[4px_4px_0_#091828] transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-white dark:bg-[#4B2635] dark:shadow-[4px_4px_0_#FFFFFF]"
                                     >
                                         Retake photo
                                     </button>
                                     <button
                                         type="button"
                                         onClick={()=>uploadInputRef.current?.click()}
-                                        className="flex-1 rounded-full border-2 border-[#091828] bg-white px-5 py-3 font-black shadow-[4px_4px_0_#091828] transition active:translate-x-1 active:translate-y-1 active:shadow-none dark:border-white dark:bg-[#1B2631] dark:shadow-[4px_4px_0_#FFFFFF]"
+                                        disabled={isScanning}
+                                        className="flex-1 rounded-full border-2 border-[#091828] bg-white px-5 py-3 font-black shadow-[4px_4px_0_#091828] transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-white dark:bg-[#1B2631] dark:shadow-[4px_4px_0_#FFFFFF]"
                                     >
                                         Replace image
                                     </button>
@@ -98,9 +127,18 @@ export default function ReceiptScanPage(){
                                 <button
                                     type="button"
                                     onClick={removeImage}
-                                    className="mt-3 w-full rounded-full border-2 border-[#091828] bg-[#FFE9B5] px-5 py-3 font-black shadow-[4px_4px_0_#091828] transition active:translate-x-1 active:translate-y-1 active:shadow-none dark:border-white dark:bg-[#574821] dark:shadow-[4px_4px_0_#FFFFFF]"
+                                    disabled={isScanning}
+                                    className="mt-3 w-full rounded-full border-2 border-[#091828] bg-[#FFE9B5] px-5 py-3 font-black shadow-[4px_4px_0_#091828] transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-white dark:bg-[#574821] dark:shadow-[4px_4px_0_#FFFFFF]"
                                 >
                                     Remove image
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleScan}
+                                    disabled={isScanning||scan?.status==='READY_FOR_REVIEW'}
+                                    className="mt-3 w-full rounded-full border-2 border-[#091828] bg-[#DCEFE8] px-5 py-4 font-black shadow-[4px_4px_0_#091828] transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-white dark:bg-[#0f4f42] dark:shadow-[4px_4px_0_#FFFFFF]"
+                                >
+                                    {isScanning?'Reading your receipt...':'Scan receipt'}
                                 </button>
                             </>
                         ):(
@@ -138,6 +176,7 @@ export default function ReceiptScanPage(){
                             accept="image/jpeg,image/png"
                             capture="environment"
                             onChange={handleUpload}
+                            disabled={isScanning}
                             className="hidden"
                             aria-label="Take receipt photo"
                         />
@@ -146,9 +185,20 @@ export default function ReceiptScanPage(){
                             type="file"
                             accept="image/jpeg,image/png"
                             onChange={handleUpload}
+                            disabled={isScanning}
                             className="hidden"
                             aria-label="Upload receipt image"
                         />
+                        {isScanning&&(
+                            <p role="status" className="mt-4 text-center text-sm font-bold">
+                                Reading your receipt...
+                            </p>
+                        )}
+                        {scan?.status==='READY_FOR_REVIEW'&&(
+                            <p role="status" className="mt-4 rounded-2xl border-2 border-[#091828] bg-[#DCEFE8] px-4 py-3 text-sm font-bold shadow-[3px_3px_0_#091828] dark:border-white dark:bg-[#0f4f42] dark:shadow-[3px_3px_0_#FFFFFF]">
+                                Receipt scanned. Ready for review.
+                            </p>
+                        )}
                         {error&&(
                             <p role="alert" className="mt-4 rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-4 py-3 text-sm font-bold shadow-[3px_3px_0_#091828] dark:border-white dark:bg-[#4B2635] dark:shadow-[3px_3px_0_#FFFFFF]">
                                 {error}
