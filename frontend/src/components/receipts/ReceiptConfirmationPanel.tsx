@@ -1,0 +1,275 @@
+import {useRef,useState} from 'react'
+import {CheckCircle2,Info,RefreshCw,ShieldCheck,TriangleAlert} from 'lucide-react'
+import {confirmReceiptPayment,type ReceiptConfirmationBody,type ReceiptConfirmationResult} from '../../features/receipts/receiptsApi'
+import {getReceiptOccurrenceBalance,type ReceiptOccurrence} from '../../features/receipts/receiptOccurrencesApi'
+import type {ReceiptReviewValues} from './ReceiptExtractionForm'
+
+type ReceiptConfirmationPanelProps={
+    scanId:string
+    values:ReceiptReviewValues
+    occurrence:ReceiptOccurrence|null
+    onOccurrenceChange:(occurrence:ReceiptOccurrence|null)=>void
+}
+
+type ConfirmationAttempt={
+    key:string
+    body:ReceiptConfirmationBody
+}
+
+function moneyToCents(value:string):bigint|null{    
+    if(!/^\d+(?:\.\d{1,2})?$/.test(value))return null
+    const [whole,fraction='']=value.split('.')
+    return BigInt(whole)*100n+BigInt(fraction.padEnd(2,'0'))
+}
+
+function centsToMoney(value:bigint){
+    return `${value/100n}.${(value%100n).toString().padStart(2,'0')}`
+}
+
+function isValidDate(value:string){    
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false
+    const parsed=new Date(`${value}T00:00:00.000Z`)
+    return !Number.isNaN(parsed.getTime())&&parsed.toISOString().slice(0,10)===value
+}
+
+function getToday(){
+    const today=new Date()
+    const year=today.getFullYear()
+    const month=String(today.getMonth()+1).padStart(2,'0')
+    const day=String(today.getDate()).padStart(2,'0')
+    return `${year}-${month}-${day}`
+}
+
+export default function ReceiptConfirmationPanel({
+    scanId,
+    values,
+    occurrence,
+    onOccurrenceChange,
+}:ReceiptConfirmationPanelProps){
+    const [acknowledged,setAcknowledged]=useState(false)
+    const [processing,setProcessing]=useState(false)
+    const [error,setError]=useState<string|null>(null)
+    const [result,setResult]=useState<ReceiptConfirmationResult|null>(null)
+    const attemptRef=useRef<ConfirmationAttempt|null>(null)
+    const processingRef=useRef(false)
+
+    const amountCents=moneyToCents(values.amount.trim())
+    const remainingCents=occurrence?moneyToCents(occurrence.amountRemaining):null
+    const canRecord=occurrence?.canRecord??(
+        occurrence!==null&&
+        occurrence.status!=='PAID'&&
+        occurrence.status!=='PAID_LATE'&&
+        occurrence.status!=='MISSED'&&
+        occurrence.status!=='CANCELLED'&&
+        remainingCents!==null&&remainingCents>0n
+    )
+    const currencyMatches=occurrence!==null&&values.currency.trim().toUpperCase()===occurrence.currency
+    const amountValid=amountCents!==null&&amountCents>0n
+    const amountFits=amountValid&&remainingCents!==null&&amountCents<=remainingCents
+    const dateValid=isValidDate(values.receiptDate)&&values.receiptDate<=getToday()
+    const currencyValid=/^[A-Z]{3}$/.test(values.currency.trim().toUpperCase())
+    const previewRemaining=occurrence&&amountFits&&remainingCents!==null
+        ?centsToMoney(remainingCents-amountCents)
+        :null
+    const canConfirm=Boolean(
+        occurrence&&canRecord&&amountValid&&amountFits&&currencyValid&&currencyMatches&&dateValid&&acknowledged
+    )
+
+    function getValidationMessage(){
+        if(!occurrence)return 'Choose a payment occurrence before confirming.'
+        if(!canRecord)return 'This occurrence can no longer accept payments.'
+        if(!amountValid)return 'Enter a payment amount greater than zero with no more than two decimal places.'
+        if(!currencyValid)return 'Enter a valid three-letter currency code.'
+        if(!currencyMatches)return 'The receipt currency must match the selected payment currency.'
+        if(!dateValid)return 'Enter a valid payment date that is not in the future.'
+        if(!amountFits)return 'The payment amount cannot exceed the outstanding balance.'
+        if(!acknowledged)return 'Confirm that you made this payment before continuing.'
+        return null
+    }
+
+    async function handleConfirm(){
+        if(processingRef.current||result)return
+        const validation=getValidationMessage()
+        if(validation){
+            setError(validation)
+            return
+        }
+        if(!occurrence||amountCents===null)return
+        processingRef.current=true
+        setProcessing(true)
+        setError(null)
+        const body:ReceiptConfirmationBody={
+            occurrenceId:occurrence.id,
+            amount:centsToMoney(amountCents),
+            currency:values.currency.trim().toUpperCase(),
+            paidDate:values.receiptDate,
+            acknowledged:true,
+        }
+        try{
+            const existing=attemptRef.current
+            const isRetry=existing!==null&&JSON.stringify(existing.body)===JSON.stringify(body)
+            if(!isRetry){
+                const latest=await getReceiptOccurrenceBalance(occurrence.id)
+                const current=latest.occurrence
+                const changed=current.amountRemaining!==occurrence.amountRemaining||
+                    current.currency!==occurrence.currency||
+                    current.status!==occurrence.status||
+                    current.canRecord===false
+                onOccurrenceChange(current)
+                if(changed){
+                    attemptRef.current=null
+                    setAcknowledged(false)
+                    setError('The payment balance has changed. Review the updated balance and confirm again.')
+                    return
+                }
+                const key=crypto.randomUUID()
+                attemptRef.current={key,body}
+            }
+            const attempt=attemptRef.current
+            if(!attempt)return
+            const confirmation=await confirmReceiptPayment(scanId,attempt.body,attempt.key)
+            attemptRef.current=null
+            setResult(confirmation)
+            onOccurrenceChange(confirmation.occurrence)
+        }catch(caught){
+            const failure=caught as {statusCode?:number;error?:{code?:string}}
+            const code=failure.error?.code
+            if(failure.statusCode===409||code==='SCAN_EXPIRED'||code==='SCAN_ALREADY_CONSUMED'){
+                attemptRef.current=null
+                if(code==='SCAN_EXPIRED'){
+                    setError('This receipt scan has expired. Please scan the receipt again.')
+                }else if(code==='SCAN_ALREADY_CONSUMED'){
+                    setError('This receipt has already been used for a payment. Check your payment history before trying again.')
+                }else if(code==='AMOUNT_EXCEEDS_REMAINING'||code==='OCCURRENCE_NOT_PAYABLE'||code==='CURRENCY_MISMATCH'){
+                    setError('The payment details have changed. Review the latest balance before confirming again.')
+                    try{
+                        const updated=await getReceiptOccurrenceBalance(occurrence.id)
+                        onOccurrenceChange(updated.occurrence)
+                    }catch{
+                        onOccurrenceChange(null)
+                        setError('Unable to refresh the payment balance. Please choose the payment again.')
+                    }
+                    setAcknowledged(false)
+                }else{
+                    setError('This payment could not be confirmed. Check the details before trying again.')
+                }
+            }else if(failure.statusCode&&failure.statusCode>=400&&failure.statusCode<500){
+                attemptRef.current=null
+                setError('Please check your payment details before trying again.')
+            }else{
+                setError('We could not confirm whether the payment was recorded. Retry to check the same request safely.')
+            }
+        }finally{
+            processingRef.current=false
+            setProcessing(false)
+        }
+    }
+    if(result){
+        return(
+            <section className="rounded-3xl border-2 border-[#091828] bg-[#DCEFE8] p-6 shadow-[5px_5px_0_#091828] dark:border-white dark:bg-[#0f4f42] dark:shadow-[5px_5px_0_#FFFFFF]">
+                <CheckCircle2 className="size-12 text-[#10775F] dark:text-[#5eead4]"/>
+                <h2 className="mt-4 text-2xl font-black">Payment recorded</h2>
+                <p role="status" className="mt-2 text-sm leading-6">
+                    SpendSense confirmed your receipt payment. The balance below is the updated amount returned by the server.
+                </p>
+                <div className="mt-5 rounded-2xl bg-white p-4 text-[#091828] dark:bg-[#1c263c] dark:text-white">
+                    <p className="text-xs font-bold uppercase tracking-widest opacity-60">
+                        Payment amount
+                    </p>
+                    <p className="mt-1 text-2xl font-black">
+                        {result.contribution.currency} {result.contribution.amount}
+                    </p>
+                    <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
+                        Remaining balance
+                    </p>
+                    <p className="mt-1 text-2xl font-black">
+                        {result.occurrence.currency} {result.occurrence.amountRemaining}
+                    </p>
+                </div>
+                <p className="mt-4 text-xs opacity-70">
+                    Contribution reference: {result.contribution.id}
+                </p>
+            </section>
+        )
+    }
+
+    return(
+        <section className="rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[5px_5px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[5px_5px_0_#060e20] sm:p-6">
+            <div className="flex items-start gap-3">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#DCEFE8] dark:bg-[#0f4f42]">
+                    <ShieldCheck className="size-6 text-[#10775F] dark:text-[#5eead4]"/>
+                </div>
+                <div>
+                    <p className="text-xs font-extrabold uppercase tracking-widest text-[#AC2A5D] dark:text-[#ffb1c5]">
+                        Final check
+                    </p>
+                    <h2 className="mt-1 text-2xl font-black tracking-tight">
+                        Confirm your payment
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-[#6b6375] dark:text-[#a0aec0]">
+                        Check the amount and outstanding balance before recording your payment.
+                    </p>
+                </div>
+            </div>
+            {occurrence&&(
+                <div className="mt-6 rounded-2xl bg-[#F4FBF7] p-4 dark:bg-[#1c263c]">
+                    <p className="text-sm font-extrabold">{occurrence.obligationName}</p>
+                    <div className="mt-5 space-y-3">
+                        <div className="flex justify-between gap-3 text-sm">
+                            <span className="text-[#6b6375] dark:text-[#a0aec0]">Current outstanding</span>
+                            <span className="font-bold">{occurrence.currency} {occurrence.amountRemaining}</span>
+                        </div>
+                        <div className="flex justify-between gap-3 text-sm">
+                            <span className="text-[#6b6375] dark:text-[#a0aec0]">Payment amount</span>
+                            <span className="font-bold">{values.currency||occurrence.currency} {values.amount||'0.00'}</span>
+                        </div>
+                        <div className="border-t border-[#DCEFE8] pt-3 dark:border-[#2d3449]">
+                            <div className="flex justify-between gap-3">
+                                <span className="text-sm font-extrabold">Expected remaining</span>
+                                <span className="text-lg font-black text-[#10775F] dark:text-[#5eead4]">
+                                    {previewRemaining===null?'Check amount':`${occurrence.currency} ${previewRemaining}`}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div className="mt-5 rounded-2xl bg-[#E8E4F4] px-4 py-3 dark:bg-[#302A43]">
+                <p className="flex items-start gap-2 text-xs font-semibold leading-5 text-[#5B4D8B] dark:text-[#c5b3f0]">
+                    <Info className="mt-0.5 size-4 shrink-0"/>
+                    The expected balance is only a preview. SpendSense will validate the current balance again when you confirm.
+                </p>
+            </div>
+            <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-[#DCEFE8] px-4 py-4 dark:border-[#2d3449]">
+                <input
+                    type="checkbox"
+                    checked={acknowledged}
+                    onChange={event=>{setAcknowledged(event.target.checked);setError(null)}}
+                    disabled={processing}
+                    className="mt-1 size-5 accent-[#10775F]"
+                />
+                <span className="text-sm font-semibold leading-6">
+                    I confirm that I made this payment and have checked the receipt details.
+                </span>
+            </label>
+            {error&&(
+                <div role="alert" className="mt-4 flex items-start gap-2 rounded-2xl bg-[#FFD9E1] px-4 py-3 text-sm font-semibold text-[#AC2A5D] dark:bg-[#4B2635] dark:text-[#ffb1c5]">
+                    <TriangleAlert className="mt-0.5 size-5 shrink-0"/>
+                    <span>{error}</span>
+                </div>
+            )}
+            <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={!canConfirm||processing}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#091828] px-5 py-4 text-sm font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-40 dark:bg-[#FF6B9D] dark:text-[#650030]"
+            >
+                {processing&&<RefreshCw className="size-4 animate-spin"/>}
+                {processing?'Confirming payment...':'Confirm payment'}
+            </button>
+            <p className="mt-3 text-center text-xs text-[#6b6375] dark:text-[#a0aec0]">
+                Your payment is only recorded after you press Confirm payment.
+            </p>
+        </section>
+    )
+}

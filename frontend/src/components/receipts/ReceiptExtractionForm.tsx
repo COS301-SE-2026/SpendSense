@@ -12,6 +12,7 @@ export type ReceiptReviewValues={
 
 type ReceiptExtractionFormProps={
     extraction:ReceiptExtraction
+    onChange?:(values:ReceiptReviewValues)=>void
 }
 
 const confidenceStyles:Record<ReceiptConfidence,string>={
@@ -19,6 +20,15 @@ const confidenceStyles:Record<ReceiptConfidence,string>={
     MEDIUM:'bg-[#FFE9B5] text-[#7A5A00] dark:bg-[#574821] dark:text-[#ffd166]',
     LOW:'bg-[#FFD9E1] text-[#AC2A5D] dark:bg-[#4B2635] dark:text-[#ffb1c5]',
     UNKNOWN:'bg-[#E8E4F4] text-[#5B4D8B] dark:bg-[#302A43] dark:text-[#c5b3f0]',
+}
+
+function getInitialReceiptValues(extraction:ReceiptExtraction):ReceiptReviewValues{
+    return{
+        amount:extraction.amountCandidates[0]?.value??'',
+        currency:extraction.amountCandidates[0]?.currency??'',
+        merchant:extraction.merchant?.value??'',
+        receiptDate:extraction.receiptDate?.value??'',
+    }
 }
 
 function ConfidenceBadge({confidence}:{confidence:ReceiptConfidence}){
@@ -29,30 +39,29 @@ function ConfidenceBadge({confidence}:{confidence:ReceiptConfidence}){
     )
 }
 
-export default function ReceiptExtractionForm({extraction}:ReceiptExtractionFormProps){
-    const [values,setValues]=useState<ReceiptReviewValues>({
-        amount:extraction.amountCandidates[0]?.value??'',
-        currency:extraction.amountCandidates[0]?.currency??'',
-        merchant:extraction.merchant?.value??'',
-        receiptDate:extraction.receiptDate?.value??'',
-    })
+export default function ReceiptExtractionForm({extraction,onChange}:ReceiptExtractionFormProps){
+    const [values,setValues]=useState<ReceiptReviewValues>(()=>getInitialReceiptValues(extraction))
     const [selectedCandidate,setSelectedCandidate]=useState<number|null>(
         extraction.amountCandidates.length>0?0:null
     )
 
     function updateField(field:keyof ReceiptReviewValues,value:string){
-        setValues(current=>({...current,[field]:value}))
+        const next={...values,[field]:value}
+        setValues(next)
+        onChange?.(next)
         if(field==='amount'||field==='currency')setSelectedCandidate(null)
     }
 
     function selectCandidate(index:number){
         const candidate=extraction.amountCandidates[index]
         if(!candidate)return
-        setValues(current=>({
-            ...current,
+        const next={
+            ...values,
             amount:candidate.value,
             currency:candidate.currency,
-        }))
+        }
+        setValues(next)
+        onChange?.(next)
         setSelectedCandidate(index)
     }
 

@@ -3,7 +3,7 @@ import React from 'react'
 import {fireEvent,render,screen} from '@testing-library/react'
 import {describe,expect,it} from 'vitest'
 import '@testing-library/jest-dom'
-import ReceiptExtractionForm from '../components/receipts/ReceiptsExtractionFrom'
+import ReceiptExtractionForm from '../components/receipts/ReceiptExtractionForm'
 import type {ReceiptExtraction} from '../features/receipts/receiptsApi'
 
 const extraction:ReceiptExtraction={

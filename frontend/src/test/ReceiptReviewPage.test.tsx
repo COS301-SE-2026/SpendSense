@@ -6,6 +6,7 @@ import {beforeEach,describe,expect,it,vi} from 'vitest'
 import '@testing-library/jest-dom'
 import ReceiptReviewPage from '../domains/ReceiptReviewPage'
 import {getReceiptScan} from '../features/receipts/receiptsApi'
+import {getEligibleReceiptOccurrences,getReceiptOccurrenceBalance} from '../features/receipts/receiptOccurrencesApi'
 
 const navigate=vi.fn()
 
@@ -19,7 +20,26 @@ vi.mock('react-router-dom',async()=>{
 
 vi.mock('../features/receipts/receiptsApi',()=>({
     getReceiptScan:vi.fn(),
+    confirmReceiptPayment:vi.fn(),
 }))
+
+vi.mock('../features/receipts/receiptOccurrencesApi',()=>({
+    getEligibleReceiptOccurrences:vi.fn(),
+    getReceiptOccurrenceBalance:vi.fn(),
+}))
+
+const occurrence={
+    id:'occ_123',
+    obligationId:'obl_456',
+    obligationName:'Electricity',
+    dueDate:'2026-09-30',
+    currency:'ZAR',
+    amountDue:'300.00',
+    amountPaid:'0.00',
+    amountRemaining:'300.00',
+    status:'PENDING' as const,
+    canRecord:true,
+}
 
 const scanResponse={
     id:'scan_abc',
@@ -50,6 +70,11 @@ describe('ReceiptReviewPage',()=>{
     beforeEach(()=>{
         vi.clearAllMocks()
         vi.mocked(getReceiptScan).mockResolvedValue(scanResponse)
+        vi.mocked(getEligibleReceiptOccurrences).mockResolvedValue({
+            items:[occurrence],
+            nextCursor:null,
+        })
+        vi.mocked(getReceiptOccurrenceBalance).mockResolvedValue({occurrence})
     })
     it('renders the review page using the scan passed from upload',()=>{
         renderReview({scan:scanResponse})
@@ -66,10 +91,13 @@ describe('ReceiptReviewPage',()=>{
         expect(screen.getByLabelText('Merchant')).toHaveValue('City Power')
         expect(screen.getByLabelText('Receipt date')).toHaveValue('2026-09-20')
     })
-    it('preserves the occurrence preselection',()=>{
+    it('preserves the occurrence preselection',async()=>{
         renderReview({scan:scanResponse})
         expect(screen.getByText('occ_123')).toBeInTheDocument()
         expect(screen.getByText('Payment preselected from your previous screen')).toBeInTheDocument()
+        await waitFor(()=>{
+            expect(getReceiptOccurrenceBalance).toHaveBeenCalledWith('occ_123')
+        })
     })
     it('loads the scan from the API after a refresh',async()=>{
         renderReview()
@@ -107,9 +135,14 @@ describe('ReceiptReviewPage',()=>{
         })
         expect(await screen.findByRole('heading',{name:'Review your receipt'})).toBeInTheDocument()
     })
-    it('does not show payment confirmation before review is implemented',()=>{
+    it('shows confirmation but requires explicit acknowledgement',async()=>{
         renderReview({scan:scanResponse})
-        expect(screen.queryByRole('button',{name:'Confirm payment'})).not.toBeInTheDocument()
+        expect(screen.getByRole('heading',{name:'Confirm your payment'})).toBeInTheDocument()
+        expect(screen.getByRole('button',{name:'Confirm payment'})).toBeDisabled()
+        await waitFor(()=>{
+            expect(getReceiptOccurrenceBalance).toHaveBeenCalledWith('occ_123')
+        })
+        expect(screen.getByRole('button',{name:'Confirm payment'})).toBeDisabled()
         expect(screen.getByText('No payment has been recorded.',{exact:false})).toBeInTheDocument()
     })
 })

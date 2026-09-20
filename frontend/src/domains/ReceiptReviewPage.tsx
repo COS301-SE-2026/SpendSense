@@ -2,13 +2,23 @@
 import {useCallback,useEffect,useState} from 'react'
 import {useLocation,useNavigate,useParams} from 'react-router-dom'
 import {ArrowLeft,CheckCircle2,FileText,RefreshCw} from 'lucide-react'
-import {getReceiptScan,type ReceiptScan} from '../features/receipts/receiptsApi'
+import {getReceiptScan,type ReceiptScan,type ReceiptExtraction} from '../features/receipts/receiptsApi'
 import type {ReceiptOccurrence} from '../features/receipts/receiptOccurrencesApi'
-import ReceiptExtractionForm from '../components/receipts/ReceiptsExtractionFrom'
+import ReceiptExtractionForm,{type ReceiptReviewValues} from '../components/receipts/ReceiptExtractionForm'
 import ReceiptOccurrencePicker from '../components/receipts/ReceiptOccurencePicker'
+import ReceiptConfirmationPanel from '../components/receipts/ReceiptConfirmationPanel'
 
 type ReviewLocationState={
     scan?:ReceiptScan
+}
+
+function getInitialReceiptValues(extraction:ReceiptExtraction):ReceiptReviewValues{
+    return{
+        amount:extraction.amountCandidates[0]?.value??'',
+        currency:extraction.amountCandidates[0]?.currency??'',
+        merchant:extraction.merchant?.value??'',
+        receiptDate:extraction.receiptDate?.value??'',
+    }
 }
 
 export default function ReceiptReviewPage(){
@@ -23,6 +33,7 @@ export default function ReceiptReviewPage(){
     const [error,setError]=useState<string|null>(null)
     const [retryCount,setRetryCount]=useState(0)
     const [selectedOccurrence,setSelectedOccurrence]=useState<ReceiptOccurrence|null>(null)
+    const [editedValues,setEditedValues]=useState<ReceiptReviewValues|null>(null)
     const [isExpired,setIsExpired]=useState(()=>{
         return initialScan?new Date(initialScan.expiresAt).getTime()<=Date.now():false
     })
@@ -50,6 +61,10 @@ export default function ReceiptReviewPage(){
 
     const handleOccurrenceSelect=useCallback((occurrence:ReceiptOccurrence|null)=>{
         setSelectedOccurrence(occurrence)
+    },[])
+
+    const handleValuesChange=useCallback((values:ReceiptReviewValues)=>{
+        setEditedValues(values)
     },[])
 
     const displayError=!scanId
@@ -115,6 +130,8 @@ export default function ReceiptReviewPage(){
         )
     }
 
+    const values=editedValues??getInitialReceiptValues(scan.extraction)
+
     return(
         <main className="min-h-[100dvh] bg-[#F4FBF7] px-5 py-8 text-[#091828] dark:bg-[#0b1326] dark:text-white">
             <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
@@ -177,21 +194,24 @@ export default function ReceiptReviewPage(){
                         </div>
                     )}
                 </section>
-                <ReceiptExtractionForm key={scan.id} extraction={scan.extraction}/>
+                <ReceiptExtractionForm
+                    key={`${scan.id}-extraction`}
+                    extraction={scan.extraction}
+                    onChange={handleValuesChange}
+                />
                 <ReceiptOccurrencePicker
-                    key={scan.id}
+                    key={`${scan.id}-occurrence`}
                     preselectedOccurrenceId={scan.preselectedOccurrenceId}
                     selectedOccurrence={selectedOccurrence}
                     onSelect={handleOccurrenceSelect}
                 />
-                <section className="rounded-3xl bg-[#E8E4F4] px-5 py-4 dark:bg-[#302A43]">
-                    <p className="text-xs font-extrabold uppercase tracking-widest">
-                        Before payment confirmation
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[#6b6375] dark:text-[#a0aec0]">
-                        Check your receipt details and the selected payment balance. You will confirm the payment explicitly in the next step.
-                    </p>
-                </section>
+                <ReceiptConfirmationPanel
+                    key={`${scan.id}-confirmation`}
+                    scanId={scan.id}
+                    values={values}
+                    occurrence={selectedOccurrence}
+                    onOccurrenceChange={handleOccurrenceSelect}
+                />
             </div>
         </main>
     )

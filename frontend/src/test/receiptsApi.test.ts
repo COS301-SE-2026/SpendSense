@@ -1,5 +1,6 @@
+
 import {beforeEach,describe,expect,it,vi} from 'vitest'
-import {getReceiptScan,scanReceipt} from '../features/receipts/receiptsApi'
+import {confirmReceiptPayment,getReceiptScan,scanReceipt} from '../features/receipts/receiptsApi'
 import {apiDataFetch} from '../lib/api'
 
 vi.mock('../lib/api',()=>({
@@ -100,5 +101,95 @@ describe('receiptsApi',()=>{
         vi.mocked(apiDataFetch).mockResolvedValue(response)
         await expect(getReceiptScan('scan_abc')).resolves.toEqual(response)
         expect(apiDataFetch).toHaveBeenCalledWith('/receipts/scans/scan_abc')
+    })
+    it('confirms a receipt with an idempotency key',async()=>{
+        const body={
+            occurrenceId:'occ_123',
+            amount:'100.00',
+            currency:'ZAR',
+            paidDate:'2026-09-20',
+            acknowledged:true as const,
+        }
+        const response={
+            replayed:false,
+            contribution:{
+                id:'pc_789',
+                occurrenceId:'occ_123',
+                amount:'100.00',
+                currency:'ZAR',
+                paidDate:'2026-09-20',
+                source:'RECEIPT_SCAN',
+                state:'POSTED',
+                receiptScanId:'scan_abc',
+                createdAt:'2026-09-20T12:00:00.000Z',
+            },
+            occurrence:{
+                id:'occ_123',
+                obligationId:'obl_456',
+                obligationName:'Electricity',
+                dueDate:'2026-09-30',
+                currency:'ZAR',
+                amountDue:'300.00',
+                amountPaid:'100.00',
+                amountRemaining:'200.00',
+                status:'PARTIALLY_PAID',
+                canRecord:true,
+            },
+            settlement:null,
+            scoreImpact:null,
+            rewards:null,
+        }
+        vi.mocked(apiDataFetch).mockResolvedValue(response)
+        await expect(confirmReceiptPayment('scan_abc',body,'key_123')).resolves.toEqual(response)
+        expect(apiDataFetch).toHaveBeenCalledWith('/receipts/scans/scan_abc/confirm',{
+            method:'POST',
+            headers:{'Idempotency-Key':'key_123'},
+            body:JSON.stringify(body),
+        })
+    })
+    it('returns the replayed confirmation result',async()=>{
+        const body={
+            occurrenceId:'occ_123',
+            amount:'100.00',
+            currency:'ZAR',
+            paidDate:'2026-09-20',
+            acknowledged:true as const,
+        }
+        const response={
+            replayed:true,
+            contribution:{
+                id:'pc_789',
+                occurrenceId:'occ_123',
+                amount:'100.00',
+                currency:'ZAR',
+                paidDate:'2026-09-20',
+                source:'RECEIPT_SCAN',
+                state:'POSTED',
+                receiptScanId:'scan_abc',
+                createdAt:'2026-09-20T12:00:00.000Z',
+            },
+            occurrence:{
+                id:'occ_123',
+                obligationId:'obl_456',
+                obligationName:'Electricity',
+                dueDate:'2026-09-30',
+                currency:'ZAR',
+                amountDue:'300.00',
+                amountPaid:'100.00',
+                amountRemaining:'200.00',
+                status:'PARTIALLY_PAID',
+                canRecord:true,
+            },
+            settlement:null,
+            scoreImpact:null,
+            rewards:null,
+        }
+        vi.mocked(apiDataFetch).mockResolvedValue(response)
+        await expect(confirmReceiptPayment('scan_abc',body,'key_123')).resolves.toEqual(response)
+        expect(apiDataFetch).toHaveBeenCalledWith('/receipts/scans/scan_abc/confirm',{
+            method:'POST',
+            headers:{'Idempotency-Key':'key_123'},
+            body:JSON.stringify(body),
+        })
     })
 })
