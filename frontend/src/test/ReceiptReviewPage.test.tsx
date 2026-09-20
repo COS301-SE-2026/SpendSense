@@ -58,6 +58,14 @@ describe('ReceiptReviewPage',()=>{
         expect(screen.getByText('scan_abc')).toBeInTheDocument()
         expect(getReceiptScan).not.toHaveBeenCalled()
     })
+    it('displays the editable OCR values on the review page',()=>{
+        renderReview({scan:scanResponse})
+        expect(screen.getByRole('heading',{name:'Check your receipt'})).toBeInTheDocument()
+        expect(screen.getByLabelText('Amount paid')).toHaveValue('100.00')
+        expect(screen.getByLabelText('Currency')).toHaveValue('ZAR')
+        expect(screen.getByLabelText('Merchant')).toHaveValue('City Power')
+        expect(screen.getByLabelText('Receipt date')).toHaveValue('2026-09-20')
+    })
     it('preserves the occurrence preselection',()=>{
         renderReview({scan:scanResponse})
         expect(screen.getByText('occ_123')).toBeInTheDocument()

@@ -3,6 +3,7 @@ import {useEffect,useState} from 'react'
 import {useLocation,useNavigate,useParams} from 'react-router-dom'
 import {ArrowLeft,CheckCircle2,FileText,RefreshCw} from 'lucide-react'
 import {getReceiptScan,type ReceiptScan} from '../features/receipts/receiptsApi'
+import ReceiptExtractionForm from '../components/receipts/ReceiptsExtractionFrom'
 
 type ReviewLocationState={
     scan?:ReceiptScan
@@ -169,12 +170,13 @@ export default function ReceiptReviewPage(){
                         </div>
                     )}
                 </section>
+                <ReceiptExtractionForm key={scan.id} extraction={scan.extraction}/>
                 <section className="rounded-3xl bg-[#E8E4F4] px-5 py-4 dark:bg-[#302A43]">
                     <p className="text-xs font-extrabold uppercase tracking-widest">
                         Before payment confirmation
                     </p>
                     <p className="mt-2 text-sm leading-6 text-[#6b6375] dark:text-[#a0aec0]">
-                        You will review and correct the extracted details, choose a payment occurrence and confirm the amount before anything is logged.
+                        Next, you will choose a payment occurrence and check the current outstanding balance before confirming anything.
                     </p>
                 </section>
             </div>
