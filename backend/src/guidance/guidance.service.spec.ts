@@ -1,4 +1,4 @@
-import { GuidanceWalkthroughStatus } from '@prisma/client';
+import { GuidanceWalkthroughStatus, QuizSessionType } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { UsersService } from '../users/users.service';
 import { GuidanceService } from './guidance.service';
@@ -33,6 +33,12 @@ describe('GuidanceService', () => {
       create: jest.Mock;
       upsert: jest.Mock<Promise<unknown>, [GuidanceUpsertArgs]>;
     };
+    quizSession: {
+      findFirst: jest.Mock;
+    };
+    gamificationProfile: {
+      findUnique: jest.Mock;
+    };
   };
 
   let usersService: jest.Mocked<Pick<UsersService, 'findOrCreateUser'>>;
@@ -48,6 +54,12 @@ describe('GuidanceService', () => {
         findUnique: jest.fn(),
         create: jest.fn(),
         upsert: jest.fn<Promise<unknown>, [GuidanceUpsertArgs]>(),
+      },
+      quizSession: {
+        findFirst: jest.fn(),
+      },
+      gamificationProfile: {
+        findUnique: jest.fn(),
       },
     };
 
@@ -429,5 +441,125 @@ describe('GuidanceService', () => {
     );
 
     expect(prisma.guidanceState.upsert).not.toHaveBeenCalled();
+  });
+
+  it('will read daily quiz facts using the Johannesburg local day', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.quizSession.findFirst.mockResolvedValue(null);
+    prisma.gamificationProfile.findUnique.mockResolvedValue(null);
+
+    const now = new Date('2026-09-20T22:30:00.000Z');
+
+    await service.getDailyFacts(authUser, now);
+
+    expect(prisma.quizSession.findFirst).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        type: QuizSessionType.DAILY,
+        quizDate: {
+          gte: new Date('2026-09-20T22:00:00.000Z'),
+          lt: new Date('2026-09-21T22:00:00.000Z'),
+        },
+      },
+      orderBy: {
+        startedAt: 'desc',
+      },
+      select: {
+        id: true,
+        status: true,
+        score: true,
+        totalQuestions: true,
+        startedAt: true,
+        completedAt: true,
+        coinsAwarded: true,
+        xpAwarded: true,
+      },
+    });
+  });
+
+  it('will return the current streaksfor the gamification profile', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.quizSession.findFirst.mockResolvedValue(null);
+
+    prisma.gamificationProfile.findUnique.mockResolvedValue({
+      currentPaymentStreak: 4,
+      currentKnowledgeStreak: 8,
+    });
+
+    const result = await service.getDailyFacts(authUser);
+
+    expect(result.streaks).toEqual({
+      payment: 4,
+      knowledge: 8,
+    });
+  });
+
+  it('will return the current daily quiz state', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    const startedAt = new Date('2026-09-20T08:00:00.000Z');
+
+    prisma.quizSession.findFirst.mockResolvedValue({
+      id: 'quiz-1',
+      status: 'IN_PROGRESS',
+      score: 3,
+      totalQuestions: 5,
+      startedAt,
+      completedAt: null,
+      coinsAwarded: 0,
+      xpAwarded: 0,
+    });
+
+    prisma.gamificationProfile.findUnique.mockResolvedValue({
+      currentPaymentStreak: 3,
+      currentKnowledgeStreak: 2,
+    });
+
+    const result = await service.getDailyFacts(
+      authUser,
+      new Date('2026-09-20T10:00:00.000Z'),
+    );
+
+    expect(result.quiz).toEqual({
+      id: 'quiz-1',
+      status: 'IN_PROGRESS',
+      score: 3,
+      totalQuestions: 5,
+      startedAt,
+      completedAt: null,
+      coinsAwarded: 0,
+      xpAwarded: 0,
+    });
+  });
+
+  it('will return valid empty daily facts for when there is no activity', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.quizSession.findFirst.mockResolvedValue(null);
+    prisma.gamificationProfile.findUnique.mockResolvedValue(null);
+
+    const result = await service.getDailyFacts(
+      authUser,
+      new Date('2026-09-20T10:00:00.000Z'),
+    );
+
+    expect(result.quiz).toBeNull();
+
+    expect(result.streaks).toEqual({
+      payment: 0,
+      knowledge: 0,
+    });
+
+    expect(result.payments).toBeNull();
   });
 });

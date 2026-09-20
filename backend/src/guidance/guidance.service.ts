@@ -1,5 +1,5 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
-import { GuidanceWalkthroughStatus } from '@prisma/client';
+import { GuidanceWalkthroughStatus, QuizSessionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import {
@@ -10,6 +10,14 @@ import {
 } from './guidance.constants';
 import type { AuthUser } from '../auth/types/auth-user.type';
 import type { UpdateGuidanceStateDto } from './dto/update-guidance-state.dto';
+
+const GUIDANCE_TIME_ZONE = 'Africa/Johannesburg';
+
+type GuidanceDateRange = {
+  date: string;
+  start: Date;
+  end: Date;
+};
 
 @Injectable()
 export class GuidanceService {
@@ -66,6 +74,97 @@ export class GuidanceService {
       message,
       details: {},
     });
+  }
+
+  private getJohannesburgDateRange(now: Date): GuidanceDateRange {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: GUIDANCE_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now);
+
+    const values = Object.fromEntries(
+      parts.map((part) => [part.type, part.value]),
+    );
+
+    const date = `${values.year}-${values.month}-${values.day}`;
+
+    const start = new Date(`${date}T00:00:00+02:00`);
+
+    const end = new Date(start);
+
+    end.setUTCDate(end.getUTCDate() + 1);
+
+    return {
+      date,
+      start,
+      end,
+    };
+  }
+
+  async getDailyFacts(authUser: AuthUser, now = new Date()) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+
+    const dateRange = this.getJohannesburgDateRange(now);
+
+    const [dailyQuiz, gamificationProfile] = await Promise.all([
+      this.prisma.quizSession.findFirst({
+        where: {
+          userId: user.id,
+          type: QuizSessionType.DAILY,
+          quizDate: {
+            gte: dateRange.start,
+            lt: dateRange.end,
+          },
+        },
+        orderBy: {
+          startedAt: 'desc',
+        },
+        select: {
+          id: true,
+          status: true,
+          score: true,
+          totalQuestions: true,
+          startedAt: true,
+          completedAt: true,
+          coinsAwarded: true,
+          xpAwarded: true,
+        },
+      }),
+
+      this.prisma.gamificationProfile.findUnique({
+        where: {
+          userId: user.id,
+        },
+        select: {
+          currentPaymentStreak: true,
+          currentKnowledgeStreak: true,
+        },
+      }),
+    ]);
+
+    return {
+      date: dateRange.date,
+      // TODO: replace payments below with the payment contribution facts (once the actual partial payment schema changes have been added)
+      payments: null,
+      quiz: dailyQuiz
+        ? {
+            id: dailyQuiz.id,
+            status: dailyQuiz.status,
+            score: dailyQuiz.score,
+            totalQuestions: dailyQuiz.totalQuestions,
+            startedAt: dailyQuiz.startedAt,
+            completedAt: dailyQuiz.completedAt,
+            coinsAwarded: dailyQuiz.coinsAwarded,
+            xpAwarded: dailyQuiz.xpAwarded,
+          }
+        : null,
+      streaks: {
+        payment: gamificationProfile?.currentPaymentStreak ?? 0,
+        knowledge: gamificationProfile?.currentKnowledgeStreak ?? 0,
+      },
+    };
   }
 
   async getState(authUser: AuthUser) {
