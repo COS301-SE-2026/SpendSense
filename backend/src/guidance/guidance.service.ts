@@ -1,5 +1,10 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
-import { GuidanceWalkthroughStatus, QuizSessionType } from '@prisma/client';
+import {
+  GuidanceWalkthroughStatus,
+  QuizSessionType,
+  PaymentContributionState,
+  PaymentOccurrenceStatus,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import {
@@ -108,46 +113,99 @@ export class GuidanceService {
 
     const dateRange = this.getJohannesburgDateRange(now);
 
-    const [dailyQuiz, gamificationProfile] = await Promise.all([
-      this.prisma.quizSession.findFirst({
-        where: {
-          userId: user.id,
-          type: QuizSessionType.DAILY,
-          quizDate: {
-            gte: dateRange.start,
-            lt: dateRange.end,
+    const [dailyQuiz, gamificationProfile, paymentContributions] =
+      await Promise.all([
+        this.prisma.quizSession.findFirst({
+          where: {
+            userId: user.id,
+            type: QuizSessionType.DAILY,
+            quizDate: {
+              gte: dateRange.start,
+              lt: dateRange.end,
+            },
           },
-        },
-        orderBy: {
-          startedAt: 'desc',
-        },
-        select: {
-          id: true,
-          status: true,
-          score: true,
-          totalQuestions: true,
-          startedAt: true,
-          completedAt: true,
-          coinsAwarded: true,
-          xpAwarded: true,
-        },
-      }),
+          orderBy: {
+            startedAt: 'desc',
+          },
+          select: {
+            id: true,
+            status: true,
+            score: true,
+            totalQuestions: true,
+            startedAt: true,
+            completedAt: true,
+            coinsAwarded: true,
+            xpAwarded: true,
+          },
+        }),
 
-      this.prisma.gamificationProfile.findUnique({
-        where: {
-          userId: user.id,
-        },
-        select: {
-          currentPaymentStreak: true,
-          currentKnowledgeStreak: true,
-        },
+        this.prisma.gamificationProfile.findUnique({
+          where: {
+            userId: user.id,
+          },
+          select: {
+            currentPaymentStreak: true,
+            currentKnowledgeStreak: true,
+          },
+        }),
+
+        this.prisma.paymentContribution.findMany({
+          where: {
+            userId: user.id,
+            state: PaymentContributionState.POSTED,
+            createdAt: {
+              gte: dateRange.start,
+              lt: dateRange.end,
+            },
+          },
+          select: {
+            amount: true,
+            currency: true,
+            occurrenceId: true,
+            occurrence: {
+              select: {
+                status: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+    const totalsByCurrency = new Map<string, number>();
+
+    for (const contribution of paymentContributions) {
+      const current = totalsByCurrency.get(contribution.currency) ?? 0;
+      totalsByCurrency.set(
+        contribution.currency,
+        current + Number(contribution.amount),
+      );
+    }
+
+    const paymentTotals = Array.from(totalsByCurrency.entries()).map(
+      ([currency, amount]) => ({
+        currency,
+        amount: amount.toFixed(2),
       }),
-    ]);
+    );
+
+    const completedOccurrenceIds = new Set(
+      paymentContributions
+        .filter(
+          (contribution) =>
+            contribution.occurrence.status === PaymentOccurrenceStatus.PAID ||
+            contribution.occurrence.status ===
+              PaymentOccurrenceStatus.PAID_LATE,
+        )
+        .map((contribution) => contribution.occurrenceId),
+    );
 
     return {
       date: dateRange.date,
-      // TODO: replace payments below with the payment contribution facts (once the actual partial payment schema changes have been added)
-      payments: null,
+      payments: {
+        contributionCount: paymentContributions.length,
+        completedOccurrenceCount: completedOccurrenceIds.size,
+        totalsByCurrency: paymentTotals,
+      },
       quiz: dailyQuiz
         ? {
             id: dailyQuiz.id,

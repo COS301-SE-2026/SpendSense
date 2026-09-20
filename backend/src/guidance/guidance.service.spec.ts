@@ -1,4 +1,9 @@
-import { GuidanceWalkthroughStatus, QuizSessionType } from '@prisma/client';
+import {
+  GuidanceWalkthroughStatus,
+  QuizSessionType,
+  PaymentContributionState,
+  PaymentOccurrenceStatus,
+} from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { UsersService } from '../users/users.service';
 import { GuidanceService } from './guidance.service';
@@ -39,6 +44,9 @@ describe('GuidanceService', () => {
     gamificationProfile: {
       findUnique: jest.Mock;
     };
+    paymentContribution: {
+      findMany: jest.Mock;
+    };
   };
 
   let usersService: jest.Mocked<Pick<UsersService, 'findOrCreateUser'>>;
@@ -60,6 +68,9 @@ describe('GuidanceService', () => {
       },
       gamificationProfile: {
         findUnique: jest.fn(),
+      },
+      paymentContribution: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
     };
 
@@ -560,6 +571,153 @@ describe('GuidanceService', () => {
       knowledge: 0,
     });
 
-    expect(result.payments).toBeNull();
+    expect(result.payments).toEqual({
+      contributionCount: 0,
+      completedOccurrenceCount: 0,
+      totalsByCurrency: [],
+    });
+  });
+
+  it('will total partial and final payment contribution without counting it twice', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.paymentContribution.findMany.mockResolvedValue([
+      {
+        amount: 50,
+        currency: 'ZAR',
+        occurrenceId: 'occurrence-1',
+        occurrence: {
+          status: PaymentOccurrenceStatus.PAID,
+        },
+      },
+      {
+        amount: 100,
+        currency: 'ZAR',
+        occurrenceId: 'occurrence-1',
+        occurrence: {
+          status: PaymentOccurrenceStatus.PAID,
+        },
+      },
+    ]);
+
+    prisma.quizSession.findFirst.mockResolvedValue(null);
+    prisma.gamificationProfile.findUnique.mockResolvedValue(null);
+
+    const result = await service.getDailyFacts(
+      authUser,
+      new Date('2026-09-20T10:00:00.000Z'),
+    );
+
+    expect(result.payments).toEqual({
+      contributionCount: 2,
+      completedOccurrenceCount: 1,
+      totalsByCurrency: [
+        {
+          currency: 'ZAR',
+          amount: '150.00',
+        },
+      ],
+    });
+  });
+
+  it('will exclude payment contributions that are voided', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.paymentContribution.findMany.mockResolvedValue([
+      {
+        amount: 50,
+        currency: 'ZAR',
+        occurrenceId: 'occurrence-1',
+        occurrence: {
+          status: PaymentOccurrenceStatus.PARTIALLY_PAID,
+        },
+      },
+    ]);
+
+    prisma.quizSession.findFirst.mockResolvedValue(null);
+    prisma.gamificationProfile.findUnique.mockResolvedValue(null);
+
+    await service.getDailyFacts(authUser, new Date('2026-09-20T10:00:00.000Z'));
+
+    expect(prisma.paymentContribution.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        state: PaymentContributionState.POSTED,
+        createdAt: {
+          gte: expect.any(Date) as Date,
+          lt: expect.any(Date) as Date,
+        },
+      },
+      select: {
+        amount: true,
+        currency: true,
+        occurrenceId: true,
+        occurrence: {
+          select: {
+            status: true,
+          },
+        },
+      },
+    });
+  });
+
+  it('will group payment totals by currency', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.paymentContribution.findMany.mockResolvedValue([
+      {
+        amount: 50,
+        currency: 'ZAR',
+        occurrenceId: 'occurrence-1',
+        occurrence: {
+          status: PaymentOccurrenceStatus.PARTIALLY_PAID,
+        },
+      },
+      {
+        amount: 50,
+        currency: 'ZAR',
+        occurrenceId: 'occurrence-2',
+        occurrence: {
+          status: PaymentOccurrenceStatus.PAID,
+        },
+      },
+      {
+        currency: 'USD',
+        amount: '35.00',
+        occurrenceId: 'occurrence-3',
+        occurrence: {
+          status: PaymentOccurrenceStatus.PAID,
+        },
+      },
+    ]);
+
+    prisma.quizSession.findFirst.mockResolvedValue(null);
+    prisma.gamificationProfile.findUnique.mockResolvedValue(null);
+
+    const result = await service.getDailyFacts(
+      authUser,
+      new Date('2026-09-20T10:00:00.000Z'),
+    );
+
+    expect(result.payments).toEqual({
+      contributionCount: 3,
+      completedOccurrenceCount: 2,
+      totalsByCurrency: [
+        {
+          currency: 'ZAR',
+          amount: '100.00',
+        },
+        {
+          currency: 'USD',
+          amount: '35.00',
+        },
+      ],
+    });
   });
 });
