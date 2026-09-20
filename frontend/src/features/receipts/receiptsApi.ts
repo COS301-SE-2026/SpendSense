@@ -1,3 +1,4 @@
+
 import {apiDataFetch} from '../../lib/api'
 
 export type ReceiptConfidence='HIGH'|'MEDIUM'|'LOW'|'UNKNOWN'
@@ -37,4 +38,8 @@ export async function scanReceipt(image:File,preselectedOccurrenceId?:string){
         method:'POST',
         body:formData,
     })
+}
+
+export async function getReceiptScan(scanId:string){
+    return apiDataFetch<ReceiptScan>(`/receipts/scans/${encodeURIComponent(scanId)}`)
 }

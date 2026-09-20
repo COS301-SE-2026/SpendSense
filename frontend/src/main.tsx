@@ -1,3 +1,4 @@
+
 import { StrictMode} from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
@@ -50,6 +51,7 @@ import HelpPage from './domains/HelpPage.tsx'
 import HomeRoute from './components/HomeRoute'
 import ScrollToTop from './components/common/ScrollToTop.tsx'
 import ReceiptScanPage from './domains/ReceiptScanPage'
+import ReceiptReviewPage from './domains/ReceiptReviewPage'
 import PaymentForm from './domains/PaymentForm.tsx'
 
 initAuthListener()
@@ -105,6 +107,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/edit-profile" element={<ProtectedRoute><EditProfilePage/></ProtectedRoute>}/>
           <Route path="/help" element={<ProtectedRoute><HelpPage/></ProtectedRoute>}/>
           <Route path="/receipts/new" element={<ProtectedRoute><ReceiptScanPage/></ProtectedRoute>}/>
+          <Route path="/receipts/scans/:scanId/review" element={<ProtectedRoute><ReceiptReviewPage/></ProtectedRoute>}/>
         </Routes>
       </NotificationsProvider>
     </BrowserRouter>

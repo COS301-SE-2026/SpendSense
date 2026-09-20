@@ -118,7 +118,7 @@ describe('ReceiptScanPage',()=>{
         fireEvent.click(screen.getByRole('button',{name:'Go back'}))
         expect(navigate).toHaveBeenCalledWith(-1)
     })
-    it('submits the selected image to the scan API',async()=>{
+    it('submits the selected image to the scan API and opens review',async()=>{
         vi.mocked(scanReceipt).mockResolvedValue(scanResponse)
         render(
             <MemoryRouter>
@@ -130,11 +130,12 @@ describe('ReceiptScanPage',()=>{
         fireEvent.click(screen.getByRole('button',{name:'Scan receipt'}))
         await waitFor(()=>{
             expect(scanReceipt).toHaveBeenCalledWith(file,undefined)
+            expect(navigate).toHaveBeenCalledWith('/receipts/scans/scan_abc/review',{state:{scan:scanResponse}})
         })
-        expect(await screen.findByText('Receipt scanned. Ready for review.')).toBeInTheDocument()
     })
-    it('passes the occurrence ID from the URL to the scan API',async()=>{
-        vi.mocked(scanReceipt).mockResolvedValue(scanResponse)
+    it('passes the occurrence ID from the URL to the scan API and preserves the returned draft',async()=>{
+        const response={...scanResponse,preselectedOccurrenceId:'occ_123'}
+        vi.mocked(scanReceipt).mockResolvedValue(response)
         render(
             <MemoryRouter initialEntries={['/receipts/new?occurrenceId=occ_123']}>
                 <ReceiptScanPage/>
@@ -145,6 +146,7 @@ describe('ReceiptScanPage',()=>{
         fireEvent.click(screen.getByRole('button',{name:'Scan receipt'}))
         await waitFor(()=>{
             expect(scanReceipt).toHaveBeenCalledWith(file,'occ_123')
+            expect(navigate).toHaveBeenCalledWith('/receipts/scans/scan_abc/review',{state:{scan:response}})
         })
     })
     it('shows the OCR processing state and disables image controls',()=>{
@@ -173,6 +175,7 @@ describe('ReceiptScanPage',()=>{
         fireEvent.change(screen.getByLabelText('Upload receipt image'),{target:{files:[file]}})
         fireEvent.click(screen.getByRole('button',{name:'Scan receipt'}))
         expect(await screen.findByRole('alert')).toHaveTextContent('Unable to scan receipt. Please try again.')
+        expect(navigate).not.toHaveBeenCalled()
         expect(screen.queryByText('Receipt scanned. Ready for review.')).not.toBeInTheDocument()
     })
     it.each([
@@ -195,6 +198,7 @@ describe('ReceiptScanPage',()=>{
         expect(screen.getByAltText('Receipt preview')).toBeInTheDocument()
         expect(screen.getByRole('button',{name:'Scan receipt'})).toBeEnabled()
         expect(screen.getByRole('button',{name:'Enter payment manually'})).toBeInTheDocument()
+        expect(navigate).not.toHaveBeenCalled()
         expect(screen.queryByText('Receipt scanned. Ready for review.')).not.toBeInTheDocument()
     })
     it('retries a failed scan with the original image',async()=>{
@@ -209,7 +213,9 @@ describe('ReceiptScanPage',()=>{
         fireEvent.click(screen.getByRole('button',{name:'Scan receipt'}))
         expect(await screen.findByRole('alert')).toHaveTextContent('Receipt scanning is busy.')
         fireEvent.click(screen.getByRole('button',{name:'Scan receipt'}))
-        expect(await screen.findByText('Receipt scanned. Ready for review.')).toBeInTheDocument()
+        await waitFor(()=>{
+            expect(navigate).toHaveBeenCalledWith('/receipts/scans/scan_abc/review',{state:{scan:scanResponse}})
+        })
         expect(scanReceipt).toHaveBeenCalledTimes(2)
         expect(scanReceipt).toHaveBeenNthCalledWith(1,file,undefined)
         expect(scanReceipt).toHaveBeenNthCalledWith(2,file,undefined)

@@ -1,5 +1,5 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest'
-import {scanReceipt} from '../features/receipts/receiptsApi'
+import {getReceiptScan,scanReceipt} from '../features/receipts/receiptsApi'
 import {apiDataFetch} from '../lib/api'
 
 vi.mock('../lib/api',()=>({
@@ -83,5 +83,22 @@ describe('receiptsApi',()=>{
         }
         vi.mocked(apiDataFetch).mockResolvedValue(response)
         await expect(scanReceipt(file)).resolves.toEqual(response)
+    })
+    it('retrieves a receipt scan draft by ID',async()=>{
+        const response={
+            id:'scan_abc',
+            status:'READY_FOR_REVIEW' as const,
+            expiresAt:'2026-09-21T12:00:00.000Z',
+            extraction:{
+                amountCandidates:[],
+                merchant:null,
+                receiptDate:null,
+                warnings:[],
+            },
+            preselectedOccurrenceId:'occ_123',
+        }
+        vi.mocked(apiDataFetch).mockResolvedValue(response)
+        await expect(getReceiptScan('scan_abc')).resolves.toEqual(response)
+        expect(apiDataFetch).toHaveBeenCalledWith('/receipts/scans/scan_abc')
     })
 })

@@ -1,3 +1,4 @@
+
 import React,{useEffect,useRef,useState} from 'react'
 import {useNavigate,useSearchParams} from 'react-router-dom'
 import {scanReceipt,type ReceiptScan} from '../features/receipts/receiptsApi'
@@ -134,6 +135,7 @@ export default function ReceiptScanPage(){
         try{
             const result=await scanReceipt(image,occurrenceId)
             setScan(result)
+            navigate(`/receipts/scans/${encodeURIComponent(result.id)}/review`,{state:{scan:result}})
         }catch(caught){
             const code=(caught as {error?:{code?:string}})?.error?.code
             setError(scanErrorMessages[code??'']??'Unable to scan receipt. Please try again.')
