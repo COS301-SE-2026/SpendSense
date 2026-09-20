@@ -26,10 +26,7 @@ import { PaymentContributionsService } from './payment-contributions.service';
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService, PaymentContributionsService],
-  exports: [
-    PaymentsService,
-    PaymentContributionsService
-  ],
+  exports: [PaymentsService, PaymentContributionsService],
 })
 export class PaymentsModule {}
 

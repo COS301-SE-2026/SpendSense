@@ -16,7 +16,6 @@ import {
 import {
   ObligationType,
   PaymentOccurrenceStatus,
-  PaymentContribution,
   Prisma,
   ScoreEventType,
   ScoreTier,
@@ -26,7 +25,7 @@ type CreditScoreDb = PrismaService | Prisma.TransactionClient;
 
 @Injectable()
 export class CreditScoreService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async getCreditScore(userId: string, db: CreditScoreDb = this.prisma) {
     const paymentHistoryScore = await this.calculatePaymentHistory(userId, db);
@@ -98,7 +97,6 @@ export class CreditScoreService {
     userId: string,
     db: CreditScoreDb = this.prisma,
   ): Promise<number> {
-
     const occurrences = await db.paymentOccurrence.findMany({
       where: {
         userId,
@@ -138,11 +136,21 @@ export class CreditScoreService {
     let priorityWeightTotal = 0;
 
     for (const occurrence of occurrences) {
-
       let daysLate: number | undefined;
 
-      if (occurrence.status === PaymentOccurrenceStatus.PAID || occurrence.status === PaymentOccurrenceStatus.PAID_LATE) {
-        daysLate = occurrence.paidAt ? Math.max(0, Math.ceil((occurrence.paidAt.getTime() - occurrence.dueDate.getTime()) / (1000 * 60 * 60 * 24))) : undefined;
+      if (
+        occurrence.status === PaymentOccurrenceStatus.PAID ||
+        occurrence.status === PaymentOccurrenceStatus.PAID_LATE
+      ) {
+        daysLate = occurrence.paidAt
+          ? Math.max(
+              0,
+              Math.ceil(
+                (occurrence.paidAt.getTime() - occurrence.dueDate.getTime()) /
+                  (1000 * 60 * 60 * 24),
+              ),
+            )
+          : undefined;
       }
 
       if (daysLate === null) {
@@ -611,34 +619,35 @@ export class CreditScoreService {
     periodEnd: Date,
     db: CreditScoreDb = this.prisma,
   ): Promise<boolean> {
-    const latePayments = await db.paymentOccurrence.findMany(
-      {
-        where: {
-          userId,
-          status: PaymentOccurrenceStatus.PAID_LATE,
+    const latePayments = await db.paymentOccurrence.findMany({
+      where: {
+        userId,
+        status: PaymentOccurrenceStatus.PAID_LATE,
 
-          dueDate: {
-            gte: periodStart,
-            lte: periodEnd,
-          },
-
-          paidAt: {
-            not: null,
-          },
+        dueDate: {
+          gte: periodStart,
+          lte: periodEnd,
         },
 
-        select: {
-          dueDate: true,
-          paidAt: true,
+        paidAt: {
+          not: null,
         },
-      }
-    );
+      },
+
+      select: {
+        dueDate: true,
+        paidAt: true,
+      },
+    });
 
     return latePayments.some((payment) => {
       if (!payment.paidAt) {
         return false;
       }
-      const daysLate = Math.ceil((payment.paidAt.getTime() - payment.dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const daysLate = Math.ceil(
+        (payment.paidAt.getTime() - payment.dueDate.getTime()) /
+          (1000 * 60 * 60 * 24),
+      );
       return daysLate >= 15 && daysLate <= 30;
     });
   }
@@ -741,29 +750,25 @@ export class CreditScoreService {
     return ScoreTier.BUILDING;
   }
 
-  private async countPaymentStatuses(userId: string, db: CreditScoreDb = this.prisma): Promise<PaymentStatusCounts> {
-    const [onTimePaymentCount, latePaymentCount] = await Promise.all(
-      [
+  private async countPaymentStatuses(
+    userId: string,
+    db: CreditScoreDb = this.prisma,
+  ): Promise<PaymentStatusCounts> {
+    const [onTimePaymentCount, latePaymentCount] = await Promise.all([
+      db.paymentOccurrence.count({
+        where: {
+          userId,
+          status: PaymentOccurrenceStatus.PAID,
+        },
+      }),
 
-        db.paymentOccurrence.count(
-          {
-            where: {
-              userId,
-              status: PaymentOccurrenceStatus.PAID,
-            },
-          }
-        ),
-
-        db.paymentOccurrence.count(
-          {
-            where: {
-              userId,
-              status: PaymentOccurrenceStatus.PAID_LATE,
-            },
-          }
-        ),
-      ]
-    );
+      db.paymentOccurrence.count({
+        where: {
+          userId,
+          status: PaymentOccurrenceStatus.PAID_LATE,
+        },
+      }),
+    ]);
 
     return {
       onTimePaymentCount,
@@ -784,8 +789,14 @@ export class CreditScoreService {
       explanation: string;
     },
   ) {
-    const { userId, occurrenceId, paymentRecordId, paymentContributionId, eventType, explanation } =
-      params;
+    const {
+      userId,
+      occurrenceId,
+      paymentRecordId,
+      paymentContributionId,
+      eventType,
+      explanation,
+    } = params;
 
     const creditProfile = await tx.creditProfile.upsert({
       where: { userId },

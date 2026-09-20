@@ -325,7 +325,9 @@ describe('CreditScoreService', () => {
 
   describe('countPaymentStatuses', () => {
     it('defaults both counts to 0 when no groups are returned', async () => {
-      prisma.paymentOccurrence.count.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+      prisma.paymentOccurrence.count
+        .mockResolvedValueOnce(0)
+        .mockResolvedValueOnce(0);
       await expect(internals.countPaymentStatuses('user-1')).resolves.toEqual({
         onTimePaymentCount: 0,
         latePaymentCount: 0,
@@ -333,8 +335,9 @@ describe('CreditScoreService', () => {
     });
 
     it('extracts on-time and late counts from grouped results', async () => {
-      prisma.paymentOccurrence.count.mockResolvedValueOnce(5).mockResolvedValueOnce(2);
-
+      prisma.paymentOccurrence.count
+        .mockResolvedValueOnce(5)
+        .mockResolvedValueOnce(2);
 
       await expect(internals.countPaymentStatuses('user-1')).resolves.toEqual({
         onTimePaymentCount: 5,

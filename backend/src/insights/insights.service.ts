@@ -174,9 +174,7 @@ export class InsightsService {
 
       if (occurrence.status === PaymentOccurrenceStatus.PAID) {
         period.onTimePaymentCount += 1;
-      } else if (
-        occurrence.status === PaymentOccurrenceStatus.PAID_LATE
-      ) {
+      } else if (occurrence.status === PaymentOccurrenceStatus.PAID_LATE) {
         period.latePaymentCount += 1;
       } else if (occurrence.status === PaymentOccurrenceStatus.MISSED) {
         period.missedPaymentCount += 1;
