@@ -9,6 +9,7 @@ type ReceiptConfirmationPanelProps={
     values:ReceiptReviewValues
     occurrence:ReceiptOccurrence|null
     onOccurrenceChange:(occurrence:ReceiptOccurrence|null)=>void
+    onConfirmed?:(result:ReceiptConfirmationResult)=>void
 }
 
 type ConfirmationAttempt={
@@ -16,7 +17,7 @@ type ConfirmationAttempt={
     body:ReceiptConfirmationBody
 }
 
-function moneyToCents(value:string):bigint|null{    
+function moneyToCents(value:string):bigint|null{
     if(!/^\d+(?:\.\d{1,2})?$/.test(value))return null
     const [whole,fraction='']=value.split('.')
     return BigInt(whole)*100n+BigInt(fraction.padEnd(2,'0'))
@@ -26,7 +27,7 @@ function centsToMoney(value:bigint){
     return `${value/100n}.${(value%100n).toString().padStart(2,'0')}`
 }
 
-function isValidDate(value:string){    
+function isValidDate(value:string){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false
     const parsed=new Date(`${value}T00:00:00.000Z`)
     return !Number.isNaN(parsed.getTime())&&parsed.toISOString().slice(0,10)===value
@@ -40,16 +41,30 @@ function getToday(){
     return `${year}-${month}-${day}`
 }
 
+function ResultDetails({title,value}:{title:string;value:unknown}){
+    if(value===null||value===undefined)return null
+    return(
+        <div className="mt-4 rounded-2xl bg-white p-4 text-[#091828] dark:bg-[#1c263c] dark:text-white">
+            <h3 className="text-sm font-extrabold">{title}</h3>
+            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6">
+                {JSON.stringify(value,null,2)}
+            </pre>
+        </div>
+    )
+}
+
 export default function ReceiptConfirmationPanel({
     scanId,
     values,
     occurrence,
     onOccurrenceChange,
+    onConfirmed,
 }:ReceiptConfirmationPanelProps){
     const [acknowledged,setAcknowledged]=useState(false)
     const [processing,setProcessing]=useState(false)
     const [error,setError]=useState<string|null>(null)
     const [result,setResult]=useState<ReceiptConfirmationResult|null>(null)
+    const [blocked,setBlocked]=useState(false)
     const attemptRef=useRef<ConfirmationAttempt|null>(null)
     const processingRef=useRef(false)
 
@@ -72,10 +87,11 @@ export default function ReceiptConfirmationPanel({
         ?centsToMoney(remainingCents-amountCents)
         :null
     const canConfirm=Boolean(
-        occurrence&&canRecord&&amountValid&&amountFits&&currencyValid&&currencyMatches&&dateValid&&acknowledged
+        !blocked&&occurrence&&canRecord&&amountValid&&amountFits&&currencyValid&&currencyMatches&&dateValid&&acknowledged
     )
 
     function getValidationMessage(){
+        if(blocked)return 'This receipt cannot be submitted again.'
         if(!occurrence)return 'Choose a payment occurrence before confirming.'
         if(!canRecord)return 'This occurrence can no longer accept payments.'
         if(!amountValid)return 'Enter a payment amount greater than zero with no more than two decimal places.'
@@ -88,16 +104,13 @@ export default function ReceiptConfirmationPanel({
     }
 
     async function handleConfirm(){
-        if(processingRef.current||result)return
+        if(processingRef.current||result||blocked)return
         const validation=getValidationMessage()
         if(validation){
             setError(validation)
             return
         }
         if(!occurrence||amountCents===null)return
-        processingRef.current=true
-        setProcessing(true)
-        setError(null)
         const body:ReceiptConfirmationBody={
             occurrenceId:occurrence.id,
             amount:centsToMoney(amountCents),
@@ -105,16 +118,23 @@ export default function ReceiptConfirmationPanel({
             paidDate:values.receiptDate,
             acknowledged:true,
         }
+        const existing=attemptRef.current
+        if(existing&&JSON.stringify(existing.body)!==JSON.stringify(body)){
+            setError('Your previous payment request has an uncertain result. Restore the original payment details before retrying.')
+            return
+        }
+        processingRef.current=true
+        setProcessing(true)
+        setError(null)
         try{
-            const existing=attemptRef.current
-            const isRetry=existing!==null&&JSON.stringify(existing.body)===JSON.stringify(body)
-            if(!isRetry){
+            if(!existing){
                 const latest=await getReceiptOccurrenceBalance(occurrence.id)
                 const current=latest.occurrence
                 const changed=current.amountRemaining!==occurrence.amountRemaining||
                     current.currency!==occurrence.currency||
                     current.status!==occurrence.status||
                     current.canRecord===false
+
                 onOccurrenceChange(current)
                 if(changed){
                     attemptRef.current=null
@@ -122,8 +142,10 @@ export default function ReceiptConfirmationPanel({
                     setError('The payment balance has changed. Review the updated balance and confirm again.')
                     return
                 }
-                const key=crypto.randomUUID()
-                attemptRef.current={key,body}
+                attemptRef.current={
+                    key:crypto.randomUUID(),
+                    body,
+                }
             }
             const attempt=attemptRef.current
             if(!attempt)return
@@ -131,28 +153,42 @@ export default function ReceiptConfirmationPanel({
             attemptRef.current=null
             setResult(confirmation)
             onOccurrenceChange(confirmation.occurrence)
+            onConfirmed?.(confirmation)
         }catch(caught){
-            const failure=caught as {statusCode?:number;error?:{code?:string}}
-            const code=failure.error?.code
-            if(failure.statusCode===409||code==='SCAN_EXPIRED'||code==='SCAN_ALREADY_CONSUMED'){
-                attemptRef.current=null
-                if(code==='SCAN_EXPIRED'){
-                    setError('This receipt scan has expired. Please scan the receipt again.')
-                }else if(code==='SCAN_ALREADY_CONSUMED'){
-                    setError('This receipt has already been used for a payment. Check your payment history before trying again.')
-                }else if(code==='AMOUNT_EXCEEDS_REMAINING'||code==='OCCURRENCE_NOT_PAYABLE'||code==='CURRENCY_MISMATCH'){
-                    setError('The payment details have changed. Review the latest balance before confirming again.')
-                    try{
-                        const updated=await getReceiptOccurrenceBalance(occurrence.id)
-                        onOccurrenceChange(updated.occurrence)
-                    }catch{
-                        onOccurrenceChange(null)
-                        setError('Unable to refresh the payment balance. Please choose the payment again.')
-                    }
-                    setAcknowledged(false)
-                }else{
-                    setError('This payment could not be confirmed. Check the details before trying again.')
+            const failure=caught as{
+                statusCode?:number
+                error?:{
+                    code?:string
                 }
+            }
+            const code=failure.error?.code
+            if(code==='SCAN_EXPIRED'){
+                attemptRef.current=null
+                setBlocked(true)
+                setError('This receipt scan has expired. Please scan the receipt again.')
+            }else if(code==='SCAN_ALREADY_CONSUMED'){
+                attemptRef.current=null
+                setBlocked(true)
+                setError('This receipt has already been used for a payment. Check your payment history before trying again.')
+            }else if(
+                code==='AMOUNT_EXCEEDS_REMAINING'||
+                code==='OCCURRENCE_NOT_PAYABLE'||
+                code==='CURRENCY_MISMATCH'
+            ){
+                attemptRef.current=null
+                setAcknowledged(false)
+                setError('The payment details have changed. Review the latest balance before confirming again.')
+                try{
+                    const updated=await getReceiptOccurrenceBalance(occurrence.id)
+                    onOccurrenceChange(updated.occurrence)
+                }catch{
+                    onOccurrenceChange(null)
+                    setError('Unable to refresh the payment balance. Please choose the payment again.')
+                }
+            }else if(code==='IDEMPOTENCY_KEY_REUSED'){
+                attemptRef.current=null
+                setBlocked(true)
+                setError('This payment request could not be safely retried. Please check your payment history.')
             }else if(failure.statusCode&&failure.statusCode>=400&&failure.statusCode<500){
                 attemptRef.current=null
                 setError('Please check your payment details before trying again.')
@@ -165,30 +201,76 @@ export default function ReceiptConfirmationPanel({
         }
     }
     if(result){
+        const completed=moneyToCents(result.occurrence.amountRemaining)===0n
+        const settled=completed&&(
+            result.occurrence.status==='PAID'||
+            result.occurrence.status==='PAID_LATE'
+        )
+
         return(
-            <section className="rounded-3xl border-2 border-[#091828] bg-[#DCEFE8] p-6 shadow-[5px_5px_0_#091828] dark:border-white dark:bg-[#0f4f42] dark:shadow-[5px_5px_0_#FFFFFF]">
-                <CheckCircle2 className="size-12 text-[#10775F] dark:text-[#5eead4]"/>
-                <h2 className="mt-4 text-2xl font-black">Payment recorded</h2>
+            <section className={`rounded-3xl border-2 border-[#091828] p-6 shadow-[5px_5px_0_#091828] dark:border-white dark:shadow-[5px_5px_0_#FFFFFF] ${settled?'bg-[#E8E4F4] dark:bg-[#302A43]':'bg-[#DCEFE8] dark:bg-[#0f4f42]'}`}>
+                <CheckCircle2 className={`size-12 ${settled?'text-[#5B4D8B] dark:text-[#c5b3f0]':'text-[#10775F] dark:text-[#5eead4]'}`}/>
+                <h2 className="mt-4 text-2xl font-black">
+                    {settled?'Payment complete!':'Partially paid'}
+                </h2>
                 <p role="status" className="mt-2 text-sm leading-6">
-                    SpendSense confirmed your receipt payment. The balance below is the updated amount returned by the server.
+                    {settled
+                        ?'SpendSense confirmed your receipt payment and completed this scheduled payment.'
+                        :'SpendSense confirmed your receipt payment. An outstanding balance remains.'}
                 </p>
                 <div className="mt-5 rounded-2xl bg-white p-4 text-[#091828] dark:bg-[#1c263c] dark:text-white">
                     <p className="text-xs font-bold uppercase tracking-widest opacity-60">
-                        Payment amount
+                        Scheduled payment
+                    </p>
+                    <p className="mt-1 text-lg font-black">
+                        {result.occurrence.obligationName}
+                    </p>
+                    <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
+                        Amount recorded
                     </p>
                     <p className="mt-1 text-2xl font-black">
                         {result.contribution.currency} {result.contribution.amount}
                     </p>
                     <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
+                        Total already paid
+                    </p>
+                    <p className="mt-1 text-lg font-extrabold">
+                        {result.occurrence.currency} {result.occurrence.amountPaid}
+                    </p>
+                    <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
                         Remaining balance
                     </p>
-                    <p className="mt-1 text-2xl font-black">
+                    <p className="mt-1 text-2xl font-black text-[#10775F] dark:text-[#5eead4]">
                         {result.occurrence.currency} {result.occurrence.amountRemaining}
                     </p>
+                    <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
+                        Payment date
+                    </p>
+                    <p className="mt-1 text-sm font-bold">
+                        {result.contribution.paidDate}
+                    </p>
+                    <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
+                        Payment status
+                    </p>
+                    <p className="mt-1 text-sm font-bold">
+                        {result.occurrence.status.replaceAll('_',' ')}
+                    </p>
                 </div>
-                <p className="mt-4 text-xs opacity-70">
+                {settled&&(
+                    <>
+                        <ResultDetails title="Settlement details" value={result.settlement}/>
+                        <ResultDetails title="Score impact" value={result.scoreImpact}/>
+                        <ResultDetails title="Rewards" value={result.rewards}/>
+                    </>
+                )}
+                <p className="mt-5 break-all text-xs opacity-70">
                     Contribution reference: {result.contribution.id}
                 </p>
+                {result.replayed&&(
+                    <p className="mt-3 text-xs font-semibold opacity-70">
+                        SpendSense recovered your original payment confirmation. No second contribution was created.
+                    </p>
+                )}
             </section>
         )
     }
@@ -216,16 +298,26 @@ export default function ReceiptConfirmationPanel({
                     <p className="text-sm font-extrabold">{occurrence.obligationName}</p>
                     <div className="mt-5 space-y-3">
                         <div className="flex justify-between gap-3 text-sm">
-                            <span className="text-[#6b6375] dark:text-[#a0aec0]">Current outstanding</span>
-                            <span className="font-bold">{occurrence.currency} {occurrence.amountRemaining}</span>
+                            <span className="text-[#6b6375] dark:text-[#a0aec0]">
+                                Current outstanding
+                            </span>
+                            <span className="font-bold">
+                                {occurrence.currency} {occurrence.amountRemaining}
+                            </span>
                         </div>
                         <div className="flex justify-between gap-3 text-sm">
-                            <span className="text-[#6b6375] dark:text-[#a0aec0]">Payment amount</span>
-                            <span className="font-bold">{values.currency||occurrence.currency} {values.amount||'0.00'}</span>
+                            <span className="text-[#6b6375] dark:text-[#a0aec0]">
+                                Payment amount
+                            </span>
+                            <span className="font-bold">
+                                {values.currency||occurrence.currency} {values.amount||'0.00'}
+                            </span>
                         </div>
                         <div className="border-t border-[#DCEFE8] pt-3 dark:border-[#2d3449]">
                             <div className="flex justify-between gap-3">
-                                <span className="text-sm font-extrabold">Expected remaining</span>
+                                <span className="text-sm font-extrabold">
+                                    Expected remaining
+                                </span>
                                 <span className="text-lg font-black text-[#10775F] dark:text-[#5eead4]">
                                     {previewRemaining===null?'Check amount':`${occurrence.currency} ${previewRemaining}`}
                                 </span>
@@ -245,7 +337,7 @@ export default function ReceiptConfirmationPanel({
                     type="checkbox"
                     checked={acknowledged}
                     onChange={event=>{setAcknowledged(event.target.checked);setError(null)}}
-                    disabled={processing}
+                    disabled={processing||blocked}
                     className="mt-1 size-5 accent-[#10775F]"
                 />
                 <span className="text-sm font-semibold leading-6">
