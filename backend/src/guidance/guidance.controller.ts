@@ -49,6 +49,10 @@ export class GuidanceController {
   async getState(@CurrentAuthUser() authUser: AuthUser) {
     return this.guidanceService.getState(authUser);
   }
+  @Get('daily')
+  async getDaily(@CurrentAuthUser() authUser: AuthUser) {
+    return this.guidanceService.getDailyFacts(authUser);
+  }
 
   @ApiOperation({
     summary: 'Update mascot guidance state',

@@ -9,13 +9,14 @@ describe('GuidanceController', () => {
   let controller: GuidanceController;
 
   let guidanceService: jest.Mocked<
-    Pick<GuidanceService, 'getState' | 'updateState'>
+    Pick<GuidanceService, 'getState' | 'updateState' | 'getDailyFacts'>
   >;
 
   beforeEach(() => {
     guidanceService = {
       getState: jest.fn(),
       updateState: jest.fn(),
+      getDailyFacts: jest.fn(),
     };
 
     controller = new GuidanceController(
@@ -75,5 +76,38 @@ describe('GuidanceController', () => {
     );
 
     expect(guidanceService.updateState).toHaveBeenCalledWith(authUser, dto);
+  });
+
+  it('will return the daily guidance facts', async () => {
+    const authUser = {
+      supabaseAuthId: 'test-supabase-user',
+      email: 'test-user@example.com',
+    };
+
+    const dailyFacts = {
+      localDate: '2026-09-20',
+      asOf: '2026-09-20T10:00:00.000Z',
+      payments: {
+        contributionCount: 0,
+        completedOccurrenceCount: 0,
+        totalsByCurrency: [],
+      },
+      dailyQuiz: {
+        status: 'UNAVAILABLE' as const,
+        sessionId: null,
+        canStart: false,
+        canResume: false,
+      },
+      streaks: {
+        payment: 0,
+        knowledge: 0,
+      },
+    };
+
+    guidanceService.getDailyFacts.mockResolvedValue(dailyFacts);
+
+    await expect(controller.getDaily(authUser)).resolves.toEqual(dailyFacts);
+
+    expect(guidanceService.getDailyFacts).toHaveBeenCalledWith(authUser);
   });
 });

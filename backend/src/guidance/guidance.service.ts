@@ -1,9 +1,12 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  UnprocessableEntityException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import {
   GuidanceWalkthroughStatus,
   QuizSessionType,
   PaymentContributionState,
-  PaymentOccurrenceStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
@@ -110,119 +113,129 @@ export class GuidanceService {
 
   async getDailyFacts(authUser: AuthUser, now = new Date()) {
     const user = await this.usersService.findOrCreateUser(authUser);
-
     const dateRange = this.getJohannesburgDateRange(now);
 
-    const [dailyQuiz, gamificationProfile, paymentContributions] =
-      await Promise.all([
-        this.prisma.quizSession.findFirst({
-          where: {
-            userId: user.id,
-            type: QuizSessionType.DAILY,
-            quizDate: {
-              gte: dateRange.start,
-              lt: dateRange.end,
-            },
-          },
-          orderBy: {
-            startedAt: 'desc',
-          },
-          select: {
-            id: true,
-            status: true,
-            score: true,
-            totalQuestions: true,
-            startedAt: true,
-            completedAt: true,
-            coinsAwarded: true,
-            xpAwarded: true,
-          },
-        }),
-
-        this.prisma.gamificationProfile.findUnique({
-          where: {
-            userId: user.id,
-          },
-          select: {
-            currentPaymentStreak: true,
-            currentKnowledgeStreak: true,
-          },
-        }),
-
-        this.prisma.paymentContribution.findMany({
-          where: {
-            userId: user.id,
-            state: PaymentContributionState.POSTED,
-            createdAt: {
-              gte: dateRange.start,
-              lt: dateRange.end,
-            },
-          },
-          select: {
-            amount: true,
-            currency: true,
-            occurrenceId: true,
-            occurrence: {
-              select: {
-                status: true,
+    try {
+      const [dailyQuiz, gamificationProfile, paymentContributions] =
+        await Promise.all([
+          this.prisma.quizSession.findFirst({
+            where: {
+              userId: user.id,
+              type: QuizSessionType.DAILY,
+              quizDate: {
+                gte: dateRange.start,
+                lt: dateRange.end,
               },
             },
-          },
+            orderBy: {
+              startedAt: 'desc',
+            },
+            select: {
+              id: true,
+              status: true,
+              score: true,
+              totalQuestions: true,
+              startedAt: true,
+              completedAt: true,
+              coinsAwarded: true,
+              xpAwarded: true,
+            },
+          }),
+
+          this.prisma.gamificationProfile.findUnique({
+            where: {
+              userId: user.id,
+            },
+            select: {
+              currentPaymentStreak: true,
+              currentKnowledgeStreak: true,
+            },
+          }),
+
+          this.prisma.paymentContribution.findMany({
+            where: {
+              userId: user.id,
+              state: PaymentContributionState.POSTED,
+              createdAt: {
+                gte: dateRange.start,
+                lt: dateRange.end,
+              },
+            },
+            select: {
+              amount: true,
+              currency: true,
+              occurrenceId: true,
+              occurrence: {
+                select: {
+                  status: true,
+                },
+              },
+            },
+          }),
+        ]);
+
+      const totalsByCurrency = new Map<string, number>();
+
+      for (const contribution of paymentContributions) {
+        const current = totalsByCurrency.get(contribution.currency) ?? 0;
+
+        totalsByCurrency.set(
+          contribution.currency,
+          current + Number(contribution.amount),
+        );
+      }
+
+      const paymentTotals = Array.from(totalsByCurrency.entries()).map(
+        ([currency, amount]) => ({
+          currency,
+          amount: amount.toFixed(2),
         }),
-      ]);
+      );
 
-    const totalsByCurrency = new Map<string, number>();
+      const completedOccurrenceIds = new Set(
+        paymentContributions
+          .filter(
+            (contribution) =>
+              contribution.occurrence.status === 'PAID' ||
+              contribution.occurrence.status === 'PAID_LATE',
+          )
+          .map((contribution) => contribution.occurrenceId),
+      );
 
-    for (const contribution of paymentContributions) {
-      const current = totalsByCurrency.get(contribution.currency) ?? 0;
-      totalsByCurrency.set(
-        contribution.currency,
-        current + Number(contribution.amount),
+      return {
+        localDate: dateRange.date,
+        asOf: now.toISOString(),
+
+        payments: {
+          contributionCount: paymentContributions.length,
+          completedOccurrenceCount: completedOccurrenceIds.size,
+          totalsByCurrency: paymentTotals,
+        },
+
+        dailyQuiz: dailyQuiz
+          ? {
+              status: dailyQuiz.status,
+              sessionId: dailyQuiz.id,
+              canStart: false,
+              canResume: dailyQuiz.status === 'IN_PROGRESS',
+            }
+          : {
+              status: 'UNAVAILABLE' as const,
+              sessionId: null,
+              canStart: false,
+              canResume: false,
+            },
+
+        streaks: {
+          payment: gamificationProfile?.currentPaymentStreak ?? 0,
+          knowledge: gamificationProfile?.currentKnowledgeStreak ?? 0,
+        },
+      };
+    } catch {
+      throw new ServiceUnavailableException(
+        'Daily guidance facts are unavailable',
       );
     }
-
-    const paymentTotals = Array.from(totalsByCurrency.entries()).map(
-      ([currency, amount]) => ({
-        currency,
-        amount: amount.toFixed(2),
-      }),
-    );
-
-    const completedOccurrenceIds = new Set(
-      paymentContributions
-        .filter(
-          (contribution) =>
-            contribution.occurrence.status === PaymentOccurrenceStatus.PAID ||
-            contribution.occurrence.status ===
-              PaymentOccurrenceStatus.PAID_LATE,
-        )
-        .map((contribution) => contribution.occurrenceId),
-    );
-
-    return {
-      date: dateRange.date,
-      payments: {
-        contributionCount: paymentContributions.length,
-        completedOccurrenceCount: completedOccurrenceIds.size,
-        totalsByCurrency: paymentTotals,
-      },
-      quiz: dailyQuiz
-        ? {
-            id: dailyQuiz.id,
-            status: dailyQuiz.status,
-            score: dailyQuiz.score,
-            totalQuestions: dailyQuiz.totalQuestions,
-            startedAt: dailyQuiz.startedAt,
-            completedAt: dailyQuiz.completedAt,
-            coinsAwarded: dailyQuiz.coinsAwarded,
-            xpAwarded: dailyQuiz.xpAwarded,
-          }
-        : null,
-      streaks: {
-        payment: gamificationProfile?.currentPaymentStreak ?? 0,
-        knowledge: gamificationProfile?.currentKnowledgeStreak ?? 0,
-      },
-    };
   }
 
   async getState(authUser: AuthUser) {

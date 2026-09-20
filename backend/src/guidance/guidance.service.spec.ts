@@ -539,15 +539,47 @@ describe('GuidanceService', () => {
       new Date('2026-09-20T10:00:00.000Z'),
     );
 
-    expect(result.quiz).toEqual({
-      id: 'quiz-1',
+    expect(result.dailyQuiz).toEqual({
       status: 'IN_PROGRESS',
-      score: 3,
+      sessionId: 'quiz-1',
+      canStart: false,
+      canResume: true,
+    });
+  });
+
+  it('will return the completed daily quiz state', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    const startedAt = new Date('2026-09-20T08:00:00.000Z');
+
+    prisma.quizSession.findFirst.mockResolvedValue({
+      id: 'quiz-1',
+      status: 'COMPLETED',
+      score: 5,
       totalQuestions: 5,
       startedAt,
       completedAt: null,
       coinsAwarded: 0,
       xpAwarded: 0,
+    });
+
+    prisma.gamificationProfile.findUnique.mockResolvedValue({
+      currentPaymentStreak: 3,
+      currentKnowledgeStreak: 2,
+    });
+
+    const result = await service.getDailyFacts(
+      authUser,
+      new Date('2026-09-20T10:00:00.000Z'),
+    );
+
+    expect(result.dailyQuiz).toEqual({
+      status: 'COMPLETED',
+      sessionId: 'quiz-1',
+      canStart: false,
+      canResume: false,
     });
   });
 
@@ -564,7 +596,12 @@ describe('GuidanceService', () => {
       new Date('2026-09-20T10:00:00.000Z'),
     );
 
-    expect(result.quiz).toBeNull();
+    expect(result.dailyQuiz).toEqual({
+      status: 'UNAVAILABLE',
+      sessionId: null,
+      canStart: false,
+      canResume: false,
+    });
 
     expect(result.streaks).toEqual({
       payment: 0,
@@ -719,5 +756,26 @@ describe('GuidanceService', () => {
         },
       ],
     });
+  });
+
+  it('will return unavailable when daily facts cannot be read safely', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.paymentContribution.findMany.mockRejectedValue(
+      new Error('database failure'),
+    );
+
+    prisma.quizSession.findFirst.mockResolvedValue(null);
+
+    prisma.gamificationProfile.findUnique.mockResolvedValue({
+      currentPaymentStreak: 2,
+      currentKnowledgeStreak: 3,
+    });
+
+    await expect(service.getDailyFacts(authUser)).rejects.toThrow(
+      'Daily guidance facts are unavailable',
+    );
   });
 });
