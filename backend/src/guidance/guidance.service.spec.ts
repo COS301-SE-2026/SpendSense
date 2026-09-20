@@ -7,6 +7,7 @@ import {
 import type { PrismaService } from '../prisma/prisma.service';
 import type { UsersService } from '../users/users.service';
 import { GuidanceService } from './guidance.service';
+import { UnauthorizedException } from '@nestjs/common';
 
 type GuidanceUpsertArgs = {
   where: {
@@ -763,9 +764,7 @@ describe('GuidanceService', () => {
       id: 'user-1',
     } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
 
-    prisma.paymentContribution.findMany.mockRejectedValue(
-      new Error('database failure'),
-    );
+    prisma.paymentContribution.findMany.mockRejectedValue('database failure');
 
     prisma.quizSession.findFirst.mockResolvedValue(null);
 
@@ -777,5 +776,33 @@ describe('GuidanceService', () => {
     await expect(service.getDailyFacts(authUser)).rejects.toThrow(
       'Daily guidance facts are unavailable',
     );
+  });
+
+  it('will not read guidance state for an account that is inactive', async () => {
+    usersService.findOrCreateUser.mockRejectedValue(
+      new UnauthorizedException('User account is deactivated'),
+    );
+
+    await expect(service.getState(authUser)).rejects.toThrow(
+      'User account is deactivated',
+    );
+
+    expect(prisma.guidanceState.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('will read guidance state for the authenticated user', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'authenticated-user',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.guidanceState.findUnique.mockResolvedValue(null);
+
+    await service.getState(authUser);
+
+    expect(prisma.guidanceState.findUnique).toHaveBeenCalledWith({
+      where: {
+        userId: 'authenticated-user',
+      },
+    });
   });
 });

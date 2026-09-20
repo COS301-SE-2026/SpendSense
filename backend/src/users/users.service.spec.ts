@@ -447,6 +447,15 @@ describe('UsersService', () => {
       notificationPreference: {},
       creditProfile: {},
       gamificationProfile: {},
+      guidanceState: {
+        tipsEnabled: true,
+        dailyExpansionEnabled: false,
+        walkthroughStatus: 'IN_PROGRESS',
+        walkthroughStep: 2,
+        dismissedTipIds: ['calendar.overdue.explainer'],
+        createdAt: new Date('2026-09-20T10:00:00.000Z'),
+        updatedAt: new Date('2026-09-20T11:00:00.000Z'),
+      },
       obligations: [],
       paymentOccurrences: [],
       paymentRecords: [],
@@ -471,6 +480,15 @@ describe('UsersService', () => {
     expect(result.preferences).toBeDefined();
     expect(result.notificationPreferences).toBeDefined();
     expect(result.obligations).toEqual([]);
+    expect(result.guidanceState).toEqual({
+      tipsEnabled: true,
+      dailyExpansionEnabled: false,
+      walkthroughStatus: 'IN_PROGRESS',
+      walkthroughStep: 2,
+      dismissedTipIds: ['calendar.overdue.explainer'],
+      createdAt: new Date('2026-09-20T10:00:00.000Z'),
+      updatedAt: new Date('2026-09-20T11:00:00.000Z'),
+    });
     expect(prisma.user.update).not.toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.user.findUnique).toHaveBeenCalledTimes(2);
@@ -559,6 +577,7 @@ const DELETE_MANY_MODELS = [
   'userInventoryItem',
   'creditProfile',
   'gamificationProfile',
+  'guidanceState',
   'notificationPreference',
   'userPreference',
 ] as const;
@@ -694,12 +713,14 @@ describe('UsersService data deletion', () => {
     prisma.user.findUnique.mockResolvedValue({ id: userId });
 
     const result = await service.deleteAllUserData(authUser);
+    const guidanceIndex = DELETE_MANY_MODELS.indexOf('guidanceState');
 
     expect(result.deleted).toBe(true);
     expect(result.deletedAt).toBeInstanceOf(Date);
     expect(result.recordsDeleted.scoreEvents).toBe(1);
     expect(result.recordsDeleted.preference).toBe(DELETE_MANY_MODELS.length);
     expect(result.recordsDeleted.user).toBe(1);
+    expect(result.recordsDeleted.guidanceState).toBe(guidanceIndex + 1);
   });
 
   it('leaves shared reference data untouched', async () => {
