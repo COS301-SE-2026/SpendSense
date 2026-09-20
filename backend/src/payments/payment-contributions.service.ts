@@ -300,6 +300,8 @@ export class PaymentContributionsService {
           return replay;
         }
       }
+
+      throw error ; 
     }
   }
 
