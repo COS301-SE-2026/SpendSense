@@ -4,30 +4,34 @@ import {getReceiptOccurrenceBalance,type ReceiptOccurrence} from '../../features
 
 type PaymentOccurrenceBalanceProps={
     occurrenceId:string
+    onBalanceChange?:(balance:ReceiptOccurrence|null)=>void
 }
 function formatMoney(value:string,currency:string){
     return `${currency==='ZAR'?'R':currency} ${value}`
 }
-export default function PaymentOccurrenceBalance({occurrenceId}:PaymentOccurrenceBalanceProps){
+export default function PaymentOccurrenceBalance({occurrenceId,onBalanceChange}:PaymentOccurrenceBalanceProps){
     const [balance,setBalance]=useState<ReceiptOccurrence|null>(null)
     const [loading,setLoading]=useState(true)
     const [error,setError]=useState<string|null>(null)
     const [retryCount,setRetryCount]=useState(0)
     useEffect(()=>{
         let active=true
+        onBalanceChange?.(null)
         getReceiptOccurrenceBalance(occurrenceId).then(result=>{
             if(!active)return
             setBalance(result.occurrence)
+            onBalanceChange?.(result.occurrence)
             setError(null)
         }).catch(()=>{
             if(!active)return
             setBalance(null)
+            onBalanceChange?.(null)
             setError('Unable to load the current payment balance. Please try again.')
         }).finally(()=>{
             if(active)setLoading(false)
         })
         return()=>{active=false}
-    },[occurrenceId,retryCount])
+    },[occurrenceId,retryCount,onBalanceChange])
     function refreshBalance(){
         if(loading)return
         setLoading(true)

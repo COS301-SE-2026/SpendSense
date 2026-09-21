@@ -1,5 +1,5 @@
 "use client";
-import {useState,useEffect,type ReactNode} from "react";
+import {useState,useEffect,useCallback,type ReactNode} from "react";
 import {useForm,Controller,useWatch,type Resolver} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -7,27 +7,22 @@ import {useLocation,useNavigate} from "react-router-dom";
 import {LongButton} from "../components/common/LongButton";
 import {getUpcomingOccurrences,logPayment} from "../features/payments/paymentsApi";
 import type {CalendarOccurrence} from "../hooks/useCalendarOccurrences";
+import type {ReceiptOccurrence} from "../features/receipts/receiptOccurrencesApi";
 import {Popover,PopoverContent,PopoverTrigger} from "../components/ui/popover";
 import {Calendar as CalenderIcon,CheckCircle2,Coins,Flame,TrendingUp,X,Camera,ChevronDown,Check,CreditCard} from "lucide-react";
 import {Calendar} from "@/components/ui/calendar";
 import PaymentOccurrenceBalance from "../components/payments/PaymentOccurrenceBalance";
 
 const paymentSchema=z.object({
-    occurrenceId:z
-        .string()
-        .min(1,"OccurrenceID is required."),
-    amountPaid:z
-        .coerce.number()
-        .positive("Amount must be greater than 0"),
-    paidDate:z
-        .date({message:"A start date is required."}),
-    notes:z
-        .string()
-        .optional(),
+    occurrenceId:z.string().min(1,"OccurrenceID is required."),
+    amountPaid:z.coerce.number()
+        .positive("Amount must be greater than 0")
+        .refine(value=>Math.abs(value*100-Math.round(value*100))<0.0000001,"Amount cannot have more than two decimal places."),
+    paidDate:z.date({message:"A start date is required."}),
+    notes:z.string().optional(),
 });
 
 type PaymentFormData=z.infer<typeof paymentSchema>;
-
 type PaymentResult={
     scoreImpact?:{
         previousScore:number;
@@ -47,7 +42,15 @@ type PaymentResult={
         simulatedInterest:number|string;
     };
 };
-
+function moneyToCents(value:string|number):bigint|null{
+    const text=String(value).trim()
+    if(!/^\d+(?:\.\d{1,2})?$/.test(text))return null
+    const [whole,fraction='']=text.split('.')
+    return BigInt(whole)*100n+BigInt(fraction.padEnd(2,'0'))
+}
+function centsToMoney(value:bigint){
+    return `${value/100n}.${(value%100n).toString().padStart(2,'0')}`
+}
 export default function ObligationForm(){
     const navigate=useNavigate();
     const location=useLocation();
@@ -67,7 +70,7 @@ export default function ObligationForm(){
     const selectedOccurrence=selectedPayment?.occurrence;
     const fallbackOccurrenceId=new URLSearchParams(location.search??'').get('occurrenceId')??'';
     const selectedObligation=selectedPayment?.obligation;
-    const selectedAmount=Number(selectedOccurrence?.amountDue ?? 0);
+    const selectedAmount=Number(selectedOccurrence?.amountDue??0);
     const [showPopup,setShowPopup]=useState(false);
     const [paymentResult,setPaymentResult]=useState<PaymentResult|null>(null);
     const [submitError,setSubmitError]=useState<string|null>(null);
@@ -76,23 +79,51 @@ export default function ObligationForm(){
     const [occurrencesLoading,setOccurrencesLoading]=useState(true);
     const [occurrencesError,setOccurrencesError]=useState<string|null>(null);
     const [isOccurrencePickerOpen,setIsOccurrencePickerOpen]=useState(false);
+    const [currentBalance,setCurrentBalance]=useState<ReceiptOccurrence|null>(null);
+    const [amountEdited,setAmountEdited]=useState(false);
     const{
         register,
         handleSubmit,
         control,
         getValues,
+        setValue,
         formState:{errors},
     }=useForm<PaymentFormData>({
         resolver:zodResolver(paymentSchema) as Resolver<PaymentFormData>,
         defaultValues:{
-            occurrenceId:selectedOccurrence?.id ?? fallbackOccurrenceId,
+            occurrenceId:selectedOccurrence?.id??fallbackOccurrenceId,
             amountPaid:selectedAmount,
             paidDate:new Date(),
             notes:""
         }satisfies PaymentFormData,
     });
     const watchedOccurrenceId=useWatch({control,name:"occurrenceId"});
+    const watchedAmount=useWatch({control,name:"amountPaid"});
     const balanceOccurrenceId=selectedOccurrence?.id??watchedOccurrenceId;
+    const balanceForSelection=currentBalance?.id===balanceOccurrenceId?currentBalance:null;
+    const remainingCents=balanceForSelection?moneyToCents(balanceForSelection.amountRemaining):null;
+    const amountCents=moneyToCents(watchedAmount);
+    const validAmount=amountCents!==null&&amountCents>0n;
+    const amountFits=validAmount&&remainingCents!==null&&amountCents<=remainingCents;
+    const expectedRemaining=amountFits&&remainingCents!==null&&amountCents!==null
+        ?centsToMoney(remainingCents-amountCents)
+        :null;
+    const isPartial=amountFits&&remainingCents!==null&&amountCents!==null&&amountCents<remainingCents;
+    const canRecord=balanceForSelection?.canRecord??(
+        balanceForSelection!==null&&
+        balanceForSelection.status!=='PAID'&&
+        balanceForSelection.status!=='PAID_LATE'&&
+        balanceForSelection.status!=='MISSED'&&
+        balanceForSelection.status!=='CANCELLED'&&
+        remainingCents!==null&&remainingCents>0n
+    );
+
+    const handleBalanceChange=useCallback((balance:ReceiptOccurrence|null)=>{
+        setCurrentBalance(balance);
+        if(balance&&!amountEdited){
+            setValue("amountPaid",Number(balance.amountRemaining));
+        }
+    },[amountEdited,setValue]);
     useEffect(()=>{
         let active=true;
         getUpcomingOccurrences({
@@ -110,25 +141,33 @@ export default function ObligationForm(){
         return()=>{active=false};
     },[]);
     const onSubmit=async(formData:PaymentFormData)=>{
-        setSubmitting(true);
         setSubmitError(null);
+        if(!balanceForSelection||!canRecord||!amountFits){
+            setSubmitError("Check the current payment balance and enter a valid amount.");
+            return;
+        }
+        if(isPartial){
+            setSubmitError("Partial payment submission will be enabled with the new contribution flow.");
+            return;
+        }
+        setSubmitting(true);
         try{
             const response=await logPayment({
-                occurrenceId:selectedOccurrence?.id ?? formData.occurrenceId,
-                amountPaid:selectedOccurrence ? selectedAmount : formData.amountPaid,
+                occurrenceId:balanceForSelection.id,
+                amountPaid:formData.amountPaid,
                 paidDate:formData.paidDate.toISOString().split("T")[0],
-                notes:formData.notes?.trim() || undefined,
+                notes:formData.notes?.trim()||undefined,
             });
             setPaymentResult((response as {data:PaymentResult}).data);
             setShowPopup(true);
         }catch(error){
             console.error("Failed to log payment: ",error);
-            setSubmitError(error instanceof Error ? error.message : "Failed to log payment");
+            setSubmitError(error instanceof Error?error.message:"Failed to log payment");
         }finally{
             setSubmitting(false);
         }
     }
-    
+
     return(
         <div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
@@ -155,7 +194,7 @@ export default function ObligationForm(){
                     <Camera className="size-5"/>
                     Scan receipt instead
                 </button>
-                {selectedOccurrence && selectedObligation && (
+                {selectedOccurrence&&selectedObligation&&(
                     <div className="rounded-3xl border-2 border-[#091828] bg-white p-4 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20]">
                         <p className="text-xs font-bold uppercase tracking-wide text-[#6b6375] dark:text-[#a0aec0]">Selected payment</p>
                         <div className="mt-2 flex items-center justify-between gap-3">
@@ -164,15 +203,15 @@ export default function ObligationForm(){
                                 <p className="text-xs font-semibold text-[#6b6375] dark:text-[#a0aec0]">{selectedObligation.type} | {selectedOccurrence.status}</p>
                             </div>
                             <p className="text-lg font-extrabold text-[#AC2A5D] dark:text-[#ff6b9d]">
-                                {selectedOccurrence.currency === "ZAR" ? "R" : selectedOccurrence.currency} {selectedAmount.toFixed(2)}
+                                {selectedOccurrence.currency==="ZAR"?"R":selectedOccurrence.currency} {selectedAmount.toFixed(2)}
                             </p>
                         </div>
                     </div>
                 )}
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
-                    {selectedOccurrence ? (
+                    {selectedOccurrence?(
                         <input type="hidden" {...register("occurrenceId")}/>
-                    ) : (
+                    ):(
                         <>
                             <Controller
                                 control={control}
@@ -218,6 +257,7 @@ export default function ObligationForm(){
                                                                 type="button"
                                                                 onClick={()=>{
                                                                     field.onChange(fallbackOccurrenceId)
+                                                                    setAmountEdited(false)
                                                                     setIsOccurrencePickerOpen(false)
                                                                 }}
                                                                 className="flex w-full items-center gap-3 rounded-xl bg-[#F4FBF7] px-3 py-3 text-left text-sm text-[#091828] dark:bg-[#1c263c] dark:text-white"
@@ -233,6 +273,7 @@ export default function ObligationForm(){
                                                                 type="button"
                                                                 onClick={()=>{
                                                                     field.onChange(occurrence.id)
+                                                                    setAmountEdited(false)
                                                                     setIsOccurrencePickerOpen(false)
                                                                 }}
                                                                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-[#F4FBF7] dark:hover:bg-[#1c263c] ${field.value===occurrence.id?'bg-[#DCEFE8] dark:bg-[#0f4f42]':''}`}
@@ -279,19 +320,45 @@ export default function ObligationForm(){
                         <PaymentOccurrenceBalance
                             key={balanceOccurrenceId}
                             occurrenceId={balanceOccurrenceId}
+                            onBalanceChange={handleBalanceChange}
                         />
                     )}
                     <div className="space-y-1">
                         <label htmlFor="amountPaid" className="text-xs font-semibold text-[#091828] dark:text-white">Amount paid</label>
                         <input
                             id="amountPaid"
-                            {...register("amountPaid")}
-                            readOnly={Boolean(selectedOccurrence)}
+                            inputMode="decimal"
+                            {...register("amountPaid",{
+                                onChange:()=>setAmountEdited(true),
+                            })}
                             placeholder="R0.00"
                             className="w-full rounded-2xl bg-white px-4 py-3.5 text-sm text-[#091828] outline-none dark:bg-[#131b2e] dark:text-white"
                         />
                     </div>
                     {errors.amountPaid?.message&&<p className="text-xs text-red-500 dark:text-[#ffb4ab]">{errors.amountPaid.message}</p>}
+                    {balanceForSelection&&(
+                        <div className="rounded-2xl bg-[#DCEFE8] px-4 py-4 dark:bg-[#0f4f42]">
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm font-semibold text-[#091828] dark:text-white">
+                                    Expected remaining
+                                </span>
+                                <span className="text-lg font-extrabold text-[#10775F] dark:text-[#5eead4]">
+                                    {expectedRemaining===null?'Check amount':`${balanceForSelection.currency==='ZAR'?'R':balanceForSelection.currency} ${expectedRemaining}`}
+                                </span>
+                            </div>
+                            {amountCents!==null&&remainingCents!==null&&amountCents>remainingCents&&(
+                                <p role="alert" className="mt-2 text-xs font-semibold text-[#AC2A5D] dark:text-[#ffb1c5]">
+                                    Amount cannot exceed the outstanding balance.
+                                </p>
+                            )}
+                            {isPartial&&(
+                                <p className="mt-2 text-xs font-semibold text-[#10775F] dark:text-[#5eead4]">
+                                    This amount will leave an outstanding balance.
+                                </p>
+                            )}
+                        </div>
+                    )}
+
                     <div className="space-y-1">
                         <label htmlFor="paidDate" className="text-xs font-semibold text-[#091828] dark:text-white mb-1">Date paid</label>
                         <Controller
@@ -305,9 +372,9 @@ export default function ObligationForm(){
                                             className="flex w-full items-center rounded-2xl bg-white px-4 py-3.5 text-left text-sm text-[#091828] dark:bg-[#131b2e] dark:text-white"
                                         >
                                             <CalenderIcon className="mr-2 h-4 w-4 text-[#6b6375] dark:text-[#a0aec0]"/>
-                                            {field.value ? (
+                                            {field.value?(
                                                 new Intl.DateTimeFormat('en-US',{dateStyle:'long'}).format(new Date(field.value))
-                                            ) : (
+                                            ):(
                                                 <span className="text-gray-400 dark:text-[#a0aec0]">Select date</span>
                                             )}
                                         </button>
@@ -334,7 +401,7 @@ export default function ObligationForm(){
                         />
                     </div>
                     {errors.notes?.message&&<p className="text-xs text-red-500 dark:text-[#ffb4ab]">{errors.notes.message}</p>}
-                    {submitError&&<p className="rounded-2xl bg-[#FFD9E1] px-4 py-3 text-xs font-semibold text-[#AC2A5D] dark:bg-[#93000a]/30 dark:text-[#ffb4ab]">{submitError}</p>}
+                    {submitError&&<p role="alert" className="rounded-2xl bg-[#FFD9E1] px-4 py-3 text-xs font-semibold text-[#AC2A5D] dark:bg-[#93000a]/30 dark:text-[#ffb4ab]">{submitError}</p>}
                     <button
                         type="submit"
                         className="w-full rounded-full bg-[#091828] py-4 text-base font-medium text-white disabled:opacity-50 dark:bg-[#ff6b9d] dark:text-[#650030]"
@@ -361,12 +428,12 @@ function PaymentImpactModal({
     result:PaymentResult|null;
     onDone:()=>void;
 }){
-    const scoreDelta=result?.scoreImpact?.delta ?? 0;
+    const scoreDelta=result?.scoreImpact?.delta??0;
     const scoreBefore=result?.scoreImpact?.previousScore;
     const scoreAfter=result?.scoreImpact?.currentScore;
-    const coins=result?.rewards?.coinsAwarded ?? 0;
-    const xp=result?.rewards?.xpAwarded ?? 10;
-    const streak=result?.rewards?.currentPaymentStreak ?? 0;
+    const coins=result?.rewards?.coinsAwarded??0;
+    const xp=result?.rewards?.xpAwarded??10;
+    const streak=result?.rewards?.currentPaymentStreak??0;
     const mood=result?.rewards?.mascotMood;
     return(
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#091828]/40 px-4 pb-6 dark:bg-black/70">
@@ -387,8 +454,8 @@ function PaymentImpactModal({
                     <ImpactStat
                         icon={<TrendingUp className="size-4"/>}
                         label="Score"
-                        value={`${scoreDelta >= 0 ? "+" : ""}${scoreDelta} points`}
-                        detail={scoreBefore !== undefined && scoreAfter !== undefined ? `${scoreBefore} -> ${scoreAfter}` : "Updated"}
+                        value={`${scoreDelta>=0?"+":""}${scoreDelta} points`}
+                        detail={scoreBefore!==undefined&&scoreAfter!==undefined?`${scoreBefore} -> ${scoreAfter}`:"Updated"}
                     />
                     <ImpactStat
                         icon={<Coins className="size-4"/>}
@@ -406,7 +473,7 @@ function PaymentImpactModal({
                         icon={<Flame className="size-4"/>}
                         label="Streak"
                         value={`${streak} days`}
-                        detail={mood ? `Mood: ${mood}` : "Current streak"}
+                        detail={mood?`Mood: ${mood}`:"Current streak"}
                     />
                 </div>
                 {result?.paymentImpact?.isLate&&(

@@ -1,4 +1,3 @@
-
 import React from "react";
 import {render,screen,waitFor} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -6,7 +5,7 @@ import {describe,it,expect,vi,beforeEach} from "vitest";
 import "@testing-library/jest-dom";
 import PaymentForm from "../domains/PaymentForm";
 import {getUpcomingOccurrences,logPayment} from "../features/payments/paymentsApi";
-
+import {getReceiptOccurrenceBalance} from "../features/receipts/receiptOccurrencesApi";
 const mockNavigate=vi.fn();
 let mockLocationState:unknown=null;
 let mockLocationSearch="";
@@ -20,7 +19,9 @@ vi.mock("../features/payments/paymentsApi",()=>({
     getUpcomingOccurrences:vi.fn(),
     logPayment:vi.fn(),
 }));
-
+vi.mock("../features/receipts/receiptOccurrencesApi",()=>({
+    getReceiptOccurrenceBalance:vi.fn(),
+}));
 const paymentResponse={
     data:{
         scoreImpact:{
@@ -66,7 +67,23 @@ const occurrencesResponse={
         meta:{},
     },
 };
-
+function balanceFor(id:string){
+    const due=id==="occ_electricity"?"300.00":"199.00";
+    return{
+        occurrence:{
+            id,
+            obligationId:id==="occ_electricity"?"obl_electricity":"obl_netflix",
+            obligationName:id==="occ_electricity"?"Electricity":"Netflix",
+            dueDate:"2026-09-30",
+            currency:"ZAR",
+            amountDue:due,
+            amountPaid:"0.00",
+            amountRemaining:due,
+            status:"PENDING" as const,
+            canRecord:true,
+        },
+    };
+}
 async function selectOccurrence(user:ReturnType<typeof userEvent.setup>,name:string){
     const picker=screen.getByRole("button",{name:"Allocate payment to"});
     await waitFor(()=>expect(picker).not.toBeDisabled());
@@ -81,6 +98,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
         mockLocationSearch="";
         vi.mocked(getUpcomingOccurrences).mockResolvedValue(occurrencesResponse);
         vi.mocked(logPayment).mockResolvedValue(paymentResponse);
+        vi.mocked(getReceiptOccurrenceBalance).mockImplementation(async id=>balanceFor(id));
     });
 
     it("should render all form fields and the 'Add Payment' header correctly",async()=>{
@@ -144,7 +162,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
         const user=userEvent.setup();
         render(<PaymentForm/>);
         await selectOccurrence(user,"Netflix");
-        expect(screen.getByRole("button",{name:"Allocate payment to"})).toHaveTextContent("Netflix");
+        await screen.findByRole("heading",{name:"Netflix"});
         await user.clear(screen.getByLabelText(/amount paid/i));
         await user.type(screen.getByLabelText(/amount paid/i),"199.00");
         await user.type(screen.getByLabelText(/notes/i),"Paid in full");
@@ -186,7 +204,8 @@ describe("PaymentForm (ObligationForm) Component",()=>{
         render(<PaymentForm/>);
         expect(screen.getByText("Netflix")).toBeInTheDocument();
         expect(screen.queryByRole("button",{name:"Allocate payment to"})).not.toBeInTheDocument();
-        expect(screen.getByLabelText(/amount paid/i)).toHaveValue("199");
+        await waitFor(()=>expect(getReceiptOccurrenceBalance).toHaveBeenCalledWith("occ_from_calendar"));
+        expect(screen.getByLabelText(/amount paid/i)).not.toHaveAttribute("readonly");
         await user.click(screen.getByRole("button",{name:/log payment/i}));
         await waitFor(()=>{
             expect(logPayment).toHaveBeenCalledWith(expect.objectContaining({
@@ -204,6 +223,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
             expect(picker).toHaveTextContent("Netflix");
         });
         expect(picker).toHaveTextContent("R 199.00");
+        expect(getReceiptOccurrenceBalance).toHaveBeenCalledWith("occ_netflix");
     });
 
     it("offers scanning without a selected occurrence",async()=>{
@@ -236,5 +256,94 @@ describe("PaymentForm (ObligationForm) Component",()=>{
         render(<PaymentForm/>);
         await user.click(screen.getByRole("button",{name:"Scan receipt instead"}));
         expect(mockNavigate).toHaveBeenCalledWith("/receipts/new?occurrenceId=occ_from_calendar");
+    });
+    it("prefills the remaining balance instead of the original amount due",async()=>{
+        vi.mocked(getReceiptOccurrenceBalance).mockResolvedValue({
+            occurrence:{
+                ...balanceFor("occ_electricity").occurrence,
+                amountPaid:"100.00",
+                amountRemaining:"200.00",
+                status:"PARTIALLY_PAID",
+            },
+        });
+        const user=userEvent.setup();
+        render(<PaymentForm/>);
+        await selectOccurrence(user,"Electricity");
+        await waitFor(()=>{
+            expect(screen.getByLabelText(/amount paid/i)).toHaveValue("200");
+        });
+        expect(screen.getByText("R 200.00")).toBeInTheDocument();
+    });
+    it("allows editing the amount for a calendar-selected occurrence",async()=>{
+        mockLocationState={
+            occurrence:{
+                id:"occ_from_calendar",
+                amountDue:300,
+                currency:"ZAR",
+                dueDate:"2026-09-30",
+                status:"PENDING",
+            },
+            obligation:{name:"Electricity",type:"UTILITY"},
+        };
+        vi.mocked(getReceiptOccurrenceBalance).mockResolvedValue({
+            occurrence:{
+                ...balanceFor("occ_from_calendar").occurrence,
+                amountDue:"300.00",
+                amountRemaining:"200.00",
+                amountPaid:"100.00",
+                status:"PARTIALLY_PAID",
+            },
+        });
+        const user=userEvent.setup();
+        render(<PaymentForm/>);
+        await waitFor(()=>{
+            expect(screen.getByLabelText(/amount paid/i)).toHaveValue("200");
+        });
+        await user.clear(screen.getByLabelText(/amount paid/i));
+        await user.type(screen.getByLabelText(/amount paid/i),"75.50");
+        expect(screen.getByLabelText(/amount paid/i)).toHaveValue("75.50");
+        expect(screen.getByText("R 124.50")).toBeInTheDocument();
+    });
+    it("shows the expected remaining balance for a partial amount",async()=>{
+        const user=userEvent.setup();
+        render(<PaymentForm/>);
+        await selectOccurrence(user,"Electricity");
+        await waitFor(()=>expect(screen.getByLabelText(/amount paid/i)).toHaveValue("300"));
+        await user.clear(screen.getByLabelText(/amount paid/i));
+        await user.type(screen.getByLabelText(/amount paid/i),"100.00");
+        expect(screen.getByText("R 200.00")).toBeInTheDocument();
+        expect(screen.getByText("This amount will leave an outstanding balance.")).toBeInTheDocument();
+    });
+    it("rejects amounts exceeding the remaining balance",async()=>{
+        const user=userEvent.setup();
+        render(<PaymentForm/>);
+        await selectOccurrence(user,"Electricity");
+        await waitFor(()=>expect(screen.getByLabelText(/amount paid/i)).toHaveValue("300"));
+        await user.clear(screen.getByLabelText(/amount paid/i));
+        await user.type(screen.getByLabelText(/amount paid/i),"350.00");
+        expect(screen.getByRole("alert")).toHaveTextContent("Amount cannot exceed the outstanding balance.");
+        await user.click(screen.getByRole("button",{name:/log payment/i}));
+        expect(logPayment).not.toHaveBeenCalled();
+    });
+    it("rejects amounts with more than two decimal places",async()=>{
+        const user=userEvent.setup();
+        render(<PaymentForm/>);
+        await selectOccurrence(user,"Electricity");
+        await user.clear(screen.getByLabelText(/amount paid/i));
+        await user.type(screen.getByLabelText(/amount paid/i),"100.123");
+        await user.click(screen.getByRole("button",{name:/log payment/i}));
+        expect(await screen.findByText("Amount cannot have more than two decimal places.")).toBeInTheDocument();
+        expect(logPayment).not.toHaveBeenCalled();
+    });
+    it("does not send partial contributions to the legacy full-payment endpoint",async()=>{
+        const user=userEvent.setup();
+        render(<PaymentForm/>);
+        await selectOccurrence(user,"Electricity");
+        await waitFor(()=>expect(screen.getByLabelText(/amount paid/i)).toHaveValue("300"));
+        await user.clear(screen.getByLabelText(/amount paid/i));
+        await user.type(screen.getByLabelText(/amount paid/i),"100");
+        await user.click(screen.getByRole("button",{name:/log payment/i}));
+        expect(await screen.findByRole("alert")).toHaveTextContent("Partial payment submission will be enabled");
+        expect(logPayment).not.toHaveBeenCalled();
     });
 });
