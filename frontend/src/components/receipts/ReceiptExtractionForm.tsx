@@ -10,10 +10,10 @@ export type ReceiptReviewValues={
     receiptDate:string
 }
 
-type ReceiptExtractionFormProps={
+type ReceiptExtractionFormProps=Readonly<{
     extraction:ReceiptExtraction
     onChange?:(values:ReceiptReviewValues)=>void
-}
+}>
 
 const confidenceStyles:Record<ReceiptConfidence,string>={
     HIGH:'bg-[#DCEFE8] text-[#10775F] dark:bg-[#0f4f42] dark:text-[#5eead4]',
