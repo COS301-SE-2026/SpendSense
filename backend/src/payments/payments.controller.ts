@@ -48,7 +48,7 @@ export class PaymentsController {
     private readonly usersService: UsersService,
     private readonly paymentContributionsService: PaymentContributionsService,
     private readonly paymentQueriesService: PaymentQueriesService,
-  ) {}
+  ) { }
 
   @Post('log')
   @HttpCode(HttpStatus.CREATED)
@@ -183,4 +183,20 @@ export class PaymentsController {
     const user = await this.usersService.findOrCreateUser(authUser);
     return this.paymentQueriesService.getEligibleOccurrences(user.id, query);
   }
+
+  @Get('occurrences/:occurrenceId/contributions')
+
+  @ApiOperation({ summary: 'Get contribution history for a payment occurrence' })
+  
+  @ApiResponse({ status: 200, description: 'Contribution history returned successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid occurrence ID or query parameters' })
+  @ApiResponse({ status: 401, description: 'Unauthorised' })
+  @ApiResponse({ status: 404, description: 'Payment occurrence not found' })
+
+  async getContributionHistory(@CurrentAuthUser() authUser: AuthUser, @Param('occurrenceId', new ParseUUIDPipe()) occurrenceId: string, @Query() query: ContributionHistoryQueryDto) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.paymentQueriesService.getContributionHistory(user.id, occurrenceId, query);
+  }
+
+
 }

@@ -151,4 +151,113 @@ export class PaymentQueriesService {
       throw new BadRequestException('Invalid cursor.');
     }
   }
+
+        async getContributionHistory(userId: string, occurrenceId: string, query: ContributionHistoryQueryDto,) {
+        const { limit = 20, cursor } = query;
+        const occurrence = await this.prisma.paymentOccurrence.findFirst( // check the occuranc ebelongs to the use 
+            {
+                where: {
+                    id: occurrenceId,
+                    userId,
+                    deletedAt: null,
+
+                    obligation: {
+                        is: {
+                            deletedAt: null,
+                        },
+                    },
+                },
+
+                select: {
+                    id: true,
+                },
+            }
+        );
+
+        if (!occurrence) {
+            throw new NotFoundException('Payment occurrence not found.');
+        }
+        
+        let cursorId: string | undefined;
+        if (cursor) {
+            cursorId = this.decodeCursor(cursor);
+            const cursorContribution = await this.prisma.paymentContribution.findFirst(
+                {
+                    where: {
+                        id: cursorId,
+                        userId,
+                        occurrenceId,
+                    },
+                    select: {
+                        id: true,
+                    },
+                }
+            );
+            if (!cursorContribution) {
+                throw new BadRequestException('Invalid cursor.');
+            }
+        }
+
+        const contributions = await this.prisma.paymentContribution.findMany(
+            {
+                where: {
+                    userId,
+                    occurrenceId,
+
+                    state: {
+                        in: [
+                            PaymentContributionState.POSTED,
+                            PaymentContributionState.VOIDED,
+                        ],
+                    },
+                },
+                take: limit + 1,
+                ...(cursorId
+                    ? {
+                        cursor: {
+                            id: cursorId,
+                        },
+                        skip: 1,
+                    }
+                    : {}),
+
+                orderBy: [
+                    {
+                        createdAt: 'desc',
+                    },
+                    {
+                        id: 'desc',
+                    },
+                ],
+            }
+        );
+
+        const hasMore = contributions.length > limit;
+        const pageItems = hasMore ? contributions.slice(0, limit) : contributions;
+        const nextCursor = hasMore && pageItems.length > 0 ? this.encodeCursor(pageItems[pageItems.length - 1].id) : null;
+
+        const items = pageItems.map((contribution) => ({
+            id: contribution.id,
+            occurrenceId: contribution.occurrenceId,
+            obligationId: contribution.obligationId,
+            amount: contribution.amount.toFixed(2),
+            currency: contribution.currency,
+            paidDate: contribution.paidDate,
+            source: contribution.source,
+            state: contribution.state,
+            receiptScanId: contribution.receiptScanId,
+            notes: contribution.notes,
+            createdAt: contribution.createdAt,
+            voidedAt: contribution.voidedAt,
+            voidReason: contribution.voidReason,
+        }));
+
+        return {
+            items,
+            nextCursor,
+        };
+    }
+  
+  
+
 }
