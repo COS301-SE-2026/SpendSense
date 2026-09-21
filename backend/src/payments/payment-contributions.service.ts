@@ -15,6 +15,8 @@ import {
   ScoreEventType,
   UserEventSourceType,
   UserEventType,
+  ScoreTier,
+  PaymentContributionState,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { createHash } from 'node:crypto';
@@ -37,6 +39,69 @@ export type CreateContributionInput = {
 
 type ContributionDb = PrismaService | Prisma.TransactionClient;
 
+export type CreateContributionResult = {
+  replayed: boolean;
+
+  contribution: {
+    id: string;
+    occurrenceId: string;
+    obligationId: string;
+    amount: string;
+    currency: Currency;
+    paidDate: Date;
+    source: PaymentContributionSource;
+    state: PaymentContributionState;
+    receiptScanId: string | null;
+    notes: string | null;
+    createdAt: Date;
+  };
+
+  occurrence: {
+    id: string;
+    obligationId: string;
+    obligationName: string;
+    dueDate: Date;
+    amountDue: string;
+    amountPaid: string;
+    amountRemaining: string;
+    currency: Currency;
+    status: PaymentOccurrenceStatus;
+    paidAt: Date | null;
+  };
+
+  settlement: {
+    isLate: boolean;
+    daysLate: number;
+  } | null;
+
+  scoreImpact: {
+    scoreEventId: string;
+    previousScore: number;
+    currentScore: number;
+    delta: number;
+    tierBefore: ScoreTier;
+    tierAfter: ScoreTier;
+    explanation: string;
+  } | null;
+
+  rewards: {
+    coinsAwarded: number;
+    xpAwarded: number;
+    coinBalance: number;
+    xp: number;
+    currentPaymentStreak: number;
+    longestPaymentStreak: number;
+    mascotMood: MascotMood;
+    badgesEarned: string[];
+  } | null;
+
+  paymentImpact: {
+    isLate: boolean;
+    daysLate: number;
+    simulatedInterest: number;
+  } | null;
+};
+
 const ON_TIME_COINS = 15;
 const ON_TIME_XP = 10;
 
@@ -50,7 +115,9 @@ export class PaymentContributionsService {
     private readonly creditScoreService: CreditScoreService,
   ) {}
 
-  async createContribution(input: CreateContributionInput) {
+  async createContribution(
+    input: CreateContributionInput,
+  ): Promise<CreateContributionResult> {
     const amount = new Prisma.Decimal(input.amount);
 
     // contribution must be positive.
@@ -203,6 +270,7 @@ export class PaymentContributionsService {
             settlement: null,
             scoreImpact: null,
             rewards: null,
+            paymentImpact: null,
           };
         }
 
@@ -301,7 +369,7 @@ export class PaymentContributionsService {
         }
       }
 
-      throw error ; 
+      throw error;
     }
   }
 
@@ -590,6 +658,7 @@ export class PaymentContributionsService {
       // not rerunning gamification functionality upon idenpodency reply
       scoreImpact: null,
       rewards: null,
+      paymentImpact: null,
     };
   }
 
