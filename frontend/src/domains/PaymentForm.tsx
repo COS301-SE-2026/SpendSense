@@ -1,7 +1,6 @@
-
 "use client";
 import {useState,useEffect,type ReactNode} from "react";
-import {useForm,Controller,type Resolver} from "react-hook-form";
+import {useForm,Controller,useWatch,type Resolver} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {useLocation,useNavigate} from "react-router-dom";
@@ -11,6 +10,7 @@ import type {CalendarOccurrence} from "../hooks/useCalendarOccurrences";
 import {Popover,PopoverContent,PopoverTrigger} from "../components/ui/popover";
 import {Calendar as CalenderIcon,CheckCircle2,Coins,Flame,TrendingUp,X,Camera,ChevronDown,Check,CreditCard} from "lucide-react";
 import {Calendar} from "@/components/ui/calendar";
+import PaymentOccurrenceBalance from "../components/payments/PaymentOccurrenceBalance";
 
 const paymentSchema=z.object({
     occurrenceId:z
@@ -91,7 +91,8 @@ export default function ObligationForm(){
             notes:""
         }satisfies PaymentFormData,
     });
-
+    const watchedOccurrenceId=useWatch({control,name:"occurrenceId"});
+    const balanceOccurrenceId=selectedOccurrence?.id??watchedOccurrenceId;
     useEffect(()=>{
         let active=true;
         getUpcomingOccurrences({
@@ -108,7 +109,6 @@ export default function ObligationForm(){
         });
         return()=>{active=false};
     },[]);
-
     const onSubmit=async(formData:PaymentFormData)=>{
         setSubmitting(true);
         setSubmitError(null);
@@ -128,7 +128,7 @@ export default function ObligationForm(){
             setSubmitting(false);
         }
     }
-
+    
     return(
         <div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
@@ -275,6 +275,12 @@ export default function ObligationForm(){
                             {errors.occurrenceId?.message&&<p className="text-xs text-red-500 dark:text-[#ffb4ab]">{errors.occurrenceId.message}</p>}
                         </>
                     )}
+                    {balanceOccurrenceId&&(
+                        <PaymentOccurrenceBalance
+                            key={balanceOccurrenceId}
+                            occurrenceId={balanceOccurrenceId}
+                        />
+                    )}
                     <div className="space-y-1">
                         <label htmlFor="amountPaid" className="text-xs font-semibold text-[#091828] dark:text-white">Amount paid</label>
                         <input
@@ -362,7 +368,6 @@ function PaymentImpactModal({
     const xp=result?.rewards?.xpAwarded ?? 10;
     const streak=result?.rewards?.currentPaymentStreak ?? 0;
     const mood=result?.rewards?.mascotMood;
-
     return(
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#091828]/40 px-4 pb-6 dark:bg-black/70">
             <div className="w-full max-w-sm rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[6px_6px_0_#091828] animate-in fade-in slide-in-from-bottom-5 duration-300 dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[6px_6px_0_#060e20]">
