@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReceiptsService } from './receipts.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaymentContributionsService } from '../payments/payment-contributions.service';
+const mockPaymentContributionsService = {
+  createContribution: jest.fn(),
+};
 
 describe('ReceiptsService', () => {
   let service: ReceiptsService;
@@ -14,6 +18,10 @@ describe('ReceiptsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: PaymentContributionsService,
+          useValue: mockPaymentContributionsService,
         },
       ],
     }).compile();

@@ -7,6 +7,9 @@ import {
   UseInterceptors,
   Get,
   Param,
+  Headers,
+  HttpStatus,
+  Res,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -17,6 +20,8 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiParam,
+  ApiHeader,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
@@ -25,6 +30,8 @@ import type { AuthUser } from '../auth/types/auth-user.type';
 import { UsersService } from '../users/users.service';
 import { ReceiptsService } from './receipts.service';
 import { CreateReceiptScanDto } from './dto/create-receipt-scan.dto';
+import type { Response } from 'express';
+import { ConfirmReceiptScanDto } from './dto/confirm-receipt-scan.dto';
 
 @ApiTags('receipts')
 @ApiBearerAuth()
@@ -98,5 +105,58 @@ export class ReceiptsController {
   ) {
     const user = await this.usersService.findOrCreateUser(authUser);
     return this.receiptsService.getReceiptScan(user.id, scanId);
+  }
+
+  // POST /receipts/scans/:scanId/confirm
+
+  @Post('scans/:scanId/confirm')
+  @ApiOperation({
+    summary: 'Confirm a receipt scan and record its payment contribution',
+  })
+  @ApiParam({
+    name: 'scanId',
+    description: 'Receipt scan ID',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Unique UUID used to safely retry this confirmation',
+    schema: {
+      type: 'string',
+      format: 'uuid',
+    },
+  })
+  @ApiBody({ type: ConfirmReceiptScanDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Receipt scan confirmed and contribution created',
+  })
+  @ApiResponse({ status: 200, description: 'Existing confirmation replayed' })
+  @ApiResponse({ status: 400, description: 'Invalid request' })
+  @ApiResponse({ status: 401, description: 'Unauthorised' })
+  @ApiResponse({
+    status: 404,
+    description: 'Receipt scan or occurrence not found',
+  })
+  @ApiResponse({ status: 409, description: 'Receipt scan or payment conflict' })
+  async confirmScan(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('scanId') scanId: string,
+    @Body() dto: ConfirmReceiptScanDto,
+    @Headers('idempotency-key') idempotencyKey: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+
+    const result = await this.receiptsService.confirmReceiptScan(
+      user.id,
+      scanId,
+      dto,
+      idempotencyKey,
+    );
+
+    response.status(result.replayed ? HttpStatus.OK : HttpStatus.CREATED);
+
+    return result;
   }
 }
