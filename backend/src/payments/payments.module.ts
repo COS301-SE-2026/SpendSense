@@ -26,7 +26,11 @@ import { PaymentQueriesService } from './payment-queries.service';
     CreditScoreModule,
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService, PaymentContributionsService, PaymentQueriesService],
+  providers: [
+    PaymentsService,
+    PaymentContributionsService,
+    PaymentQueriesService,
+  ],
   exports: [PaymentsService, PaymentContributionsService],
 })
 export class PaymentsModule {}

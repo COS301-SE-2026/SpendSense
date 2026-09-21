@@ -11,6 +11,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -33,6 +34,10 @@ import { CreateContributionDto } from './dto/create-contribution.dto';
 import { PaymentContributionsService } from './payment-contributions.service';
 import { isUUID } from 'class-validator';
 
+import { EligibleOccurrencesQueryDto } from './dto/eligible-occurrences-query.dto';
+import { ContributionHistoryQueryDto } from './dto/contribution-history-query.dto';
+import { PaymentQueriesService } from './payment-queries.service';
+
 @ApiTags('payments')
 @ApiBearerAuth()
 @UseGuards(SupabaseJwtGuard)
@@ -42,6 +47,7 @@ export class PaymentsController {
     private readonly paymentsService: PaymentsService,
     private readonly usersService: UsersService,
     private readonly paymentContributionsService: PaymentContributionsService,
+    private readonly paymentQueriesService: PaymentQueriesService,
   ) {}
 
   @Post('log')
@@ -160,5 +166,21 @@ export class PaymentsController {
 
   // GET /payments/occurrences/eligible
 
-  // GET /payments/occurrences/:occurrenceId/contributions
+  @Get('occurrences/eligible')
+  @ApiOperation({
+    summary: 'Get payment occurrences eligible to receive a payment',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Eligible payment occurrences returned successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
+  @ApiResponse({ status: 401, description: 'Unauthorised' })
+  async getEligibleOccurrences(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Query() query: EligibleOccurrencesQueryDto,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    return this.paymentQueriesService.getEligibleOccurrences(user.id, query);
+  }
 }
