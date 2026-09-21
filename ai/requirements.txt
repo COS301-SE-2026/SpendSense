@@ -1,2 +1,8 @@
 fastapi==0.115.6
 uvicorn==0.34.0
+#allows fastapi to receive thwe uploaded image
+python-multipart==0.0.20 
+#opens,validates and preproces the image
+Pillow==11.1.0 
+# alows python to communacte w/ tessaract
+pytesseract==0.3.13 
