@@ -2,11 +2,11 @@ import {useEffect,useState} from 'react'
 import {CalendarDays,Check,ChevronDown,RefreshCw,Wallet} from 'lucide-react'
 import {getEligibleReceiptOccurrences,getReceiptOccurrenceBalance,type ReceiptOccurrence} from '../../features/receipts/receiptOccurrencesApi'
 
-type ReceiptOccurrencePickerProps={
+type ReceiptOccurrencePickerProps=Readonly<{
     preselectedOccurrenceId?:string|null
     selectedOccurrence:ReceiptOccurrence|null
     onSelect:(occurrence:ReceiptOccurrence|null)=>void
-}
+}>
 
 function formatMoney(value:string,currency:string){
     return `${currency} ${value}`
@@ -143,9 +143,9 @@ export default function ReceiptOccurrencePicker({
                 </div>
             </div>
             <div className="mt-6">
-                <label className="mb-2 block text-xs font-bold">
+                <span className="mb-2 block text-xs font-bold">
                     Allocate receipt to
-                </label>
+                </span>
                 <button
                     type="button"
                     aria-label="Select payment occurrence"
@@ -162,9 +162,9 @@ export default function ReceiptOccurrencePicker({
                 {isOpen&&(
                     <div className="mt-3 rounded-2xl border-2 border-[#091828] bg-[#F4FBF7] p-3 dark:border-white dark:bg-[#1c263c]">
                         {loading&&(
-                            <p role="status" className="px-2 py-3 text-sm font-medium">
+                            <output className="block px-2 py-3 text-sm font-medium">
                                 Loading available payments...
-                            </p>
+                            </output>
                         )}
                         {error&&(
                             <div className="space-y-3">
@@ -223,9 +223,9 @@ export default function ReceiptOccurrencePicker({
                 )}
             </div>
             {loadingBalance&&(
-                <p role="status" className="mt-4 text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
+                <output className="mt-4 block text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
                     Loading current balance...
-                </p>
+                </output>
             )}
             {balanceError&&(
                 <p role="alert" className="mt-4 rounded-2xl bg-[#FFD9E1] px-4 py-3 text-sm font-semibold text-[#AC2A5D] dark:bg-[#4B2635] dark:text-[#ffb1c5]">
