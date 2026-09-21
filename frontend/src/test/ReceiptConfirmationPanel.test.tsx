@@ -171,7 +171,6 @@ describe('ReceiptConfirmationPanel',()=>{
         fireEvent.click(screen.getByRole('button',{name:'Confirm payment'}))
         expect(await screen.findByRole('heading',{name:'Partially paid'})).toBeInTheDocument()
         expect(screen.getByText('ZAR 200.00')).toBeInTheDocument()
-        expect(screen.getByText('pc_789',{exact:false})).toBeInTheDocument()
         expect(onOccurrenceChange).toHaveBeenCalledWith(confirmation.occurrence)
         expect(onConfirmed).toHaveBeenCalledWith(confirmation)
     })
@@ -180,9 +179,8 @@ describe('ReceiptConfirmationPanel',()=>{
         acknowledge()
         fireEvent.click(screen.getByRole('button',{name:'Confirm payment'}))
         expect(await screen.findByRole('heading',{name:'Partially paid'})).toBeInTheDocument()
-        expect(screen.queryByRole('heading',{name:'Settlement details'})).not.toBeInTheDocument()
-        expect(screen.queryByRole('heading',{name:'Score impact'})).not.toBeInTheDocument()
-        expect(screen.queryByRole('heading',{name:'Rewards'})).not.toBeInTheDocument()
+        expect(screen.queryByText('Credit score impact')).not.toBeInTheDocument()
+        expect(screen.queryByText('Your rewards')).not.toBeInTheDocument()
     })
     it('shows a distinct completed-payment state',async()=>{
         const fullConfirmation={
@@ -213,21 +211,22 @@ describe('ReceiptConfirmationPanel',()=>{
                 status:'PAID' as const,
                 canRecord:false,
             },
-            settlement:{id:'settlement_123'},
+            settlement:{isLate:false,daysLate:0},
             scoreImpact:{delta:15},
-            rewards:{coins:20},
+            rewards:{coinsAwarded:20,xpAwarded:10},
         }
         vi.mocked(confirmReceiptPayment).mockResolvedValue(fullConfirmation)
         renderPanel()
         acknowledge()
         fireEvent.click(screen.getByRole('button',{name:'Confirm payment'}))
         expect(await screen.findByRole('heading',{name:'Payment complete!'})).toBeInTheDocument()
-        expect(screen.getByRole('heading',{name:'Settlement details'})).toBeInTheDocument()
-        expect(screen.getByRole('heading',{name:'Score impact'})).toBeInTheDocument()
-        expect(screen.getByRole('heading',{name:'Rewards'})).toBeInTheDocument()
-        expect(screen.getByText(/settlement_123/)).toBeInTheDocument()
-        expect(screen.getByText(/"delta": 15/)).toBeInTheDocument()
-        expect(screen.getByText(/"coins": 20/)).toBeInTheDocument()
+        expect(screen.getByText('Credit score impact')).toBeInTheDocument()
+        expect(screen.getByText('+15 points')).toBeInTheDocument()
+        expect(screen.getByText('Your rewards')).toBeInTheDocument()
+        expect(screen.getByText('Coins earned')).toBeInTheDocument()
+        expect(screen.getByText('XP earned')).toBeInTheDocument()
+        expect(screen.getByText('+20')).toBeInTheDocument()
+        expect(screen.getByText('+10')).toBeInTheDocument()
     })
     it('does not send another confirmation after success',async()=>{
         renderPanel()

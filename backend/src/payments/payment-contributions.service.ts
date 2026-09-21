@@ -441,7 +441,7 @@ export class PaymentContributionsService {
         : ScoreEventType.PAYMENT_ON_TIME,
 
       explanation: isLate
-        ? `Paid ${obligationName} ${daysLate} day${daySuffix} late.`
+        ? `Settled overdue ${obligationName} payment ${daysLate} day${daySuffix} after its due date.`
         : `Paid ${obligationName} on time.`,
     });
 
@@ -617,16 +617,19 @@ export class PaymentContributionsService {
 
     const isLate = occurrence.status === PaymentOccurrenceStatus.PAID_LATE;
 
-    const daysLate =
-      hasSettled && occurrence.paidAt
-        ? Math.max(
-            0,
-            Math.ceil(
-              (occurrence.paidAt.getTime() - occurrence.dueDate.getTime()) /
-                (1000 * 60 * 60 * 24),
-            ),
-          )
-        : 0;
+    const effectiveSettlementDate =
+      isLate && input.paidDate.getTime() <= occurrence.dueDate.getTime()
+        ? new Date()
+        : input.paidDate;
+    const daysLate = isLate
+      ? Math.max(
+          1,
+          Math.ceil(
+            (effectiveSettlementDate.getTime() - occurrence.dueDate.getTime()) /
+              (1000 * 60 * 60 * 24),
+          ),
+        )
+      : 0;
 
     return {
       replayed: true,

@@ -660,7 +660,8 @@ describe('PaymentContributionsService', () => {
         occurrenceId: baseOccurrence.id,
         paymentContributionId: mockContribution.id,
         eventType: ScoreEventType.PAYMENT_LATE,
-        explanation: 'Paid Mock obligation 3 days late.',
+        explanation:
+          'Settled overdue Mock obligation payment 3 days after its due date.',
       }),
     );
 

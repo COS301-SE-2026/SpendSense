@@ -41,14 +41,85 @@ function getToday(){
     return `${year}-${month}-${day}`
 }
 
-function ResultDetails({title,value}:Readonly<{title:string;value:unknown}>){
-    if(value===null||value===undefined)return null
+function formatDate(value:string){
+    const [year,month,day]=value.slice(0,10).split('-')
+    if(!year||!month||!day)return value
+    return `${day}/${month}/${year}`
+}
+
+
+function ScoreImpactDetails({value}:Readonly<{value:unknown}>){
+    if(!value||typeof value!=='object')return null
+    const impact=value as {
+        previousScore?:number
+        currentScore?:number
+        delta?:number
+        explanation?:string
+    }
+    const delta=impact.delta??0
     return(
         <div className="mt-4 rounded-2xl bg-white p-4 text-[#091828] dark:bg-[#1c263c] dark:text-white">
-            <h3 className="text-sm font-extrabold">{title}</h3>
-            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6">
-                {JSON.stringify(value,null,2)}
-            </pre>
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
+                Credit score impact
+            </p>
+            <p className={`mt-3 text-3xl font-black ${delta<0?'text-[#AC2A5D] dark:text-[#ffb1c5]':'text-[#10775F] dark:text-[#5eead4]'}`}>
+                {delta>0?'+':''}{delta} points
+            </p>
+            {impact.previousScore!==undefined&&impact.currentScore!==undefined&&(
+                <p className="mt-2 text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
+                    {impact.previousScore} → {impact.currentScore}
+                </p>
+            )}
+            {impact.explanation&&(
+                <p className="mt-3 text-sm leading-6 text-[#6b6375] dark:text-[#a0aec0]">
+                    {impact.explanation}
+                </p>
+            )}
+        </div>
+    )
+}
+
+function RewardsDetails({value}:Readonly<{value:unknown}>){
+    if(!value||typeof value!=='object')return null
+    const rewards=value as {
+        coinsAwarded?:number
+        xpAwarded?:number
+        currentPaymentStreak?:number
+        badgesEarned?:string[]
+    }
+    return(
+        <div className="mt-4 rounded-2xl bg-white p-4 text-[#091828] dark:bg-[#1c263c] dark:text-white">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
+                Your rewards
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-[#FFE9B5] p-4 dark:bg-[#574821]">
+                    <p className="text-2xl font-black text-[#7A5A00] dark:text-[#ffd166]">
+                        +{rewards.coinsAwarded??0}
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-[#7A5A00] dark:text-[#ffd166]">
+                        Coins earned
+                    </p>
+                </div>
+                <div className="rounded-2xl bg-[#DCEFE8] p-4 dark:bg-[#0f4f42]">
+                    <p className="text-2xl font-black text-[#10775F] dark:text-[#5eead4]">
+                        +{rewards.xpAwarded??0}
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-[#10775F] dark:text-[#5eead4]">
+                        XP earned
+                    </p>
+                </div>
+            </div>
+            {rewards.currentPaymentStreak!==undefined&&(
+                <p className="mt-4 text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">
+                    Current payment streak: {rewards.currentPaymentStreak} days
+                </p>
+            )}
+            {rewards.badgesEarned&&rewards.badgesEarned.length>0&&(
+                <p className="mt-2 text-sm font-semibold text-[#5B4D8B] dark:text-[#c5b3f0]">
+                    Badges earned: {rewards.badgesEarned.join(', ')}
+                </p>
+            )}
         </div>
     )
 }
@@ -100,7 +171,7 @@ function ReceiptConfirmationResult({result}:Readonly<{result:ReceiptConfirmation
                     Payment date
                 </p>
                 <p className="mt-1 text-sm font-bold">
-                    {result.contribution.paidDate}
+                    {formatDate(result.contribution.paidDate)}
                 </p>
                 <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
                     Payment status
@@ -111,14 +182,10 @@ function ReceiptConfirmationResult({result}:Readonly<{result:ReceiptConfirmation
             </div>
             {settled&&(
                 <>
-                    <ResultDetails title="Settlement details" value={result.settlement}/>
-                    <ResultDetails title="Score impact" value={result.scoreImpact}/>
-                    <ResultDetails title="Rewards" value={result.rewards}/>
+                    <ScoreImpactDetails value={result.scoreImpact}/>
+                    <RewardsDetails value={result.rewards}/>
                 </>
             )}
-            <p className="mt-5 break-all text-xs opacity-70">
-                Contribution reference: {result.contribution.id}
-            </p>
             {result.replayed&&(
                 <p className="mt-3 text-xs font-semibold opacity-70">
                     SpendSense recovered your original payment confirmation. No second contribution was created.
