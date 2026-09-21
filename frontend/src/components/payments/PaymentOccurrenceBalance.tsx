@@ -1,11 +1,11 @@
 import {useEffect,useState} from 'react'
 import {RefreshCw,Wallet} from 'lucide-react'
 import {getReceiptOccurrenceBalance,type ReceiptOccurrence} from '../../features/receipts/receiptOccurrencesApi'
-type PaymentOccurrenceBalanceProps={
+type PaymentOccurrenceBalanceProps=Readonly<{
     occurrenceId:string
     onBalanceChange?:(balance:ReceiptOccurrence|null)=>void
     currentBalance?:ReceiptOccurrence|null
-}
+}>
 function formatMoney(value:string,currency:string){
     return `${currency==='ZAR'?'R':currency} ${value}`
 }
@@ -70,7 +70,7 @@ export default function PaymentOccurrenceBalance({occurrenceId,onBalanceChange,c
                 </button>
             </div>
             {loading&&(
-                <p role="status" className="mt-4 text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">Loading current payment balance...</p>
+                <output className="mt-4 block text-sm font-semibold text-[#6b6375] dark:text-[#a0aec0]">Loading current payment balance...</output>
             )}
             {error&&(
                 <p role="alert" className="mt-4 rounded-2xl bg-[#FFD9E1] px-4 py-3 text-sm font-semibold text-[#AC2A5D] dark:bg-[#4B2635] dark:text-[#ffb1c5]">

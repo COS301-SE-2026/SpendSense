@@ -69,7 +69,16 @@ def process_ocr(image_bytes:bytes,content_type:str)->dict:
     finally:
         image.close()
 
-@app.post("/ocr/process")
+@app.post("/ocr/process",responses={
+    400:{"description":"Missing or invalid request identifier."},
+    401:{"description":"Invalid internal service credentials."},
+    413:{"description":"Receipt image exceeds the size or pixel limit."},
+    415:{"description":"Unsupported receipt image format."},
+    422:{"description":"Missing or invalid receipt image."},
+    429:{"description":"OCR service is busy."},
+    503:{"description":"OCR service is not configured or unavailable."},
+    504:{"description":"Receipt recognition timed out."},
+})
 async def ocr_process(
     file:UploadFile=File(...),
     service_token:str|None=Header(default=None,alias="X-Service-Token"),

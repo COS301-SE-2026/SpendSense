@@ -4,13 +4,13 @@ import {confirmReceiptPayment,type ReceiptConfirmationBody,type ReceiptConfirmat
 import {getReceiptOccurrenceBalance,type ReceiptOccurrence} from '../../features/receipts/receiptOccurrencesApi'
 import type {ReceiptReviewValues} from './ReceiptExtractionForm'
 
-type ReceiptConfirmationPanelProps={
+type ReceiptConfirmationPanelProps=Readonly<{
     scanId:string
     values:ReceiptReviewValues
     occurrence:ReceiptOccurrence|null
     onOccurrenceChange:(occurrence:ReceiptOccurrence|null)=>void
     onConfirmed?:(result:ReceiptConfirmationResult)=>void
-}
+}>
 
 type ConfirmationAttempt={
     key:string
@@ -41,7 +41,7 @@ function getToday(){
     return `${year}-${month}-${day}`
 }
 
-function ResultDetails({title,value}:{title:string;value:unknown}){
+function ResultDetails({title,value}:Readonly<{title:string;value:unknown}>){
     if(value===null||value===undefined)return null
     return(
         <div className="mt-4 rounded-2xl bg-white p-4 text-[#091828] dark:bg-[#1c263c] dark:text-white">
@@ -50,6 +50,81 @@ function ResultDetails({title,value}:{title:string;value:unknown}){
                 {JSON.stringify(value,null,2)}
             </pre>
         </div>
+    )
+}
+
+function ReceiptConfirmationResult({result}:Readonly<{result:ReceiptConfirmationResult}>){
+    const completed=moneyToCents(result.occurrence.amountRemaining)===0n
+    const settled=completed&&(
+        result.occurrence.status==='PAID'||
+        result.occurrence.status==='PAID_LATE'
+    )
+
+    return(
+        <section className={`rounded-3xl border-2 border-[#091828] p-6 shadow-[5px_5px_0_#091828] dark:border-white dark:shadow-[5px_5px_0_#FFFFFF] ${settled?'bg-[#E8E4F4] dark:bg-[#302A43]':'bg-[#DCEFE8] dark:bg-[#0f4f42]'}`}>
+            <CheckCircle2 className={`size-12 ${settled?'text-[#5B4D8B] dark:text-[#c5b3f0]':'text-[#10775F] dark:text-[#5eead4]'}`}/>
+            <h2 className="mt-4 text-2xl font-black">
+                {settled?'Payment complete!':'Partially paid'}
+            </h2>
+            <output className="mt-2 block text-sm leading-6">
+                {settled
+                    ?'SpendSense confirmed your receipt payment and completed this scheduled payment.'
+                    :'SpendSense confirmed your receipt payment. An outstanding balance remains.'}
+            </output>
+            <div className="mt-5 rounded-2xl bg-white p-4 text-[#091828] dark:bg-[#1c263c] dark:text-white">
+                <p className="text-xs font-bold uppercase tracking-widest opacity-60">
+                    Scheduled payment
+                </p>
+                <p className="mt-1 text-lg font-black">
+                    {result.occurrence.obligationName}
+                </p>
+                <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
+                    Amount recorded
+                </p>
+                <p className="mt-1 text-2xl font-black">
+                    {result.contribution.currency} {result.contribution.amount}
+                </p>
+                <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
+                    Total already paid
+                </p>
+                <p className="mt-1 text-lg font-extrabold">
+                    {result.occurrence.currency} {result.occurrence.amountPaid}
+                </p>
+                <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
+                    Remaining balance
+                </p>
+                <p className="mt-1 text-2xl font-black text-[#10775F] dark:text-[#5eead4]">
+                    {result.occurrence.currency} {result.occurrence.amountRemaining}
+                </p>
+                <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
+                    Payment date
+                </p>
+                <p className="mt-1 text-sm font-bold">
+                    {result.contribution.paidDate}
+                </p>
+                <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
+                    Payment status
+                </p>
+                <p className="mt-1 text-sm font-bold">
+                    {result.occurrence.status.replaceAll('_',' ')}
+                </p>
+            </div>
+            {settled&&(
+                <>
+                    <ResultDetails title="Settlement details" value={result.settlement}/>
+                    <ResultDetails title="Score impact" value={result.scoreImpact}/>
+                    <ResultDetails title="Rewards" value={result.rewards}/>
+                </>
+            )}
+            <p className="mt-5 break-all text-xs opacity-70">
+                Contribution reference: {result.contribution.id}
+            </p>
+            {result.replayed&&(
+                <p className="mt-3 text-xs font-semibold opacity-70">
+                    SpendSense recovered your original payment confirmation. No second contribution was created.
+                </p>
+            )}
+        </section>
     )
 }
 
@@ -103,6 +178,50 @@ export default function ReceiptConfirmationPanel({
         return null
     }
 
+    async function handleConfirmationError(error:unknown){
+        const failure=error as{
+            statusCode?:number
+            error?:{
+                code?:string
+            }
+        }
+        const code=failure.error?.code
+        if(code==='SCAN_EXPIRED'){
+            attemptRef.current=null
+            setBlocked(true)
+            setError('This receipt scan has expired. Please scan the receipt again.')
+        }else if(code==='SCAN_ALREADY_CONSUMED'){
+            attemptRef.current=null
+            setBlocked(true)
+            setError('This receipt has already been used for a payment. Check your payment history before trying again.')
+        }else if(
+            code==='AMOUNT_EXCEEDS_REMAINING'||
+            code==='OCCURRENCE_NOT_PAYABLE'||
+            code==='CURRENCY_MISMATCH'
+        ){
+            attemptRef.current=null
+            setAcknowledged(false)
+            setError('The payment details have changed. Review the latest balance before confirming again.')
+            try{
+                if(!occurrence)return
+                const updated=await getReceiptOccurrenceBalance(occurrence.id)
+                onOccurrenceChange(updated.occurrence)
+            }catch{
+                onOccurrenceChange(null)
+                setError('Unable to refresh the payment balance. Please choose the payment again.')
+            }
+        }else if(code==='IDEMPOTENCY_KEY_REUSED'){
+            attemptRef.current=null
+            setBlocked(true)
+            setError('This payment request could not be safely retried. Please check your payment history.')
+        }else if(failure.statusCode&&failure.statusCode>=400&&failure.statusCode<500){
+            attemptRef.current=null
+            setError('Please check your payment details before trying again.')
+        }else{
+            setError('We could not confirm whether the payment was recorded. Retry to check the same request safely.')
+        }
+    }
+
     async function handleConfirm(){
         if(processingRef.current||result||blocked)return
         const validation=getValidationMessage()
@@ -154,126 +273,15 @@ export default function ReceiptConfirmationPanel({
             setResult(confirmation)
             onOccurrenceChange(confirmation.occurrence)
             onConfirmed?.(confirmation)
-        }catch(caught){
-            const failure=caught as{
-                statusCode?:number
-                error?:{
-                    code?:string
-                }
-            }
-            const code=failure.error?.code
-            if(code==='SCAN_EXPIRED'){
-                attemptRef.current=null
-                setBlocked(true)
-                setError('This receipt scan has expired. Please scan the receipt again.')
-            }else if(code==='SCAN_ALREADY_CONSUMED'){
-                attemptRef.current=null
-                setBlocked(true)
-                setError('This receipt has already been used for a payment. Check your payment history before trying again.')
-            }else if(
-                code==='AMOUNT_EXCEEDS_REMAINING'||
-                code==='OCCURRENCE_NOT_PAYABLE'||
-                code==='CURRENCY_MISMATCH'
-            ){
-                attemptRef.current=null
-                setAcknowledged(false)
-                setError('The payment details have changed. Review the latest balance before confirming again.')
-                try{
-                    const updated=await getReceiptOccurrenceBalance(occurrence.id)
-                    onOccurrenceChange(updated.occurrence)
-                }catch{
-                    onOccurrenceChange(null)
-                    setError('Unable to refresh the payment balance. Please choose the payment again.')
-                }
-            }else if(code==='IDEMPOTENCY_KEY_REUSED'){
-                attemptRef.current=null
-                setBlocked(true)
-                setError('This payment request could not be safely retried. Please check your payment history.')
-            }else if(failure.statusCode&&failure.statusCode>=400&&failure.statusCode<500){
-                attemptRef.current=null
-                setError('Please check your payment details before trying again.')
-            }else{
-                setError('We could not confirm whether the payment was recorded. Retry to check the same request safely.')
-            }
+        }catch(error){
+            await handleConfirmationError(error)
         }finally{
             processingRef.current=false
             setProcessing(false)
         }
     }
-    if(result){
-        const completed=moneyToCents(result.occurrence.amountRemaining)===0n
-        const settled=completed&&(
-            result.occurrence.status==='PAID'||
-            result.occurrence.status==='PAID_LATE'
-        )
 
-        return(
-            <section className={`rounded-3xl border-2 border-[#091828] p-6 shadow-[5px_5px_0_#091828] dark:border-white dark:shadow-[5px_5px_0_#FFFFFF] ${settled?'bg-[#E8E4F4] dark:bg-[#302A43]':'bg-[#DCEFE8] dark:bg-[#0f4f42]'}`}>
-                <CheckCircle2 className={`size-12 ${settled?'text-[#5B4D8B] dark:text-[#c5b3f0]':'text-[#10775F] dark:text-[#5eead4]'}`}/>
-                <h2 className="mt-4 text-2xl font-black">
-                    {settled?'Payment complete!':'Partially paid'}
-                </h2>
-                <p role="status" className="mt-2 text-sm leading-6">
-                    {settled
-                        ?'SpendSense confirmed your receipt payment and completed this scheduled payment.'
-                        :'SpendSense confirmed your receipt payment. An outstanding balance remains.'}
-                </p>
-                <div className="mt-5 rounded-2xl bg-white p-4 text-[#091828] dark:bg-[#1c263c] dark:text-white">
-                    <p className="text-xs font-bold uppercase tracking-widest opacity-60">
-                        Scheduled payment
-                    </p>
-                    <p className="mt-1 text-lg font-black">
-                        {result.occurrence.obligationName}
-                    </p>
-                    <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
-                        Amount recorded
-                    </p>
-                    <p className="mt-1 text-2xl font-black">
-                        {result.contribution.currency} {result.contribution.amount}
-                    </p>
-                    <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
-                        Total already paid
-                    </p>
-                    <p className="mt-1 text-lg font-extrabold">
-                        {result.occurrence.currency} {result.occurrence.amountPaid}
-                    </p>
-                    <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
-                        Remaining balance
-                    </p>
-                    <p className="mt-1 text-2xl font-black text-[#10775F] dark:text-[#5eead4]">
-                        {result.occurrence.currency} {result.occurrence.amountRemaining}
-                    </p>
-                    <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
-                        Payment date
-                    </p>
-                    <p className="mt-1 text-sm font-bold">
-                        {result.contribution.paidDate}
-                    </p>
-                    <p className="mt-4 text-xs font-bold uppercase tracking-widest opacity-60">
-                        Payment status
-                    </p>
-                    <p className="mt-1 text-sm font-bold">
-                        {result.occurrence.status.replaceAll('_',' ')}
-                    </p>
-                </div>
-                {settled&&(
-                    <>
-                        <ResultDetails title="Settlement details" value={result.settlement}/>
-                        <ResultDetails title="Score impact" value={result.scoreImpact}/>
-                        <ResultDetails title="Rewards" value={result.rewards}/>
-                    </>
-                )}
-                <p className="mt-5 break-all text-xs opacity-70">
-                    Contribution reference: {result.contribution.id}
-                </p>
-                {result.replayed&&(
-                    <p className="mt-3 text-xs font-semibold opacity-70">
-                        SpendSense recovered your original payment confirmation. No second contribution was created.
-                    </p>
-                )}
-            </section>
-        )
-    }
+    if(result)return <ReceiptConfirmationResult result={result}/>
 
     return(
         <section className="rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[5px_5px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[5px_5px_0_#060e20] sm:p-6">

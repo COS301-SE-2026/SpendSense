@@ -5,6 +5,7 @@ import pytesseract
 
 OCR_TIMEOUT=20
 LOW_CONFIDENCE_THRESHOLD=0.60
+STRIP_CHARACTERS=".,:;()[]"
 
 TOTAL_LABELS={
     "TOTAL",
@@ -70,7 +71,7 @@ def normalise_amount(value:str)->str|None:
     return str(amount.quantize(Decimal("0.01")))
 
 def parse_date(value:str)->str|None:
-    cleaned=value.strip(".,:;()[]")
+    cleaned=value.strip(STRIP_CHARACTERS)
     separator=None
     if "/" in cleaned:
         separator="/"
@@ -135,33 +136,46 @@ def find_merchant(lines:list[str])->str|None:
         return candidate
     return None
 
+def clean_amount_word(word:str)->str:
+    cleaned=word.strip(STRIP_CHARACTERS)
+    upper=cleaned.upper()
+    if upper in("R","ZAR","USD"):
+        return ""
+    if upper.startswith("ZAR") and len(cleaned)>3:
+        return cleaned[3:]
+    if upper.startswith("USD") and len(cleaned)>3:
+        return cleaned[3:]
+    if upper.startswith("R") and len(cleaned)>1 and cleaned[1].isdigit():
+        return cleaned[1:]
+    return cleaned
+
+def append_amount(
+    amounts:list[str],
+    words:list[str],
+    index:int,
+    cleaned:str,
+    amount:str,
+):
+    if index>0:
+        previous=words[index-1].strip(STRIP_CHARACTERS)
+        if previous.isdigit() and len(previous)<=3:
+            combined=normalise_amount(previous+" "+cleaned)
+            if combined is not None:
+                if amounts and amounts[-1]==normalise_amount(previous):
+                    amounts.pop()
+                amounts.append(combined)
+                return
+    amounts.append(amount)
+
 def extract_amounts(line:str)->list[str]:
     words=line.split()
     amounts=[]
     for index,word in enumerate(words):
-        cleaned=word.strip(".,:;()[]")
-        upper=cleaned.upper()
-        if upper in("R","ZAR","USD"):
-            continue
-        if upper.startswith("ZAR") and len(cleaned)>3:
-            cleaned=cleaned[3:]
-        elif upper.startswith("USD") and len(cleaned)>3:
-            cleaned=cleaned[3:]
-        elif upper.startswith("R") and len(cleaned)>1 and cleaned[1].isdigit():
-            cleaned=cleaned[1:]
+        cleaned=clean_amount_word(word)
         amount=normalise_amount(cleaned)
         if amount is None:
             continue
-        if index>0:
-            previous=words[index-1].strip(".,:;()[]")
-            if previous.isdigit() and len(previous)<=3:
-                combined=normalise_amount(previous+" "+cleaned)
-                if combined is not None:
-                    if amounts and amounts[-1]==normalise_amount(previous):
-                        amounts.pop()
-                    amounts.append(combined)
-                    continue
-        amounts.append(amount)
+        append_amount(amounts,words,index,cleaned,amount)
     return amounts
 
 def find_total(lines:list[str])->tuple[str|None,list[str]]:
@@ -181,21 +195,26 @@ def find_total(lines:list[str])->tuple[str|None,list[str]]:
         return None,["Multiple possible receipt totals were found."]
     return unique[0],[]
 
+def currency_from_word(word:str)->str|None:
+    upper=word.strip(STRIP_CHARACTERS).upper()
+    if upper in("ZAR","R"):
+        return "ZAR"
+    if upper.startswith("ZAR") and upper[3:4].isdigit():
+        return "ZAR"
+    if upper.startswith("R") and upper[1:2].isdigit():
+        return "ZAR"
+    if upper=="USD":
+        return "USD"
+    if upper.startswith("USD") and upper[3:4].isdigit():
+        return "USD"
+    return None
+
 def find_currency(lines:list[str])->str|None:
     for line in lines:
         for word in line.split():
-            cleaned=word.strip(".,:;()[]")
-            upper=cleaned.upper()
-            if upper=="ZAR" or upper=="R":
-                return "ZAR"
-            if upper.startswith("ZAR") and upper[3:4].isdigit():
-                return "ZAR"
-            if upper.startswith("R") and upper[1:2].isdigit():
-                return "ZAR"
-            if upper=="USD":
-                return "USD"
-            if upper.startswith("USD") and upper[3:4].isdigit():
-                return "USD"
+            currency=currency_from_word(word)
+            if currency is not None:
+                return currency
     return None
 
 def parse_receipt_lines(

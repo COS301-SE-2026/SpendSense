@@ -20,6 +20,12 @@ function getInitialReceiptValues(extraction:ReceiptExtraction):ReceiptReviewValu
     }
 }
 
+function getDisplayError(scanId:string|undefined,isExpired:boolean,error:string|null){
+    if(!scanId)return 'This receipt scan could not be found.'
+    if(isExpired)return 'This receipt scan has expired. Please scan the receipt again.'
+    return error
+}
+
 export default function ReceiptReviewPage(){
     const navigate=useNavigate()
     const location=useLocation()
@@ -46,10 +52,10 @@ export default function ReceiptReviewPage(){
             setScan(result)
             setIsExpired(new Date(result.expiresAt).getTime()<=Date.now())
             setError(null)
-        }).catch(caught=>{
+        }).catch(error=>{
             if(!active)return
-            const code=(caught as {error?:{code?:string}})?.error?.code
-            setError(code==='RECEIPT_SCAN_NOT_FOUND'||(caught as {statusCode?:number})?.statusCode===404
+            const code=(error as {error?:{code?:string}})?.error?.code
+            setError(code==='RECEIPT_SCAN_NOT_FOUND'||(error as {statusCode?:number})?.statusCode===404
                 ?'This receipt scan is unavailable or has expired. Please scan the receipt again.'
                 :'Unable to load your receipt. Please try again.')
             setScan(null)
@@ -71,11 +77,7 @@ export default function ReceiptReviewPage(){
         setConfirmedResult(result)
     },[])
 
-    const displayError=!scanId
-        ?'This receipt scan could not be found.'
-        :isExpired
-            ?'This receipt scan has expired. Please scan the receipt again.'
-            :error
+    const displayError=getDisplayError(scanId,isExpired,error)
 
     const preselectedOccurrenceId=scan?.preselectedOccurrenceId??initialScan?.preselectedOccurrenceId
     const scanPath=preselectedOccurrenceId
@@ -86,9 +88,9 @@ export default function ReceiptReviewPage(){
         return(
             <main className="min-h-[100dvh] bg-[#F4FBF7] px-5 py-8 text-[#091828] dark:bg-[#0b1326] dark:text-white">
                 <div className="mx-auto w-full max-w-xl">
-                    <p role="status" className="rounded-3xl bg-white px-5 py-6 text-sm font-semibold dark:bg-[#131b2e]">
+                    <output className="block rounded-3xl bg-white px-5 py-6 text-sm font-semibold dark:bg-[#131b2e]">
                         Loading your receipt...
-                    </p>
+                    </output>
                 </div>
             </main>
         )

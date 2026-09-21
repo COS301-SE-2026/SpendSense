@@ -1,5 +1,5 @@
 from io import BytesIO
-from PIL import Image,ImageOps,UnidentifiedImageError
+from PIL import Image,ImageOps
 
 MAX_FILE_SIZE=8*1024*1024
 MAX_PIXELS=12_000_000
@@ -88,7 +88,6 @@ def process_receipt_image(
     except ImageValidationError:
         raise
     except(
-        UnidentifiedImageError,
         OSError,
         ValueError,
         SyntaxError,
