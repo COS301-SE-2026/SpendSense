@@ -15,32 +15,40 @@ import { ContributionHistoryQueryDto } from './dto/contribution-history-query.dt
 
 @Injectable()
 export class PaymentQueriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  async getEligibleOccurrences(
-    userId: string,
-    query: EligibleOccurrencesQueryDto,
-  ) {
-    const { limit = 20, cursor, from, to } = query;
+
+
+  private buildDueDateFilter(from?: string, to?: string) {
     const fromDate = from ? new Date(from) : undefined;
     const toDate = to ? new Date(to) : undefined;
 
     if (fromDate && toDate && fromDate > toDate) {
       throw new BadRequestException('"from" date cannot be after "to" date.');
     }
+    if (!fromDate && !toDate) {
+      return undefined;
+    }
+    return {
+      ...(fromDate ? { gte: fromDate } : {}),
+      ...(toDate ? { lte: toDate } : {}),
+    };
+  }
 
-    let cursorId: string | undefined;
-    if (cursor) {
-      cursorId = this.decodeCursor(cursor);
+  private getNextCursor(hasMore: boolean, pageItems: { id: string }[]): string | null {
+    if (!hasMore || pageItems.length === 0) {
+      return null;
     }
 
-    const dueDateFilter =
-      fromDate || toDate
-        ? {
-            ...(fromDate ? { gte: fromDate } : {}),
-            ...(toDate ? { lte: toDate } : {}),
-          }
-        : undefined;
+    return this.encodeCursor(pageItems[pageItems.length - 1].id);
+  }
+
+  async getEligibleOccurrences(userId: string, query: EligibleOccurrencesQueryDto) {
+    
+    const { limit = 20, cursor, from, to } = query;
+
+    const cursorId = cursor ? this.decodeCursor(cursor) : undefined;
+    const dueDateFilter = this.buildDueDateFilter(from, to);
 
     const where = {
       userId,
@@ -53,7 +61,7 @@ export class PaymentQueriesService {
         ],
       },
       amountPaid: {
-        lt: this.prisma.paymentOccurrence.fields.amountDue, // occurances with an outstanding amount the user still needs to pay.
+        lt: this.prisma.paymentOccurrence.fields.amountDue,
       },
       obligation: {
         is: {
@@ -64,7 +72,7 @@ export class PaymentQueriesService {
       ...(dueDateFilter ? { dueDate: dueDateFilter } : {}),
     };
 
-    // make sure cursor belongs to the approprate authed user
+    // Make sure cursor belongs to the authenticated user.
     if (cursorId) {
       const cursorOccurrence = await this.prisma.paymentOccurrence.findFirst({
         where: {
@@ -75,12 +83,13 @@ export class PaymentQueriesService {
           id: true,
         },
       });
+
       if (!cursorOccurrence) {
         throw new BadRequestException('Invalid cursor');
       }
     }
 
-    // fetch an extra recrod so we knwo if another page exists
+    // Fetch one extra record so we know whether another page exists.
     const occurrences = await this.prisma.paymentOccurrence.findMany({
       where,
       take: limit + 1,
@@ -110,13 +119,13 @@ export class PaymentQueriesService {
 
     const hasMore = occurrences.length > limit;
     const pageItems = hasMore ? occurrences.slice(0, limit) : occurrences;
-    const nextCursor =
-      hasMore && pageItems.length > 0
-        ? this.encodeCursor(pageItems[pageItems.length - 1].id)
-        : null;
+    const nextCursor = this.getNextCursor(hasMore, pageItems);
 
     const items = pageItems.map((occurrence) => {
-      const amountRemaining = occurrence.amountDue.minus(occurrence.amountPaid);
+      const amountRemaining = occurrence.amountDue.minus(
+        occurrence.amountPaid,
+      );
+
       return {
         id: occurrence.id,
         obligationId: occurrence.obligationId,
@@ -130,6 +139,7 @@ export class PaymentQueriesService {
         canRecord: true,
       };
     });
+
     return {
       items,
       nextCursor,
@@ -144,7 +154,7 @@ export class PaymentQueriesService {
     try {
       const decoded = Buffer.from(cursor, 'base64url').toString('utf8');
       if (!isUUID(decoded)) {
-        throw new Error();
+        throw new Error("Invalid UUID");
       }
       return decoded;
     } catch {
@@ -217,11 +227,11 @@ export class PaymentQueriesService {
       take: limit + 1,
       ...(cursorId
         ? {
-            cursor: {
-              id: cursorId,
-            },
-            skip: 1,
-          }
+          cursor: {
+            id: cursorId,
+          },
+          skip: 1,
+        }
         : {}),
 
       orderBy: [

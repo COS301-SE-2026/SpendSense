@@ -17,6 +17,8 @@ import {
   UserEventType,
   ScoreTier,
   PaymentContributionState,
+  PaymentContribution,
+  PaymentOccurrence,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { createHash } from 'node:crypto';
@@ -113,7 +115,7 @@ export class PaymentContributionsService {
     private readonly badgeEngineService: BadgeEngineService,
     private readonly rewardService: RewardService,
     private readonly creditScoreService: CreditScoreService,
-  ) {}
+  ) { }
 
   async createContribution(
     input: CreateContributionInput,
@@ -240,38 +242,19 @@ export class PaymentContributionsService {
           });
 
           return {
-            replayed: false,
+            ...this.buildContributionResponse(
+              contribution,
+              updatedOccurrence,
+              occurrence.obligation.name,
+              remainingAfter.toFixed(2),
+            ),
 
-            contribution: {
-              id: contribution.id,
-              occurrenceId: contribution.occurrenceId,
-              obligationId: contribution.obligationId,
-              amount: contribution.amount.toFixed(2),
-              currency: contribution.currency,
-              paidDate: contribution.paidDate,
-              source: contribution.source,
-              state: contribution.state,
-              receiptScanId: contribution.receiptScanId, // this could be NULL, does not have to be a partial contribution via OCR, could be manual.
-              notes: contribution.notes,
-              createdAt: contribution.createdAt,
-            },
-            occurrence: {
-              id: updatedOccurrence.id,
-              obligationId: updatedOccurrence.obligationId,
-              obligationName: occurrence.obligation.name,
-              dueDate: updatedOccurrence.dueDate,
-              amountDue: updatedOccurrence.amountDue.toFixed(2),
-              amountPaid: updatedOccurrence.amountPaid.toFixed(2),
-              amountRemaining: remainingAfter.toFixed(2),
-              currency: updatedOccurrence.currency,
-              status: updatedOccurrence.status,
-              paidAt: updatedOccurrence.paidAt,
-            },
             settlement: null,
             scoreImpact: null,
             rewards: null,
             paymentImpact: null,
           };
+
         }
 
         //  2.2 for the the payment contribution IS settlig the occurance in full
@@ -285,12 +268,12 @@ export class PaymentContributionsService {
           : PaymentOccurrenceStatus.PAID;
         const daysLate = isLate
           ? Math.max(
-              0,
-              Math.ceil(
-                (input.paidDate.getTime() - occurrence.dueDate.getTime()) /
-                  (1000 * 60 * 60 * 24),
-              ),
-            )
+            0,
+            Math.ceil(
+              (input.paidDate.getTime() - occurrence.dueDate.getTime()) /
+              (1000 * 60 * 60 * 24),
+            ),
+          )
           : 0;
 
         const updatedOccurrence = await tx.paymentOccurrence.update({
@@ -316,34 +299,12 @@ export class PaymentContributionsService {
         });
 
         return {
-          replayed: false,
-
-          contribution: {
-            id: contribution.id,
-            occurrenceId: contribution.occurrenceId,
-            obligationId: contribution.obligationId,
-            amount: contribution.amount.toFixed(2),
-            currency: contribution.currency,
-            paidDate: contribution.paidDate,
-            source: contribution.source,
-            state: contribution.state,
-            receiptScanId: contribution.receiptScanId,
-            notes: contribution.notes,
-            createdAt: contribution.createdAt,
-          },
-
-          occurrence: {
-            id: updatedOccurrence.id,
-            obligationId: updatedOccurrence.obligationId,
-            obligationName: occurrence.obligation.name,
-            dueDate: updatedOccurrence.dueDate,
-            amountDue: updatedOccurrence.amountDue.toFixed(2),
-            amountPaid: updatedOccurrence.amountPaid.toFixed(2),
-            amountRemaining: remainingAfter.toFixed(2),
-            currency: updatedOccurrence.currency,
-            status: updatedOccurrence.status,
-            paidAt: updatedOccurrence.paidAt,
-          },
+          ...this.buildContributionResponse(
+            contribution,
+            updatedOccurrence,
+            occurrence.obligation.name,
+            remainingAfter.toFixed(2),
+          ),
 
           settlement: {
             isLate,
@@ -371,6 +332,44 @@ export class PaymentContributionsService {
 
       throw error;
     }
+  }
+
+  private buildContributionResponse(
+    contribution: PaymentContribution,
+    updatedOccurrence: PaymentOccurrence,
+    obligationName: string,
+    amountRemaining: string,
+  ) {
+    return {
+      replayed: false,
+
+      contribution: {
+        id: contribution.id,
+        occurrenceId: contribution.occurrenceId,
+        obligationId: contribution.obligationId,
+        amount: contribution.amount.toFixed(2),
+        currency: contribution.currency,
+        paidDate: contribution.paidDate,
+        source: contribution.source,
+        state: contribution.state,
+        receiptScanId: contribution.receiptScanId,
+        notes: contribution.notes,
+        createdAt: contribution.createdAt,
+      },
+
+      occurrence: {
+        id: updatedOccurrence.id,
+        obligationId: updatedOccurrence.obligationId,
+        obligationName,
+        dueDate: updatedOccurrence.dueDate,
+        amountDue: updatedOccurrence.amountDue.toFixed(2),
+        amountPaid: updatedOccurrence.amountPaid.toFixed(2),
+        amountRemaining,
+        currency: updatedOccurrence.currency,
+        status: updatedOccurrence.status,
+        paidAt: updatedOccurrence.paidAt,
+      },
+    };
   }
 
   private async runSettlementEffects(
@@ -417,6 +416,7 @@ export class PaymentContributionsService {
     });
 
     // credit score relcalculation
+    const daySuffix = daysLate === 1 ? '' : 's';
     const {
       scoreEventId,
       scoreBefore,
@@ -435,8 +435,9 @@ export class PaymentContributionsService {
         ? ScoreEventType.PAYMENT_LATE
         : ScoreEventType.PAYMENT_ON_TIME,
 
+
       explanation: isLate
-        ? `Paid ${obligationName} ${daysLate} day${daysLate === 1 ? '' : 's'} late.`
+        ? `Paid ${obligationName} ${daysLate} day${daySuffix} late.`
         : `Paid ${obligationName} on time.`,
     });
 
@@ -615,12 +616,12 @@ export class PaymentContributionsService {
     const daysLate =
       hasSettled && occurrence.paidAt
         ? Math.max(
-            0,
-            Math.ceil(
-              (occurrence.paidAt.getTime() - occurrence.dueDate.getTime()) /
-                (1000 * 60 * 60 * 24),
-            ),
-          )
+          0,
+          Math.ceil(
+            (occurrence.paidAt.getTime() - occurrence.dueDate.getTime()) /
+            (1000 * 60 * 60 * 24),
+          ),
+        )
         : 0;
 
     return {

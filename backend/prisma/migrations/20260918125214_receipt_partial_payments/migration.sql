@@ -101,15 +101,8 @@ ALTER TABLE "ReceiptScan" ADD CONSTRAINT "ReceiptScan_preselectedOccurrenceId_fk
 -- AddForeignKey
 ALTER TABLE "ScoreEvent" ADD CONSTRAINT "ScoreEvent_paymentContributionId_fkey" FOREIGN KEY ("paymentContributionId") REFERENCES "PaymentContribution"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- ============================================================================
--- Legacy payment data backfill
--- ============================================================================
 
--- Copy every active legacy PaymentRecord into PaymentContribution.
---
--- We reuse the PaymentRecord ID as the PaymentContribution ID so that
--- historical ScoreEvent relationships can be migrated deterministically.
---
+-- Legacy payment data backfill
 -- Existing PaymentRecord rows remain in place during the staged migration.
 INSERT INTO "PaymentContribution" (
     "id",
@@ -144,12 +137,7 @@ SELECT
     NULL,
     pr."notes",
 
-    -- Existing PaymentRecord IDs are UUIDs, so they are suitable deterministic
-    -- migration-only idempotency keys.
     pr."id",
-
-    -- Historical records did not have request payload hashes.
-    -- This deterministic marker is only for migrated legacy data.
     'legacy:' || pr."id",
 
     pr."createdAt",
