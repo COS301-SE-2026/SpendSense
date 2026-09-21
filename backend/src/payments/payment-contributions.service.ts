@@ -19,6 +19,7 @@ import {
   PaymentContributionState,
   PaymentContribution,
   PaymentOccurrence,
+  ReceiptScanStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { createHash } from 'node:crypto';
@@ -115,7 +116,7 @@ export class PaymentContributionsService {
     private readonly badgeEngineService: BadgeEngineService,
     private readonly rewardService: RewardService,
     private readonly creditScoreService: CreditScoreService,
-  ) { }
+  ) {}
 
   async createContribution(
     input: CreateContributionInput,
@@ -167,6 +168,7 @@ export class PaymentContributionsService {
         if (replay) {
           return replay;
         }
+        await this.validateReceiptScanForContribution(tx, input);
 
         // 1.2 chekc the status of the occurances
         const terminalStatuses: PaymentOccurrenceStatus[] = [
@@ -241,6 +243,8 @@ export class PaymentContributionsService {
             },
           });
 
+          await this.consumeReceiptScan(tx, input);
+
           return {
             ...this.buildContributionResponse(
               contribution,
@@ -254,7 +258,6 @@ export class PaymentContributionsService {
             rewards: null,
             paymentImpact: null,
           };
-
         }
 
         //  2.2 for the the payment contribution IS settlig the occurance in full
@@ -268,12 +271,12 @@ export class PaymentContributionsService {
           : PaymentOccurrenceStatus.PAID;
         const daysLate = isLate
           ? Math.max(
-            0,
-            Math.ceil(
-              (input.paidDate.getTime() - occurrence.dueDate.getTime()) /
-              (1000 * 60 * 60 * 24),
-            ),
-          )
+              0,
+              Math.ceil(
+                (input.paidDate.getTime() - occurrence.dueDate.getTime()) /
+                  (1000 * 60 * 60 * 24),
+              ),
+            )
           : 0;
 
         const updatedOccurrence = await tx.paymentOccurrence.update({
@@ -297,6 +300,8 @@ export class PaymentContributionsService {
           isLate,
           daysLate,
         });
+
+        await this.consumeReceiptScan(tx, input);
 
         return {
           ...this.buildContributionResponse(
@@ -434,7 +439,6 @@ export class PaymentContributionsService {
       eventType: isLate
         ? ScoreEventType.PAYMENT_LATE
         : ScoreEventType.PAYMENT_ON_TIME,
-
 
       explanation: isLate
         ? `Paid ${obligationName} ${daysLate} day${daySuffix} late.`
@@ -616,12 +620,12 @@ export class PaymentContributionsService {
     const daysLate =
       hasSettled && occurrence.paidAt
         ? Math.max(
-          0,
-          Math.ceil(
-            (occurrence.paidAt.getTime() - occurrence.dueDate.getTime()) /
-            (1000 * 60 * 60 * 24),
-          ),
-        )
+            0,
+            Math.ceil(
+              (occurrence.paidAt.getTime() - occurrence.dueDate.getTime()) /
+                (1000 * 60 * 60 * 24),
+            ),
+          )
         : 0;
 
     return {
@@ -883,6 +887,103 @@ export class PaymentContributionsService {
           canRecord,
         },
       };
+    });
+  }
+
+  private async validateReceiptScanForContribution(
+    tx: Prisma.TransactionClient,
+    input: CreateContributionInput,
+  ) {
+    if (input.source !== PaymentContributionSource.RECEIPT_SCAN) {
+      return;
+    }
+
+    if (!input.receiptScanId) {
+      throw new BadRequestException(
+        'Receipt scan ID is required for receipt contributions.',
+      );
+    }
+
+    await tx.$queryRaw`
+    SELECT "id"
+    FROM "ReceiptScan"
+    WHERE "id" = ${input.receiptScanId}
+      AND "userId" = ${input.userId}
+    FOR UPDATE
+  `;
+
+    const scan = await tx.receiptScan.findFirst({
+      where: {
+        id: input.receiptScanId,
+        userId: input.userId,
+      },
+      select: {
+        id: true,
+        status: true,
+        expiresAt: true,
+        consumedAt: true,
+      },
+    });
+
+    // Missing and foreign scans look identical.
+    if (!scan) {
+      throw new NotFoundException({
+        statusCode: 404,
+        code: 'RECEIPT_SCAN_NOT_FOUND',
+        message: 'Receipt scan not found.',
+      });
+    }
+
+    if (
+      scan.status === ReceiptScanStatus.CONSUMED ||
+      scan.consumedAt !== null
+    ) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'SCAN_ALREADY_CONSUMED',
+        message: 'Receipt scan has already been consumed.',
+      });
+    }
+
+    if (
+      scan.status === ReceiptScanStatus.EXPIRED ||
+      scan.expiresAt.getTime() <= Date.now()
+    ) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'SCAN_EXPIRED',
+        message: 'Receipt scan has expired.',
+      });
+    }
+
+    if (scan.status !== ReceiptScanStatus.READY_FOR_REVIEW) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'RECEIPT_SCAN_NOT_READY',
+        message: 'Receipt scan is not ready for confirmation.',
+      });
+    }
+  }
+
+  private async consumeReceiptScan(
+    tx: Prisma.TransactionClient,
+    input: CreateContributionInput,
+  ) {
+    if (
+      input.source !== PaymentContributionSource.RECEIPT_SCAN ||
+      !input.receiptScanId
+    ) {
+      return;
+    }
+
+    await tx.receiptScan.update({
+      where: {
+        id: input.receiptScanId,
+      },
+      data: {
+        status: ReceiptScanStatus.CONSUMED,
+        consumedAt: new Date(),
+      },
     });
   }
 }

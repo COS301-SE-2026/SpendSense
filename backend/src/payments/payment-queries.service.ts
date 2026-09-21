@@ -15,9 +15,7 @@ import { ContributionHistoryQueryDto } from './dto/contribution-history-query.dt
 
 @Injectable()
 export class PaymentQueriesService {
-  constructor(private readonly prisma: PrismaService) { }
-
-
+  constructor(private readonly prisma: PrismaService) {}
 
   private buildDueDateFilter(from?: string, to?: string) {
     const fromDate = from ? new Date(from) : undefined;
@@ -35,7 +33,10 @@ export class PaymentQueriesService {
     };
   }
 
-  private getNextCursor(hasMore: boolean, pageItems: { id: string }[]): string | null {
+  private getNextCursor(
+    hasMore: boolean,
+    pageItems: { id: string }[],
+  ): string | null {
     if (!hasMore || pageItems.length === 0) {
       return null;
     }
@@ -43,8 +44,10 @@ export class PaymentQueriesService {
     return this.encodeCursor(pageItems.at(-1)!.id);
   }
 
-  async getEligibleOccurrences(userId: string, query: EligibleOccurrencesQueryDto) {
-
+  async getEligibleOccurrences(
+    userId: string,
+    query: EligibleOccurrencesQueryDto,
+  ) {
     const { limit = 20, cursor, from, to } = query;
 
     const cursorId = cursor ? this.decodeCursor(cursor) : undefined;
@@ -122,9 +125,7 @@ export class PaymentQueriesService {
     const nextCursor = this.getNextCursor(hasMore, pageItems);
 
     const items = pageItems.map((occurrence) => {
-      const amountRemaining = occurrence.amountDue.minus(
-        occurrence.amountPaid,
-      );
+      const amountRemaining = occurrence.amountDue.minus(occurrence.amountPaid);
 
       return {
         id: occurrence.id,
@@ -154,7 +155,7 @@ export class PaymentQueriesService {
     try {
       const decoded = Buffer.from(cursor, 'base64url').toString('utf8');
       if (!isUUID(decoded)) {
-        throw new Error("Invalid UUID");
+        throw new Error('Invalid UUID');
       }
       return decoded;
     } catch {
@@ -227,11 +228,11 @@ export class PaymentQueriesService {
       take: limit + 1,
       ...(cursorId
         ? {
-          cursor: {
-            id: cursorId,
-          },
-          skip: 1,
-        }
+            cursor: {
+              id: cursorId,
+            },
+            skip: 1,
+          }
         : {}),
 
       orderBy: [
