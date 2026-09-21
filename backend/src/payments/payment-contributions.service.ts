@@ -674,4 +674,60 @@ export class PaymentContributionsService {
     });
     return createHash('sha256').update(payload).digest('hex');
   }
+
+  // function for GET /payments/occurrences/:occurrenceId/balance
+
+  async getOccurrenceBalance(userId: string, occurrenceId: string) {
+    const occurrence = await this.prisma.paymentOccurrence.findFirst({
+      where: {
+        id: occurrenceId,
+        userId,
+        deletedAt: null,
+
+        obligation: {
+          deletedAt: null,
+        },
+      },
+
+      include: {
+        obligation: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!occurrence) {
+      throw new NotFoundException('Payment occurrence not found.');
+    }
+
+    const amountRemaining = occurrence.amountDue.minus(occurrence.amountPaid);
+
+    const payableStatuses: PaymentOccurrenceStatus[] = [
+      PaymentOccurrenceStatus.PENDING,
+      PaymentOccurrenceStatus.PARTIALLY_PAID,
+      PaymentOccurrenceStatus.OVERDUE,
+    ];
+
+    const canRecord =
+      payableStatuses.includes(occurrence.status) &&
+      amountRemaining.greaterThan(0);
+
+    return {
+      occurrence: {
+        id: occurrence.id,
+        obligationId: occurrence.obligationId,
+        obligationName: occurrence.obligation.name,
+        dueDate: occurrence.dueDate,
+        currency: occurrence.currency,
+        amountDue: occurrence.amountDue.toFixed(2),
+        amountPaid: occurrence.amountPaid.toFixed(2),
+        amountRemaining: amountRemaining.toFixed(2),
+        status: occurrence.status,
+        canRecord,
+      },
+    };
+  }
 }
