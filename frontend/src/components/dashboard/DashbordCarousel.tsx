@@ -12,11 +12,12 @@ import {
     Flame,
     Sun,
     Circle,
+    Gamepad2,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-type CarouselSlide = "wrapped" | "quests" | "insights" | "stickers"
+type CarouselSlide = "wrapped" | "simulation" | "quests" | "insights" | "stickers"
 
 type DashboardCarouselProps = {
     stickersCollected?: number
@@ -30,6 +31,7 @@ export function DashboardCarousel({ stickersCollected, stickersTotal, }: Dashboa
 
     const slides: CarouselSlide[] = [
         ...(showWrapped ? (["wrapped"] as CarouselSlide[]) : []),
+        "simulation",
         "quests",
         "insights",
         "stickers",
@@ -215,6 +217,33 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                     <p className="mt-2 text-xs leading-relaxed text-[#6B6375] dark:text-[#d0c5d4]">
                         Your payments, progress and rewards from the month, all in one place.
                     </p>
+                </Link>
+            )
+
+        case "simulation":
+            return (
+                <Link
+                    to="/simulation"
+                    onClick={onClick}
+                    className={cn(sharedClass, "bg-[#DCEFE8] dark:bg-[#12463d] dark:text-white")}
+                    style={slideStyle}
+                    aria-label="Open Simulated month"
+                >
+                    <div className="flex items-center gap-3">
+                        <SlideIcon tone="lilac"><Gamepad2 className="size-5" /></SlideIcon>
+                        <p className="flex-1 text-[11px] font-black uppercase tracking-[0.12em]">Simulated month</p>
+                        <ChevronRight className="size-5 text-[#16635A] dark:text-[#7fd8c4]" />
+                    </div>
+
+                    <h3 className="mt-2 text-lg font-extrabold leading-tight">Your 30-day money challenge</h3>
+                    <p className="mt-2 max-w-[28ch] text-xs leading-relaxed text-[#356B61] dark:text-[#b7e9dc]">
+                        Practise real-life choices with fictional money.
+                    </p>
+
+                    <div className="mt-3 flex w-fit items-center gap-2 rounded-xl border border-[#9CCFBE] bg-white/70 px-2.5 py-1.5 text-[10px] font-bold dark:border-[#2d7567] dark:bg-[#0b342d]">
+                        <span className="rounded-full bg-[#C5E6D8] px-1.5 py-0.5 font-black uppercase tracking-wide text-[#16635A] dark:bg-[#1c6256] dark:text-[#d8f6ec]">30 days</span>
+                        <span className="text-[#356B61] dark:text-[#b7e9dc]">Fictional budget</span>
+                    </div>
                 </Link>
             )
 
