@@ -5,9 +5,9 @@ import {zodResolver} from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {useLocation,useNavigate} from "react-router-dom";
 import {LongButton} from "../components/common/LongButton";
-import {getUpcomingOccurrences,logPayment} from "../features/payments/paymentsApi";
+import {createManualContribution,getUpcomingOccurrences,type ManualContributionBody,type ManualContributionResult} from "../features/payments/paymentsApi";
 import type {CalendarOccurrence} from "../hooks/useCalendarOccurrences";
-import type {ReceiptOccurrence} from "../features/receipts/receiptOccurrencesApi";
+import {getReceiptOccurrenceBalance,type ReceiptOccurrence} from "../features/receipts/receiptOccurrencesApi";
 import {Popover,PopoverContent,PopoverTrigger} from "../components/ui/popover";
 import {Calendar as CalenderIcon,CheckCircle2,Coins,Flame,TrendingUp,X,Camera,ChevronDown,Check,CreditCard} from "lucide-react";
 import {Calendar} from "@/components/ui/calendar";
@@ -23,24 +23,9 @@ const paymentSchema=z.object({
 });
 
 type PaymentFormData=z.infer<typeof paymentSchema>;
-type PaymentResult={
-    scoreImpact?:{
-        previousScore:number;
-        currentScore:number;
-        delta:number;
-        explanation:string;
-    };
-    rewards?:{
-        coinsAwarded:number;
-        xpAwarded:number;
-        currentPaymentStreak:number;
-        mascotMood:string;
-    };
-    paymentImpact?:{
-        isLate:boolean;
-        daysLate:number;
-        simulatedInterest:number|string;
-    };
+type ContributionAttempt={
+    key:string;
+    body:ManualContributionBody;
 };
 function moneyToCents(value:string|number):bigint|null{
     const text=String(value).trim()
@@ -50,6 +35,59 @@ function moneyToCents(value:string|number):bigint|null{
 }
 function centsToMoney(value:bigint){
     return `${value/100n}.${(value%100n).toString().padStart(2,'0')}`
+}
+function canOccurrenceRecord(balance:ReceiptOccurrence){
+    const remaining=moneyToCents(balance.amountRemaining)
+    return balance.canRecord??(
+        balance.status!=='PAID'&&
+        balance.status!=='PAID_LATE'&&
+        balance.status!=='MISSED'&&
+        balance.status!=='CANCELLED'&&
+        remaining!==null&&remaining>0n
+    )
+}
+function contributionToBalance(result:ManualContributionResult):ReceiptOccurrence{
+    const occurrence=result.occurrence
+    const remaining=moneyToCents(occurrence.amountRemaining)
+    return{
+        id:occurrence.id,
+        obligationId:occurrence.obligationId,
+        obligationName:occurrence.obligationName,
+        dueDate:occurrence.dueDate,
+        currency:occurrence.currency,
+        amountDue:occurrence.amountDue,
+        amountPaid:occurrence.amountPaid,
+        amountRemaining:occurrence.amountRemaining,
+        status:occurrence.status,
+        canRecord:
+            occurrence.status!=='PAID'&&
+            occurrence.status!=='PAID_LATE'&&
+            occurrence.status!=='MISSED'&&
+            occurrence.status!=='CANCELLED'&&
+            remaining!==null&&remaining>0n,
+    }
+}
+function getApiFailure(error:unknown){
+    const failure=error as{
+        statusCode?:number;
+        message?:string;
+        error?:string|{code?:string;message?:string};
+        data?:{code?:string;message?:string};
+    };
+    const nested=typeof failure.error==="object"?failure.error:undefined;
+    return{
+        statusCode:failure.statusCode,
+        code:nested?.code??failure.data?.code,
+        message:nested?.message??failure.data?.message??failure.message??(typeof failure.error==="string"?failure.error:""),
+    };
+}
+function isBalanceConflict(code:string|undefined,message:string){
+    return code==="AMOUNT_EXCEEDS_REMAINING"||
+        code==="OCCURRENCE_NOT_PAYABLE"||
+        code==="CURRENCY_MISMATCH"||
+        message.includes("exceeds remaining balance")||
+        message.includes("cannot receive another contribution")||
+        message.includes("does not match occurrence currency");
 }
 export default function ObligationForm(){
     const navigate=useNavigate();
@@ -72,7 +110,7 @@ export default function ObligationForm(){
     const selectedObligation=selectedPayment?.obligation;
     const selectedAmount=Number(selectedOccurrence?.amountDue??0);
     const [showPopup,setShowPopup]=useState(false);
-    const [paymentResult,setPaymentResult]=useState<PaymentResult|null>(null);
+    const [paymentResult,setPaymentResult]=useState<ManualContributionResult|null>(null);
     const [submitError,setSubmitError]=useState<string|null>(null);
     const [isSubmitting,setSubmitting]=useState(false);
     const [occurrences,setOccurrences]=useState<CalendarOccurrence[]>([]);
@@ -81,6 +119,8 @@ export default function ObligationForm(){
     const [isOccurrencePickerOpen,setIsOccurrencePickerOpen]=useState(false);
     const [currentBalance,setCurrentBalance]=useState<ReceiptOccurrence|null>(null);
     const [amountEdited,setAmountEdited]=useState(false);
+    const [attempt,setAttempt]=useState<ContributionAttempt|null>(null);
+    const [submissionBlocked,setSubmissionBlocked]=useState(false);
     const{
         register,
         handleSubmit,
@@ -109,21 +149,15 @@ export default function ObligationForm(){
         ?centsToMoney(remainingCents-amountCents)
         :null;
     const isPartial=amountFits&&remainingCents!==null&&amountCents!==null&&amountCents<remainingCents;
-    const canRecord=balanceForSelection?.canRecord??(
-        balanceForSelection!==null&&
-        balanceForSelection.status!=='PAID'&&
-        balanceForSelection.status!=='PAID_LATE'&&
-        balanceForSelection.status!=='MISSED'&&
-        balanceForSelection.status!=='CANCELLED'&&
-        remainingCents!==null&&remainingCents>0n
-    );
-
+    const canRecord=balanceForSelection?canOccurrenceRecord(balanceForSelection):false;
     const handleBalanceChange=useCallback((balance:ReceiptOccurrence|null)=>{
         setCurrentBalance(balance);
-        if(balance&&!amountEdited){
-            setValue("amountPaid",Number(balance.amountRemaining));
+    },[]);
+    useEffect(()=>{
+        if(currentBalance&&currentBalance.id===balanceOccurrenceId&&!amountEdited){
+            setValue("amountPaid",Number(currentBalance.amountRemaining));
         }
-    },[amountEdited,setValue]);
+    },[currentBalance,balanceOccurrenceId,amountEdited,setValue]);
     useEffect(()=>{
         let active=true;
         getUpcomingOccurrences({
@@ -141,28 +175,79 @@ export default function ObligationForm(){
         return()=>{active=false};
     },[]);
     const onSubmit=async(formData:PaymentFormData)=>{
+        if(isSubmitting||showPopup||submissionBlocked)return;
         setSubmitError(null);
-        if(!balanceForSelection||!canRecord||!amountFits){
+        if(!balanceForSelection||!canRecord||!amountFits||amountCents===null){
             setSubmitError("Check the current payment balance and enter a valid amount.");
             return;
         }
-        if(isPartial){
-            setSubmitError("Partial payment submission will be enabled with the new contribution flow.");
+        const body:ManualContributionBody={
+            occurrenceId:balanceForSelection.id,
+            amount:centsToMoney(amountCents),
+            currency:balanceForSelection.currency,
+            paidDate:formData.paidDate.toISOString().split("T")[0],
+            notes:formData.notes?.trim()||undefined,
+        };
+        const existingAttempt=attempt;
+        if(existingAttempt&&JSON.stringify(existingAttempt.body)!==JSON.stringify(body)){
+            setSubmitError("Your previous payment request has an uncertain result. Restore the original payment details before retrying.");
             return;
         }
         setSubmitting(true);
+        let contributionRequested=false;
         try{
-            const response=await logPayment({
-                occurrenceId:balanceForSelection.id,
-                amountPaid:formData.amountPaid,
-                paidDate:formData.paidDate.toISOString().split("T")[0],
-                notes:formData.notes?.trim()||undefined,
-            });
-            setPaymentResult((response as {data:PaymentResult}).data);
+            if(!existingAttempt){
+                const latestResponse=await getReceiptOccurrenceBalance(balanceForSelection.id);
+                const latest=latestResponse.occurrence;
+                const changed=
+                    latest.amountRemaining!==balanceForSelection.amountRemaining||
+                    latest.amountPaid!==balanceForSelection.amountPaid||
+                    latest.currency!==balanceForSelection.currency||
+                    latest.status!==balanceForSelection.status||
+                    latest.canRecord!==balanceForSelection.canRecord;
+                setCurrentBalance(latest);
+                if(changed){
+                    setAttempt(null);
+                    setSubmitError("The payment balance has changed. Review the updated balance before trying again.");
+                    return;
+                }
+            }
+            const request=existingAttempt??{key:crypto.randomUUID(),body};
+            setAttempt(request);
+            contributionRequested=true;
+            const result=await createManualContribution(request.body,request.key);
+            setAttempt(null);
+            setCurrentBalance(contributionToBalance(result));
+            setPaymentResult(result);
             setShowPopup(true);
         }catch(error){
-            console.error("Failed to log payment: ",error);
-            setSubmitError(error instanceof Error?error.message:"Failed to log payment");
+            const failure=getApiFailure(error);
+            if(!contributionRequested){
+                setAttempt(null);
+                setSubmitError("Unable to refresh the current payment balance. Please try again.");
+            }else if(isBalanceConflict(failure.code,failure.message)){
+                setAttempt(null);
+                try{
+                    const refreshed=await getReceiptOccurrenceBalance(balanceForSelection.id);
+                    setCurrentBalance(refreshed.occurrence);
+                    setSubmitError("The payment balance has changed. Review the updated balance before trying again.");
+                }catch{
+                    setCurrentBalance(null);
+                    setSubmitError("The payment balance has changed, but SpendSense could not refresh it. Please select the payment again.");
+                }
+            }else if(
+                failure.code==="IDEMPOTENCY_KEY_REUSED"||
+                failure.message.includes("Idempotency key has already been used with different payment data")
+            ){
+                setAttempt(null);
+                setSubmissionBlocked(true);
+                setSubmitError("This payment request could not be safely retried. Check your payment history before submitting another payment.");
+            }else if(failure.statusCode&&failure.statusCode>=400&&failure.statusCode<500){
+                setAttempt(null);
+                setSubmitError(failure.message||"Please check your payment details before trying again.");
+            }else{
+                setSubmitError("We could not confirm whether the payment was recorded. Retry the same payment to check safely.");
+            }
         }finally{
             setSubmitting(false);
         }
@@ -321,6 +406,7 @@ export default function ObligationForm(){
                             key={balanceOccurrenceId}
                             occurrenceId={balanceOccurrenceId}
                             onBalanceChange={handleBalanceChange}
+                            currentBalance={balanceForSelection}
                         />
                     )}
                     <div className="space-y-1">
@@ -405,7 +491,7 @@ export default function ObligationForm(){
                     <button
                         type="submit"
                         className="w-full rounded-full bg-[#091828] py-4 text-base font-medium text-white disabled:opacity-50 dark:bg-[#ff6b9d] dark:text-[#650030]"
-                        disabled={isSubmitting||(occurrencesLoading&&!selectedOccurrence)}
+                        disabled={isSubmitting||submissionBlocked||(occurrencesLoading&&!selectedOccurrence)}
                     >
                         {isSubmitting?"Saving...":"Log Payment"}
                     </button>
@@ -425,14 +511,14 @@ function PaymentImpactModal({
     result,
     onDone,
 }:{
-    result:PaymentResult|null;
+    result:ManualContributionResult|null;
     onDone:()=>void;
 }){
     const scoreDelta=result?.scoreImpact?.delta??0;
     const scoreBefore=result?.scoreImpact?.previousScore;
     const scoreAfter=result?.scoreImpact?.currentScore;
     const coins=result?.rewards?.coinsAwarded??0;
-    const xp=result?.rewards?.xpAwarded??10;
+    const xp=result?.rewards?.xpAwarded??0;
     const streak=result?.rewards?.currentPaymentStreak??0;
     const mood=result?.rewards?.mascotMood;
     return(
@@ -455,7 +541,7 @@ function PaymentImpactModal({
                         icon={<TrendingUp className="size-4"/>}
                         label="Score"
                         value={`${scoreDelta>=0?"+":""}${scoreDelta} points`}
-                        detail={scoreBefore!==undefined&&scoreAfter!==undefined?`${scoreBefore} -> ${scoreAfter}`:"Updated"}
+                        detail={scoreBefore!==undefined&&scoreAfter!==undefined?`${scoreBefore} -> ${scoreAfter}`:"No change"}
                     />
                     <ImpactStat
                         icon={<Coins className="size-4"/>}
