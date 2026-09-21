@@ -1,8 +1,32 @@
-import { Controller, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags} from '@nestjs/swagger';
+import {
+    Body,
+    Controller,
+    Post,
+    UploadedFile,
+    UseGuards,
+    UseInterceptors,
+    Get,
+    Param,
+} from '@nestjs/common';
+import {
+    ApiBearerAuth,
+    ApiBody,
+    ApiConsumes,
+    ApiOperation,
+    ApiTags,
+    ApiNotFoundResponse,
+    ApiOkResponse,
+    ApiParam,
+} from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SupabaseJwtGuard } from '../auth/guards/supabase-jwt.guard';
-import { ReceiptsService } from './receipts.service';
+import { CurrentAuthUser } from '../common/decorators/current-auth-user.decorator';
+import type { AuthUser } from '../auth/types/auth-user.type';
 import { UsersService } from '../users/users.service';
+import { ReceiptsService } from './receipts.service';
+import { CreateReceiptScanDto } from './dto/create-receipt-scan.dto';
+
+
 @ApiTags('receipts')
 @ApiBearerAuth()
 @UseGuards(SupabaseJwtGuard)
@@ -12,4 +36,37 @@ export class ReceiptsController {
         private readonly receiptsService: ReceiptsService,
         private readonly usersService: UsersService,
     ) { }
+
+    @Post('scans')
+    @ApiOperation({ summary: 'Upload a receipt for OCR review' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                image: {
+                    type: 'string',
+                    format: 'binary',
+                },
+                preselectedOccurrenceId: {
+                    type: 'string',
+                    format: 'uuid',
+                    nullable: true,
+                },
+            },
+            required: ['image'],
+        },
+    })
+    @UseInterceptors(
+        FileInterceptor('image', {
+            limits: {
+                fileSize: 8 * 1024 * 1024,
+                files: 1,
+            },
+        }),
+    )
+    async createScan(@CurrentAuthUser() authUser: AuthUser, @UploadedFile() file: Express.Multer.File | undefined, @Body() dto: CreateReceiptScanDto) {
+        const user = await this.usersService.findOrCreateUser(authUser);
+        return this.receiptsService.validateReceiptUpload(user.id, file, dto.preselectedOccurrenceId);
+    }
 }
