@@ -61,7 +61,7 @@ describe("MascotPage", () => {
 		renderPage()
 		expect(screen.getByText("Level 6")).toBeInTheDocument()
 		expect(screen.getByText("Happy")).toBeInTheDocument()
-		expect(screen.getByText("4,200")).toBeInTheDocument()
+		expect(screen.getByText('4 200')).toBeInTheDocument()
 	})
 
     it("shows only fields the profile actually returns, no invented mood score", () => {
