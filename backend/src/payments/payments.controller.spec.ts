@@ -81,7 +81,6 @@ describe('PaymentsController', () => {
     expect(mockPaymentsService.logPayment).toHaveBeenCalledWith(
       dto,
       user.id,
-      undefined,
     );
     expect(result).toEqual(serviceResult);
   });

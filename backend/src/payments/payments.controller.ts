@@ -77,7 +77,7 @@ export class PaymentsController {
 
     const user = await this.usersService.findOrCreateUser(authUser);
 
-    return this.paymentsService.logPayment(dto, user.id, idempotencyKey);
+    return this.paymentsService.logPayment(dto, user.id);
   }
 
   // api/v1/payments/contributions
