@@ -8,6 +8,7 @@ import {
   Headers,
   Res,
   UnprocessableEntityException,
+  BadRequestException,
   Get,
   Param,
   ParseUUIDPipe,
@@ -38,6 +39,8 @@ import { EligibleOccurrencesQueryDto } from './dto/eligible-occurrences-query.dt
 import { ContributionHistoryQueryDto } from './dto/contribution-history-query.dto';
 import { PaymentQueriesService } from './payment-queries.service';
 
+import { VoidContributionDto } from './dto/void-contribution.dto';
+
 @ApiTags('payments')
 @ApiBearerAuth()
 @UseGuards(SupabaseJwtGuard)
@@ -48,7 +51,7 @@ export class PaymentsController {
     private readonly usersService: UsersService,
     private readonly paymentContributionsService: PaymentContributionsService,
     private readonly paymentQueriesService: PaymentQueriesService,
-  ) { }
+  ) {}
 
   @Post('log')
   @HttpCode(HttpStatus.CREATED)
@@ -185,18 +188,76 @@ export class PaymentsController {
   }
 
   @Get('occurrences/:occurrenceId/contributions')
-
-  @ApiOperation({ summary: 'Get contribution history for a payment occurrence' })
-  
-  @ApiResponse({ status: 200, description: 'Contribution history returned successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid occurrence ID or query parameters' })
+  @ApiOperation({
+    summary: 'Get contribution history for a payment occurrence',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Contribution history returned successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid occurrence ID or query parameters',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorised' })
   @ApiResponse({ status: 404, description: 'Payment occurrence not found' })
-
-  async getContributionHistory(@CurrentAuthUser() authUser: AuthUser, @Param('occurrenceId', new ParseUUIDPipe()) occurrenceId: string, @Query() query: ContributionHistoryQueryDto) {
+  async getContributionHistory(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('occurrenceId', new ParseUUIDPipe()) occurrenceId: string,
+    @Query() query: ContributionHistoryQueryDto,
+  ) {
     const user = await this.usersService.findOrCreateUser(authUser);
-    return this.paymentQueriesService.getContributionHistory(user.id, occurrenceId, query);
+    return this.paymentQueriesService.getContributionHistory(
+      user.id,
+      occurrenceId,
+      query,
+    );
   }
 
+  @Post('contributions/:contributionId/void')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Void a payment contribution',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description: 'Unique UUID for this void request',
+    schema: {
+      type: 'string',
+      format: 'uuid',
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Contribution voided successfully' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid contribution ID or request body',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorised' })
+  @ApiResponse({ status: 404, description: 'Payment contribution not found' })
+  @ApiResponse({ status: 409, description: 'Contribution cannot be voided' })
+  async voidContribution(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('contributionId', new ParseUUIDPipe())
+    contributionId: string,
+    @Body() dto: VoidContributionDto,
+    @Headers('idempotency-key')
+    idempotencyKey: string,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
 
+    if (!idempotencyKey) {
+      throw new BadRequestException('Idempotency-Key header is required.');
+    }
+
+    if (!isUUID(idempotencyKey)) {
+      throw new BadRequestException('Idempotency-Key must be a valid UUID.');
+    }
+
+    return this.paymentContributionsService.voidContribution(
+      user.id,
+      contributionId,
+      dto.reason,
+    );
+  }
 }

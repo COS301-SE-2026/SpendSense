@@ -730,4 +730,158 @@ export class PaymentContributionsService {
       },
     };
   }
+
+  async voidContribution(
+    userId: string,
+    contributionId: string,
+    reason: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const contribution = await tx.paymentContribution.findFirst({
+        where: {
+          id: contributionId,
+          userId,
+        },
+      });
+
+      if (!contribution) {
+        throw new NotFoundException('Payment contribution not found.');
+      }
+      if (contribution.state === PaymentContributionState.VOIDED) {
+        throw new ConflictException(
+          'Payment contribution has already been voided.',
+        );
+      }
+
+      // lock the pccurance
+      await tx.$queryRaw`
+      SELECT id
+      FROM "PaymentOccurrence"
+      WHERE id = ${contribution.occurrenceId}
+      FOR UPDATE
+    `;
+
+      const occurrence = await tx.paymentOccurrence.findFirst({
+        where: {
+          id: contribution.occurrenceId,
+          userId,
+          deletedAt: null,
+        },
+
+        include: {
+          obligation: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!occurrence) {
+        throw new NotFoundException('Payment occurrence not found.');
+      }
+
+      // if settled it cant be voidd
+      const terminalStatuses: PaymentOccurrenceStatus[] = [
+        PaymentOccurrenceStatus.PAID,
+        PaymentOccurrenceStatus.PAID_LATE,
+        PaymentOccurrenceStatus.MISSED,
+        PaymentOccurrenceStatus.CANCELLED,
+      ];
+
+      if (terminalStatuses.includes(occurrence.status)) {
+        throw new ConflictException(
+          'Contribution cannot be voided after the occurrence has settled.',
+        );
+      }
+
+      const newAmountPaid = occurrence.amountPaid.minus(contribution.amount);
+
+      if (newAmountPaid.lessThan(0)) {
+        throw new ConflictException(
+          'Voiding this contribution would create an invalid balance.',
+        );
+      }
+
+      let newStatus: PaymentOccurrenceStatus;
+
+      if (newAmountPaid.greaterThan(0)) {
+        newStatus = PaymentOccurrenceStatus.PARTIALLY_PAID;
+      } else if (occurrence.dueDate.getTime() < Date.now()) {
+        newStatus = PaymentOccurrenceStatus.OVERDUE;
+      } else {
+        newStatus = PaymentOccurrenceStatus.PENDING;
+      }
+
+      const now = new Date();
+
+      const voidedContribution = await tx.paymentContribution.update({
+        where: {
+          id: contribution.id,
+        },
+        data: {
+          state: PaymentContributionState.VOIDED,
+          voidedAt: now,
+          voidReason: reason,
+          voidedByUserId: userId,
+        },
+      });
+
+      const updatedOccurrence = await tx.paymentOccurrence.update({
+        where: {
+          id: occurrence.id,
+        },
+
+        data: {
+          amountPaid: newAmountPaid,
+          status: newStatus,
+          paidAt: null,
+        },
+      });
+
+      const amountRemaining = updatedOccurrence.amountDue.minus(
+        updatedOccurrence.amountPaid,
+      );
+      const payableStatuses: PaymentOccurrenceStatus[] = [
+        PaymentOccurrenceStatus.PENDING,
+        PaymentOccurrenceStatus.PARTIALLY_PAID,
+        PaymentOccurrenceStatus.OVERDUE,
+      ];
+      const canRecord =
+        payableStatuses.includes(updatedOccurrence.status) &&
+        amountRemaining.greaterThan(0);
+
+      return {
+        contribution: {
+          id: voidedContribution.id,
+          occurrenceId: voidedContribution.occurrenceId,
+          obligationId: voidedContribution.obligationId,
+          amount: voidedContribution.amount.toFixed(2),
+          currency: voidedContribution.currency,
+          paidDate: voidedContribution.paidDate,
+          source: voidedContribution.source,
+          state: voidedContribution.state,
+          receiptScanId: voidedContribution.receiptScanId,
+          notes: voidedContribution.notes,
+          createdAt: voidedContribution.createdAt,
+          voidedAt: voidedContribution.voidedAt,
+          voidReason: voidedContribution.voidReason,
+        },
+        occurrence: {
+          id: updatedOccurrence.id,
+          obligationId: updatedOccurrence.obligationId,
+          obligationName: occurrence.obligation.name,
+          dueDate: updatedOccurrence.dueDate,
+          currency: updatedOccurrence.currency,
+          amountDue: updatedOccurrence.amountDue.toFixed(2),
+          amountPaid: updatedOccurrence.amountPaid.toFixed(2),
+          amountRemaining: amountRemaining.toFixed(2),
+          status: updatedOccurrence.status,
+          paidAt: updatedOccurrence.paidAt,
+
+          canRecord,
+        },
+      };
+    });
+  }
 }

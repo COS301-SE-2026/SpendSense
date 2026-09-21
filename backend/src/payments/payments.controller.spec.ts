@@ -12,7 +12,7 @@ describe('PaymentsController', () => {
   const mockPaymentsService = { logPayment: jest.fn() };
   const mockUsersService = { findOrCreateUser: jest.fn() };
   const mockPaymentContributionsService = { createContribution: jest.fn() };
-   const mockPaymentQueriesService = {};
+  const mockPaymentQueriesService = {};
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
