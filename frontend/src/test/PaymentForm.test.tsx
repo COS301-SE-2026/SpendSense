@@ -246,7 +246,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
             );
         });
         expect(screen.getByText("Payment impact")).toBeInTheDocument();
-        expect(screen.getByText("Payment made!")).toBeInTheDocument();
+        expect(screen.getByText("Payment completed!")).toBeInTheDocument();
         expect(screen.getByText("+8 points")).toBeInTheDocument();
         expect(screen.getByText("712 -> 720")).toBeInTheDocument();
         expect(screen.getByText("+15")).toBeInTheDocument();
@@ -274,7 +274,36 @@ describe("PaymentForm (ObligationForm) Component",()=>{
                 "123e4567-e89b-42d3-a456-426614174000",
             );
         });
-        expect(screen.getByText("Payment made!")).toBeInTheDocument();
+        expect(screen.getByText("Partial payment recorded!")).toBeInTheDocument();
+        expect(screen.getAllByText("R 100.00").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("R 200.00").length).toBeGreaterThan(0);
+        expect(screen.getByText("Contribution ID: contribution_partial")).toBeInTheDocument();
+        expect(screen.queryByText("+0 points")).not.toBeInTheDocument();
+        expect(screen.queryByText("+0")).not.toBeInTheDocument();
+    });
+    it("shows replay confirmation without claiming a second payment",async()=>{
+        vi.mocked(createManualContribution).mockResolvedValue({...fullPaymentResponse,replayed:true});
+        const user=userEvent.setup();
+        render(<PaymentForm/>);
+        await selectOccurrence(user,"Netflix");
+        await user.click(screen.getByRole("button",{name:/log payment/i}));
+        expect(await screen.findByText("Previously recorded payment confirmed. No new contribution was created.")).toBeInTheDocument();
+        expect(screen.getByText("Contribution ID: contribution_123")).toBeInTheDocument();
+        expect(createManualContribution).toHaveBeenCalledTimes(1);
+    });
+    it("shows the recorded late settlement from the contribution response",async()=>{
+        vi.mocked(createManualContribution).mockResolvedValue({
+            ...fullPaymentResponse,
+            occurrence:{...fullPaymentResponse.occurrence,status:"PAID_LATE"},
+            paymentImpact:{isLate:true,daysLate:2,simulatedInterest:0},
+        });
+        const user=userEvent.setup();
+        render(<PaymentForm/>);
+        await selectOccurrence(user,"Netflix");
+        await user.click(screen.getByRole("button",{name:/log payment/i}));
+        expect(await screen.findByText("Payment completed!")).toBeInTheDocument();
+        expect(screen.getByText("This payment was 2 days late.")).toBeInTheDocument();
+        expect(screen.getAllByText(/PAID LATE/).length).toBeGreaterThan(0);
     });
     it("refreshes the authoritative balance before the first submission",async()=>{
         const user=userEvent.setup();

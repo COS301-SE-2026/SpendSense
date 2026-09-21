@@ -514,55 +514,72 @@ function PaymentImpactModal({
     result:ManualContributionResult|null;
     onDone:()=>void;
 }){
-    const scoreDelta=result?.scoreImpact?.delta??0;
-    const scoreBefore=result?.scoreImpact?.previousScore;
-    const scoreAfter=result?.scoreImpact?.currentScore;
-    const coins=result?.rewards?.coinsAwarded??0;
-    const xp=result?.rewards?.xpAwarded??0;
-    const streak=result?.rewards?.currentPaymentStreak??0;
-    const mood=result?.rewards?.mascotMood;
+    if(!result)return null;
+    const settled=result.occurrence.status==='PAID'||result.occurrence.status==='PAID_LATE';
+    const currency=result.contribution.currency==='ZAR'?'R':result.contribution.currency;
+    const scoreDelta=result.scoreImpact?.delta??0;
+    const scoreBefore=result.scoreImpact?.previousScore;
+    const scoreAfter=result.scoreImpact?.currentScore;
+    const coins=result.rewards?.coinsAwarded??0;
+    const xp=result.rewards?.xpAwarded??0;
+    const streak=result.rewards?.currentPaymentStreak??0;
+    const mood=result.rewards?.mascotMood;
     return(
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#091828]/40 px-4 pb-6 dark:bg-black/70">
-            <div className="w-full max-w-sm rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[6px_6px_0_#091828] animate-in fade-in slide-in-from-bottom-5 duration-300 dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[6px_6px_0_#060e20]">
+            <div role="dialog" aria-modal="true" aria-labelledby="contribution-result-title" className="w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[6px_6px_0_#091828] animate-in fade-in slide-in-from-bottom-5 duration-300 dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[6px_6px_0_#060e20]">
                 <div className="flex items-start gap-3">
                     <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#DCEFE8] dark:bg-[#0f4f42]">
                         <CheckCircle2 className="size-6 text-[#10775F] dark:text-[#5eead4]"/>
                     </div>
                     <div>
                         <p className="text-xs font-bold uppercase tracking-wide text-[#6b6375] dark:text-[#a0aec0]">Payment impact</p>
-                        <h2 className="text-2xl font-extrabold text-[#091828] dark:text-white">Payment made!</h2>
-                        {result?.scoreImpact?.explanation&&(
+                        <h2 id="contribution-result-title" className="text-2xl font-extrabold text-[#091828] dark:text-white">
+                            {settled?'Payment completed!':'Partial payment recorded!'}
+                        </h2>
+                        {result.replayed&&(
+                            <p className="mt-1 text-xs font-semibold text-[#10775F] dark:text-[#5eead4]">Previously recorded payment confirmed. No new contribution was created.</p>
+                        )}
+                        {result.scoreImpact?.explanation&&(
                             <p className="mt-1 text-xs font-semibold text-[#6b6375] dark:text-[#a0aec0]">{result.scoreImpact.explanation}</p>
                         )}
                     </div>
                 </div>
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                    <ImpactStat
-                        icon={<TrendingUp className="size-4"/>}
-                        label="Score"
-                        value={`${scoreDelta>=0?"+":""}${scoreDelta} points`}
-                        detail={scoreBefore!==undefined&&scoreAfter!==undefined?`${scoreBefore} -> ${scoreAfter}`:"No change"}
-                    />
-                    <ImpactStat
-                        icon={<Coins className="size-4"/>}
-                        label="Coins"
-                        value={`+${coins}`}
-                        detail="Awarded"
-                    />
-                    <ImpactStat
-                        icon={<Flame className="size-4"/>}
-                        label="XP"
-                        value={`+${xp}`}
-                        detail="Progress gained"
-                    />
-                    <ImpactStat
-                        icon={<Flame className="size-4"/>}
-                        label="Streak"
-                        value={`${streak} days`}
-                        detail={mood?`Mood: ${mood}`:"Current streak"}
-                    />
+                <div className="mt-5 space-y-3 rounded-2xl bg-[#F4FBF7] p-4 dark:bg-[#1c263c]">
+                    <p className="text-xs font-bold uppercase tracking-wide text-[#6b6375] dark:text-[#a0aec0]">Recorded contribution</p>
+                    <p className="text-sm font-bold text-[#091828] dark:text-white">{result.occurrence.obligationName}</p>
+                    <div className="flex justify-between gap-3 text-sm text-[#091828] dark:text-white">
+                        <span>Amount recorded</span>
+                        <span className="font-extrabold">{currency} {result.contribution.amount}</span>
+                    </div>
+                    <div className="flex justify-between gap-3 text-sm text-[#091828] dark:text-white">
+                        <span>Already paid</span>
+                        <span className="font-bold">{currency} {result.occurrence.amountPaid}</span>
+                    </div>
+                    <div className="flex justify-between gap-3 border-t border-[#DCEFE8] pt-3 text-sm text-[#091828] dark:border-[#2d3449] dark:text-white">
+                        <span>Remaining balance</span>
+                        <span className="font-extrabold text-[#10775F] dark:text-[#5eead4]">{currency} {result.occurrence.amountRemaining}</span>
+                    </div>
+                    <p className="text-xs text-[#6b6375] dark:text-[#a0aec0]">Paid on {String(result.contribution.paidDate).slice(0,10)} · {result.occurrence.status.replaceAll('_',' ')}</p>
+                    <p className="break-all text-[10px] text-[#6b6375] dark:text-[#a0aec0]">Contribution ID: {result.contribution.id}</p>
                 </div>
-                {result?.paymentImpact?.isLate&&(
+                {result.scoreImpact&&(
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                        <ImpactStat
+                            icon={<TrendingUp className="size-4"/>}
+                            label="Score"
+                            value={`${scoreDelta>=0?"+":""}${scoreDelta} points`}
+                            detail={scoreBefore!==undefined&&scoreAfter!==undefined?`${scoreBefore} -> ${scoreAfter}`:"No change"}
+                        />
+                    </div>
+                )}
+                {result.rewards&&(
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                        <ImpactStat icon={<Coins className="size-4"/>} label="Coins" value={`+${coins}`} detail="Awarded"/>
+                        <ImpactStat icon={<Flame className="size-4"/>} label="XP" value={`+${xp}`} detail="Progress gained"/>
+                        <ImpactStat icon={<Flame className="size-4"/>} label="Streak" value={`${streak} days`} detail={mood?`Mood: ${mood}`:"Current streak"}/>
+                    </div>
+                )}
+                {result.paymentImpact?.isLate&&(
                     <div className="mt-4 rounded-2xl bg-[#FFD9E1] px-4 py-3 text-xs font-semibold text-[#AC2A5D] dark:bg-[#93000a]/30 dark:text-[#ffb4ab]">
                         This payment was {result.paymentImpact.daysLate} days late.
                     </div>
