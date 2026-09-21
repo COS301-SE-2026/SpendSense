@@ -40,11 +40,11 @@ export class PaymentQueriesService {
       return null;
     }
 
-    return this.encodeCursor(pageItems[pageItems.length - 1].id);
+    return this.encodeCursor(pageItems.at(-1)!.id);
   }
 
   async getEligibleOccurrences(userId: string, query: EligibleOccurrencesQueryDto) {
-    
+
     const { limit = 20, cursor, from, to } = query;
 
     const cursorId = cursor ? this.decodeCursor(cursor) : undefined;
