@@ -13,9 +13,17 @@ function formatMoney(value:string,currency:string){
 }
 
 function formatDate(value:string){
-    const [year,month,day]=value.split('-')
+    const [year,month,day]=value.slice(0,10).split('-')
     if(!year||!month||!day)return value
     return `${day}/${month}/${year}`
+}
+
+function isOverdue(value:string){
+    const today=new Date()
+    const year=today.getFullYear()
+    const month=String(today.getMonth()+1).padStart(2,'0')
+    const day=String(today.getDate()).padStart(2,'0')
+    return value.slice(0,10)<`${year}-${month}-${day}`
 }
 
 export default function ReceiptOccurrencePicker({
@@ -197,7 +205,7 @@ export default function ReceiptOccurrencePicker({
                                     <p className="truncate text-sm font-extrabold">
                                         {occurrence.obligationName}
                                     </p>
-                                    <p className="mt-1 text-xs text-[#6b6375] dark:text-[#a0aec0]">
+                                    <p className={`mt-1 text-xs font-semibold ${isOverdue(occurrence.dueDate)?'text-[#AC2A5D] dark:text-[#ffb1c5]':'text-[#10775F] dark:text-[#5eead4]'}`}>
                                         Due {formatDate(occurrence.dueDate)}
                                     </p>
                                     <p className="mt-1 text-xs font-bold text-[#10775F] dark:text-[#5eead4]">
@@ -242,7 +250,7 @@ export default function ReceiptOccurrencePicker({
                             <h3 className="mt-1 text-lg font-black">
                                 {selectedOccurrence.obligationName}
                             </h3>
-                            <p className="mt-1 text-xs opacity-70">
+                            <p className={`mt-1 text-xs font-semibold ${isOverdue(selectedOccurrence.dueDate)?'text-[#AC2A5D] dark:text-[#ffb1c5]':'text-[#10775F] dark:text-[#5eead4]'}`}>
                                 Due {formatDate(selectedOccurrence.dueDate)}
                             </p>
                         </div>
