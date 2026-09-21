@@ -70,9 +70,13 @@ describe('PaymentsController', () => {
     mockUsersService.findOrCreateUser.mockResolvedValue(user);
     mockPaymentsService.logPayment.mockResolvedValue(serviceResult);
 
-    const result = await controller.logPayment(authUser, dto);
+    const result = await controller.logPayment(authUser, dto, undefined);
     expect(mockUsersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
-    expect(mockPaymentsService.logPayment).toHaveBeenCalledWith(dto, user.id);
+    expect(mockPaymentsService.logPayment).toHaveBeenCalledWith(
+      dto,
+      user.id,
+      undefined,
+    );
     expect(result).toEqual(serviceResult);
   });
 });
