@@ -1,4 +1,4 @@
-import {apiFetch,apiDataFetch} from '../../lib/api'
+import {apiFetch} from '../../lib/api'
 
 // paymentsApi: payment occurrence timeline and payment logging
 // logPayment triggers the full behavioural loop:
@@ -37,11 +37,13 @@ export interface OccurrenceDetail{
     }
     reminders: unknown[]
 }
+ 
 // GET /payment-occurrences/:id
 export async function getOccurrenceDetail(id: string): Promise<OccurrenceDetail>{
     const response = await apiFetch<{data:{data: OccurrenceDetail}}>(`/payment-occurrences/${id}`)
     const detail = response?.data?.data
     if(!detail) throw new Error('Unexpected response shape from /payment-occurrences/:id')
+ 
     return{
         ...detail,
         occurrence:{
@@ -58,7 +60,8 @@ export async function getUpcomingOccurrences(params?:{
     obligationId?: string
     page?: number
     perPage?: number
-}){
+}) 
+{
     const query = new URLSearchParams()
     if(params?.from){
         query.set('from', params.from)
@@ -81,90 +84,13 @@ export async function getUpcomingOccurrences(params?:{
     const qs = query.toString() ? `?${query.toString()}` : ''
     return apiFetch(`/payment-occurrences/upcoming${qs}`)
 }
+
 export async function logPayment(body:{
     occurrenceId: string
     amountPaid: number
     paidDate: string
     notes?: string
-}){
+}) 
+{
     return apiFetch('/payments/log', {method: 'POST', body: JSON.stringify(body)})
-}
-export type ManualContributionBody={
-    occurrenceId:string
-    amount:string
-    currency:string
-    paidDate:string
-    notes?:string
-}
-export type ManualContribution={
-    id:string
-    occurrenceId:string
-    obligationId:string
-    amount:string
-    currency:string
-    paidDate:string
-    source:'MANUAL'
-    state:'POSTED'|'VOIDED'
-    receiptScanId:null
-    notes:string|null
-    createdAt:string
-}
-export type ManualContributionOccurrence={
-    id:string
-    obligationId:string
-    obligationName:string
-    dueDate:string
-    amountDue:string
-    amountPaid:string
-    amountRemaining:string
-    currency:string
-    status:'PENDING'|'PARTIALLY_PAID'|'OVERDUE'|'PAID'|'PAID_LATE'|'MISSED'|'CANCELLED'
-    paidAt:string|null
-}
-export type ManualContributionSettlement={
-    isLate:boolean
-    daysLate:number
-}
-export type ManualContributionScoreImpact={
-    scoreEventId:string
-    previousScore:number
-    currentScore:number
-    delta:number
-    tierBefore:string
-    tierAfter:string
-    explanation:string
-}
-export type ManualContributionRewards={
-    coinsAwarded:number
-    xpAwarded:number
-    coinBalance:number
-    xp:number
-    currentPaymentStreak:number
-    longestPaymentStreak:number
-    mascotMood:string
-    badgesEarned:string[]
-}
-export type ManualContributionPaymentImpact={
-    isLate:boolean
-    daysLate:number
-    simulatedInterest:number
-}
-export type ManualContributionResult={
-    replayed:boolean
-    contribution:ManualContribution
-    occurrence:ManualContributionOccurrence
-    settlement:ManualContributionSettlement|null
-    scoreImpact:ManualContributionScoreImpact|null
-    rewards:ManualContributionRewards|null
-    paymentImpact:ManualContributionPaymentImpact|null
-}
-export async function createManualContribution(
-    body:ManualContributionBody,
-    idempotencyKey:string,
-){
-    return apiDataFetch<ManualContributionResult>('/payments/contributions',{
-        method:'POST',
-        headers:{'Idempotency-Key':idempotencyKey},
-        body:JSON.stringify(body),
-    })
 }
