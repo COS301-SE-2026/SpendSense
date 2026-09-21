@@ -8,6 +8,9 @@ import {
   Headers,
   Res,
   UnprocessableEntityException,
+  Get,
+  Param,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -28,6 +31,7 @@ import type { Response } from 'express';
 import { PaymentContributionSource, Prisma } from '@prisma/client';
 import { CreateContributionDto } from './dto/create-contribution.dto';
 import { PaymentContributionsService } from './payment-contributions.service';
+import { isUUID } from 'class-validator';
 
 @ApiTags('payments')
 @ApiBearerAuth()
@@ -54,9 +58,17 @@ export class PaymentsController {
   async logPayment(
     @CurrentAuthUser() authUser: AuthUser,
     @Body() dto: LogPaymentDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
+    if (idempotencyKey && !isUUID(idempotencyKey, '4')) {
+      throw new UnprocessableEntityException(
+        'Idempotency-Key must be a valid UUID.',
+      );
+    }
+
     const user = await this.usersService.findOrCreateUser(authUser);
-    return this.paymentsService.logPayment(dto, user.id);
+
+    return this.paymentsService.logPayment(dto, user.id, idempotencyKey);
   }
 
   // api/v1/payments/contributions
@@ -73,9 +85,7 @@ export class PaymentsController {
       format: 'uuid',
     },
   })
-  @ApiBody({
-    type: CreateContributionDto,
-  })
+  @ApiBody({ type: CreateContributionDto })
   @ApiResponse({
     status: 201,
     description: 'Payment contribution created successfully',
@@ -84,28 +94,21 @@ export class PaymentsController {
     status: 200,
     description: 'Existing contribution replayed for the same idempotency key',
   })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid request',
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Unauthorised',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Payment occurrence not found',
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'Payment conflict',
-  })
+  @ApiResponse({ status: 400, description: 'Invalid request' })
+  @ApiResponse({ status: 401, description: 'Unauthorised' })
+  @ApiResponse({ status: 404, description: 'Payment occurrence not found' })
+  @ApiResponse({ status: 409, description: 'Payment conflict' })
   async createContribution(
     @CurrentAuthUser() authUser: AuthUser,
     @Body() dto: CreateContributionDto,
     @Headers('idempotency-key') idempotencyKey: string,
     @Res({ passthrough: true }) response: Response,
   ) {
+    if (!idempotencyKey || !isUUID(idempotencyKey, '4')) {
+      throw new UnprocessableEntityException(
+        'Idempotency-Key must be a valid UUID.',
+      );
+    }
     const user = await this.usersService.findOrCreateUser(authUser);
 
     const paidDate = new Date(dto.paidDate);
@@ -131,4 +134,31 @@ export class PaymentsController {
 
     return result;
   }
+
+  // GET /payments/occurrences/:occurrenceId/balance
+
+  @Get('occurrences/:occurrenceId/balance')
+  @ApiOperation({ summary: 'Get the current balance for a payment occurrence' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current occurrence balance returned successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid occurrence ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorised' })
+  @ApiResponse({ status: 404, description: 'Payment occurrence not found' })
+  async getOccurrenceBalance(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('occurrenceId', new ParseUUIDPipe()) occurrenceId: string,
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+
+    return this.paymentContributionsService.getOccurrenceBalance(
+      user.id,
+      occurrenceId,
+    );
+  }
+
+  // GET /payments/occurrences/eligible
+
+  // GET /payments/occurrences/:occurrenceId/contributions
 }
