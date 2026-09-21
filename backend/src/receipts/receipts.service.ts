@@ -4,6 +4,7 @@ import {
   HttpStatus,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
@@ -13,8 +14,12 @@ import {
   PaymentOccurrenceStatus,
   ReceiptScanStatus,
   Currency,
+  PaymentContributionSource,
+  Prisma,
 } from '@prisma/client';
 import { isUUID } from 'class-validator';
+import { ConfirmReceiptScanDto } from './dto/confirm-receipt-scan.dto';
+import { PaymentContributionsService } from '../payments/payment-contributions.service';
 
 type PreselectedOccurrenceProjection = {
   id: string;
@@ -47,7 +52,10 @@ const SCAN_EXPIRY_MS=15*60*1000;
 
 @Injectable()
 export class ReceiptsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly paymentContributionsService: PaymentContributionsService,
+  ) {}
 
   async validateReceiptUpload(
     userId: string,
@@ -413,6 +421,61 @@ export class ReceiptsService {
       statusCode: 404,
       code: 'RECEIPT_SCAN_NOT_FOUND',
       message: 'Receipt scan not found.',
+    });
+  }
+
+  async confirmReceiptScan(
+    userId: string,
+    scanId: string,
+    dto: ConfirmReceiptScanDto,
+    idempotencyKey: string | undefined,
+  ) {
+    if (!isUUID(scanId)) {
+      throw this.receiptScanNotFound();
+    }
+    if (!idempotencyKey || !isUUID(idempotencyKey, '4')) {
+      throw new UnprocessableEntityException({
+        statusCode: 422,
+        code: 'INVALID_CONFIRMATION',
+        message: 'A valid Idempotency-Key UUID is required.',
+      });
+    }
+    if (dto.acknowledged !== true) {
+      throw new UnprocessableEntityException({
+        statusCode: 422,
+        code: 'INVALID_CONFIRMATION',
+        message: 'Receipt confirmation must be acknowledged.',
+      });
+    }
+
+    const paidDate = new Date(dto.paidDate);
+    if (Number.isNaN(paidDate.getTime()) || paidDate.getTime() > Date.now()) {
+      throw new UnprocessableEntityException({
+        statusCode: 422,
+        code: 'INVALID_CONFIRMATION',
+        message: 'Payment date is invalid or in the future.',
+      });
+    }
+
+    const notes = dto.notes?.trim();
+    if (dto.notes !== undefined && !notes) {
+      throw new UnprocessableEntityException({
+        statusCode: 422,
+        code: 'INVALID_CONFIRMATION',
+        message: 'Notes cannot be blank.',
+      });
+    }
+
+    return this.paymentContributionsService.createContribution({
+      userId,
+      occurrenceId: dto.occurrenceId,
+      amount: new Prisma.Decimal(dto.amount),
+      currency: dto.currency,
+      paidDate,
+      source: PaymentContributionSource.RECEIPT_SCAN,
+      idempotencyKey,
+      notes,
+      receiptScanId: scanId,
     });
   }
 }

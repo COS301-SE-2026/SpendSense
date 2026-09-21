@@ -82,7 +82,6 @@ export class PaymentsService {
   async logPayment(
     dto: LogPaymentDto,
     userId: string,
-    idempotencyKey?: string,
   ): Promise<LogPaymentResult> {
     // below means "go to the "PaymentOccurance" table and find the row where 'id' = 'occuranceId'
     // NOTE AGAIN - this 'occuranceId' is passed from the frontent
