@@ -12,7 +12,6 @@ import {
     Flame,
     Sun,
     Circle,
-    Gamepad2,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -230,7 +229,13 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                     aria-label="Open Simulated month"
                 >
                     <div className="flex items-center gap-3">
-                        <SlideIcon tone="lilac"><Gamepad2 className="size-5" /></SlideIcon>
+                        <SlideIcon tone="lilac">
+                            <span className="relative grid size-6 place-items-center rounded-md border-2 border-[#091828] bg-[#FF6B9D] shadow-[1px_2px_0_#091828] [transform:rotate(-5deg)] dark:border-[#060e20] dark:shadow-[1px_2px_0_#060e20]">
+                                <span className="absolute -top-1.5 left-1 h-2.5 w-1 rounded-full border border-[#091828] bg-white dark:border-[#060e20]" />
+                                <span className="absolute -top-1.5 right-1 h-2.5 w-1 rounded-full border border-[#091828] bg-white dark:border-[#060e20]" />
+                                <strong className="text-[10px] font-black leading-none">30</strong>
+                            </span>
+                        </SlideIcon>
                         <p className="flex-1 text-[11px] font-black uppercase tracking-[0.12em]">Simulated month</p>
                         <ChevronRight className="size-5 text-[#16635A] dark:text-[#7fd8c4]" />
                     </div>
