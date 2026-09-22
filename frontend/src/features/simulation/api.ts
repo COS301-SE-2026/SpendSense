@@ -1,4 +1,4 @@
-import { apiDataFetch } from '@/lib/api'
+import { apiDataFetch } from "@/lib/api";
 import type {
   ActiveSimulationResponse,
   BriefingResponse,
@@ -8,37 +8,32 @@ import type {
   SimulationActionResponse,
   SimulationDetail,
   SimulationStatusAction,
-} from './types'
+} from "./types";
 
-const BASE = '/api/v1/simulations'
+// apiDataFetch already prefixes paths with VITE_API_URL, which is configured as
+// http://localhost:3000/api/v1 in the frontend environment.
+const BASE = "/simulations";
 
 function mutationHeaders(idempotencyKey: string) {
   return {
-    'Idempotency-Key': idempotencyKey,
-  }
+    "Idempotency-Key": idempotencyKey,
+  };
 }
 
-export function createSimulation(
-  timedMode: boolean,
-  idempotencyKey: string,
-) {
+export function createSimulation(timedMode: boolean, idempotencyKey: string) {
   return apiDataFetch<BriefingResponse>(BASE, {
-    method: 'POST',
+    method: "POST",
     headers: mutationHeaders(idempotencyKey),
     body: JSON.stringify({ timedMode }),
-  })
+  });
 }
 
 export function getActiveSimulation() {
-  return apiDataFetch<ActiveSimulationResponse>(
-    `${BASE}/active`,
-  )
+  return apiDataFetch<ActiveSimulationResponse>(`${BASE}/active`);
 }
 
 export function getSimulation(sessionId: string) {
-  return apiDataFetch<SimulationDetail>(
-    `${BASE}/${sessionId}`,
-  )
+  return apiDataFetch<SimulationDetail>(`${BASE}/${sessionId}`);
 }
 
 export function setupSimulation(
@@ -46,28 +41,22 @@ export function setupSimulation(
   setup: SetupRequest,
   idempotencyKey: string,
 ) {
-  return apiDataFetch(
-    `${BASE}/${sessionId}/setup`,
-    {
-      method: 'POST',
-      headers: mutationHeaders(idempotencyKey),
-      body: JSON.stringify(setup),
-    },
-  )
+  return apiDataFetch(`${BASE}/${sessionId}/setup`, {
+    method: "POST",
+    headers: mutationHeaders(idempotencyKey),
+    body: JSON.stringify(setup),
+  });
 }
 
-export function advanceSimulation(
-  sessionId: string,
-  idempotencyKey: string,
-) {
+export function advanceSimulation(sessionId: string, idempotencyKey: string) {
   return apiDataFetch<SimulationActionResponse>(
     `${BASE}/${sessionId}/advance`,
     {
-      method: 'POST',
+      method: "POST",
       headers: mutationHeaders(idempotencyKey),
       body: JSON.stringify({}),
     },
-  )
+  );
 }
 
 export function paySimulationObligation(
@@ -78,11 +67,11 @@ export function paySimulationObligation(
   return apiDataFetch<PaymentSimulationResponse>(
     `${BASE}/${sessionId}/obligations/${obligationId}/pay`,
     {
-      method: 'POST',
+      method: "POST",
       headers: mutationHeaders(idempotencyKey),
       body: JSON.stringify({}),
     },
-  )
+  );
 }
 
 export function resolveSimulationEvent(
@@ -94,25 +83,22 @@ export function resolveSimulationEvent(
   return apiDataFetch<EventSimulationResponse>(
     `${BASE}/${sessionId}/events/${eventId}/resolve`,
     {
-      method: 'POST',
+      method: "POST",
       headers: mutationHeaders(idempotencyKey),
       body: JSON.stringify({ optionId }),
     },
-  )
+  );
 }
 
-export function continueSimulation(
-  sessionId: string,
-  idempotencyKey: string,
-) {
+export function continueSimulation(sessionId: string, idempotencyKey: string) {
   return apiDataFetch<SimulationActionResponse>(
     `${BASE}/${sessionId}/continue`,
     {
-      method: 'POST',
+      method: "POST",
       headers: mutationHeaders(idempotencyKey),
       body: JSON.stringify({}),
     },
-  )
+  );
 }
 
 export function updateSimulationStatus(
@@ -120,12 +106,9 @@ export function updateSimulationStatus(
   action: SimulationStatusAction,
   idempotencyKey: string,
 ) {
-  return apiDataFetch(
-    `${BASE}/${sessionId}/status`,
-    {
-      method: 'PATCH',
-      headers: mutationHeaders(idempotencyKey),
-      body: JSON.stringify({ action }),
-    },
-  )
+  return apiDataFetch(`${BASE}/${sessionId}/status`, {
+    method: "PATCH",
+    headers: mutationHeaders(idempotencyKey),
+    body: JSON.stringify({ action }),
+  });
 }
