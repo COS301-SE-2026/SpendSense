@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { SimulationPageShell } from '../components/SimulationPageShell'
 import { formatSimulationMoney } from '../presentation'
-import type { SimulationDetail, SimulationObligation } from '../types'
+import type { SimulationDetail, SimulationObligation } from '../../features/simulation/types'
 
 interface ObligationDetailPageProps {
   simulation: SimulationDetail

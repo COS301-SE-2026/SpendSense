@@ -1,5 +1,5 @@
 import { TrendingDown, TrendingUp } from 'lucide-react'
-import type { SimulationScoreEntry } from '../types'
+import type { SimulationScoreEntry } from '../../features/simulation/types'
 
 interface RecentScoreActivityProps {
   entries: SimulationScoreEntry[]

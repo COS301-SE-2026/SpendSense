@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, LoaderCircle } from 'lucide-react'
-import { SimulationBoard } from '@/features/simulation/components/SimulationBoard'
+import { SimulationBoard } from '@/components/simulation/SimulationBoard'
 import { routeForSimulationState } from '@/features/simulation/routing'
 import { useSimulation } from '@/hooks/useSimulation'
 

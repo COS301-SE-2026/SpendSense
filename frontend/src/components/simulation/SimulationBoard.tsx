@@ -1,12 +1,12 @@
 import * as React from 'react'
 import { useSimulationPolling } from '@/hooks/useSimulationPolling'
-import { advanceSimulation } from '../api'
-import { createIdempotencyKey } from '../idempotency'
-import { useRefetchAtDeadline } from '../hooks/useRefetchAtDeadline'
+import { advanceSimulation } from '../../features/simulation/api'
+import { createIdempotencyKey } from '../../features/simulation/idempotency'
+import { useRefetchAtDeadline } from '../../features/simulation/hooks/useRefetchAtDeadline'
 import { MonthAgenda } from './MonthAgenda'
 import { RecentScoreActivity } from './RecentScoreActivity'
 import { SimulationHeader } from './SimulationHeader'
-import type { SimulationDetail } from '../types'
+import type { SimulationDetail } from '../../features/simulation/types'
 
 interface SimulationBoardProps {
   simulation: SimulationDetail

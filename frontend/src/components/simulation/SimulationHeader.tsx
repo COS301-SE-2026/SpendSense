@@ -1,6 +1,6 @@
 import { Clock3, WalletCards, PiggyBank } from 'lucide-react'
 import { useSimulationCountdown } from '@/hooks/useSimulationCountdown'
-import type { SimulationDetail } from '../types'
+import type { SimulationDetail } from '../../features/simulation/types'
 
 interface SimulationHeaderProps {
   simulation: SimulationDetail

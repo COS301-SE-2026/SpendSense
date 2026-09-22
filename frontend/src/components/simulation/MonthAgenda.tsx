@@ -1,4 +1,4 @@
-import type { SimulationObligation } from '../types'
+import type { SimulationObligation } from '../../features/simulation/types'
 import { ObligationRow } from './ObligationRow'
 
 interface MonthAgendaProps {

@@ -1,5 +1,5 @@
 import { Check, CircleAlert, Clock3 } from 'lucide-react'
-import type { SimulationObligation } from '../types'
+import type { SimulationObligation } from '../../features/simulation/types'
 
 interface ObligationRowProps {
   obligation: SimulationObligation
