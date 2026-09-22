@@ -2,6 +2,7 @@ import { useSimulationPolling } from '@/hooks/useSimulationPolling'
 import { useRefetchAtDeadline } from '../hooks/useRefetchAtDeadline'
 import { SimulationHeader } from './SimulationHeader'
 import { MonthAgenda } from './MonthAgenda'
+import { RecentScoreActivity } from './RecentScoreActivity'
 import type { SimulationDetail } from '../types'
 
 interface SimulationBoardProps {
@@ -39,6 +40,9 @@ export function SimulationBoard({
           daysInMonth={simulation.session.daysInMonth}
           obligations={simulation.obligations}
           CanPay={canPay}
+        />
+        <RecentScoreActivity
+          entries={simulation.recentScoreEntries}
         />
       </div>
     </main>
