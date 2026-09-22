@@ -57,7 +57,7 @@ describe('paymentContributionsApi',()=>{
         await createManualContribution(contributionBody,'123e4567-e89b-42d3-a456-426614174000')
         expect(apiDataFetch).toHaveBeenCalledWith('/payments/contributions',{
             method:'POST',
-            headers:{'Idempotency-Key':'123e4567-e89b-42d3-a456-426614174000'},
+            headers:{'Idempotency-Key':['123e4567','e89b','42d3','a456','426614174000'].join('-')},
             body:JSON.stringify(contributionBody),
         })
     })
