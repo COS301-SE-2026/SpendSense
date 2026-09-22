@@ -6,11 +6,11 @@ import {
   CircleDollarSign,
   ArrowLeft,
 } from 'lucide-react'
-import { SimulationPageShell } from '../components/SimulationPageShell'
-import { formatSimulationMoney } from '../presentation'
-import type { SimulationDetail, SimulationObligation } from '../../features/simulation/types'
+import { SimulationPageShell } from './SimulationPageShell'
+import { formatSimulationMoney } from '@/features/simulation/presentation'
+import type { SimulationDetail, SimulationObligation } from '@/features/simulation/types'
 
-interface ObligationDetailPageProps {
+interface ObligationDetailProps {
   simulation: SimulationDetail
   obligation: SimulationObligation
   onBack: () => void
@@ -22,7 +22,7 @@ export function ObligationDetailPage({
   obligation,
   onBack,
   onPay,
-}: ObligationDetailPageProps) {
+}: ObligationDetailProps) {
   const canPay =
     simulation.allowedActions.includes('PAY_OBLIGATION') &&
     obligation.status === 'PAYABLE'
@@ -112,9 +112,7 @@ export function ObligationDetailPage({
             How payment works
           </h2>
           <p className="mt-2 text-sm leading-6 text-[#6B6375] dark:text-[#A0AEC0]">
-            This fictional payment is always made in full.
-            The simulation uses your Current balance first
-            and then Savings if more funds are needed.
+            This fictional payment is always made in full. The simulation uses your Current balance first, and then Savings if more funds are needed.
           </p>
           {canPay ? (
             <button
