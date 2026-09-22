@@ -1,9 +1,12 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -31,6 +34,22 @@ type PreselectedOccurrenceProjection = {
   canRecord: boolean;
 };
 
+type OcrResult = {
+  request_id: string;
+  merchant: string | null;
+  receipt_date: string | null;
+  total: string | null;
+  currency: string | null;
+  confidence: number;
+  warnings: string[];
+};
+
+type ReceiptConfidence = 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
+
+const MAX_FILE_SIZE = 8 * 1024 * 1024;
+const OCR_TIMEOUT_MS = 25_000;
+const SCAN_EXPIRY_MS = 15 * 60 * 1000;
+
 @Injectable()
 export class ReceiptsService {
   constructor(
@@ -45,6 +64,16 @@ export class ReceiptsService {
   ) {
     if (!file) {
       throw new BadRequestException('Receipt image is required.');
+    }
+
+    if (file.size > MAX_FILE_SIZE || file.buffer.length > MAX_FILE_SIZE) {
+      throw new HttpException(
+        {
+          code: 'RECEIPT_TOO_LARGE',
+          message: 'Receipt image exceeds the 8 MiB size limit.',
+        },
+        HttpStatus.PAYLOAD_TOO_LARGE,
+      );
     }
 
     let metadata: sharp.Metadata;
@@ -72,6 +101,14 @@ export class ReceiptsService {
       );
     }
 
+    const expectedType =
+      metadata.format === 'jpeg' ? 'image/jpeg' : 'image/png';
+    if (file.mimetype !== expectedType) {
+      throw new BadRequestException(
+        'Receipt image content does not match its declared type.',
+      );
+    }
+
     if (preselectedOccurrenceId) {
       const occurrence = await this.prisma.paymentOccurrence.findFirst({
         where: {
@@ -91,19 +128,201 @@ export class ReceiptsService {
       }
     }
 
-    // this is a temporary response until OCR integration
-    return {
-      validated: true,
-
-      image: {
-        format: metadata.format,
-        width: metadata.width,
-        height: metadata.height,
-        sizeBytes: file.size,
-      },
-
-      preselectedOccurrenceId: preselectedOccurrenceId ?? null,
+    const ocr = await this.processReceiptOcr(file);
+    const confidence = this.getReceiptConfidence(ocr.confidence);
+    const extraction = {
+      amountCandidates:
+        ocr.total !== null
+          ? [
+              {
+                value: ocr.total,
+                currency: ocr.currency ?? '',
+                confidence,
+                label: 'Total',
+              },
+            ]
+          : [],
+      merchant:
+        ocr.merchant !== null
+          ? {
+              value: ocr.merchant,
+              confidence,
+            }
+          : null,
+      receiptDate:
+        ocr.receipt_date !== null
+          ? {
+              value: ocr.receipt_date,
+              confidence,
+            }
+          : null,
+      warnings: ocr.warnings,
     };
+    if (
+      extraction.amountCandidates.length === 0 &&
+      extraction.merchant === null &&
+      extraction.receiptDate === null
+    ) {
+      throw new HttpException(
+        {
+          code: 'OCR_NO_USABLE_RESULT',
+          message: 'No usable receipt details could be identified.',
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+    const scan = await this.prisma.receiptScan.create({
+      data: {
+        userId,
+        status: ReceiptScanStatus.READY_FOR_REVIEW,
+        preselectedOccurrenceId: preselectedOccurrenceId ?? null,
+        extraction,
+        warnings: ocr.warnings,
+        expiresAt: new Date(Date.now() + SCAN_EXPIRY_MS),
+      },
+      select: {
+        id: true,
+        status: true,
+        extraction: true,
+        warnings: true,
+        expiresAt: true,
+        preselectedOccurrenceId: true,
+      },
+    });
+    return {
+      id: scan.id,
+      status: scan.status,
+      expiresAt: scan.expiresAt,
+      extraction: scan.extraction,
+      warnings: scan.warnings ?? [],
+      preselectedOccurrenceId: scan.preselectedOccurrenceId,
+    };
+  }
+
+  private async processReceiptOcr(
+    file: Express.Multer.File,
+  ): Promise<OcrResult> {
+    const serviceUrl = process.env.AI_SERVICE_URL;
+    const serviceToken = process.env.AI_SERVICE_TOKEN;
+    if (!serviceUrl || !serviceToken) {
+      throw new HttpException(
+        {
+          code: 'OCR_UNAVAILABLE',
+          message: 'Receipt scanning is temporarily unavailable.',
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+    const requestId = randomUUID();
+    const form = new FormData();
+    form.append(
+      'file',
+      new Blob([Uint8Array.from(file.buffer)], { type: file.mimetype }),
+      file.originalname || 'receipt',
+    );
+    let response: Response;
+    try {
+      response = await fetch(`${serviceUrl.replace(/\/$/, '')}/ocr/process`, {
+        method: 'POST',
+        headers: {
+          'X-Service-Token': serviceToken,
+          'X-Request-Id': requestId,
+        },
+        body: form,
+        signal: AbortSignal.timeout(OCR_TIMEOUT_MS),
+      });
+    } catch {
+      throw new HttpException(
+        {
+          code: 'OCR_UNAVAILABLE',
+          message: 'Receipt scanning is temporarily unavailable.',
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+    if (!response.ok) {
+      this.handleOcrFailure(response.status);
+    }
+    let result: OcrResult;
+    try {
+      result = (await response.json()) as OcrResult;
+    } catch {
+      throw new HttpException(
+        {
+          code: 'OCR_UNAVAILABLE',
+          message: 'Receipt scanning returned an invalid response.',
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+    if (
+      !result ||
+      result.request_id !== requestId ||
+      (result.merchant !== null && typeof result.merchant !== 'string') ||
+      (result.receipt_date !== null &&
+        typeof result.receipt_date !== 'string') ||
+      (result.total !== null && typeof result.total !== 'string') ||
+      (result.currency !== null && typeof result.currency !== 'string') ||
+      typeof result.confidence !== 'number' ||
+      !Number.isFinite(result.confidence) ||
+      result.confidence < 0 ||
+      result.confidence > 1 ||
+      !Array.isArray(result.warnings) ||
+      !result.warnings.every((warning: unknown) => typeof warning === 'string')
+    ) {
+      throw new HttpException(
+        {
+          code: 'OCR_UNAVAILABLE',
+          message: 'Receipt scanning returned an invalid response.',
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+    return result;
+  }
+
+  private handleOcrFailure(status: number): never {
+    if (status === 429) {
+      throw new HttpException(
+        {
+          code: 'OCR_BUSY',
+          message: 'Receipt scanning is busy. Please try again.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    if (status === 413) {
+      throw new HttpException(
+        {
+          code: 'RECEIPT_TOO_LARGE',
+          message: 'Receipt image exceeds the allowed size.',
+        },
+        HttpStatus.PAYLOAD_TOO_LARGE,
+      );
+    }
+    if (status === 415 || status === 422) {
+      throw new HttpException(
+        {
+          code: 'UNSUPPORTED_RECEIPT',
+          message: 'Receipt image could not be processed.',
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+    throw new HttpException(
+      {
+        code: 'OCR_UNAVAILABLE',
+        message: 'Receipt scanning is temporarily unavailable.',
+      },
+      HttpStatus.SERVICE_UNAVAILABLE,
+    );
+  }
+
+  private getReceiptConfidence(confidence: number): ReceiptConfidence {
+    if (confidence >= 0.85) return 'HIGH';
+    if (confidence >= 0.6) return 'MEDIUM';
+    if (confidence > 0) return 'LOW';
+    return 'UNKNOWN';
   }
 
   async getReceiptScan(userId: string, scanId: string) {
