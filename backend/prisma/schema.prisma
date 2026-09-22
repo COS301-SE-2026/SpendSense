@@ -231,6 +231,7 @@ enum ReceiptScanStatus {
   READY_FOR_REVIEW
   CONSUMED
   EXPIRED
+}
 
 enum GuidanceWalkthroughStatus {
   NOT_STARTED
