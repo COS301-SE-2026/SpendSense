@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { LoaderCircle, AlertTriangle } from 'lucide-react'
 import { useSimulation } from '@/hooks/useSimulation'
 import { ObligationDetailPage } from '@/components/simulation/ObligationDetail'
-import { paySimulationObligation } from '@/features/simulation/api'
+import { continueSimulation, paySimulationObligation } from '@/features/simulation/api'
 import { createIdempotencyKey } from '@/features/simulation/idempotency'
+import { PaymentResult } from '@/components/simulation/PaymentResult'
+import type { PaymentSimulationResponse } from '@/features/simulation/types'
 
 export default function SimulationObligationDetailPage() {
   const {
@@ -33,6 +35,19 @@ export default function SimulationObligationDetailPage() {
 
   const paymentInFlightRef = React.useRef(false)
 
+  const [paymentResult, setPaymentResult] =
+    React.useState<PaymentSimulationResponse | null>(
+      null,
+    )
+
+  const [continuing, setContinuing] = React.useState(false)
+
+  const [continueError, setContinueError] = React.useState<string | null>(null)
+
+  const continueKeyRef = React.useRef<string | null>(null)
+
+  const continueInFlightRef = React.useRef(false)
+
   if (!simulation && loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#F4FBF7] dark:bg-[#0b1326]">
@@ -54,7 +69,6 @@ export default function SimulationObligationDetailPage() {
   const handlePay = async () => {
     if (
       !sessionId ||
-      !obligation ||
       paymentInFlightRef.current
     ) {
       return
@@ -91,6 +105,7 @@ export default function SimulationObligationDetailPage() {
       paymentKeyRef.current = null
 
       setSimulation(result)
+      setPaymentResult(result)
     } catch (caughtError) {
       const apiError = caughtError as {
         statusCode?: number
@@ -117,6 +132,44 @@ export default function SimulationObligationDetailPage() {
     } finally {
       paymentInFlightRef.current = false
       setPaying(false)
+    }
+  }
+
+  const handleContinue = async () => {
+    if (
+      !sessionId ||
+      !paymentResult ||
+      continueInFlightRef.current
+    ) {
+      return
+    }
+
+    const idempotencyKey = continueKeyRef.current ?? createIdempotencyKey()
+
+    continueKeyRef.current = idempotencyKey
+    continueInFlightRef.current = true
+    setContinuing(true)
+    setContinueError(null)
+
+    try {
+      const result =
+        await continueSimulation(
+          sessionId,
+          idempotencyKey,
+        )
+
+      continueKeyRef.current = null
+
+      setSimulation(result)
+      setPaymentResult(null)
+      navigate(-1) // temp nav for now (until all routes connected)
+    } catch {
+      setContinueError(
+        'Could not return to the month. Please try again.',
+      )
+    } finally {
+      continueInFlightRef.current = false
+      setContinuing(false)
     }
   }
 
@@ -150,6 +203,17 @@ export default function SimulationObligationDetailPage() {
           </div>
         </div>
       </main>
+    )
+  }
+
+  if (paymentResult) {
+    return (
+      <PaymentResult
+        result={paymentResult}
+        continuing={continuing}
+        continueError={continueError}
+        onContinue={() => void handleContinue()}
+      />
     )
   }
 
