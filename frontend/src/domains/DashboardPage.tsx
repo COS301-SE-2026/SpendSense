@@ -25,6 +25,8 @@ import { getCrditScore } from "@/features/credit-score/credit-scoreApi"
 import { StreakCarousel, type StreakPanel } from "@/components/dashboard/StreakCarousel"
 import { BottomNav } from "@/components/common/BottomNav"
 import { DashboardCarousel } from "@/components/dashboard/DashbordCarousel"
+import { DashboardDailyGuide } from "@/components/guidance/DashboardDailyGuide"
+import { GuidanceTourInvitation } from "@/components/guidance/GuidanceWalkthrough"
 
 export default function DashboardPage() {
 	const navigate = useNavigate()
@@ -116,6 +118,13 @@ export default function DashboardPage() {
 						</button>
 					</div>
 				</header>
+
+				<DashboardDailyGuide
+					className="mt-6"
+					payableCount={dashboard ? upcomingPayments.length : undefined}
+				/>
+
+				<GuidanceTourInvitation className="mt-4" />
 
 				<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#131b2e] dark:shadow-lg dark:shadow-black/20">
 

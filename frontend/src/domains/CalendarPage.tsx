@@ -12,6 +12,8 @@ import {
 import { CustomCard } from "@/components/ui/CustomCard"
 import { cn } from "@/lib/utils"
 import { useCalendarOccurrences, type CalendarOccurrence } from "@/hooks/useCalendarOccurrences"
+import { GuideSlot } from "@/components/guidance/GuideSlot"
+import { calendarGuidanceFacts } from "@/features/guidance/calendarGuidanceFacts"
 import { useUserProfile } from "@/hooks/useUserProfile"
 import { getOccurrenceDetail } from "@/features/payments/paymentsApi"
 import {
@@ -109,7 +111,7 @@ export default function CalendarPage(){
   const isCurrentMonth = now.getFullYear() === displayYear && now.getMonth() === displayMonth
   const today = isCurrentMonth ? now.getDate() : -1
  
-  const byDay = groupByDay(occurrences)
+  const byDay = React.useMemo(() => groupByDay(occurrences), [occurrences])
   const summary = calcSummary(occurrences)
 
   const { user } = useUserProfile()
@@ -174,11 +176,19 @@ export default function CalendarPage(){
     }
   }
  
-  const visibleOccurrences = selectedDate === null
+  const visibleOccurrences = React.useMemo(
+    () => (selectedDate === null
       ? [...occurrences].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      : (byDay[selectedDate] ?? [])
+      : (byDay[selectedDate] ?? [])),
+    [selectedDate, occurrences, byDay],
+  )
  
   const monthLabel = MONTH_NAMES[displayMonth]
+
+  const guidanceFacts = React.useMemo(
+    () => calendarGuidanceFacts(occurrences, visibleOccurrences, { loading, error }),
+    [occurrences, visibleOccurrences, loading, error],
+  )
  
   return(
     <div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
@@ -347,6 +357,12 @@ export default function CalendarPage(){
           </div>
         </div>
  
+        <GuideSlot
+          surface="calendar"
+          facts={guidanceFacts}
+          className="mt-4"
+        />
+
         {/* EVENT LIST */}
         <div className="mt-4 flex flex-col gap-3">
           {loading ? (

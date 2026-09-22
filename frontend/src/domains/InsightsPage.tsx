@@ -6,6 +6,8 @@ import { CustomCard } from "@/components/ui/CustomCard"
 import { SectionHeader } from "@/components/common/SectionHeader"
 import { CategoryIcon } from "@/components/common/CategoryIcon"
 import { useInsights } from "@/hooks/useInsights"
+import { GuideSlot } from "@/components/guidance/GuideSlot"
+import { insightGuidanceFacts } from "@/features/guidance/insightGuidanceFacts"
 import type { InsightCard, InsightKey, InsightSeverity } from "@/features/insights/insightsApi"
 
 
@@ -41,6 +43,11 @@ export default function InsightsPage() {
     const nav = useNavigate()
     const { asOf, insights, loading, error, refetch } = useInsights()
 
+    const guidanceFacts = React.useMemo(
+        () => insightGuidanceFacts(insights, { loading, error }),
+        [insights, loading, error],
+    )
+
     return (
         <div className="min-h-screen bg-[#f4fbf7] pb-24 dark:bg-[#0b1326]">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
@@ -60,6 +67,13 @@ export default function InsightsPage() {
                     <div aria-hidden="true" className="size-12 shrink-0" />
 
                 </header>
+
+                <GuideSlot
+                    surface="insights"
+                    facts={guidanceFacts}
+                    onRetry={refetch}
+                    className="mt-5"
+                />
 
 
                 {loading && (
