@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { LoaderCircle, AlertTriangle } from 'lucide-react'
 import { useSimulation } from '@/hooks/useSimulation'
 import { ObligationDetailPage } from '@/components/simulation/ObligationDetail'
+import { paySimulationObligation } from '@/features/simulation/api'
+import { createIdempotencyKey } from '@/features/simulation/idempotency'
 
 export default function SimulationObligationDetailPage() {
   const {
@@ -16,10 +18,20 @@ export default function SimulationObligationDetailPage() {
   const navigate = useNavigate()
 
   const {
-    data: simulation,
+    data: 
+    simulation,
     loading,
     error,
+    setSimulation,
   } = useSimulation(sessionId)
+
+  const [paying, setPaying] = React.useState(false)
+
+  const [paymentError, setPaymentError] = React.useState<string | null>(null)
+
+  const paymentKeyRef = React.useRef<string | null>(null)
+
+  const paymentInFlightRef = React.useRef(false)
 
   if (!simulation && loading) {
     return (
@@ -38,6 +50,75 @@ export default function SimulationObligationDetailPage() {
     simulation?.obligations.find(
       (item) => item.id === obligationId,
     )
+
+  const handlePay = async () => {
+    if (
+      !sessionId ||
+      !obligation ||
+      paymentInFlightRef.current
+    ) {
+      return
+    }
+
+    const canPay =
+      simulation.allowedActions.includes(
+        'PAY_OBLIGATION',
+      ) &&
+      obligation.status === 'PAYABLE'
+
+    if (!canPay) {
+      return
+    }
+
+    const idempotencyKey =
+      paymentKeyRef.current ??
+      createIdempotencyKey()
+
+    paymentKeyRef.current = idempotencyKey
+    paymentInFlightRef.current = true
+
+    setPaying(true)
+    setPaymentError(null)
+
+    try {
+      const result =
+        await paySimulationObligation(
+          sessionId,
+          obligation.id,
+          idempotencyKey,
+        )
+
+      paymentKeyRef.current = null
+
+      setSimulation(result)
+    } catch (caughtError) {
+      const apiError = caughtError as {
+        statusCode?: number
+        error?: {
+          code?: string
+          message?: string
+        }
+        message?: string
+      }
+
+      if (
+        apiError.statusCode === 409 &&
+        apiError.error?.code === 'INSUFFICIENT_SIMULATION_FUNDS'
+      ) {
+        setPaymentError(
+          apiError.error.message ??
+            'There are not enough simulated funds to pay this obligation.',
+        )
+      } else {
+        setPaymentError(
+          'The payment could not be confirmed. Please try again.',
+        )
+      }
+    } finally {
+      paymentInFlightRef.current = false
+      setPaying(false)
+    }
+  }
 
   if (
     !sessionId ||
@@ -77,12 +158,9 @@ export default function SimulationObligationDetailPage() {
       simulation={simulation}
       obligation={obligation}
       onBack={() => navigate(-1)}
-      onPay={() => {
-        console.info(
-          'Pay obligation:',
-          obligation.id,
-        )
-      }}
+      onPay={() => void handlePay()}
+      paying={paying}
+      paymentError={paymentError}
     />
   )
 }

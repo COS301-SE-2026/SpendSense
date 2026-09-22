@@ -10,11 +10,13 @@ import { SimulationPageShell } from './SimulationPageShell'
 import { formatSimulationMoney } from '@/features/simulation/presentation'
 import type { SimulationDetail, SimulationObligation } from '@/features/simulation/types'
 
-interface ObligationDetailProps {
+interface ObligationDetailPageProps {
   simulation: SimulationDetail
   obligation: SimulationObligation
   onBack: () => void
   onPay: () => void
+  paying?: boolean
+  paymentError?: string | null
 }
 
 export function ObligationDetailPage({
@@ -22,7 +24,9 @@ export function ObligationDetailPage({
   obligation,
   onBack,
   onPay,
-}: ObligationDetailProps) {
+  paying = false,
+  paymentError = null,
+}: ObligationDetailPageProps) {
   const canPay =
     simulation.allowedActions.includes('PAY_OBLIGATION') &&
     obligation.status === 'PAYABLE'
@@ -115,13 +119,27 @@ export function ObligationDetailPage({
             This fictional payment is always made in full. The simulation uses your Current balance first, and then Savings if more funds are needed.
           </p>
           {canPay ? (
-            <button
-              type="button"
-              onClick={onPay}
-              className="mt-5 w-full rounded-full border-2 border-[#091828] bg-[#FF6B9D] px-5 py-3 text-sm font-black text-[#091828] shadow-[3px_3px_0_#091828]"
-            >
-              Pay full amount
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={onPay}
+                disabled={paying}
+                className="mt-5 w-full rounded-full border-2 border-[#091828] bg-[#FF6B9D] px-5 py-3 text-sm font-black text-[#091828] shadow-[3px_3px_0_#091828] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {paying
+                  ? 'Processing payment...'
+                  : 'Pay full amount'}
+              </button>
+
+              {paymentError && (
+                <p
+                  role="alert"
+                  className="mt-3 rounded-2xl bg-[#FFD9E1] px-4 py-3 text-sm font-semibold text-[#AC2A5D]"
+                >
+                  {paymentError}
+                </p>
+              )}
+            </>
           ) : (
             <p className="mt-5 rounded-2xl bg-[#F4FBF7] px-4 py-3 text-sm font-semibold text-[#6B6375] dark:bg-[#1C263C] dark:text-[#A0AEC0]">
               This obligation cannot be paid right now.
