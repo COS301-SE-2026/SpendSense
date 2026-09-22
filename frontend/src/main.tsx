@@ -49,6 +49,10 @@ import EditProfilePage from './domains/EditProfilePage.tsx'
 import HelpPage from './domains/HelpPage.tsx'
 import HomeRoute from './components/HomeRoute'
 import ScrollToTop from './components/common/ScrollToTop.tsx'
+import SimulationEntryPage from './features/simulation/screens/SimulationEntryPage.tsx'
+import SimulationBriefingPage from './features/simulation/screens/SimulationBriefingPage.tsx'
+import BudgetAllocationPage from './features/simulation/screens/BudgetAllocationPage.tsx'
+import MonthPlanningPage from './features/simulation/screens/MonthPlanningPage.tsx'
 
 initAuthListener()
 initTheme()
@@ -103,6 +107,10 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/settings/account" element={<SettingsAccountPage/>}/>
           <Route path="/edit-profile" element={<EditProfilePage/>}/>
           <Route path="/help" element={<HelpPage/>}/>
+          <Route path="/simulation" element={<ProtectedRoute><SimulationEntryPage/></ProtectedRoute>}/>
+          <Route path="/simulation/briefing" element={<ProtectedRoute><SimulationBriefingPage/></ProtectedRoute>}/>
+          <Route path="/simulation/setup/:sessionId" element={<ProtectedRoute><BudgetAllocationPage/></ProtectedRoute>}/>
+          <Route path="/simulation/setup/:sessionId/planning" element={<ProtectedRoute><MonthPlanningPage/></ProtectedRoute>}/>
         </Routes>
       </NotificationsProvider>
     </BrowserRouter>
