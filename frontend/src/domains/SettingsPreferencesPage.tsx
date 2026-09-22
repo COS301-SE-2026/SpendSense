@@ -3,6 +3,7 @@ import * as React from "react"
 import {CustomCard} from "@/components/ui/CustomCard"
 import {LongButton} from "@/components/common/LongButton"
 import {SubPageShell} from "@/components/common/SubPageShell"
+import {GuidanceSettings} from "@/components/guidance/GuidanceSettings"
 import {useUserProfile} from "@/hooks/useUserProfile"
 import {updatePreferences, type UserPreferences} from "@/features/profile/profileApi"
 import {setTheme} from "@/lib/theme"
@@ -153,6 +154,7 @@ export default function SettingsPreferencesPage(){
                     )}
                 </>
             )}
+            <GuidanceSettings />
         </SubPageShell>
     )
 }

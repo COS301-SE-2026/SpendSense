@@ -14,6 +14,8 @@ import {
 import {CustomCard} from "@/components/ui/CustomCard"
 import {CustomInput} from "@/components/common/CustomInput"
 import {SubPageShell} from "@/components/common/SubPageShell"
+import {GuidanceTourInvitation} from "@/components/guidance/GuidanceWalkthrough"
+import {GuidanceSettings} from "@/components/guidance/GuidanceSettings"
 
 
 const walkThrough: {
@@ -147,6 +149,9 @@ export default function HelpPage(){
 			
 			{/*walkthrough*/}
 			<SectionLabel>Getting Started</SectionLabel>
+
+			<GuidanceTourInvitation />
+			<GuidanceSettings />
 
 			{walkThrough.map((step) => (
 				<CustomCard key={step.title} variant="navyBorder" size="sm" className="flex items-start gap-3 dark:border-[#574146] dark:bg-[#171f33]">
