@@ -6,6 +6,7 @@ import { ObligationDetailPage } from '@/components/simulation/ObligationDetail'
 import { continueSimulation, paySimulationObligation } from '@/features/simulation/api'
 import { createIdempotencyKey } from '@/features/simulation/idempotency'
 import { PaymentResult } from '@/components/simulation/PaymentResult'
+import { ResultAcknowledgement } from '@/components/simulation/ResultAcknowledgement'
 import type { PaymentSimulationResponse } from '@/features/simulation/types'
 
 export default function SimulationObligationDetailPage() {
@@ -212,6 +213,18 @@ export default function SimulationObligationDetailPage() {
         result={paymentResult}
         continuing={continuing}
         continueError={continueError}
+        onContinue={() => void handleContinue()}
+      />
+    )
+  }
+
+  if (
+    simulation.session.pending.type === ' PAYMENT_RESULT'
+  ) {
+    return (
+      <ResultAcknowledgement
+        detail={simulation}
+        kind='payment'
         onContinue={() => void handleContinue()}
       />
     )
