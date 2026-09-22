@@ -43,7 +43,15 @@ export function SimulationHeader({
           </div>
         )}
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-2xl bg-[#FFD9E6] p-3">
+          <p className="text-xs font-semibold text-[#6B6375]">
+            Starting budget
+          </p>
+          <p className="mt-1 text-lg font-black text-[#091828] dark:text-white">
+            {formatMoney(session.startingBudget)}
+          </p>
+        </div>
         <div className="rounded-2xl bg-[#E6F7F2] p-3">
           <div className="flex items-center gap-2 text-xs font-semibold text-[#6B6375]">
             <WalletCards className="size-4"/>

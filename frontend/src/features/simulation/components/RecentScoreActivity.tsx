@@ -30,7 +30,8 @@ export function RecentScoreActivity({
         ) : (
           <div className="flex flex-col">
             {recentEntries.map((entry) => {
-              const positive = entry.delta >= 0
+              const delta = Number(entry.pointsDelta)
+              const positive = delta >= 0
               return (
                 <div
                   key={entry.id}
@@ -54,7 +55,7 @@ export function RecentScoreActivity({
                       {entry.reason}
                     </p>
                     <p className="mt-1 text-xs text-[#6B6375] dark:text-[#A0AEC0]">
-                      Day {entry.day}
+                      Day {entry.simulatedDay}
                     </p>
                   </div>
                   <span
@@ -65,7 +66,7 @@ export function RecentScoreActivity({
                     }`}
                   >
                     {positive ? '+' : ''}
-                    {entry.delta}
+                    {entry.pointsDelta}
                   </span>
                 </div>
               )
