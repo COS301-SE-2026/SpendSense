@@ -1,4 +1,3 @@
-
 import { StrictMode} from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
@@ -53,6 +52,8 @@ import ScrollToTop from './components/common/ScrollToTop.tsx'
 import ReceiptScanPage from './domains/ReceiptScanPage'
 import ReceiptReviewPage from './domains/ReceiptReviewPage'
 import PaymentForm from './domains/PaymentForm.tsx'
+import { GuidanceProvider } from './features/guidance/GuidanceProvider.tsx'
+import { GuidanceWalkthrough } from './components/guidance/GuidanceWalkthrough.tsx'
 
 initAuthListener()
 initTheme()
@@ -64,51 +65,54 @@ createRoot(document.getElementById('root')!).render(
       <ScrollToTop/>
       <NotificationsProvider>
         <NotificationListener/>
-        <Routes>
-          <Route path="/" element={<HomeRoute />}/>
-          <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path="/dev" element={<App />} />
-          <Route path="/calendar" element={<ProtectedRoute><CalendarPage/></ProtectedRoute>}/>
-          <Route path="/calendar/scheduled" element={<ProtectedRoute><ScheduledPaymentsPage/></ProtectedRoute>}/>
-          <Route path="/login" element={<LoginPage />}/>
-          <Route path="/register" element={<RegisterPage/>}/>
-          <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm/></ProtectedRoute>}/>
-          <Route path="/stickers" element={<ProtectedRoute><StickerAlbumPage/></ProtectedRoute>}/>
-          <Route path="/stickers/:badgeKey" element={<ProtectedRoute><StickerDetailPage/></ProtectedRoute>}/>
-          <Route path="/paymentForm" element={<ProtectedRoute><PaymentForm/></ProtectedRoute>}/>
-          <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
-          <Route path="/profile" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
-          <Route path="/landing" element={<LandingPage/>}/>
-          <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
-          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
-          <Route path="/quests" element={<ProtectedRoute><QuestsPage/></ProtectedRoute>}/>
-          <Route path="/quiz" element={<ProtectedRoute><QuizPage/></ProtectedRoute>}/>
-          <Route path="/quiz/topics/:topic" element={<ProtectedRoute><TopicQuizTeachingPage/></ProtectedRoute>}/>
-          <Route path="/quiz/session/:sessionId" element={<ProtectedRoute><QuizQuestionPage/></ProtectedRoute>}/>
-          <Route path="/quiz/topics" element={<ProtectedRoute><TopicQuizPage/></ProtectedRoute>}/>
-          <Route path="/quiz/session/:sessionId/feedback" element={<ProtectedRoute><QuizAnswerFeedbackPage/></ProtectedRoute>}/>
-          <Route path="/quiz/session/:sessionId/results" element={<ProtectedRoute><QuizResultsPage/></ProtectedRoute>}/>
-          <Route path="/friends" element={<ProtectedRoute><FriendsPage/></ProtectedRoute>}/>
-          <Route path="/friends/list" element={<ProtectedRoute><FriendsListPage/></ProtectedRoute>}/>
-          <Route path="/friends/add" element={<ProtectedRoute><AddFriendPage/></ProtectedRoute>}/>
-          <Route path="/friends/:friendId" element={<ProtectedRoute><FriendProfilePage/></ProtectedRoute>}/>
-          <Route path="/friends/activity" element={<ProtectedRoute><FriendActivityPage/></ProtectedRoute>}/>
-          <Route path="/friends/leaderboard" element={<ProtectedRoute><LeaderboardPage/></ProtectedRoute>}/>
-          <Route path="/wagers" element={<ProtectedRoute><WagersPage/></ProtectedRoute>}/>
-          <Route path="/wagers/new" element={<ProtectedRoute><NewWagerPage/></ProtectedRoute>}/>
-          <Route path="/wagers/:wagerId" element={<ProtectedRoute><WagerDetailPage/></ProtectedRoute>}/>
-          <Route path="/mascot" element={<ProtectedRoute><MascotPage/></ProtectedRoute>}/>
-          <Route path="/mascot/shop" element={<ProtectedRoute><MascotShopPage/></ProtectedRoute>}/>
-          <Route path="/wrapped" element={<ProtectedRoute><WrappedPage/></ProtectedRoute>}/>
-          <Route path="/settings" element={<ProtectedRoute><SettingsPage/></ProtectedRoute>}/>
-          <Route path="/settings/preferences" element={<ProtectedRoute><SettingsPreferencesPage/></ProtectedRoute>}/>
-          <Route path="/settings/notifications" element={<ProtectedRoute><SettingsNotificationsPage/></ProtectedRoute>}/>
-          <Route path="/settings/account" element={<ProtectedRoute><SettingsAccountPage/></ProtectedRoute>}/>
-          <Route path="/edit-profile" element={<ProtectedRoute><EditProfilePage/></ProtectedRoute>}/>
-          <Route path="/help" element={<ProtectedRoute><HelpPage/></ProtectedRoute>}/>
-          <Route path="/receipts/new" element={<ProtectedRoute><ReceiptScanPage/></ProtectedRoute>}/>
-          <Route path="/receipts/scans/:scanId/review" element={<ProtectedRoute><ReceiptReviewPage/></ProtectedRoute>}/>
-        </Routes>
+        <GuidanceProvider>
+          <Routes>
+            <Route path="/" element={<HomeRoute />}/>
+            <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="/dev" element={<App />} />
+            <Route path="/calendar" element={<ProtectedRoute><CalendarPage/></ProtectedRoute>}/>
+            <Route path="/calendar/scheduled" element={<ProtectedRoute><ScheduledPaymentsPage/></ProtectedRoute>}/>
+            <Route path="/login" element={<LoginPage />}/>
+            <Route path="/register" element={<RegisterPage/>}/>
+            <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm/></ProtectedRoute>}/>
+            <Route path="/stickers" element={<ProtectedRoute><StickerAlbumPage/></ProtectedRoute>}/>
+            <Route path="/stickers/:badgeKey" element={<ProtectedRoute><StickerDetailPage/></ProtectedRoute>}/>
+            <Route path="/paymentForm" element={<ProtectedRoute><PaymentForm/></ProtectedRoute>}/>
+            <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
+            <Route path="/landing" element={<LandingPage/>}/>
+            <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
+            <Route path="/quests" element={<ProtectedRoute><QuestsPage/></ProtectedRoute>}/>
+            <Route path="/quiz" element={<ProtectedRoute><QuizPage/></ProtectedRoute>}/>
+            <Route path="/quiz/topics/:topic" element={<ProtectedRoute><TopicQuizTeachingPage/></ProtectedRoute>}/>
+            <Route path="/quiz/session/:sessionId" element={<ProtectedRoute><QuizQuestionPage/></ProtectedRoute>}/>
+            <Route path="/quiz/topics" element={<ProtectedRoute><TopicQuizPage/></ProtectedRoute>}/>
+            <Route path="/quiz/session/:sessionId/feedback" element={<ProtectedRoute><QuizAnswerFeedbackPage/></ProtectedRoute>}/>
+            <Route path="/quiz/session/:sessionId/results" element={<ProtectedRoute><QuizResultsPage/></ProtectedRoute>}/>
+            <Route path="/friends" element={<ProtectedRoute><FriendsPage/></ProtectedRoute>}/>
+            <Route path="/friends/list" element={<ProtectedRoute><FriendsListPage/></ProtectedRoute>}/>
+            <Route path="/friends/add" element={<ProtectedRoute><AddFriendPage/></ProtectedRoute>}/>
+            <Route path="/friends/:friendId" element={<ProtectedRoute><FriendProfilePage/></ProtectedRoute>}/>
+            <Route path="/friends/activity" element={<ProtectedRoute><FriendActivityPage/></ProtectedRoute>}/>
+            <Route path="/friends/leaderboard" element={<ProtectedRoute><LeaderboardPage/></ProtectedRoute>}/>
+            <Route path="/wagers" element={<ProtectedRoute><WagersPage/></ProtectedRoute>}/>
+            <Route path="/wagers/new" element={<ProtectedRoute><NewWagerPage/></ProtectedRoute>}/>
+            <Route path="/wagers/:wagerId" element={<ProtectedRoute><WagerDetailPage/></ProtectedRoute>}/>
+            <Route path="/mascot" element={<ProtectedRoute><MascotPage/></ProtectedRoute>}/>
+            <Route path="/mascot/shop" element={<ProtectedRoute><MascotShopPage/></ProtectedRoute>}/>
+            <Route path="/wrapped" element={<ProtectedRoute><WrappedPage/></ProtectedRoute>}/>
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage/></ProtectedRoute>}/>
+            <Route path="/settings/preferences" element={<ProtectedRoute><SettingsPreferencesPage/></ProtectedRoute>}/>
+            <Route path="/settings/notifications" element={<ProtectedRoute><SettingsNotificationsPage/></ProtectedRoute>}/>
+            <Route path="/settings/account" element={<ProtectedRoute><SettingsAccountPage/></ProtectedRoute>}/>
+            <Route path="/edit-profile" element={<ProtectedRoute><EditProfilePage/></ProtectedRoute>}/>
+            <Route path="/help" element={<ProtectedRoute><HelpPage/></ProtectedRoute>}/>
+            <Route path="/receipts/new" element={<ProtectedRoute><ReceiptScanPage/></ProtectedRoute>}/>
+            <Route path="/receipts/scans/:scanId/review" element={<ProtectedRoute><ReceiptReviewPage/></ProtectedRoute>}/>
+          </Routes>
+          <GuidanceWalkthrough showInvitation={false}/>
+        </GuidanceProvider>
       </NotificationsProvider>
     </BrowserRouter>
   </StrictMode>,
