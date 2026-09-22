@@ -129,35 +129,7 @@ export class ReceiptsService {
     }
 
     const ocr = await this.processReceiptOcr(file);
-    const confidence = this.getReceiptConfidence(ocr.confidence);
-    const extraction = {
-      amountCandidates:
-        ocr.total !== null
-          ? [
-              {
-                value: ocr.total,
-                currency: ocr.currency ?? '',
-                confidence,
-                label: 'Total',
-              },
-            ]
-          : [],
-      merchant:
-        ocr.merchant !== null
-          ? {
-              value: ocr.merchant,
-              confidence,
-            }
-          : null,
-      receiptDate:
-        ocr.receipt_date !== null
-          ? {
-              value: ocr.receipt_date,
-              confidence,
-            }
-          : null,
-      warnings: ocr.warnings,
-    };
+    const extraction = this.buildExtraction(ocr);
     if (
       extraction.amountCandidates.length === 0 &&
       extraction.merchant === null &&
@@ -196,6 +168,38 @@ export class ReceiptsService {
       extraction: scan.extraction,
       warnings: scan.warnings ?? [],
       preselectedOccurrenceId: scan.preselectedOccurrenceId,
+    };
+  }
+
+  private buildExtraction(ocr: OcrResult) {
+    const confidence = this.getReceiptConfidence(ocr.confidence);
+    return {
+      amountCandidates:
+        ocr.total !== null
+          ? [
+              {
+                value: ocr.total,
+                currency: ocr.currency ?? '',
+                confidence,
+                label: 'Total',
+              },
+            ]
+          : [],
+      merchant:
+        ocr.merchant !== null
+          ? {
+              value: ocr.merchant,
+              confidence,
+            }
+          : null,
+      receiptDate:
+        ocr.receipt_date !== null
+          ? {
+              value: ocr.receipt_date,
+              confidence,
+            }
+          : null,
+      warnings: ocr.warnings,
     };
   }
 

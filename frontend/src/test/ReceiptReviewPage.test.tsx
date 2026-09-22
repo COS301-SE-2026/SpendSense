@@ -79,8 +79,8 @@ describe('ReceiptReviewPage',()=>{
     it('renders the review page using the scan passed from upload',()=>{
         renderReview({scan:scanResponse})
         expect(screen.getByRole('heading',{name:'Review your receipt'})).toBeInTheDocument()
-        expect(screen.getByText('Receipt ready')).toBeInTheDocument()
-        expect(screen.getByText('scan_abc')).toBeInTheDocument()
+        expect(screen.getByText(`Draft expires ${new Date(scanResponse.expiresAt).toLocaleString('en-ZA')}`)).toBeInTheDocument()
+        expect(screen.queryByText('scan_abc')).not.toBeInTheDocument()
         expect(getReceiptScan).not.toHaveBeenCalled()
     })
     it('displays the editable OCR values on the review page',()=>{
@@ -93,8 +93,6 @@ describe('ReceiptReviewPage',()=>{
     })
     it('preserves the occurrence preselection',async()=>{
         renderReview({scan:scanResponse})
-        expect(screen.getByText('occ_123')).toBeInTheDocument()
-        expect(screen.getByText('Payment preselected from your previous screen')).toBeInTheDocument()
         await waitFor(()=>{
             expect(getReceiptOccurrenceBalance).toHaveBeenCalledWith('occ_123')
         })
@@ -104,7 +102,7 @@ describe('ReceiptReviewPage',()=>{
         expect(screen.getByRole('status')).toHaveTextContent('Loading your receipt...')
         expect(await screen.findByRole('heading',{name:'Review your receipt'})).toBeInTheDocument()
         expect(getReceiptScan).toHaveBeenCalledWith('scan_abc')
-        expect(screen.getByText('scan_abc')).toBeInTheDocument()
+        expect(screen.getByText(`Draft expires ${new Date(scanResponse.expiresAt).toLocaleString('en-ZA')}`)).toBeInTheDocument()
     })
     it('shows a recovery message for an unavailable scan',async()=>{
         vi.mocked(getReceiptScan).mockRejectedValue({

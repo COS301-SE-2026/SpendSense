@@ -1,6 +1,6 @@
 import {useCallback,useEffect,useState} from 'react'
 import {useLocation,useNavigate,useParams} from 'react-router-dom'
-import {ArrowLeft,CheckCircle2,FileText,RefreshCw} from 'lucide-react'
+import {ArrowLeft,Clock3,RefreshCw} from 'lucide-react'
 import {getReceiptScan,type ReceiptScan,type ReceiptExtraction,type ReceiptConfirmationResult} from '../features/receipts/receiptsApi'
 import type {ReceiptOccurrence} from '../features/receipts/receiptOccurrencesApi'
 import ReceiptExtractionForm,{type ReceiptReviewValues} from '../components/receipts/ReceiptExtractionForm'
@@ -166,44 +166,15 @@ export default function ReceiptReviewPage(){
                             ?'Your receipt payment has been recorded. The result below comes from SpendSense.'
                             :'Your receipt has been scanned. No payment has been recorded.'}
                     </p>
+                    {!confirmedResult&&(
+                        <p className="mt-3 flex items-center gap-2 text-xs font-medium text-[#6b6375] dark:text-[#a0aec0]">
+                            <Clock3 className="size-4 shrink-0 text-[#10775F] dark:text-[#5eead4]"/>
+                            Draft expires {new Date(scan.expiresAt).toLocaleString('en-ZA')}
+                        </p>
+                    )}
                 </section>
                 {!confirmedResult&&(
                     <>
-                        <section className="rounded-3xl border-2 border-[#091828] bg-white p-6 shadow-[5px_5px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[5px_5px_0_#060e20]">
-                            <div className="flex items-start gap-4">
-                                <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-[#DCEFE8] dark:bg-[#0f4f42]">
-                                    <FileText className="size-7 text-[#10775F] dark:text-[#5eead4]"/>
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <CheckCircle2 className="size-5 text-[#10775F] dark:text-[#5eead4]"/>
-                                        <h2 className="text-xl font-extrabold">Receipt ready</h2>
-                                    </div>
-                                    <p className="mt-2 text-sm leading-6 text-[#6b6375] dark:text-[#a0aec0]">
-                                        Your temporary scan draft is ready for review.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="mt-5 rounded-2xl bg-[#F4FBF7] px-4 py-4 dark:bg-[#1c263c]">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
-                                    Receipt scan
-                                </p>
-                                <p className="mt-1 break-all text-sm font-semibold">{scan.id}</p>
-                                <p className="mt-3 text-xs text-[#6b6375] dark:text-[#a0aec0]">
-                                    Draft expires {new Date(scan.expiresAt).toLocaleString('en-ZA')}
-                                </p>
-                            </div>
-                            {scan.preselectedOccurrenceId&&(
-                                <div className="mt-4 rounded-2xl bg-[#E8E4F4] px-4 py-3 dark:bg-[#302A43]">
-                                    <p className="text-xs font-bold text-[#5B4D8B] dark:text-[#c5b3f0]">
-                                        Payment preselected from your previous screen
-                                    </p>
-                                    <p className="mt-1 break-all text-xs text-[#6b6375] dark:text-[#a0aec0]">
-                                        {scan.preselectedOccurrenceId}
-                                    </p>
-                                </div>
-                            )}
-                        </section>
                         <ReceiptExtractionForm
                             key={`${scan.id}-extraction`}
                             extraction={scan.extraction}

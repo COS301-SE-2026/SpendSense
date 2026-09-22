@@ -1,4 +1,3 @@
-
 import {apiDataFetch} from '../../lib/api'
 
 export type ReceiptConfidence='HIGH'|'MEDIUM'|'LOW'|'UNKNOWN'
@@ -68,9 +67,9 @@ export type ReceiptConfirmationResult={
     replayed:boolean
     contribution:ReceiptContribution
     occurrence:ReceiptConfirmedOccurrence
-    settlement:unknown|null
-    scoreImpact:unknown|null
-    rewards:unknown|null
+    settlement:unknown
+    scoreImpact:unknown
+    rewards:unknown
 }
 
 export async function scanReceipt(image:File,preselectedOccurrenceId?:string){

@@ -1,4 +1,3 @@
-
 import {useState} from 'react'
 import {Check,FileText,Info,TriangleAlert,X} from 'lucide-react'
 import type {ReceiptExtraction,ReceiptConfidence} from '../../features/receipts/receiptsApi'
@@ -31,7 +30,7 @@ function getInitialReceiptValues(extraction:ReceiptExtraction):ReceiptReviewValu
     }
 }
 
-function ConfidenceBadge({confidence}:{confidence:ReceiptConfidence}){
+function ConfidenceBadge({confidence}:Readonly<{confidence:ReceiptConfidence}>){
     return(
         <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${confidenceStyles[confidence]}`}>
             {confidence} confidence

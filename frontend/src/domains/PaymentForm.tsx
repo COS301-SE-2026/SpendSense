@@ -36,6 +36,9 @@ function moneyToCents(value:string|number):bigint|null{
 function centsToMoney(value:bigint){
     return `${value/100n}.${(value%100n).toString().padStart(2,'0')}`
 }
+function currencyLabel(currency:string){
+    return currency==='ZAR'?'R':currency
+}
 function canOccurrenceRecord(balance:ReceiptOccurrence){
     const remaining=moneyToCents(balance.amountRemaining)
     return balance.canRecord??(
@@ -174,6 +177,35 @@ export default function ObligationForm(){
         });
         return()=>{active=false};
     },[]);
+    const handleContributionFailure=async(error:unknown,contributionRequested:boolean,balance:ReceiptOccurrence)=>{
+        const failure=getApiFailure(error);
+        if(!contributionRequested){
+            setAttempt(null);
+            setSubmitError("Unable to refresh the current payment balance. Please try again.");
+        }else if(isBalanceConflict(failure.code,failure.message)){
+            setAttempt(null);
+            try{
+                const refreshed=await getReceiptOccurrenceBalance(balance.id);
+                setCurrentBalance(refreshed.occurrence);
+                setSubmitError("The payment balance has changed. Review the updated balance before trying again.");
+            }catch{
+                setCurrentBalance(null);
+                setSubmitError("The payment balance has changed, but SpendSense could not refresh it. Please select the payment again.");
+            }
+        }else if(
+            failure.code==="IDEMPOTENCY_KEY_REUSED"||
+            failure.message.includes("Idempotency key has already been used with different payment data")
+        ){
+            setAttempt(null);
+            setSubmissionBlocked(true);
+            setSubmitError("This payment request could not be safely retried. Check your payment history before submitting another payment.");
+        }else if(failure.statusCode&&failure.statusCode>=400&&failure.statusCode<500){
+            setAttempt(null);
+            setSubmitError(failure.message||"Please check your payment details before trying again.");
+        }else{
+            setSubmitError("We could not confirm whether the payment was recorded. Retry the same payment to check safely.");
+        }
+    };
     const onSubmit=async(formData:PaymentFormData)=>{
         if(isSubmitting||showPopup||submissionBlocked)return;
         setSubmitError(null);
@@ -221,33 +253,7 @@ export default function ObligationForm(){
             setPaymentResult(result);
             setShowPopup(true);
         }catch(error){
-            const failure=getApiFailure(error);
-            if(!contributionRequested){
-                setAttempt(null);
-                setSubmitError("Unable to refresh the current payment balance. Please try again.");
-            }else if(isBalanceConflict(failure.code,failure.message)){
-                setAttempt(null);
-                try{
-                    const refreshed=await getReceiptOccurrenceBalance(balanceForSelection.id);
-                    setCurrentBalance(refreshed.occurrence);
-                    setSubmitError("The payment balance has changed. Review the updated balance before trying again.");
-                }catch{
-                    setCurrentBalance(null);
-                    setSubmitError("The payment balance has changed, but SpendSense could not refresh it. Please select the payment again.");
-                }
-            }else if(
-                failure.code==="IDEMPOTENCY_KEY_REUSED"||
-                failure.message.includes("Idempotency key has already been used with different payment data")
-            ){
-                setAttempt(null);
-                setSubmissionBlocked(true);
-                setSubmitError("This payment request could not be safely retried. Check your payment history before submitting another payment.");
-            }else if(failure.statusCode&&failure.statusCode>=400&&failure.statusCode<500){
-                setAttempt(null);
-                setSubmitError(failure.message||"Please check your payment details before trying again.");
-            }else{
-                setSubmitError("We could not confirm whether the payment was recorded. Retry the same payment to check safely.");
-            }
+            await handleContributionFailure(error,contributionRequested,balanceForSelection);
         }finally{
             setSubmitting(false);
         }
@@ -303,13 +309,17 @@ export default function ObligationForm(){
                                 name="occurrenceId"
                                 render={({field})=>{
                                     const selected=occurrences.find(occurrence=>occurrence.id===field.value)
+                                    let unselectedName='Select a payment'
+                                    if(field.value)unselectedName='Previously selected payment'
+                                    else if(occurrencesLoading)unselectedName='Loading available payments...'
                                     return(
                                         <div className="space-y-1">
-                                            <label className="text-xs font-semibold text-[#091828] dark:text-white">Allocate payment to</label>
+                                            <label htmlFor="occurrence-picker" className="text-xs font-semibold text-[#091828] dark:text-white">Allocate payment to</label>
                                             <Popover open={isOccurrencePickerOpen} onOpenChange={setIsOccurrencePickerOpen}>
                                                 <PopoverTrigger asChild>
                                                     <button
                                                         type="button"
+                                                        id="occurrence-picker"
                                                         aria-label="Allocate payment to"
                                                         aria-expanded={isOccurrencePickerOpen}
                                                         disabled={occurrencesLoading}
@@ -320,10 +330,10 @@ export default function ObligationForm(){
                                                         </div>
                                                         <div className="min-w-0 flex-1">
                                                             <p className="truncate text-sm font-semibold">
-                                                                {selected?.obligation.name??(field.value?'Previously selected payment':occurrencesLoading?'Loading available payments...':'Select a payment')}
+                                                                {selected?.obligation.name??unselectedName}
                                                             </p>
                                                             <p className="mt-0.5 text-xs text-[#6b6375] dark:text-[#a0aec0]">
-                                                                {selected?`${selected.currency==='ZAR'?'R':selected.currency} ${Number(selected.amountDue).toFixed(2)} · Due ${selected.dueDate.slice(0,10)}`:'Choose from your outstanding payments'}
+                                                                {selected?`${currencyLabel(selected.currency)} ${Number(selected.amountDue).toFixed(2)} · Due ${selected.dueDate.slice(0,10)}`:'Choose from your outstanding payments'}
                                                             </p>
                                                         </div>
                                                         <ChevronDown className={`size-5 shrink-0 text-[#6b6375] transition-transform dark:text-[#a0aec0] ${isOccurrencePickerOpen?'rotate-180':''}`}/>
@@ -429,7 +439,7 @@ export default function ObligationForm(){
                                     Expected remaining
                                 </span>
                                 <span className="text-lg font-extrabold text-[#10775F] dark:text-[#5eead4]">
-                                    {expectedRemaining===null?'Check amount':`${balanceForSelection.currency==='ZAR'?'R':balanceForSelection.currency} ${expectedRemaining}`}
+                                    {expectedRemaining===null?'Check amount':`${currencyLabel(balanceForSelection.currency)} ${expectedRemaining}`}
                                 </span>
                             </div>
                             {amountCents!==null&&remainingCents!==null&&amountCents>remainingCents&&(
@@ -455,6 +465,7 @@ export default function ObligationForm(){
                                     <PopoverTrigger asChild>
                                         <button
                                             type="button"
+                                            id="paidDate"
                                             className="flex w-full items-center rounded-2xl bg-white px-4 py-3.5 text-left text-sm text-[#091828] dark:bg-[#131b2e] dark:text-white"
                                         >
                                             <CalenderIcon className="mr-2 h-4 w-4 text-[#6b6375] dark:text-[#a0aec0]"/>
@@ -525,8 +536,8 @@ function PaymentImpactModal({
     const streak=result.rewards?.currentPaymentStreak??0;
     const mood=result.rewards?.mascotMood;
     return(
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#091828]/40 px-4 pb-6 dark:bg-black/70">
-            <div role="dialog" aria-modal="true" aria-labelledby="contribution-result-title" className="w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[6px_6px_0_#091828] animate-in fade-in slide-in-from-bottom-5 duration-300 dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[6px_6px_0_#060e20]">
+        <dialog open aria-modal="true" aria-labelledby="contribution-result-title" className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-end justify-center border-0 bg-[#091828]/40 px-4 pb-6 dark:bg-black/70">
+            <div className="w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[6px_6px_0_#091828] animate-in fade-in slide-in-from-bottom-5 duration-300 dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[6px_6px_0_#060e20]">
                 <div className="flex items-start gap-3">
                     <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#DCEFE8] dark:bg-[#0f4f42]">
                         <CheckCircle2 className="size-6 text-[#10775F] dark:text-[#5eead4]"/>
@@ -593,7 +604,7 @@ function PaymentImpactModal({
                     Back to dashboard
                 </LongButton>
             </div>
-        </div>
+        </dialog>
     );
 }
 

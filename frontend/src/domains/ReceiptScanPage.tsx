@@ -1,4 +1,3 @@
-
 import React,{useEffect,useRef,useState} from 'react'
 import {useNavigate,useSearchParams} from 'react-router-dom'
 import {scanReceipt,type ReceiptScan} from '../features/receipts/receiptsApi'
@@ -59,8 +58,8 @@ export default function ReceiptScanPage(){
             const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false})
             cameraStreamRef.current=stream
             setIsCameraOpen(true)
-        }catch(caught){
-            const denied=(caught as {name?:string})?.name==='NotAllowedError'||(caught as {name?:string})?.name==='PermissionDeniedError'
+        }catch(error){
+            const denied=(error as {name?:string})?.name==='NotAllowedError'||(error as {name?:string})?.name==='PermissionDeniedError'
             setError(denied?'Camera access was denied. You can still upload an image.':'Unable to access your camera. You can still upload an image.')
         }finally{
             setIsStartingCamera(false)
@@ -69,7 +68,7 @@ export default function ReceiptScanPage(){
 
     async function capturePhoto(){
         const video=videoRef.current
-        if(!video||!video.videoWidth||!video.videoHeight){
+        if(!video?.videoWidth||!video.videoHeight){
             setError('Camera is not ready. Please try again or upload an image.')
             return
         }
@@ -136,8 +135,8 @@ export default function ReceiptScanPage(){
             const result=await scanReceipt(image,occurrenceId)
             setScan(result)
             navigate(`/receipts/scans/${encodeURIComponent(result.id)}/review`,{state:{scan:result}})
-        }catch(caught){
-            const code=(caught as {error?:{code?:string}})?.error?.code
+        }catch(error){
+            const code=(error as {error?:{code?:string}})?.error?.code
             setError(scanErrorMessages[code??'']??'Unable to scan receipt. Please try again.')
             setHasScanFailed(true)
         }finally{
@@ -175,7 +174,7 @@ export default function ReceiptScanPage(){
                 <section className="relative overflow-hidden rounded-[2rem] border-2 border-[#091828] bg-[#F4FBF7] p-6 shadow-[7px_7px_0_#091828] dark:border-white dark:bg-[#182720] dark:shadow-[7px_7px_0_#FFFFFF]">
                     <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-[#DCEFE8] dark:bg-[#284338]"/>
                     <div className="relative">
-                        {isCameraOpen?(
+                        {isCameraOpen&&(
                             <>
                                 <video ref={videoRef} autoPlay playsInline muted aria-label="Receipt camera preview" className="max-h-[420px] w-full rounded-[1.5rem] border-2 border-[#091828] bg-black object-contain dark:border-white"/>
                                 <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -190,7 +189,8 @@ export default function ReceiptScanPage(){
                                     Upload image instead
                                 </button>
                             </>
-                        ):previewUrl?(
+                        )}
+                        {!isCameraOpen&&previewUrl&&(
                             <>
                                 <div className="overflow-hidden rounded-[1.5rem] border-2 border-[#091828] bg-white shadow-[4px_4px_0_#091828] dark:border-white dark:bg-[#1B2631] dark:shadow-[4px_4px_0_#FFFFFF]">
                                     <img
@@ -234,7 +234,8 @@ export default function ReceiptScanPage(){
                                     {isScanning?'Reading your receipt...':'Scan receipt'}
                                 </button>
                             </>
-                        ):(
+                        )}
+                        {!isCameraOpen&&!previewUrl&&(
                             <>
                                 <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-[1.5rem] border-2 border-[#091828] bg-[#FFE9B5] text-4xl shadow-[4px_4px_0_#091828] dark:border-white dark:bg-[#574821] dark:shadow-[4px_4px_0_#FFFFFF]">
                                     🧾
@@ -284,14 +285,14 @@ export default function ReceiptScanPage(){
                             aria-label="Upload receipt image"
                         />
                         {isScanning&&(
-                            <p role="status" className="mt-4 text-center text-sm font-bold">
+                            <output className="mt-4 block text-center text-sm font-bold">
                                 Reading your receipt...
-                            </p>
+                            </output>
                         )}
                         {scan?.status==='READY_FOR_REVIEW'&&(
-                            <p role="status" className="mt-4 rounded-2xl border-2 border-[#091828] bg-[#DCEFE8] px-4 py-3 text-sm font-bold shadow-[3px_3px_0_#091828] dark:border-white dark:bg-[#0f4f42] dark:shadow-[3px_3px_0_#FFFFFF]">
+                            <output className="mt-4 block rounded-2xl border-2 border-[#091828] bg-[#DCEFE8] px-4 py-3 text-sm font-bold shadow-[3px_3px_0_#091828] dark:border-white dark:bg-[#0f4f42] dark:shadow-[3px_3px_0_#FFFFFF]">
                                 Receipt scanned. Ready for review.
-                            </p>
+                            </output>
                         )}
                         {error&&(
                             <p role="alert" className="mt-4 rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-4 py-3 text-sm font-bold shadow-[3px_3px_0_#091828] dark:border-white dark:bg-[#4B2635] dark:shadow-[3px_3px_0_#FFFFFF]">
