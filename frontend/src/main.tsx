@@ -1,6 +1,6 @@
-import { StrictMode} from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import {StrictMode} from 'react'
+import {createRoot} from 'react-dom/client'
+import {BrowserRouter,Routes,Route} from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import DashboardPage from '@/domains/DashboardPage.tsx'
@@ -31,8 +31,8 @@ import ProfilePage from './domains/ProfilePage.tsx'
 import LandingPage from './domains/LandingPage.tsx'
 import OnboardingPage from './domains/OnboardingPage.tsx'
 import NotificationsPage from './domains/NotificationsPage.tsx'
-import { NotificationsProvider } from './features/notifications/NotificationsContext.tsx'
-import { NotificationListener } from './features/notifications/NotificationListener.tsx'
+import {NotificationsProvider} from './features/notifications/NotificationsContext.tsx'
+import {NotificationListener} from './features/notifications/NotificationListener.tsx'
 import TopicQuizPage from './domains/TopicQuizPage.tsx'
 import TopicQuizTeachingPage from './domains/TopicQuizTeachingPage.tsx'
 import QuizQuestionPage from './domains/QuizQuestionPage.tsx'
@@ -56,70 +56,78 @@ import MonthPlanningPage from './features/simulation/screens/MonthPlanningPage.t
 import {SurpriseEventRevealPage,SurpriseEventDecisionPage} from './features/simulation/screens/SurpriseEventPage.tsx'
 import {SurpriseEventResultPage} from './features/simulation/screens/SurpriseEventResultPage.tsx'
 import MonthSummaryPage from './features/simulation/screens/MonthSummaryPage.tsx'
+import ScoreBreakdownPage from './domains/ScoreBreakdownPage.tsx'
+import SimulationBoardPage from './domains/SimulationBoardPage.tsx'
+import SimulationObligationDetailPage from './domains/SimulationObligationDetailPage.tsx'
+import SimulationRecovery from './domains/SimulationRecovery.tsx'
+import PaymentForm from './domains/PaymentForm.tsx'
 
 initAuthListener()
 initTheme()
 initReducedMotion()
-import PaymentForm from './domains/PaymentForm.tsx'
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <ScrollToTop/>
-      <NotificationsProvider>
-        <NotificationListener/>
-        <Routes>
-          <Route path="/" element={<HomeRoute />}/>
-          <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path="/dev" element={<App />} />
-          <Route path="/calendar" element={<CalendarPage />}/>
-          <Route path="/calendar/scheduled" element={<ProtectedRoute><ScheduledPaymentsPage/></ProtectedRoute>}/>
-          <Route path="/login" element={<LoginPage />}/>
-          <Route path="/register" element={<RegisterPage/>}/>
-          <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm/></ProtectedRoute>}/>
-          <Route path="/stickers" element={<StickerAlbumPage />}/>
-          <Route path="/stickers/:badgeKey" element={<StickerDetailPage />}/>
-          <Route path="/paymentForm" element={<PaymentForm/>}/>
-          <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
-          <Route path="/profile" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
-          <Route path="/landing" element={<LandingPage/>}/>
-          <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
-          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
-          <Route path="/quests" element={<ProtectedRoute><QuestsPage/></ProtectedRoute>}/>
-          <Route path="/quiz" element={<ProtectedRoute><QuizPage/></ProtectedRoute>}/>
-          <Route path="/quiz/topics/:topic" element={<ProtectedRoute><TopicQuizTeachingPage/></ProtectedRoute>}/>
-          <Route path="/quiz/session/:sessionId" element={<ProtectedRoute><QuizQuestionPage/></ProtectedRoute>}/>
-          <Route path="/quiz/topics" element={<ProtectedRoute><TopicQuizPage/></ProtectedRoute>}/>
-          <Route path="/quiz/session/:sessionId/feedback" element={<ProtectedRoute><QuizAnswerFeedbackPage/></ProtectedRoute>}/>
-          <Route path="/quiz/session/:sessionId/results" element={<ProtectedRoute><QuizResultsPage/></ProtectedRoute>}/>
-          <Route path="/friends" element={<FriendsPage/>}/>
-          <Route path="/friends/list" element={<FriendsListPage/>}/>
-          <Route path="/friends/add" element={<AddFriendPage/>}/>
-          <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
-          <Route path="/friends/activity" element={<FriendActivityPage/>}/>
-          <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
-          <Route path="/wagers" element={<WagersPage/>}/>
-          <Route path="/wagers/new" element={<NewWagerPage/>}/>
-          <Route path="/wagers/:wagerId" element={<WagerDetailPage/>}/>
-          <Route path="/mascot" element={<MascotPage/>}/>
-          <Route path="/mascot/shop" element={<MascotShopPage/>}/>
-          <Route path="/wrapped" element={<WrappedPage/>}/>
-          <Route path="/settings" element={<SettingsPage/>}/>
-          <Route path="/settings/preferences" element={<SettingsPreferencesPage/>}/>
-          <Route path="/settings/notifications" element={<SettingsNotificationsPage/>}/>
-          <Route path="/settings/account" element={<SettingsAccountPage/>}/>
-          <Route path="/edit-profile" element={<EditProfilePage/>}/>
-          <Route path="/help" element={<HelpPage/>}/>
-          <Route path="/simulation" element={<ProtectedRoute><SimulationEntryPage/></ProtectedRoute>}/>
-          <Route path="/simulation/briefing" element={<ProtectedRoute><SimulationBriefingPage/></ProtectedRoute>}/>
-          <Route path="/simulation/setup/:sessionId" element={<ProtectedRoute><BudgetAllocationPage/></ProtectedRoute>}/>
-          <Route path="/simulation/setup/:sessionId/planning" element={<ProtectedRoute><MonthPlanningPage/></ProtectedRoute>}/>
-          <Route path="/simulation/session/:sessionId/event" element={<ProtectedRoute><SurpriseEventRevealPage/></ProtectedRoute>}/>
-          <Route path="/simulation/session/:sessionId/event/decision" element={<ProtectedRoute><SurpriseEventDecisionPage/></ProtectedRoute>}/>
-          <Route path="/simulation/session/:sessionId/event-result" element={<ProtectedRoute><SurpriseEventResultPage/></ProtectedRoute>}/>
-          <Route path="/simulation/session/:sessionId/summary" element={<ProtectedRoute><MonthSummaryPage/></ProtectedRoute>}/>
-        </Routes>
-      </NotificationsProvider>
-    </BrowserRouter>
-  </StrictMode>,
+    <StrictMode>
+        <BrowserRouter>
+            <ScrollToTop/>
+            <NotificationsProvider>
+                <NotificationListener/>
+                <Routes>
+                    <Route path="/" element={<HomeRoute/>}/>
+                    <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage/></ProtectedRoute>}/>
+                    <Route path="/dev" element={<App/>}/>
+                    <Route path="/calendar" element={<CalendarPage/>}/>
+                    <Route path="/calendar/scheduled" element={<ProtectedRoute><ScheduledPaymentsPage/></ProtectedRoute>}/>
+                    <Route path="/login" element={<LoginPage/>}/>
+                    <Route path="/register" element={<RegisterPage/>}/>
+                    <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm/></ProtectedRoute>}/>
+                    <Route path="/stickers" element={<StickerAlbumPage/>}/>
+                    <Route path="/stickers/:badgeKey" element={<StickerDetailPage/>}/>
+                    <Route path="/paymentForm" element={<PaymentForm/>}/>
+                    <Route path="/insights" element={<ProtectedRoute><InsightsPage/></ProtectedRoute>}/>
+                    <Route path="/profile" element={<ProtectedRoute><ProfilePage/></ProtectedRoute>}/>
+                    <Route path="/landing" element={<LandingPage/>}/>
+                    <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage/></ProtectedRoute>}/>
+                    <Route path="/notifications" element={<ProtectedRoute><NotificationsPage/></ProtectedRoute>}/>
+                    <Route path="/quests" element={<ProtectedRoute><QuestsPage/></ProtectedRoute>}/>
+                    <Route path="/quiz" element={<ProtectedRoute><QuizPage/></ProtectedRoute>}/>
+                    <Route path="/quiz/topics/:topic" element={<ProtectedRoute><TopicQuizTeachingPage/></ProtectedRoute>}/>
+                    <Route path="/quiz/session/:sessionId" element={<ProtectedRoute><QuizQuestionPage/></ProtectedRoute>}/>
+                    <Route path="/quiz/topics" element={<ProtectedRoute><TopicQuizPage/></ProtectedRoute>}/>
+                    <Route path="/quiz/session/:sessionId/feedback" element={<ProtectedRoute><QuizAnswerFeedbackPage/></ProtectedRoute>}/>
+                    <Route path="/quiz/session/:sessionId/results" element={<ProtectedRoute><QuizResultsPage/></ProtectedRoute>}/>
+                    <Route path="/friends" element={<FriendsPage/>}/>
+                    <Route path="/friends/list" element={<FriendsListPage/>}/>
+                    <Route path="/friends/add" element={<AddFriendPage/>}/>
+                    <Route path="/friends/:friendId" element={<FriendProfilePage/>}/>
+                    <Route path="/friends/activity" element={<FriendActivityPage/>}/>
+                    <Route path="/friends/leaderboard" element={<LeaderboardPage/>}/>
+                    <Route path="/wagers" element={<WagersPage/>}/>
+                    <Route path="/wagers/new" element={<NewWagerPage/>}/>
+                    <Route path="/wagers/:wagerId" element={<WagerDetailPage/>}/>
+                    <Route path="/mascot" element={<MascotPage/>}/>
+                    <Route path="/mascot/shop" element={<MascotShopPage/>}/>
+                    <Route path="/wrapped" element={<WrappedPage/>}/>
+                    <Route path="/settings" element={<SettingsPage/>}/>
+                    <Route path="/settings/preferences" element={<SettingsPreferencesPage/>}/>
+                    <Route path="/settings/notifications" element={<SettingsNotificationsPage/>}/>
+                    <Route path="/settings/account" element={<SettingsAccountPage/>}/>
+                    <Route path="/edit-profile" element={<EditProfilePage/>}/>
+                    <Route path="/help" element={<HelpPage/>}/>
+                    <Route path="/simulation" element={<ProtectedRoute><SimulationEntryPage/></ProtectedRoute>}/>
+                    <Route path="/simulation/briefing" element={<ProtectedRoute><SimulationBriefingPage/></ProtectedRoute>}/>
+                    <Route path="/simulation/setup/:sessionId" element={<ProtectedRoute><BudgetAllocationPage/></ProtectedRoute>}/>
+                    <Route path="/simulation/setup/:sessionId/planning" element={<ProtectedRoute><MonthPlanningPage/></ProtectedRoute>}/>
+                    <Route path="/simulation/recovery" element={<ProtectedRoute><SimulationRecovery/></ProtectedRoute>}/>
+                    <Route path="/simulation/session/:sessionId/board" element={<ProtectedRoute><SimulationBoardPage/></ProtectedRoute>}/>
+                    <Route path="/simulation/session/:sessionId/obligations/:obligationId" element={<ProtectedRoute><SimulationObligationDetailPage/></ProtectedRoute>}/>
+                    <Route path="/simulation/session/:sessionId/score-breakdown" element={<ProtectedRoute><ScoreBreakdownPage/></ProtectedRoute>}/>
+                    <Route path="/simulation/session/:sessionId/event" element={<ProtectedRoute><SurpriseEventRevealPage/></ProtectedRoute>}/>
+                    <Route path="/simulation/session/:sessionId/event/decision" element={<ProtectedRoute><SurpriseEventDecisionPage/></ProtectedRoute>}/>
+                    <Route path="/simulation/session/:sessionId/event-result" element={<ProtectedRoute><SurpriseEventResultPage/></ProtectedRoute>}/>
+                    <Route path="/simulation/session/:sessionId/summary" element={<ProtectedRoute><MonthSummaryPage/></ProtectedRoute>}/>
+                </Routes>
+            </NotificationsProvider>
+        </BrowserRouter>
+    </StrictMode>
 )

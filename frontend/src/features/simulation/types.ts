@@ -168,6 +168,20 @@ export interface SimulationActionResponse extends SimulationDetail {
   replayed: boolean
 }
 
+export interface SimulationStatusResponse
+  extends SimulationDetail {
+  replayed: boolean
+}
+
+export interface DiscardSimulationResponse {
+  session: {
+    id: string
+    status: 'ABANDONED'
+    abandonedAt: string
+  }
+  replayed: boolean
+}
+
 export type SetupRequest =
   | { allocationId: string }
   | { currentAmount: string }
