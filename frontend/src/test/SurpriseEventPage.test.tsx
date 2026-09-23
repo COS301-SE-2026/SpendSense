@@ -58,7 +58,7 @@ function renderRoute(initialEntry:string){
                     element={<p>Event result handoff</p>}
                 />
                 <Route
-                    path="/simulation/session/:sessionId"
+                    path="/simulation/session/:sessionId/board"
                     element={<p>Board handoff</p>}
                 />
                 <Route

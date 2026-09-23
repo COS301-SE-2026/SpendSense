@@ -10,6 +10,7 @@ interface ResultAcknowledgementProps {
   kind: ResultAcknowledgementKind;
   status?: ResultAcknowledgementStatus;
   onContinue: () => void;
+  showContinue?: boolean;
 }
 
 const copyByKind: Record<
@@ -33,6 +34,7 @@ export function ResultAcknowledgement({
   kind,
   status = 'recovered',
   onContinue,
+  showContinue = true,
 }: ResultAcknowledgementProps) {
   const copy = copyByKind[kind];
   const obligation =
@@ -103,7 +105,7 @@ export function ResultAcknowledgement({
             </div>
           </dl>
 
-          {canContinue && (
+          {canContinue && showContinue && (
             <LongButton type="button" onClick={onContinue}>
               Continue
             </LongButton>

@@ -67,7 +67,7 @@ export default function SimulationEntryPage() {
       return;
     }
 
-    navigate(`/simulation/session/${session.id}`);
+    navigate("/simulation/recovery");
   };
 
   const discard = async () => {

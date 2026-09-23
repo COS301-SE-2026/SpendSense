@@ -1,6 +1,5 @@
-
 import React from 'react'
-import {fireEvent,render,screen,waitFor,within} from '@testing-library/react'
+import {fireEvent,render,screen,waitFor} from '@testing-library/react'
 import {MemoryRouter,Route,Routes} from 'react-router-dom'
 import {beforeEach,describe,expect,it,vi} from 'vitest'
 import '@testing-library/jest-dom'
@@ -29,7 +28,7 @@ function renderRoute(){
                     element={<MonthSummaryPage/>}
                 />
                 <Route
-                    path="/simulation/session/:sessionId"
+                    path="/simulation/session/:sessionId/board"
                     element={<p>Board handoff</p>}
                 />
                 <Route
@@ -73,24 +72,15 @@ describe('Month summary and completion flow',()=>{
         expect(screen.getByText('Your final score')).toBeInTheDocument()
         expect(screen.getByText('190.00')).toBeInTheDocument()
     })
-    it('shows immutable final balances and budget values',async()=>{
-        renderRoute()
-        expect(await screen.findByText('Final balances')).toBeInTheDocument()
-        expect(screen.getByText('Your remaining budget')).toBeInTheDocument()
-        expect(screen.getByText('46.67%')).toBeInTheDocument()
-        expect(screen.getByText('1.20×')).toBeInTheDocument()
-        expect(screen.getByText('40.00 points')).toBeInTheDocument()
-    })
-    it('renders obligation and event outcomes supplied by the API',async()=>{
+    it('keeps the detailed financial and outcome report on the score breakdown page',async()=>{
         renderRoute()
         await screen.findByText('Month complete!')
-        const obligationSection=screen.getByText('Obligation outcomes').parentElement!
-        const eventSection=screen.getByText('Surprise event outcomes').parentElement!
-        expect(within(obligationSection).getByText('Paid on time')).toBeInTheDocument()
-        expect(within(obligationSection).getByText('Paid late')).toBeInTheDocument()
-        expect(within(obligationSection).getByText('Missed')).toBeInTheDocument()
-        expect(within(eventSection).getByText('Resolved')).toBeInTheDocument()
-        expect(within(eventSection).getByText('Timed out')).toBeInTheDocument()
+        expect(screen.queryByText('Final balances')).not.toBeInTheDocument()
+        expect(screen.queryByText('Your remaining budget')).not.toBeInTheDocument()
+        expect(screen.queryByText('Obligation outcomes')).not.toBeInTheDocument()
+        expect(screen.queryByText('Surprise event outcomes')).not.toBeInTheDocument()
+        expect(screen.queryByText('Recent score activity')).not.toBeInTheDocument()
+        expect(screen.getByRole('button',{name:/review score breakdown/i})).toBeInTheDocument()
     })
     it('shows the fixed 15 XP reward without inventing a coin reward',async()=>{
         renderRoute()

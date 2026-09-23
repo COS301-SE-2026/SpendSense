@@ -20,6 +20,7 @@ interface SimulationBoardProps {
   onRefetch: () => Promise<unknown> | void
   onLeave: () => void
   onDiscarded: () => void
+  onOpenObligation?:(obligationId:string)=>void
 }
 
 export function SimulationBoard({
@@ -28,6 +29,7 @@ export function SimulationBoard({
   onRefetch,
   onLeave,
   onDiscarded,
+  onOpenObligation,
 }: SimulationBoardProps) {
   const [advancing, setAdvancing] = React.useState(false)
   const [advanceError, setAdvanceError] =
@@ -140,6 +142,7 @@ export function SimulationBoard({
           daysInMonth={simulation.session.daysInMonth}
           obligations={simulation.obligations}
           canPay={canPay}
+          onOpenObligation={onOpenObligation}
         />
         <RecentScoreActivity
           entries={simulation.recentScoreEntries}

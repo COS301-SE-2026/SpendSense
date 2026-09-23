@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { ConflictException } from '@nestjs/common';
-import { SimulationActionType } from '@prisma/client';
+import { Prisma, SimulationActionType } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import { SimulationTransitionService } from './simulation-transition.service';
 import { SimulationsService } from './simulations.service';
@@ -45,8 +45,8 @@ const resolutionSession = (overrides: Record<string, unknown> = {}) => ({
   status: 'ACTIVE',
   timedMode: false,
   currentDay: 4,
-  currentBalance: '100.00',
-  savingsBalance: '1000.00',
+  currentBalance: new Prisma.Decimal('100.00'),
+  savingsBalance: new Prisma.Decimal('1000.00'),
   presentationHold: 'EVENT_REVEAL',
   events: [revealedEvent()],
   ...overrides,

@@ -129,6 +129,7 @@ export default function SimulationBoardPage() {
         simulation={simulation}
         onSimulationChange={setSimulation}
         onRefetch={refetch}
+        onOpenObligation={(obligationId)=>{navigate(`/simulation/session/${sessionId}/obligations/${obligationId}`)}}
         onLeave={() => {
           navigate('/simulation')
         }}

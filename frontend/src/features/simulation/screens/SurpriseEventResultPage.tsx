@@ -1,22 +1,19 @@
 import {useCallback,useEffect,useRef,useState} from 'react'
-import {ArrowRight,Check,Clock3,Coins,RefreshCw,Wallet} from 'lucide-react'
+import {Check,Clock3,Coins,Wallet} from 'lucide-react'
 import {useLocation,useNavigate,useParams} from 'react-router-dom'
 import {ErrorCard,LoadingCard} from '@/components/common/AsyncStates'
 import {LongButton} from '@/components/common/LongButton'
 import {useSimulation} from '@/hooks/useSimulation'
+import {ResultAcknowledgement} from '@/components/simulation/ResultAcknowledgement'
 import {continueSimulation} from '../api'
 import {SimulationPageShell} from '../components/SimulationPageShell'
 import {createIdempotencyKey} from '../idempotency'
 import {formatSimulationMoney} from '../presentation'
-import {routeForSimulationState} from '../routing'
+import {pathForSimulationState,routeForSimulationState} from '../routing'
 import type {EventResolutionResult,SimulationDetail} from '../types'
 
 type ResultLocationState={
     eventResult?:EventResolutionResult
-}
-
-function getSessionPath(sessionId:string):string{
-    return `/simulation/session/${sessionId}`
 }
 
 function getErrorMessage(error:unknown):string{
@@ -29,30 +26,6 @@ function formatPoints(points:string):string{
         return points
     }
     return `${amount>0?'+':''}${points} points`
-}
-
-function routeAfterContinue(detail:SimulationDetail,sessionId:string):string{
-    const base=getSessionPath(sessionId)
-    const route=routeForSimulationState(detail)
-    switch(route){
-        case 'event-reveal':
-            return `${base}/event`
-        case 'event-result':
-            return `${base}/event-result`
-        case 'payment-result':
-            return `${base}/payment-result`
-        case 'summary':
-            return `${base}/summary`
-        case 'briefing':
-            return `/simulation/setup/${sessionId}`
-        case 'paused':
-            return `${base}/paused`
-        case 'entry':
-        case 'recovery':
-            return '/simulation'
-        default:
-            return base
-    }
 }
 
 export function SurpriseEventResultPage(){
@@ -74,7 +47,7 @@ export function SurpriseEventResultPage(){
         if(routeForSimulationState(detail)==='event-result'){
             return
         }
-        navigate(routeAfterContinue(detail,sessionId),{replace:true,state:null})
+        navigate(pathForSimulationState(detail),{replace:true,state:null})
     },[navigate,sessionId])
     useEffect(()=>{
         if(data&&!validResult){
@@ -95,7 +68,7 @@ export function SurpriseEventResultPage(){
             const result=await continueSimulation(sessionId,key)
             setSimulation(result)
             continueKeyRef.current=null
-            navigate(routeAfterContinue(result,sessionId),{
+            navigate(pathForSimulationState(result),{
                 replace:true,
                 state:null
             })
@@ -186,19 +159,13 @@ export function SurpriseEventResultPage(){
                     </div>
                 )}
                 {!eventResult&&(
-                    <div className="rounded-[22px] border-2 border-[#091828] bg-white p-5 shadow-[5px_6px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[5px_6px_0_#060E20]">
-                        <div className="flex items-center gap-2">
-                            <RefreshCw className="size-5 text-[#AC2A5D]" aria-hidden="true"/>
-                            <h3 className="text-lg font-black">
-                                {expired?'Event timed out':'Event result recorded'}
-                            </h3>
-                        </div>
-                        <p className="mt-3 text-sm leading-relaxed text-[#6B6375] dark:text-[#A0AEC0]">
-                            {expired
-                                ?'The decision deadline passed. The outcome below comes from your saved simulation.'
-                                :'Your decision was saved. The updated balances and recent activity are shown below.'}
-                        </p>
-                    </div>
+                    <ResultAcknowledgement
+                        detail={data}
+                        kind="event"
+                        status={expired?'expired':'recovered'}
+                        onContinue={()=>void continueGame()}
+                        showContinue={false}
+                    />
                 )}
                 {eventResult&&(
                     <div className="rounded-[22px] border-2 border-[#091828] bg-white p-5 shadow-[4px_5px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[4px_5px_0_#060E20]">
@@ -292,7 +259,7 @@ export function SurpriseEventResultPage(){
                 >
                     {submitting
                         ?'Returning to game…'
-                        :<>Back to game <ArrowRight className="ml-2 size-4" aria-hidden="true"/></>}
+                        :<>Back to game</>}
                 </LongButton>
             </section>
         </SimulationPageShell>

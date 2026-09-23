@@ -364,4 +364,23 @@ describe('SimulationBoard', () => {
       'test-idempotency-key',
     )
   })
+  it('will open the selected obligation when Pay is clicked',async()=>{
+    const user=userEvent.setup()
+    const onOpenObligation=vi.fn()
+    render(
+      <SimulationBoard
+        simulation={accessibilityFixture()}
+        onSimulationChange={vi.fn()}
+        onRefetch={vi.fn()}
+        onLeave={vi.fn()}
+        onDiscarded={vi.fn()}
+        onOpenObligation={onOpenObligation}
+      />,
+    )
+    await user.click(
+      screen.getByRole('button',{name:'Pay'}),
+    )
+    expect(onOpenObligation).toHaveBeenCalledWith('ob_fixture_2')
+    expect(onOpenObligation).toHaveBeenCalledTimes(1)
+  })
 })

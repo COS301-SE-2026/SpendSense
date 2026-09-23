@@ -99,6 +99,19 @@ describe('ResultAcknowledgement', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('allows a screen to supply its own Continue button', () => {
+    render(
+      <ResultAcknowledgement
+        detail={eventResultFixture}
+        kind="event"
+        onContinue={vi.fn()}
+        showContinue={false}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: 'Decision applied' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+  });
+
   it('calls the continue handler', async () => {
     const user = userEvent.setup();
     const onContinue = vi.fn();

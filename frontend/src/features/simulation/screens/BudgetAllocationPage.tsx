@@ -8,6 +8,7 @@ import { LongButton } from "@/components/common/LongButton";
 import { getSimulation } from "../api";
 import { SimulationPageShell } from "../components/SimulationPageShell";
 import { formatSimulationMoney } from "../presentation";
+import { pathForSimulationState } from "../routing";
 import type { SetupRequest, SimulationDetail } from "../types";
 
 function amountToNumber(amount: string): number {
@@ -45,7 +46,7 @@ export default function BudgetAllocationPage() {
       setDetail(nextDetail);
 
       if (nextDetail.session.status !== "BRIEFING") {
-        navigate(`/simulation/session/${sessionId}`, { replace: true });
+        navigate(pathForSimulationState(nextDetail),{replace:true});
       }
     } catch (requestError) {
       setError(

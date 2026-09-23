@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useState} from 'react'
-import {ArrowRight,Check,Landmark,PiggyBank,RotateCcw,Sparkles,Star,Trophy,Wallet} from 'lucide-react'
+import {Check,Sparkles,Star,Trophy} from 'lucide-react'
 import {useNavigate,useParams} from 'react-router-dom'
 import {ErrorCard,LoadingCard} from '@/components/common/AsyncStates'
 import {LongButton} from '@/components/common/LongButton'
@@ -7,28 +7,11 @@ import {getGamificationProfile} from '@/features/gamification/gamificationApi'
 import type {GamificationProfile} from '@/hooks/useGamificationProfile'
 import {useSimulation} from '@/hooks/useSimulation'
 import {SimulationPageShell} from '../components/SimulationPageShell'
-import {formatSimulationMoney} from '../presentation'
 import {routeForSimulationState} from '../routing'
 import type {SimulationDetail} from '../types'
 
 function getSessionPath(sessionId:string):string{
     return `/simulation/session/${sessionId}`
-}
-
-function formatPoints(points:string):string{
-    return `${points} points`
-}
-
-function outcomeLabel(key:string):string{
-    const labels:Record<string,string>={
-        paidOnTime:'Paid on time',
-        paidLate:'Paid late',
-        missed:'Missed',
-        unresolved:'Unresolved',
-        resolved:'Resolved',
-        expired:'Timed out'
-    }
-    return labels[key]??key.replace(/([a-z])([A-Z])/g,'$1 $2')
 }
 
 function routeFromDetail(detail:SimulationDetail,sessionId:string):string{
@@ -50,7 +33,7 @@ function routeFromDetail(detail:SimulationDetail,sessionId:string):string{
         case 'recovery':
             return '/simulation'
         default:
-            return base
+            return `${base}/board`
     }
 }
 
@@ -166,7 +149,7 @@ export default function MonthSummaryPage(){
                     </h2>
                     <p className="mt-3 text-sm leading-relaxed text-[#6B6375] dark:text-[#A0AEC0]">
                         You made it through {data.session.daysInMonth} fictional days.
-                        Here is how your month finished.
+                        Your results are ready to explore.
                     </p>
                 </div>
                 <div className="rounded-[22px] border-2 border-[#091828] bg-gradient-to-br from-[#FFF0F6] via-[#FFE1EC] to-[#F2EAFF] p-6 text-center shadow-[5px_6px_0_#091828] dark:border-[#060E20] dark:from-[#2D1B2E] dark:via-[#241D35] dark:to-[#1E243B] dark:shadow-[5px_6px_0_#060E20]">
@@ -219,123 +202,17 @@ export default function MonthSummaryPage(){
                         </button>
                     </div>
                 )}
-                <div className="rounded-[22px] border-2 border-[#091828] bg-white p-5 shadow-[4px_5px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[4px_5px_0_#060E20]">
-                    <div className="mb-5 flex items-center gap-2">
-                        <Wallet className="size-5 text-[#AC2A5D]" aria-hidden="true"/>
-                        <h3 className="text-lg font-black">Final balances</h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="rounded-[16px] border border-[#B9DFD5] bg-[#E0F5EF] p-4 text-[#16635A]">
-                            <Landmark className="size-5" aria-hidden="true"/>
-                            <p className="mt-2 text-xs font-extrabold">Current</p>
-                            <strong className="mt-1 block text-lg font-black">
-                                {formatSimulationMoney(completion.currentBalance)}
-                            </strong>
-                        </div>
-                        <div className="rounded-[16px] border border-[#D8CFF8] bg-[#EFEBFF] p-4 text-[#6650B0]">
-                            <PiggyBank className="size-5" aria-hidden="true"/>
-                            <p className="mt-2 text-xs font-extrabold">Savings</p>
-                            <strong className="mt-1 block text-lg font-black">
-                                {formatSimulationMoney(completion.savingsBalance)}
-                            </strong>
-                        </div>
-                    </div>
-                </div>
-                <div className="rounded-[22px] border-2 border-[#091828] bg-white p-5 shadow-[4px_5px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[4px_5px_0_#060E20]">
-                    <h3 className="mb-4 text-lg font-black">Your remaining budget</h3>
-                    <dl className="space-y-3 text-sm">
-                        <div className="flex items-center justify-between gap-4">
-                            <dt className="text-[#6B6375] dark:text-[#A0AEC0]">Total remaining</dt>
-                            <dd className="font-black">
-                                {formatSimulationMoney(completion.totalRemaining)}
-                            </dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-4">
-                            <dt className="text-[#6B6375] dark:text-[#A0AEC0]">Budget remaining</dt>
-                            <dd className="font-black">
-                                {completion.remainingPercentage}%
-                            </dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-4">
-                            <dt className="text-[#6B6375] dark:text-[#A0AEC0]">Savings multiplier</dt>
-                            <dd className="font-black">
-                                {completion.savingsRetentionMultiplier}×
-                            </dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-4">
-                            <dt className="text-[#6B6375] dark:text-[#A0AEC0]">Weighted remaining value</dt>
-                            <dd className="font-black">
-                                {formatSimulationMoney(completion.weightedRemaining)}
-                            </dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-4 border-t border-[#DCEBE7] pt-3 dark:border-[#2D3449]">
-                            <dt className="font-extrabold">Budget bonus</dt>
-                            <dd className="font-black text-[#AC2A5D] dark:text-[#FFB1C5]">
-                                {formatPoints(completion.budgetBonus)}
-                            </dd>
-                        </div>
-                    </dl>
-                    <p className="mt-4 rounded-xl bg-[#FFF1C8] p-3 text-xs font-semibold text-[#59430D] dark:bg-[#3D351B] dark:text-[#FFE4A3]">
-                        The backend gives remaining Savings a greater weight
-                        when calculating your final budget bonus.
-                    </p>
-                </div>
-                <div className="rounded-[22px] border-2 border-[#091828] bg-white p-5 shadow-[4px_5px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[4px_5px_0_#060E20]">
-                    <h3 className="mb-4 text-lg font-black">Obligation outcomes</h3>
-                    <dl className="space-y-3">
-                        {Object.entries(completion.obligations).map(([key,value])=>(
-                            <div key={key} className="flex items-center justify-between gap-3">
-                                <dt className="text-sm text-[#6B6375] dark:text-[#A0AEC0]">
-                                    {outcomeLabel(key)}
-                                </dt>
-                                <dd className="font-black">{value}</dd>
-                            </div>
-                        ))}
-                    </dl>
-                </div>
-                <div className="rounded-[22px] border-2 border-[#091828] bg-white p-5 shadow-[4px_5px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[4px_5px_0_#060E20]">
-                    <h3 className="mb-4 text-lg font-black">Surprise event outcomes</h3>
-                    <dl className="space-y-3">
-                        {Object.entries(completion.events).map(([key,value])=>(
-                            <div key={key} className="flex items-center justify-between gap-3">
-                                <dt className="text-sm text-[#6B6375] dark:text-[#A0AEC0]">
-                                    {outcomeLabel(key)}
-                                </dt>
-                                <dd className="font-black">{value}</dd>
-                            </div>
-                        ))}
-                    </dl>
-                </div>
-                {data.recentScoreEntries.length>0&&(
-                    <div className="rounded-[22px] border-2 border-[#091828] bg-white p-5 shadow-[4px_5px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[4px_5px_0_#060E20]">
-                        <h3 className="mb-4 text-lg font-black">Recent score activity</h3>
-                        <div className="space-y-3">
-                            {data.recentScoreEntries.map(entry=>(
-                                <div key={entry.id} className="flex items-start justify-between gap-3 text-sm">
-                                    <p className="text-[#6B6375] dark:text-[#A0AEC0]">
-                                        Day {entry.simulatedDay}: {entry.reason}
-                                    </p>
-                                    <strong className="shrink-0">
-                                        {Number(entry.pointsDelta)>0?'+':''}{entry.pointsDelta}
-                                    </strong>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
                 <div className="space-y-3 pt-2">
                     <LongButton
                         LongVariant="primaryPink"
                         onClick={()=>navigate(`${getSessionPath(sessionId)}/score-breakdown`)}
                     >
                         Review score breakdown
-                        <ArrowRight className="ml-2 size-4" aria-hidden="true"/>
                     </LongButton>
                     <LongButton
                         LongVariant="primaryDark"
                         onClick={()=>navigate('/simulation')}
                     >
-                        <RotateCcw className="mr-2 size-4" aria-hidden="true"/>
                         Play again
                     </LongButton>
                     <button
