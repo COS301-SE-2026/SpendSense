@@ -29,6 +29,9 @@ describe('BadgeEngineService', () => {
     quizSession: {
       count: jest.Mock;
     };
+    simulationSession: {
+      count: jest.Mock;
+    };
     userBadge: {
       findUnique: jest.Mock;
       create: jest.Mock;
@@ -70,6 +73,14 @@ describe('BadgeEngineService', () => {
     criteriaValue: 3,
     bonusCoins: 50,
   };
+  const firstSimulationBadge = {
+    id: 'badge-definition-6',
+    code: 'FIRST_SIMULATION_COMPLETE',
+    name: 'Month Navigator',
+    criteriaType: BadgeCriteriaType.SIMULATION_COMPLETION_COUNT,
+    criteriaValue: 1,
+    bonusCoins: 0,
+  };
   beforeEach(() => {
     notificationsService = {
       create: jest.fn().mockResolvedValue({ id: 'notification-1' }),
@@ -88,6 +99,9 @@ describe('BadgeEngineService', () => {
       quizSession: {
         count: jest.fn().mockResolvedValue(0),
       },
+      simulationSession: {
+        count: jest.fn().mockResolvedValue(0),
+      },
       userBadge: {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ id: 'user-badge-1' }),
@@ -101,6 +115,34 @@ describe('BadgeEngineService', () => {
       notificationsService as unknown as NotificationsService,
       rewardService as unknown as RewardService,
     );
+  });
+  it('awards the zero-coin first simulation badge only after a completed run', async () => {
+    transaction.simulationSession.count.mockResolvedValue(1);
+    transaction.badgeDefinition.findMany.mockResolvedValue([
+      firstSimulationBadge,
+    ]);
+
+    const result = await service.evaluateSimulationBadges(
+      {
+        userId: 'user-1',
+        sourceEventId: 'simulation-event-1',
+      },
+      transaction as unknown as Prisma.TransactionClient,
+    );
+
+    expect(transaction.simulationSession.count).toHaveBeenCalledWith({
+      where: { userId: 'user-1', status: 'COMPLETED' },
+    });
+    expect(transaction.userBadge.create).toHaveBeenCalledWith({
+      data: {
+        userId: 'user-1',
+        badgeDefinitionId: firstSimulationBadge.id,
+        progress: 1,
+        earnedAt: expect.any(Date) as Date,
+      },
+    });
+    expect(rewardService.grantCoins).not.toHaveBeenCalled();
+    expect(result).toEqual(['Month Navigator']);
   });
   it('creates a badge and notification when a payment badge is earned', async () => {
     transaction.badgeDefinition.findMany.mockResolvedValue([firstOnTimeBadge]);

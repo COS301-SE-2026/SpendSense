@@ -41,11 +41,34 @@ export class HttpExceptionFilter implements ExceptionFilter {
           ? exception.message
           : 'Internal server error';
 
+    const insufficientSimulationFunds =
+      typeof exceptionResponse === 'object' &&
+      exceptionResponse !== null &&
+      'message' in exceptionResponse &&
+      (exceptionResponse as Record<string, unknown>).message ===
+        'INSUFFICIENT_SIMULATION_FUNDS' &&
+      typeof (exceptionResponse as Record<string, unknown>).currentBalance ===
+        'string' &&
+      typeof (exceptionResponse as Record<string, unknown>).savingsBalance ===
+        'string' &&
+      typeof (exceptionResponse as Record<string, unknown>).remainingAmount ===
+        'string'
+        ? {
+            currentBalance: (exceptionResponse as Record<string, unknown>)
+              .currentBalance,
+            savingsBalance: (exceptionResponse as Record<string, unknown>)
+              .savingsBalance,
+            remainingAmount: (exceptionResponse as Record<string, unknown>)
+              .remainingAmount,
+          }
+        : {};
+
     response.status(statusCode).json({
       statusCode,
       message,
       timestamp: new Date().toISOString(),
       path: request.url,
+      ...insufficientSimulationFunds,
     });
   }
 }

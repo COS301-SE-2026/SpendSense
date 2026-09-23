@@ -1,0 +1,1 @@
+ALTER TYPE "SimulationActionType" ADD VALUE 'CREATE_SIMULATION';

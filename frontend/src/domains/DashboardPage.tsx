@@ -4,6 +4,8 @@ import {
 	User,
 	BookOpen,
 	CalendarCheck,
+	Gamepad2,
+	ArrowRight,
 } from "lucide-react"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { Progress } from "@/components/ui/progress"
@@ -174,9 +176,32 @@ export default function DashboardPage() {
 					</div>
 
 				</section>
+
 				<div data-tour="dashboard.upcoming">
 					<UpcomingPaymentsCard upcomingPayments={upcomingPayments} />
 				</div>
+
+				<button
+					type="button"
+					onClick={() => navigate("/simulation")}
+					className="mt-5 flex w-full items-center gap-4 rounded-2xl border-2 border-[#091828] bg-[#FFD8E6] p-4 text-left shadow-[4px_4px_0_#091828] transition hover:bg-[#FFC3D8] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none dark:border-[#060e20] dark:bg-[#54213a] dark:shadow-[4px_4px_0_#060e20]"
+				>
+					<span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-[#AC2A5D] dark:bg-[#131B2E] dark:text-[#FFB1C5]">
+						<Gamepad2 className="size-6" aria-hidden="true" />
+					</span>
+					<span className="min-w-0 flex-1">
+						<span className="block font-extrabold text-[#091828] dark:text-white">
+							Try Simulated Month
+						</span>
+						<span className="mt-0.5 block text-xs text-[#6B6375] dark:text-[#DDBFC5]">
+							Practise a fictional 30-day budget.
+						</span>
+					</span>
+					<ArrowRight
+						className="size-5 shrink-0 text-[#AC2A5D] dark:text-[#FFB1C5]"
+						aria-hidden="true"
+					/>
+				</button>
 			</div>
 			<MascotGuideDock payableCount={dashboard ? upcomingPayments.length : undefined} />
 

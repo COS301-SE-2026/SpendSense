@@ -24,6 +24,7 @@ import { CosmeticsModule } from './cosmetics/cosmetics.module';
 import { MonthlyWrappedModule } from './wrapped/wrapped.module';
 import { FriendsModule } from './friends/friends.module';
 import { WagersModule } from './wagers/wagers.module';
+import { SimulationsModule } from './simulations/simulations.module';
 import { GuidanceModule } from './guidance/guidance.module';
 import { ReceiptsModule } from './receipts/receipts.module';
 
@@ -52,6 +53,7 @@ import { ReceiptsModule } from './receipts/receipts.module';
     MonthlyWrappedModule,
     FriendsModule,
     WagersModule,
+    SimulationsModule,
     GuidanceModule,
     ReceiptsModule,
   ],

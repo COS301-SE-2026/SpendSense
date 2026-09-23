@@ -195,6 +195,13 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Next Level: 5')).toBeInTheDocument()
   })
 
+  it('links the simulated month card to the simulation entry route', async () => {
+    await renderLoadedDashboard()
+
+    expect(screen.getByRole('link', { name: /open simulated month/i })).toHaveAttribute('href', '/simulation')
+    expect(screen.getByText('Your 30-day money challenge')).toBeInTheDocument()
+  })
+
   it('renders the Coming Up section with a bill', async () => {
     await renderLoadedDashboard()
     expect(screen.getByText('Coming Up')).toBeInTheDocument()
