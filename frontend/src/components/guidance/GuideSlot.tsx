@@ -26,7 +26,7 @@ export function GuideSlot({
     variant='card',
     bubbleTail='right',
     className,
-}:GuideSlotProps){
+}:Readonly<GuideSlotProps>){
     const guidance=useGuidanceOptional()
     const evaluate=guidance?.evaluate
     const markShown=guidance?.markShown

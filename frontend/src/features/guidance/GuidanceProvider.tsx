@@ -31,7 +31,7 @@ export function GuidanceProvider({
     userId:userIdProp,
     catalogue=GUIDANCE_CATALOGUE,
     storage,
-}:GuidanceProviderProps){
+}:Readonly<GuidanceProviderProps>){
     const location=useLocation()
     const navigate=useNavigate()
     const [sessionUserId,setSessionUserId]=React.useState<string|null>(null)

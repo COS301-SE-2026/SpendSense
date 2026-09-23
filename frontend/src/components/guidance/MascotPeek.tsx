@@ -18,13 +18,13 @@ export interface MascotPeekProps{
     className?:string
 }
 
-export function MascotPeek(props:MascotPeekProps){
+export function MascotPeek(props:Readonly<MascotPeekProps>){
     const guidance=useGuidanceOptional()
     if(!guidance) return null
     return <Peek {...props}/>
 }
 
-function Peek({surface,facts,side='right',onRetry,onContinue,manual,durationMs=PEEK_DURATION_MS,className}:MascotPeekProps){
+function Peek({surface,facts,side='right',onRetry,onContinue,manual,durationMs=PEEK_DURATION_MS,className}:Readonly<MascotPeekProps>){
     const fromLeft=side==='left'
     const [expired,setExpired]=useState(false)
     const factsKey=JSON.stringify(facts)

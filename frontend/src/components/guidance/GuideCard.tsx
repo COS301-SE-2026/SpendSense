@@ -29,7 +29,7 @@ export function GuideCard({
     onContinue,
     onNavigate,
     className,
-}:GuideCardProps){
+}:Readonly<GuideCardProps>){
     const isBubble=variant==='bubble'
 
     return(

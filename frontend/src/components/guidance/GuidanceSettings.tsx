@@ -4,13 +4,13 @@ import {Toggle} from '@/components/common/Toggle'
 import {useGuidance,useGuidanceOptional} from '@/features/guidance/useGuidance'
 import {cn} from '@/lib/utils'
 
-export function GuidanceSettings({className}:{className?:string}){
+export function GuidanceSettings({className}:Readonly<{className?:string}>){
     const guidance=useGuidanceOptional()
     if(!guidance) return null
     return <GuidanceSettingsCard className={className}/>
 }
 
-function GuidanceSettingsCard({className}:{className?:string}){
+function GuidanceSettingsCard({className}:Readonly<{className?:string}>){
     const {
         state,
         setTipsEnabled,
@@ -83,13 +83,13 @@ function GuidanceSettingsCard({className}:{className?:string}){
     )
 }
 
-export function GuidanceSyncNotice({className}:{className?:string}){
+export function GuidanceSyncNotice({className}:Readonly<{className?:string}>){
     const guidance=useGuidanceOptional()
     if(!guidance?.unsynced) return null
     return <SyncNotice className={className}/>
 }
 
-function SyncNotice({className}:{className?:string}){
+function SyncNotice({className}:Readonly<{className?:string}>){
     const {retrySync}=useGuidance()
 
     return(

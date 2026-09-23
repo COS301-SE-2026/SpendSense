@@ -17,13 +17,13 @@ export interface MascotGuideDockProps{
     className?:string
 }
 
-export function MascotGuideDock(props:MascotGuideDockProps){
+export function MascotGuideDock(props:Readonly<MascotGuideDockProps>){
     const guidance=useGuidanceOptional()
     if(!guidance) return null
     return <GuideDock {...props}/>
 }
 
-function GuideDock({payableCount,storage,className}:MascotGuideDockProps){
+function GuideDock({payableCount,storage,className}:Readonly<MascotGuideDockProps>){
     const {state,userId,localDate,storage:providerStorage,walkthroughVisible}=useGuidance()
     const {status,data,refresh}=useDailyGuidance()
     const markerStorage=storage===undefined? providerStorage : storage

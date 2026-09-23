@@ -9,19 +9,19 @@ import {useGuidance,useGuidanceOptional} from '@/features/guidance/useGuidance'
 import {WALKTHROUGH_MAX_STEP,WALKTHROUGH_STEP_COUNT} from '@/features/guidance/guidanceTypes'
 import {cn} from '@/lib/utils'
 
-export function GuidanceWalkthrough({className}:{className?:string}){
+export function GuidanceWalkthrough({className}:Readonly<{className?:string}>){
     const guidance=useGuidanceOptional()
     if(!guidance) return null
     return <WalkthroughPanel className={className}/>
 }
 
-export function GuidanceTourInvitation({className}:{className?:string}){
+export function GuidanceTourInvitation({className}:Readonly<{className?:string}>){
     const guidance=useGuidanceOptional()
     if(!guidance) return null
     return <TourInvitation className={className}/>
 }
 
-function WalkthroughPanel({className}:{className?:string}){
+function WalkthroughPanel({className}:Readonly<{className?:string}>){
     const {
         state,
         walkthroughVisible,
@@ -141,7 +141,7 @@ function WalkthroughPanel({className}:{className?:string}){
     )
 }
 
-function TourInvitation({className}:{className?:string}){
+function TourInvitation({className}:Readonly<{className?:string}>){
     const {
         state,
         walkthroughVisible,
@@ -197,7 +197,7 @@ function InvitationCard({
     onPrimary,
     onDecline,
     className,
-}:InvitationCardProps){
+}:Readonly<InvitationCardProps>){
     return(
         <aside
             className={cn(
