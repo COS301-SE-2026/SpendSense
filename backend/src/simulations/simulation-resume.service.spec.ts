@@ -76,15 +76,35 @@ describe('SimulationsService resumeSession', () => {
   };
   let service: SimulationsService;
 
+  function setSessionResponses(
+    paused: Record<string, unknown> = {},
+    active: Record<string, unknown> = {},
+  ) {
+    transaction.simulationSession.findUniqueOrThrow
+      .mockReset()
+      .mockResolvedValueOnce(resumableSession(paused))
+      .mockResolvedValueOnce(refreshedSession(active));
+  }
+
+  function resume() {
+    return service.resumeSession(
+      'user-1',
+      sessionId,
+      { action: 'resume' },
+      idempotencyKey,
+    );
+  }
+
+  function getSessionUpdate() {
+    return transaction.simulationSession.updateMany.mock.calls[0][0];
+  }
+
   beforeEach(() => {
     jest.useFakeTimers();
     jest.setSystemTime(now);
     transaction = {
       simulationSession: {
-        findUniqueOrThrow: jest
-          .fn<Promise<unknown>, [unknown]>()
-          .mockResolvedValueOnce(resumableSession())
-          .mockResolvedValueOnce(refreshedSession()),
+        findUniqueOrThrow: jest.fn<Promise<unknown>, [unknown]>(),
         updateMany: jest
           .fn<Promise<{ count: number }>, [UpdateManyArgs]>()
           .mockResolvedValue({ count: 1 }),
@@ -115,6 +135,7 @@ describe('SimulationsService resumeSession', () => {
         .mockImplementation((callback) => callback(transaction)),
     };
     service = new SimulationsService(prisma as unknown as PrismaService);
+    setSessionResponses();
   });
 
   afterEach(() => {
@@ -122,15 +143,10 @@ describe('SimulationsService resumeSession', () => {
   });
 
   it('resumes a normal timed day using exactly the saved whole seconds', async () => {
-    const result = await service.resumeSession(
-      'user-1',
-      sessionId,
-      { action: 'resume' },
-      idempotencyKey,
-    );
+    const result = await resume();
 
     expect(result.session.status).toBe('ACTIVE');
-    const update = transaction.simulationSession.updateMany.mock.calls[0][0];
+    const update = getSessionUpdate();
     expect(update.data).toEqual(
       expect.objectContaining({
         status: 'ACTIVE',
@@ -144,42 +160,33 @@ describe('SimulationsService resumeSession', () => {
   });
 
   it('restores a revealed timed event decision using exactly the saved seconds', async () => {
-    transaction.simulationSession.findUniqueOrThrow.mockReset();
-    transaction.simulationSession.findUniqueOrThrow
-      .mockResolvedValueOnce(
-        resumableSession({
-          pausedDecisionSeconds: 29,
-          presentationHold: 'EVENT_REVEAL',
-          events: [{ id: eventId }],
-        }),
-      )
-      .mockResolvedValueOnce(
-        refreshedSession({
-          nextDayAt: null,
-          presentationHold: 'EVENT_REVEAL',
-          events: [
-            {
-              id: eventId,
-              triggerDay: 4,
-              decisionExpiresAt: new Date(now.getTime() + 29_000),
-              eventSnapshot: {
-                title: 'Urgent repair',
-                context: 'Choose an option.',
-                options: [],
-              },
+    setSessionResponses(
+      {
+        pausedDecisionSeconds: 29,
+        presentationHold: 'EVENT_REVEAL',
+        events: [{ id: eventId }],
+      },
+      {
+        nextDayAt: null,
+        presentationHold: 'EVENT_REVEAL',
+        events: [
+          {
+            id: eventId,
+            triggerDay: 4,
+            decisionExpiresAt: new Date(now.getTime() + 29_000),
+            eventSnapshot: {
+              title: 'Urgent repair',
+              context: 'Choose an option.',
+              options: [],
             },
-          ],
-        }),
-      );
-
-    await service.resumeSession(
-      'user-1',
-      sessionId,
-      { action: 'resume' },
-      idempotencyKey,
+          },
+        ],
+      },
     );
 
-    const update = transaction.simulationSession.updateMany.mock.calls[0][0];
+    await resume();
+
+    const update = getSessionUpdate();
     expect(update.data.nextDayAt).toBeNull();
     expect(transaction.simulationEvent.update).toHaveBeenCalledWith({
       where: { id: eventId },
@@ -188,23 +195,14 @@ describe('SimulationsService resumeSession', () => {
   });
 
   it('resumes accessibility mode without creating a timed deadline', async () => {
-    transaction.simulationSession.findUniqueOrThrow.mockReset();
-    transaction.simulationSession.findUniqueOrThrow
-      .mockResolvedValueOnce(
-        resumableSession({ timedMode: false, pausedDecisionSeconds: null }),
-      )
-      .mockResolvedValueOnce(
-        refreshedSession({ timedMode: false, nextDayAt: null }),
-      );
-
-    await service.resumeSession(
-      'user-1',
-      sessionId,
-      { action: 'resume' },
-      idempotencyKey,
+    setSessionResponses(
+      { timedMode: false, pausedDecisionSeconds: null },
+      { timedMode: false, nextDayAt: null },
     );
 
-    const update = transaction.simulationSession.updateMany.mock.calls[0][0];
+    await resume();
+
+    const update = getSessionUpdate();
     expect(update.data.nextDayAt).toBeNull();
   });
 
@@ -214,14 +212,9 @@ describe('SimulationsService resumeSession', () => {
       resumableSession({ status: 'ACTIVE' }),
     );
 
-    await expect(
-      service.resumeSession(
-        'user-1',
-        sessionId,
-        { action: 'resume' },
-        idempotencyKey,
-      ),
-    ).rejects.toThrow(new ConflictException('SIMULATION_NOT_PAUSED'));
+    await expect(resume()).rejects.toThrow(
+      new ConflictException('SIMULATION_NOT_PAUSED'),
+    );
 
     expect(transaction.simulationSession.updateMany).not.toHaveBeenCalled();
     expect(transaction.simulationAction.create).not.toHaveBeenCalled();
@@ -240,14 +233,7 @@ describe('SimulationsService resumeSession', () => {
       },
     });
 
-    await expect(
-      service.resumeSession(
-        'user-1',
-        sessionId,
-        { action: 'resume' },
-        idempotencyKey,
-      ),
-    ).resolves.toEqual({
+    await expect(resume()).resolves.toEqual({
       session: { id: sessionId, status: 'ACTIVE' },
       obligations: [],
       replayed: true,
