@@ -101,15 +101,8 @@ ALTER TABLE "ReceiptScan" ADD CONSTRAINT "ReceiptScan_preselectedOccurrenceId_fk
 -- AddForeignKey
 ALTER TABLE "ScoreEvent" ADD CONSTRAINT "ScoreEvent_paymentContributionId_fkey" FOREIGN KEY ("paymentContributionId") REFERENCES "PaymentContribution"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- ============================================================================
--- Legacy payment data backfill
--- ============================================================================
 
--- Copy every active legacy PaymentRecord into PaymentContribution.
---
--- We reuse the PaymentRecord ID as the PaymentContribution ID so that
--- historical ScoreEvent relationships can be migrated deterministically.
---
+-- Legacy payment data backfill
 -- Existing PaymentRecord rows remain in place during the staged migration.
 INSERT INTO "PaymentContribution" (
     "id",
@@ -120,7 +113,6 @@ INSERT INTO "PaymentContribution" (
     "currency",
     "paidDate",
     "source",
-    "state",
     "receiptScanId",
     "notes",
     "idempotencyKey",
@@ -140,16 +132,10 @@ SELECT
     pr."currency",
     pr."paidDate",
     'MANUAL'::"PaymentContributionSource",
-    'POSTED'::"PaymentContributionState",
     NULL,
     pr."notes",
 
-    -- Existing PaymentRecord IDs are UUIDs, so they are suitable deterministic
-    -- migration-only idempotency keys.
     pr."id",
-
-    -- Historical records did not have request payload hashes.
-    -- This deterministic marker is only for migrated legacy data.
     'legacy:' || pr."id",
 
     pr."createdAt",
@@ -161,15 +147,16 @@ FROM "PaymentRecord" pr
 WHERE pr."deletedAt" IS NULL;
 
 UPDATE "PaymentOccurrence" po
-SET "amountPaid" = COALESCE(
-    (
-        SELECT SUM(pc."amount")
-        FROM "PaymentContribution" pc
-        WHERE pc."occurrenceId" = po."id"
-          AND pc."state" = 'POSTED'
-    ),
-    0
-);
+SET "amountPaid" = totals."totalPaid"
+FROM (
+    SELECT
+        pc."occurrenceId",
+        SUM(pc."amount") AS "totalPaid"
+    FROM "PaymentContribution" pc
+    WHERE pc."state" = 'POSTED'
+    GROUP BY pc."occurrenceId"
+) totals
+WHERE po."id" = totals."occurrenceId";
 
 UPDATE "ScoreEvent" se
 SET "paymentContributionId" = se."paymentRecordId"
@@ -183,65 +170,57 @@ WHERE se."paymentRecordId" IS NOT NULL
 DO $$
 BEGIN
 
-    -- Every non-deleted legacy payment must have been migrated.
-    IF EXISTS (
-        SELECT 1
+    IF (
+        SELECT COUNT(*)
         FROM "PaymentRecord" pr
         LEFT JOIN "PaymentContribution" pc
             ON pc."id" = pr."id"
         WHERE pr."deletedAt" IS NULL
           AND pc."id" IS NULL
-    ) THEN
+    ) > 0 THEN
         RAISE EXCEPTION
             'Payment migration failed: one or more active PaymentRecord rows were not migrated';
     END IF;
 
-
-    -- amountPaid must never exceed amountDue.
-    IF EXISTS (
-        SELECT 1
+    IF (
+        SELECT COUNT(*)
         FROM "PaymentOccurrence"
         WHERE "amountPaid" > "amountDue"
-    ) THEN
+    ) > 0 THEN
         RAISE EXCEPTION
             'Payment migration failed: amountPaid exceeds amountDue';
     END IF;
 
-
-    -- amountPaid must equal the sum of POSTED contributions.
-    IF EXISTS (
-        SELECT 1
+    IF (
+        SELECT COUNT(*)
         FROM "PaymentOccurrence" po
-        WHERE po."amountPaid" <> COALESCE(
-            (
-                SELECT SUM(pc."amount")
-                FROM "PaymentContribution" pc
-                WHERE pc."occurrenceId" = po."id"
-                  AND pc."state" = 'POSTED'
-            ),
-            0
-        )
-    ) THEN
+        LEFT JOIN (
+            SELECT
+                pc."occurrenceId",
+                SUM(pc."amount") AS "totalPaid"
+            FROM "PaymentContribution" pc
+            WHERE pc."state" = 'POSTED'
+            GROUP BY pc."occurrenceId"
+        ) totals
+            ON totals."occurrenceId" = po."id"
+        WHERE po."amountPaid" <> COALESCE(totals."totalPaid", 0)
+    ) > 0 THEN
         RAISE EXCEPTION
             'Payment migration failed: amountPaid does not match posted contribution total';
     END IF;
 
-
-    -- Historically completed occurrences should still be fully settled.
-    IF EXISTS (
-        SELECT 1
+    IF (
+        SELECT COUNT(*)
         FROM "PaymentOccurrence"
         WHERE "status" IN ('PAID', 'PAID_LATE')
           AND "amountPaid" <> "amountDue"
-    ) THEN
+    ) > 0 THEN
         RAISE EXCEPTION
             'Payment migration failed: completed occurrence is not fully settled';
     END IF;
 
-
-    -- Existing payment-linked score events must have a migrated contribution.
-    IF EXISTS (
-        SELECT 1
+    IF (
+        SELECT COUNT(*)
         FROM "ScoreEvent" se
         JOIN "PaymentRecord" pr
             ON pr."id" = se."paymentRecordId"
@@ -250,7 +229,7 @@ BEGIN
         WHERE se."paymentRecordId" IS NOT NULL
           AND pr."deletedAt" IS NULL
           AND pc."id" IS NULL
-    ) THEN
+    ) > 0 THEN
         RAISE EXCEPTION
             'Payment migration failed: historical ScoreEvent contribution link missing';
     END IF;

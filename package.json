@@ -74,6 +74,10 @@
   "homepage": "https://github.com/COS301-SE-2026/SpendSense#readme",
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.15.0",
+    "@types/multer": "^2.2.0",
     "prisma-erd-generator": "^2.4.2"
+  },
+  "dependencies": {
+    "sharp": "^0.35.4"
   }
 }

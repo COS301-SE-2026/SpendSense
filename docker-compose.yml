@@ -67,10 +67,12 @@ services:
       dockerfile: Dockerfile.dev
     container_name: spendsense_ai
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
-      - ./ai:/app
+      - ./ai:/app:z
 
 volumes:
   postgres_data:

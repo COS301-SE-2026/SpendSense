@@ -217,6 +217,22 @@ enum BadgeCriteriaType {
   KNOWLEDGE_STREAK_COUNT
 }
 
+enum PaymentContributionSource {
+  MANUAL
+  RECEIPT_SCAN
+}
+
+enum PaymentContributionState {
+  POSTED
+  VOIDED
+}
+
+enum ReceiptScanStatus {
+  READY_FOR_REVIEW
+  CONSUMED
+  EXPIRED
+}
+
 enum GuidanceWalkthroughStatus {
   NOT_STARTED
   IN_PROGRESS

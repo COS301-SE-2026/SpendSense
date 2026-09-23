@@ -4,11 +4,15 @@ import { PaymentsService } from './payments.service';
 import { UsersService } from '../users/users.service';
 import type { AuthUser } from 'src/auth/types/auth-user.type';
 import { LogPaymentDto } from './dto/log-payment.dto';
+import { PaymentContributionsService } from './payment-contributions.service';
+import { PaymentQueriesService } from './payment-queries.service';
 
 describe('PaymentsController', () => {
   let controller: PaymentsController;
   const mockPaymentsService = { logPayment: jest.fn() };
   const mockUsersService = { findOrCreateUser: jest.fn() };
+  const mockPaymentContributionsService = { createContribution: jest.fn() };
+  const mockPaymentQueriesService = {};
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -21,6 +25,14 @@ describe('PaymentsController', () => {
         {
           provide: UsersService,
           useValue: mockUsersService,
+        },
+        {
+          provide: PaymentContributionsService,
+          useValue: mockPaymentContributionsService,
+        },
+        {
+          provide: PaymentQueriesService,
+          useValue: mockPaymentQueriesService,
         },
       ],
     }).compile();
@@ -64,7 +76,7 @@ describe('PaymentsController', () => {
     mockUsersService.findOrCreateUser.mockResolvedValue(user);
     mockPaymentsService.logPayment.mockResolvedValue(serviceResult);
 
-    const result = await controller.logPayment(authUser, dto);
+    const result = await controller.logPayment(authUser, dto, undefined);
     expect(mockUsersService.findOrCreateUser).toHaveBeenCalledWith(authUser);
     expect(mockPaymentsService.logPayment).toHaveBeenCalledWith(dto, user.id);
     expect(result).toEqual(serviceResult);
