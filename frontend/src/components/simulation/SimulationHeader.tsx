@@ -3,6 +3,7 @@ import {
   WalletCards, 
   PiggyBank, 
   Pause, 
+  LogOut,
 } from 'lucide-react'
 import { useSimulationCountdown } from '@/hooks/useSimulationCountdown'
 import type { SimulationDetail } from '../../features/simulation/types'
@@ -11,6 +12,7 @@ interface SimulationHeaderProps {
   simulation: SimulationDetail
   onPause?: () => void
   pausing?: boolean
+  onExit?: () => void
 }
 
 function formatMoney(value: string): string {
@@ -24,6 +26,7 @@ export function SimulationHeader({
   simulation,
   onPause,
   pausing = false,
+  onExit,
 }: SimulationHeaderProps) {
   const { session } = simulation
 
@@ -61,6 +64,16 @@ export function SimulationHeader({
             >
               <Pause className="size-4"/>
               {pausing ? 'Pausing...' : 'Pause'}
+            </button>
+          )}
+          {onExit && (
+            <button
+              type="button"
+              onClick={onExit}
+              className="flex items-center gap-2 rounded-full border-2 border-[#091828] bg-white px-3 py-2 text-sm font-black text-[#091828] shadow-[2px_2px_0_#091828] dark:bg-[#1C263C] dark:text-white"
+            >
+              <LogOut className="size-4"/>
+              Exit
             </button>
           )}
         </div>

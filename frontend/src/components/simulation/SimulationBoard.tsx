@@ -8,6 +8,8 @@ import { RecentScoreActivity } from './RecentScoreActivity'
 import { SimulationHeader } from './SimulationHeader'
 import { PauseOverlay } from './PauseOverlay'
 import { usePauseControls } from '@/hooks/usePauseControls'
+import { ExitConfirmation } from './ExitConfirmation'
+import { useExitControls } from '@/hooks/useExitControls'
 import type { SimulationDetail } from '../../features/simulation/types'
 
 interface SimulationBoardProps {
@@ -40,6 +42,10 @@ export function SimulationBoard({
     simulation.allowedActions.includes('ADVANCE_DAY')
 
   const advancingRef = React.useRef(false)
+  
+  const [showExit, setShowExit] = React.useState(false)
+
+  const [confirmDiscard, setConfirmDiscard] = React.useState(false)
 
   const {
     pause,
@@ -51,6 +57,28 @@ export function SimulationBoard({
   } = usePauseControls({
     simulation,
     onSimulationChange,
+  })
+
+  const {
+    saveAndExit,
+    discard,
+    saving,
+    discarding,
+    saveError,
+    discardError,
+  } = useExitControls({
+    simulation,
+    onSimulationChange,
+    onLeave: () => {
+      console.info(
+        'Simulation should leave to entry/dashboard',
+      )
+    },
+    onDiscarded: () => {
+      console.info(
+        'Discarded simulation should route to entry',
+      )
+    },
   })
 
   useSimulationPolling(
@@ -103,6 +131,10 @@ export function SimulationBoard({
         <SimulationHeader
           simulation={simulation}
           onPause={() => void pause()}
+          onExit={() => {
+            setConfirmDiscard(false)
+            setShowExit(true)
+          }}
           pausing={pausing}
         />
         <MonthAgenda
@@ -152,9 +184,8 @@ export function SimulationBoard({
             resumeError={resumeError}
             onResume={() => void resume()}
             onExit={() => {
-              console.info(
-                'Exit confirmation will open here',
-              )
+              setConfirmDiscard(false)
+              setShowExit(true)
             }}
           />
         )}
@@ -165,6 +196,32 @@ export function SimulationBoard({
           >
             {pauseError}
           </p>
+        )}
+        {showExit && (
+          <ExitConfirmation
+            saving={saving}
+            discarding={discarding}
+            discardError={
+              discardError ?? saveError
+            }
+            confirmDiscard={confirmDiscard}
+            onKeepPlaying={() => {
+              setShowExit(false)
+              setConfirmDiscard(false)
+            }}
+            onSaveAndExit={() => {
+              void saveAndExit()
+            }}
+            onRequestDiscard={() => {
+              setConfirmDiscard(true)
+            }}
+            onCancelDiscard={() => {
+              setConfirmDiscard(false)
+            }}
+            onConfirmDiscard={() => {
+              void discard()
+            }}
+          />
         )}
       </div>
     </main>
