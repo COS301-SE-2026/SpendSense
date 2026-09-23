@@ -55,6 +55,7 @@ import BudgetAllocationPage from './features/simulation/screens/BudgetAllocation
 import MonthPlanningPage from './features/simulation/screens/MonthPlanningPage.tsx'
 import {SurpriseEventRevealPage,SurpriseEventDecisionPage} from './features/simulation/screens/SurpriseEventPage.tsx'
 import {SurpriseEventResultPage} from './features/simulation/screens/SurpriseEventResultPage.tsx'
+import MonthSummaryPage from './features/simulation/screens/MonthSummaryPage.tsx'
 
 initAuthListener()
 initTheme()
@@ -116,6 +117,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/simulation/session/:sessionId/event" element={<ProtectedRoute><SurpriseEventRevealPage/></ProtectedRoute>}/>
           <Route path="/simulation/session/:sessionId/event/decision" element={<ProtectedRoute><SurpriseEventDecisionPage/></ProtectedRoute>}/>
           <Route path="/simulation/session/:sessionId/event-result" element={<ProtectedRoute><SurpriseEventResultPage/></ProtectedRoute>}/>
+          <Route path="/simulation/session/:sessionId/summary" element={<ProtectedRoute><MonthSummaryPage/></ProtectedRoute>}/>
         </Routes>
       </NotificationsProvider>
     </BrowserRouter>
