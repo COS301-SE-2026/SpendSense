@@ -4,6 +4,7 @@ import { SimulationActionType } from '@prisma/client';
 import type { PrismaService } from '../prisma/prisma.service';
 import { SimulationTransitionService } from './simulation-transition.service';
 import { SimulationsService } from './simulations.service';
+import { simulationStatusSession } from './simulation-status.fixture';
 
 const sessionId = '00000000-0000-4000-8000-000000000070';
 const eventId = '00000000-0000-4000-8000-000000000071';
@@ -22,32 +23,7 @@ const pauseableSession = (overrides: Record<string, unknown> = {}) => ({
 
 const refreshedSession = (overrides: Record<string, unknown> = {}) => ({
   id: sessionId,
-  status: 'PAUSED',
-  timedMode: true,
-  currentDay: 4,
-  daysInMonth: 30,
-  nextDayAt: null,
-  startingBudget: '6000.00',
-  currentBalance: '1000.00',
-  savingsBalance: '1000.00',
-  score: '48.00',
-  createdAt: now,
-  updatedAt: now,
-  completedAt: null,
-  presentationHold: 'NONE',
-  scenarioSnapshot: {
-    allocationOptions: [],
-    customAllocation: {
-      enabled: true,
-      minCurrentAmount: '0.00',
-      maxCurrentAmount: '6000.00',
-      increment: '50.00',
-    },
-  },
-  obligations: [],
-  events: [],
-  scoreEntries: [],
-  ...overrides,
+  ...simulationStatusSession(now,'PAUSED',null,overrides),
 });
 
 type UpdateManyArgs = {
