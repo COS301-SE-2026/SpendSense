@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom"
 import { Calendar, Repeat2, PiggyBank, CreditCard, Banknote, Bell } from "lucide-react"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { Toggle } from "@/components/common/Toggle"
+import { useGuidanceOptional } from "@/features/guidance/useGuidance"
 import { getReminderPreferences, updateReminderPreferences } from "@/features/reminders/remindersApi"
 import { cn } from "@/lib/utils"
 import { updateMe } from "@/features/users/usersApi"
@@ -26,6 +27,7 @@ interface ReminderPreferencesResponse {
 
 export default function OnboardingPage(){
     const nav = useNavigate()
+    const guidance = useGuidanceOptional()
 
     const [goals, setGoals] = React.useState<string[]>([])
     const [reminderDaysBefore, setReminderDaysBefore] = React.useState(3)
@@ -55,6 +57,21 @@ export default function OnboardingPage(){
         setGoals((prev)=>
             prev.includes(id) ? prev.filter((g)=> g !== id) : [...prev, id]
         )
+    }
+
+    function leaveOnboarding(forceTour: boolean = false){
+        if(guidance){
+            const status = guidance.state.walkthrough.status
+            if(status==="NOT_STARTED"){
+                guidance.startWalkthrough()
+                return
+            }
+            if(forceTour&&status!=="COMPLETED"){
+                guidance.replayWalkthrough()
+                return
+            }
+        }
+        nav("/domains/dashboard")
     }
 
     async function persist(patch: {defaultReminderDaysBefore?: number; inAppEnabled?: boolean}){
@@ -93,6 +110,8 @@ export default function OnboardingPage(){
             }
         }
 
+        leaveOnboarding(true)
+
         setIsSaving(true)
 
         try {
@@ -100,8 +119,6 @@ export default function OnboardingPage(){
                 ...(budget !== undefined && { monthlyBudget: budget }),
                 onboardingCompleted: true,
             })
-
-            nav("/domains/dashboard")
         } catch {
             setError(true)
         } finally {
@@ -116,7 +133,7 @@ export default function OnboardingPage(){
                 <header className="flex items-center justify-end">
                     <button
                         type="button"
-                        onClick={()=> nav("/domains/dashboard")}
+                        onClick={()=> leaveOnboarding()}
                         className="px-4 py-2 border-2 border-[#091828] rounded-full bg-white text-xs font-extrabold shadow-[3px_3px_0_#091828] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none"
                     >
                         Skip

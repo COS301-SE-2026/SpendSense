@@ -62,7 +62,8 @@ export function GuidanceProvider({
         if(lastUserId!==undefined){
             setState(DEFAULT_GUIDANCE_STATE)
             setUnsynced(false)
-            setWalkthroughVisible(false)
+            // the session resolving after sign-up is not an account switch
+            if(lastUserId!==null) setWalkthroughVisible(false)
             setLoadStatus('loading')
         }
     }
@@ -92,7 +93,7 @@ export function GuidanceProvider({
         return ()=>{
             active=false
         }
-    },[userIdProp])
+    },[userIdProp,location.pathname])
 
     React.useEffect(()=>{
         if(!userId) return
