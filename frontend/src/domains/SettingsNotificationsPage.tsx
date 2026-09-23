@@ -2,7 +2,7 @@ import * as React from "react"
 import {Bell} from "lucide-react"
 import {CustomCard} from "@/components/ui/CustomCard"
 import {SubPageShell} from "@/components/common/SubPageShell"
-import {Toggle} from "@/domains/SettingsPreferencesPage"
+import {Toggle} from "@/components/common/Toggle"
 import {getReminderPreferences, updateReminderPreferences} from "@/features/reminders/remindersApi"
 
 interface ReminderPreferences {

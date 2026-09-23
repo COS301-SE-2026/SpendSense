@@ -3,6 +3,7 @@ import * as React from "react"
 import {CustomCard} from "@/components/ui/CustomCard"
 import {LongButton} from "@/components/common/LongButton"
 import {SubPageShell} from "@/components/common/SubPageShell"
+import {Toggle} from "@/components/common/Toggle"
 import {GuidanceSettings} from "@/components/guidance/GuidanceSettings"
 import {useUserProfile} from "@/hooks/useUserProfile"
 import {updatePreferences, type UserPreferences} from "@/features/profile/profileApi"
@@ -192,29 +193,5 @@ function PillOption({
             className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selected ? "bg-[#FFD8E6] text-[#AC2A5D] dark:bg-[#ff6b9d] dark:text-[#6e0035]" : "bg-[#E3EAE6] text-[#6B6375] hover:text-[#091828] dark:bg-[#2d3449] dark:text-[#ddbfc5] dark:hover:text-[#dae2fd]"}`}>
                 {label}
         </button>
-    )
-}
-
-export function Toggle({
-    checked,
-    onChange,
-    label,
-}: Readonly <{
-    checked: boolean
-    onChange:()=> void
-    label: string
-}>) {
-    return(
-        <button
-            type="button"
-            role="switch"
-            aria-checked={checked}
-            aria-label={label}
-            onClick={onChange}
-            className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? "bg-[#AC2A5D]": "bg-[#E3EAE6] dark:bg-[#2d3449]"}`}>
-
-            <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${checked ? "left-[22px]": "left-0.5"}`} />
-        </button>
-
     )
 }
