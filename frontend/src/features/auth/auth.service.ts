@@ -1,6 +1,7 @@
 import {supabase} from '../../lib/supabase'
 import {setToken, clearToken} from '../../lib/tokenStore'
 import { clearE2eSession, getE2eSession, isE2eMode } from './e2e-session'
+import {clearAutoExpandMarkers} from '../guidance/guidanceLocalDay'
 
 export async function signUp(email: string, password: string, displayName?: string) {
     const {data, error} = await supabase.auth.signUp({
@@ -27,6 +28,8 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signOut() {
+    clearAutoExpandMarkers()
+
     if (isE2eMode) {
         clearE2eSession()
         return

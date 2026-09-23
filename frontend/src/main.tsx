@@ -49,10 +49,11 @@ import EditProfilePage from './domains/EditProfilePage.tsx'
 import HelpPage from './domains/HelpPage.tsx'
 import HomeRoute from './components/HomeRoute'
 import ScrollToTop from './components/common/ScrollToTop.tsx'
+import { GuidanceProvider } from './features/guidance/GuidanceProvider.tsx'
+import { GuidanceWalkthrough } from './components/guidance/GuidanceWalkthrough.tsx'
 import ReceiptScanPage from './domains/ReceiptScanPage'
 import ReceiptReviewPage from './domains/ReceiptReviewPage'
 import PaymentForm from './domains/PaymentForm.tsx'
-
 
 initAuthListener()
 initTheme()
@@ -64,6 +65,7 @@ createRoot(document.getElementById('root')!).render(
       <ScrollToTop/>
       <NotificationsProvider>
         <NotificationListener/>
+        <GuidanceProvider>
           <Routes>
             <Route path="/" element={<HomeRoute />}/>
             <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
@@ -109,6 +111,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/receipts/new" element={<ProtectedRoute><ReceiptScanPage/></ProtectedRoute>}/>
             <Route path="/receipts/scans/:scanId/review" element={<ProtectedRoute><ReceiptReviewPage/></ProtectedRoute>}/>
           </Routes>
+          <GuidanceWalkthrough/>
+        </GuidanceProvider>
       </NotificationsProvider>
     </BrowserRouter>
   </StrictMode>,

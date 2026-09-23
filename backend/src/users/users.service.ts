@@ -150,6 +150,17 @@ const userExportSelect = {
       updatedAt: true,
     },
   },
+  guidanceState: {
+    select: {
+      tipsEnabled: true,
+      dailyExpansionEnabled: true,
+      walkthroughStatus: true,
+      walkthroughStep: true,
+      dismissedTipIds: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
   obligations: {
     where: { deletedAt: null },
     select: {
@@ -348,6 +359,7 @@ type UserExportResult = {
     | 'notificationPreference'
     | 'creditProfile'
     | 'gamificationProfile'
+    | 'guidanceState'
     | 'obligations'
     | 'paymentOccurrences'
     | 'paymentRecords'
@@ -363,6 +375,7 @@ type UserExportResult = {
   notificationPreferences: UserExportData['notificationPreference'];
   creditProfile: UserExportData['creditProfile'];
   gamificationProfile: UserExportData['gamificationProfile'];
+  guidanceState: UserExportData['guidanceState'];
   obligations: UserExportData['obligations'];
   paymentOccurrences: UserExportData['paymentOccurrences'];
   paymentRecords: UserExportData['paymentRecords'];
@@ -644,6 +657,9 @@ export class UsersService {
       const gamificationProfile = await tx.gamificationProfile.deleteMany({
         where: { userId },
       });
+      const guidanceState = await tx.guidanceState.deleteMany({
+        where: { userId },
+      });
       const notificationPreference = await tx.notificationPreference.deleteMany(
         { where: { userId } },
       );
@@ -669,6 +685,7 @@ export class UsersService {
         inventoryItems: inventoryItems.count,
         creditProfile: creditProfile.count,
         gamificationProfile: gamificationProfile.count,
+        guidanceState: guidanceState.count,
         notificationPreference: notificationPreference.count,
         preference: preference.count,
         user: 1,
@@ -705,6 +722,7 @@ export class UsersService {
       notificationPreference,
       creditProfile,
       gamificationProfile,
+      guidanceState,
       obligations,
       paymentOccurrences,
       paymentRecords,
@@ -725,6 +743,7 @@ export class UsersService {
       notificationPreferences: notificationPreference,
       creditProfile,
       gamificationProfile,
+      guidanceState,
       obligations,
       paymentOccurrences,
       paymentRecords,

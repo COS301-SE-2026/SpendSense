@@ -11,6 +11,9 @@ import {getReceiptOccurrenceBalance,type ReceiptOccurrence} from "../features/re
 import {Popover,PopoverContent,PopoverTrigger} from "../components/ui/popover";
 import {Calendar as CalenderIcon,CheckCircle2,Coins,Flame,TrendingUp,X,Camera,ChevronDown,Check,CreditCard} from "lucide-react";
 import {Calendar} from "@/components/ui/calendar";
+import {GuideSlot} from "@/components/guidance/GuideSlot";
+import {MascotPeek} from "@/components/guidance/MascotPeek";
+import {useGuidanceOptional,useGuidanceSuppression} from "@/features/guidance/useGuidance";
 import PaymentOccurrenceBalance from "../components/payments/PaymentOccurrenceBalance";
 
 const paymentSchema=z.object({
@@ -116,6 +119,8 @@ export default function ObligationForm(){
     const [paymentResult,setPaymentResult]=useState<ManualContributionResult|null>(null);
     const [submitError,setSubmitError]=useState<string|null>(null);
     const [isSubmitting,setSubmitting]=useState(false);
+    const guidance=useGuidanceOptional();
+    useGuidanceSuppression("payment-form",!showPopup);
     const [occurrences,setOccurrences]=useState<CalendarOccurrence[]>([]);
     const [occurrencesLoading,setOccurrencesLoading]=useState(true);
     const [occurrencesError,setOccurrencesError]=useState<string|null>(null);
@@ -252,6 +257,7 @@ export default function ObligationForm(){
             setCurrentBalance(contributionToBalance(result));
             setPaymentResult(result);
             setShowPopup(true);
+            guidance?.requestDailyRefresh();
         }catch(error){
             await handleContributionFailure(error,contributionRequested,balanceForSelection);
         }finally{
@@ -499,6 +505,9 @@ export default function ObligationForm(){
                     </div>
                     {errors.notes?.message&&<p className="text-xs text-red-500 dark:text-[#ffb4ab]">{errors.notes.message}</p>}
                     {submitError&&<p role="alert" className="rounded-2xl bg-[#FFD9E1] px-4 py-3 text-xs font-semibold text-[#AC2A5D] dark:bg-[#93000a]/30 dark:text-[#ffb4ab]">{submitError}</p>}
+                    {submitError&&(
+                        <GuideSlot surface="payment" facts={{paymentResult:"FAILED"}} manual/>
+                    )}
                     <button
                         type="submit"
                         className="w-full rounded-full bg-[#091828] py-4 text-base font-medium text-white disabled:opacity-50 dark:bg-[#ff6b9d] dark:text-[#650030]"
@@ -535,6 +544,12 @@ function PaymentImpactModal({
     const xp=result.rewards?.xpAwarded??0;
     const streak=result.rewards?.currentPaymentStreak??0;
     const mood=result.rewards?.mascotMood;
+
+    const guidanceFacts={
+        paymentResult:result.paymentImpact?.isLate ? "FINAL_LATE" : "FINAL_ON_TIME",
+        xpAwarded:xp,
+        ...(result.scoreImpact ? {scoreDelta,scoreAfter} : {}),
+    };
     return(
         <dialog open aria-modal="true" aria-labelledby="contribution-result-title" className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-end justify-center border-0 bg-[#091828]/40 px-4 pb-6 dark:bg-black/70">
             <div className="w-full max-w-sm max-h-[90vh] overflow-y-auto rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[6px_6px_0_#091828] animate-in fade-in slide-in-from-bottom-5 duration-300 dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[6px_6px_0_#060e20]">
@@ -604,6 +619,7 @@ function PaymentImpactModal({
                     Back to dashboard
                 </LongButton>
             </div>
+            <MascotPeek surface="payment" facts={guidanceFacts} side="right" manual className="top-24 bottom-auto z-[60]"/>
         </dialog>
     );
 }

@@ -166,7 +166,7 @@ WHERE se."paymentRecordId" IS NOT NULL
       FROM "PaymentContribution" pc
       WHERE pc."id" = se."paymentRecordId"
   );
-  
+
 DO $$
 BEGIN
 

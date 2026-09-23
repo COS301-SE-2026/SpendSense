@@ -24,6 +24,7 @@ import { CosmeticsModule } from './cosmetics/cosmetics.module';
 import { MonthlyWrappedModule } from './wrapped/wrapped.module';
 import { FriendsModule } from './friends/friends.module';
 import { WagersModule } from './wagers/wagers.module';
+import { GuidanceModule } from './guidance/guidance.module';
 import { ReceiptsModule } from './receipts/receipts.module';
 
 @Module({
@@ -51,6 +52,7 @@ import { ReceiptsModule } from './receipts/receipts.module';
     MonthlyWrappedModule,
     FriendsModule,
     WagersModule,
+    GuidanceModule,
     ReceiptsModule,
   ],
   controllers: [AppController],

@@ -7,6 +7,7 @@ import { FriendsPageShell } from "@/components/common/FriendsPageShell"
 import { SearchBox } from "@/components/common/SearchBox"
 import { FriendAvatar } from "@/components/common/FriendAvatar"
 import { EmptyCard, ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
+import { MascotPeek } from "@/components/guidance/MascotPeek"
 import { FriendRequestsCard } from "@/components/common/FriendRequestsCard"
 import { useFriendSearch, useSendFriendRequest } from "@/hooks/useFriends"
 
@@ -24,6 +25,7 @@ export default function AddFriendPage() {
 	const [sentTo, setSentTo] = React.useState<string[]>([])
 	const [busyId, setBusyId] = React.useState<string | null>(null)
 	const [sendError, setSendError] = React.useState<string | null>(null)
+	const [justSentTo, setJustSentTo] = React.useState<string | null>(null)
 
 	const send = async (userId: string) => {
 		setBusyId(userId)
@@ -31,6 +33,7 @@ export default function AddFriendPage() {
 		try {
 			await sendRequest(userId)
 			setSentTo((current) => [...current, userId])
+			setJustSentTo(results?.find((person) => person.id === userId)?.displayName ?? null)
 		} catch (err) {
 			setSendError(err instanceof Error ? err.message : "Could not send that request.")
 		} finally {
@@ -127,6 +130,16 @@ export default function AddFriendPage() {
 					/>
 				}
 			/>
+
+			{justSentTo && (
+				<MascotPeek
+					key={justSentTo}
+					surface="friends"
+					side="right"
+					manual
+					facts={{ friendRequestSent: true, friendName: justSentTo }}
+				/>
+			)}
 		</FriendsPageShell>
 	)
 }
