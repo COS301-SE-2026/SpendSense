@@ -3,7 +3,7 @@ import {useLocation,useNavigate} from 'react-router-dom'
 import {getCurrentSession} from '@/features/auth/auth.service'
 import {DEFAULT_GUIDANCE_STATE,guidanceApi as defaultGuidanceApi} from './guidanceApi'
 import type {GuidanceApi} from './guidanceApi'
-import {GUIDANCE_CATALOGUE,isAllowlistedTipId,walkthroughRouteFor} from './guidanceCatalogue'
+import {GUIDANCE_CATALOGUE,GUIDANCE_ROUTES,isAllowlistedTipId,walkthroughRouteFor} from './guidanceCatalogue'
 import {GuidanceContext} from './GuidanceContextCore'
 import type {GuidanceContextValue,EvaluateOptions,GuidanceLoadStatus} from './GuidanceContextCore'
 import {clearAutoExpandMarkers,johannesburgDate} from './guidanceLocalDay'
@@ -255,7 +255,8 @@ export function GuidanceProvider({
             {walkthrough:{status:'COMPLETED',currentStep:WALKTHROUGH_MAX_STEP}},
             {status:'COMPLETED',currentStep:WALKTHROUGH_MAX_STEP},
         )
-    },[setWalkthrough])
+        if(pathname!==GUIDANCE_ROUTES.dashboard) navigate(GUIDANCE_ROUTES.dashboard)
+    },[setWalkthrough,navigate,pathname])
 
     const blocked=blockedKeys.length>0
     const route=pathname

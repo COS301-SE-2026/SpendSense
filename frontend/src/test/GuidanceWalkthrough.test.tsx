@@ -120,7 +120,20 @@ describe('GuidanceWalkthrough',()=>{
         expect(screen.getByText(/You stopped at step 2 of 5/)).toBeInTheDocument()
     })
 
-    it('finishes on the last page without saving a sixth step',async()=>{
+    it('leaves a skipped tour where the user stopped',async()=>{
+        const api=createFakeGuidanceApi({
+            state:makeGuidanceState({walkthrough:{status:'IN_PROGRESS',currentStep:3}}),
+        })
+        renderWithGuidance(<Shell/>,{api,route:'/quiz'})
+
+        await userEvent.click(await screen.findByRole('button',{name:'Resume the tour'}))
+        await userEvent.click(await screen.findByRole('button',{name:'Skip'}))
+
+        await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
+        expect(path()).toHaveTextContent(/^\/quiz$/)
+    })
+
+    it('finishes by returning the user to the dashboard, without saving a sixth step',async()=>{
         const api=createFakeGuidanceApi({
             state:makeGuidanceState({walkthrough:{status:'IN_PROGRESS',currentStep:4}}),
         })
@@ -138,7 +151,7 @@ describe('GuidanceWalkthrough',()=>{
             .map((walkthrough)=>walkthrough.currentStep)
         expect(Math.max(...steps)).toBeLessThanOrEqual(4)
         expect(screen.queryByRole('dialog')).toBeNull()
-        expect(path()).toHaveTextContent('/insights')
+        expect(path()).toHaveTextContent('/domains/dashboard')
     })
 
     it('closes from the keyboard with Escape',async()=>{
