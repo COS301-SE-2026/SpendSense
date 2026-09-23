@@ -62,7 +62,6 @@ export function GuidanceProvider({
         if(lastUserId!==undefined){
             setState(DEFAULT_GUIDANCE_STATE)
             setUnsynced(false)
-            // the session resolving after sign-up is not an account switch
             if(lastUserId!==null) setWalkthroughVisible(false)
             setLoadStatus('loading')
         }
@@ -109,7 +108,6 @@ export function GuidanceProvider({
             })
             .catch(()=>{
                 if(!active) return
-                // defaults keep guidance usable, the sync warning tells the user
                 setState(DEFAULT_GUIDANCE_STATE)
                 setLoadStatus('error')
             })
