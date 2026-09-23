@@ -25,12 +25,15 @@ function Shell(){
             <p data-testid="path">{location.pathname}</p>
             <GuidanceTourInvitation/>
             <GuidanceWalkthrough/>
+            <div data-tour="dashboard.score">score</div>
             <Link to="/friends">Friends</Link>
+            <Link to="/calendar">Calendar</Link>
         </>
     )
 }
 
 const path=()=>screen.getByTestId('path')
+const highlight=()=>document.querySelector('[data-tour-highlight]')
 
 describe('GuidanceWalkthrough',()=>{
     it('invites a new user and can be declined without blocking the app',async()=>{
@@ -47,43 +50,75 @@ describe('GuidanceWalkthrough',()=>{
         expect(path()).toHaveTextContent('/domains/dashboard')
     })
 
-    it('takes the user through every stop of each step page on Next without pausing',async()=>{
+    it('walks every stop of every page, moving the user itself',async()=>{
         const api=createFakeGuidanceApi()
         renderWithGuidance(<Shell/>,{api})
 
         await userEvent.click(await screen.findByRole('button',{name:'Take the tour'}))
 
         for(const [stepIndex,step] of WALKTHROUGH_STEPS.entries()){
-            expect(path()).toHaveTextContent(new RegExp(`^${step.route}$`))
             for(const [stopIndex,stop] of step.stops.entries()){
-                expect(await screen.findByText(new RegExp(`${step.screen} . step ${stepIndex+1} of 5`))).toBeInTheDocument()
-                expect(screen.getByRole('heading',{name:stop.title})).toBeInTheDocument()
-                const dialog=screen.getByRole('dialog')
+                const dialog=await screen.findByRole('dialog')
+                expect(dialog).toHaveTextContent(stop.title)
+                expect(dialog).toHaveTextContent(`step ${stepIndex+1} of 5`)
+                expect(path()).toHaveTextContent(new RegExp(`^${step.route}$`))
                 expect(within(dialog).getByRole('img',{name:/Mascot/})).toBeInTheDocument()
 
-                const isVeryLast=stepIndex===WALKTHROUGH_STEPS.length-1&&stopIndex===step.stops.length-1
-                await userEvent.click(screen.getByRole('button',{name:isVeryLast? 'Finish' : 'Next'}))
+                const isFinalStop=stepIndex===WALKTHROUGH_STEPS.length-1
+                    &&stopIndex===step.stops.length-1
+                expect(screen.getByRole('button',{name:isFinalStop? 'Finish' : 'Next'})).toBeInTheDocument()
+                if(!isFinalStop) await userEvent.click(screen.getByRole('button',{name:'Next'}))
             }
         }
-
-        expect(screen.queryByRole('dialog')).toBeNull()
-        expect(path()).toHaveTextContent('/domains/dashboard')
     })
 
-    it('takes the user back a page on Back',async()=>{
+    it('rings the part of the page a stop explains, and copes when it is missing',async()=>{
+        const api=createFakeGuidanceApi()
+        renderWithGuidance(<Shell/>,{api})
+
+        await userEvent.click(await screen.findByRole('button',{name:'Take the tour'}))
+
+        expect(highlight()).toBeNull()
+
+        await userEvent.click(screen.getByRole('button',{name:'Next'}))
+        await waitFor(()=>expect(
+            document.querySelector('[data-tour-highlight="dashboard.score"]'),
+        ).not.toBeNull())
+
+        await userEvent.click(screen.getByRole('button',{name:'Next'}))
+        await waitFor(()=>expect(highlight()).toBeNull())
+        expect(await screen.findByText(WALKTHROUGH_STEPS[0].stops[2].title)).toBeInTheDocument()
+    })
+
+    it('walks Back through the stops, then to the previous page',async()=>{
         const api=createFakeGuidanceApi({
             state:makeGuidanceState({walkthrough:{status:'IN_PROGRESS',currentStep:2}}),
         })
         renderWithGuidance(<Shell/>,{api,route:'/calendar/scheduled'})
 
         await userEvent.click(await screen.findByRole('button',{name:'Resume the tour'}))
-        await userEvent.click(await screen.findByRole('button',{name:'Back'}))
+        expect(await screen.findByText(WALKTHROUGH_STEPS[2].stops[0].title)).toBeInTheDocument()
 
-        expect(await screen.findByText(/Calendar . step 2 of 5/)).toBeInTheDocument()
-        const calendarStops=WALKTHROUGH_STEPS[1].stops
-        expect(screen.getByRole('heading',{name:calendarStops[calendarStops.length-1].title})).toBeInTheDocument()
+        await userEvent.click(screen.getByRole('button',{name:'Back'}))
+
+        const previous=WALKTHROUGH_STEPS[1]
+        expect(await screen.findByText(previous.stops[previous.stops.length-1].title)).toBeInTheDocument()
         expect(path()).toHaveTextContent(/^\/calendar$/)
+    })
+
+    it('disables Back only on the very first stop',async()=>{
+        const api=createFakeGuidanceApi()
+        renderWithGuidance(<Shell/>,{api})
+
+        await userEvent.click(await screen.findByRole('button',{name:'Take the tour'}))
+        expect(screen.getByRole('button',{name:'Back'})).toBeDisabled()
+
+        await userEvent.click(screen.getByRole('button',{name:'Next'}))
         expect(screen.getByRole('button',{name:'Back'})).toBeEnabled()
+
+        await userEvent.click(screen.getByRole('button',{name:'Back'}))
+        expect(await screen.findByText(WALKTHROUGH_STEPS[0].stops[0].title)).toBeInTheDocument()
+        expect(screen.getByRole('button',{name:'Back'})).toBeDisabled()
     })
 
     it('resumes on the saved step page, wherever the user starts from',async()=>{
@@ -95,8 +130,7 @@ describe('GuidanceWalkthrough',()=>{
         expect(await screen.findByText(/You stopped at step 4 of 5/)).toBeInTheDocument()
         await userEvent.click(screen.getByRole('button',{name:'Resume the tour'}))
 
-        expect(await screen.findByText(/Daily quiz . step 4 of 5/)).toBeInTheDocument()
-        expect(screen.getByRole('heading',{name:WALKTHROUGH_STEPS[3].stops[0].title})).toBeInTheDocument()
+        expect(await screen.findByText(WALKTHROUGH_STEPS[3].stops[0].title)).toBeInTheDocument()
         expect(path()).toHaveTextContent(/^\/quiz$/)
     })
 
@@ -114,28 +148,63 @@ describe('GuidanceWalkthrough',()=>{
 
         await userEvent.click(await screen.findByRole('button',{name:'Replay the tour'}))
 
-        expect(await screen.findByText(/Dashboard . step 1 of 5/)).toBeInTheDocument()
-        expect(screen.getByRole('heading',{name:WALKTHROUGH_STEPS[0].stops[0].title})).toBeInTheDocument()
+        expect(await screen.findByText(WALKTHROUGH_STEPS[0].stops[0].title)).toBeInTheDocument()
         expect(path()).toHaveTextContent('/domains/dashboard')
         await waitFor(()=>expect(api.calls).toContainEqual({replayWalkthrough:true}))
     })
 
-    it('pauses, keeping the step, when the user leaves the tour page themselves',async()=>{
+    it('follows the user to a page that is part of the tour',async()=>{
         const api=createFakeGuidanceApi()
         renderWithGuidance(<Shell/>,{api})
 
         await userEvent.click(await screen.findByRole('button',{name:'Take the tour'}))
-        const dashboardStopCount=WALKTHROUGH_STEPS[0].stops.length
-        for(let i=0;i<dashboardStopCount;i++){
-            await userEvent.click(screen.getByRole('button',{name:'Next'}))
-        }
-        expect(await screen.findByText(/Calendar . step 2 of 5/)).toBeInTheDocument()
+        expect(await screen.findByText(WALKTHROUGH_STEPS[0].stops[0].title)).toBeInTheDocument()
 
+        await userEvent.click(screen.getByRole('link',{name:'Calendar'}))
+
+        expect(await screen.findByText(WALKTHROUGH_STEPS[1].stops[0].title)).toBeInTheDocument()
+        expect(path()).toHaveTextContent(/^\/calendar$/)
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+        await waitFor(()=>expect(api.calls).toContainEqual({
+            walkthrough:{status:'IN_PROGRESS',currentStep:1},
+        }))
+    })
+
+    it('keeps running on a page the tour does not cover',async()=>{
+        const api=createFakeGuidanceApi()
+        renderWithGuidance(<Shell/>,{api})
+
+        await userEvent.click(await screen.findByRole('button',{name:'Take the tour'}))
         await userEvent.click(screen.getByRole('link',{name:'Friends'}))
 
-        await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
         expect(path()).toHaveTextContent('/friends')
-        expect(screen.getByText(/You stopped at step 2 of 5/)).toBeInTheDocument()
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+        expect(screen.getByText(WALKTHROUGH_STEPS[0].stops[0].title)).toBeInTheDocument()
+        expect(screen.queryByText(/You stopped at step/)).toBeNull()
+    })
+
+    it('finishes by returning the user to the dashboard, without saving a sixth step',async()=>{
+        const api=createFakeGuidanceApi({
+            state:makeGuidanceState({walkthrough:{status:'IN_PROGRESS',currentStep:4}}),
+        })
+        renderWithGuidance(<Shell/>,{api,route:'/insights'})
+
+        await userEvent.click(await screen.findByRole('button',{name:'Resume the tour'}))
+        while(screen.queryByRole('button',{name:'Finish'})===null){
+            await userEvent.click(screen.getByRole('button',{name:'Next'}))
+        }
+        await userEvent.click(screen.getByRole('button',{name:'Finish'}))
+
+        await waitFor(()=>expect(api.calls).toContainEqual({
+            walkthrough:{status:'COMPLETED',currentStep:4},
+        }))
+        const steps=api.calls
+            .map((call)=>call.walkthrough)
+            .filter((walkthrough)=>walkthrough!==undefined)
+            .map((walkthrough)=>walkthrough.currentStep)
+        expect(Math.max(...steps)).toBeLessThanOrEqual(4)
+        expect(screen.queryByRole('dialog')).toBeNull()
+        expect(path()).toHaveTextContent('/domains/dashboard')
     })
 
     it('leaves a skipped tour where the user stopped',async()=>{
@@ -149,31 +218,6 @@ describe('GuidanceWalkthrough',()=>{
 
         await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
         expect(path()).toHaveTextContent(/^\/quiz$/)
-    })
-
-    it('finishes by returning the user to the dashboard, without saving a sixth step',async()=>{
-        const api=createFakeGuidanceApi({
-            state:makeGuidanceState({walkthrough:{status:'IN_PROGRESS',currentStep:4}}),
-        })
-        renderWithGuidance(<Shell/>,{api})
-
-        await userEvent.click(await screen.findByRole('button',{name:'Resume the tour'}))
-        const lastStepStopCount=WALKTHROUGH_STEPS[WALKTHROUGH_STEPS.length-1].stops.length
-        for(let i=0;i<lastStepStopCount-1;i++){
-            await userEvent.click(screen.getByRole('button',{name:'Next'}))
-        }
-        await userEvent.click(await screen.findByRole('button',{name:'Finish'}))
-
-        await waitFor(()=>expect(api.calls).toContainEqual({
-            walkthrough:{status:'COMPLETED',currentStep:4},
-        }))
-        const steps=api.calls
-            .map((call)=>call.walkthrough)
-            .filter((walkthrough)=>walkthrough!==undefined)
-            .map((walkthrough)=>walkthrough.currentStep)
-        expect(Math.max(...steps)).toBeLessThanOrEqual(4)
-        expect(screen.queryByRole('dialog')).toBeNull()
-        expect(path()).toHaveTextContent('/domains/dashboard')
     })
 
     it('closes from the keyboard with Escape',async()=>{

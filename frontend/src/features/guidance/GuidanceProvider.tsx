@@ -3,7 +3,7 @@ import {useLocation,useNavigate} from 'react-router-dom'
 import {getCurrentSession} from '@/features/auth/auth.service'
 import {DEFAULT_GUIDANCE_STATE,guidanceApi as defaultGuidanceApi} from './guidanceApi'
 import type {GuidanceApi} from './guidanceApi'
-import {GUIDANCE_CATALOGUE,GUIDANCE_ROUTES,isAllowlistedTipId,walkthroughRouteFor,walkthroughStopCount} from './guidanceCatalogue'
+import {GUIDANCE_CATALOGUE,GUIDANCE_ROUTES,WALKTHROUGH_STEPS,isAllowlistedTipId,walkthroughRouteFor,walkthroughStopCount} from './guidanceCatalogue'
 import {GuidanceContext} from './GuidanceContextCore'
 import type {GuidanceContextValue,EvaluateOptions,GuidanceLoadStatus} from './GuidanceContextCore'
 import {clearAutoExpandMarkers,johannesburgDate} from './guidanceLocalDay'
@@ -243,7 +243,7 @@ export function GuidanceProvider({
         if(pathname!==GUIDANCE_ROUTES.dashboard) navigate(GUIDANCE_ROUTES.dashboard)
     },[setWalkthrough,navigate,pathname])
 
-        const nextWalkthroughStop=React.useCallback(()=>{
+    const nextWalkthroughStop=React.useCallback(()=>{
         const step=stateRef.current.walkthrough.currentStep
         if(walkthroughStop+1<walkthroughStopCount(step)){
             setWalkthroughStop(walkthroughStop+1)
@@ -270,13 +270,21 @@ export function GuidanceProvider({
 
     const suspendWalkthrough=React.useCallback(()=>setWalkthroughVisible(false),[])
 
-    const [lastPathname,setLastPathname]=React.useState(pathname)
-    if(lastPathname!==pathname){
-        setLastPathname(pathname)
-        if(walkthroughVisible&&pathname!==walkthroughRouteFor(state.walkthrough.currentStep)){
-            setWalkthroughVisible(false)
-        }
-    }
+    const syncWalkthroughToRoute=React.useCallback((route:string)=>{
+        const matched=WALKTHROUGH_STEPS.findIndex((step)=>step.route===route)
+        if(matched<0) return
+        if(matched===stateRef.current.walkthrough.currentStep) return
+        setWalkthroughStop(0)
+        setWalkthrough(
+            {walkthrough:{status:'IN_PROGRESS',currentStep:matched}},
+            {status:'IN_PROGRESS',currentStep:matched},
+        )
+    },[setWalkthrough])
+
+    React.useEffect(()=>{
+        if(!walkthroughVisible) return
+        syncWalkthroughToRoute(pathname)
+    },[pathname,walkthroughVisible,syncWalkthroughToRoute])
 
     const skipWalkthrough=React.useCallback(()=>{
         setWalkthroughVisible(false)
