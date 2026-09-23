@@ -6,6 +6,8 @@ import { useRefetchAtDeadline } from '../../features/simulation/hooks/useRefetch
 import { MonthAgenda } from './MonthAgenda'
 import { RecentScoreActivity } from './RecentScoreActivity'
 import { SimulationHeader } from './SimulationHeader'
+import { PauseOverlay } from './PauseOverlay'
+import { usePauseControls } from '@/hooks/usePauseControls'
 import type { SimulationDetail } from '../../features/simulation/types'
 
 interface SimulationBoardProps {
@@ -38,6 +40,18 @@ export function SimulationBoard({
     simulation.allowedActions.includes('ADVANCE_DAY')
 
   const advancingRef = React.useRef(false)
+
+  const {
+    pause,
+    resume,
+    pausing,
+    resuming,
+    pauseError,
+    resumeError,
+  } = usePauseControls({
+    simulation,
+    onSimulationChange,
+  })
 
   useSimulationPolling(
     shouldPoll,
@@ -86,7 +100,11 @@ export function SimulationBoard({
   return (
     <main className="min-h-screen bg-[#F4FBF7] px-4 py-6 dark:bg-[#0b1326]">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-        <SimulationHeader simulation={simulation}/>
+        <SimulationHeader
+          simulation={simulation}
+          onPause={() => void pause()}
+          pausing={pausing}
+        />
         <MonthAgenda
           currentDay={simulation.session.currentDay}
           daysInMonth={simulation.session.daysInMonth}
@@ -127,6 +145,26 @@ export function SimulationBoard({
               </p>
             )}
           </section>
+        )}
+        {simulation.session.status === 'PAUSED' && (
+          <PauseOverlay
+            resuming={resuming}
+            resumeError={resumeError}
+            onResume={() => void resume()}
+            onExit={() => {
+              console.info(
+                'Exit confirmation will open here',
+              )
+            }}
+          />
+        )}
+        {pauseError && (
+          <p
+            role="alert"
+            className="rounded-2xl bg-[#FFD9E1] px-4 py-3 text-sm font-semibold text-[#AC2A5D]"
+          >
+            {pauseError}
+          </p>
         )}
       </div>
     </main>

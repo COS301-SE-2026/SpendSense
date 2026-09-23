@@ -8,6 +8,8 @@ import type {
   SimulationActionResponse,
   SimulationDetail,
   SimulationStatusAction,
+  DiscardSimulationResponse,
+  SimulationStatusResponse,
 } from './types'
 
 const BASE = '/api/v1/simulations'
@@ -114,6 +116,18 @@ export function continueSimulation(
     },
   )
 }
+
+export function updateSimulationStatus(
+  sessionId: string,
+  action: 'pause' | 'resume',
+  idempotencyKey: string,
+): Promise<SimulationStatusResponse>
+
+export function updateSimulationStatus(
+  sessionId: string,
+  action: 'discard',
+  idempotencyKey: string,
+): Promise<DiscardSimulationResponse>
 
 export function updateSimulationStatus(
   sessionId: string,

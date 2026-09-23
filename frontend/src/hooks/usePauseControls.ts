@@ -5,7 +5,9 @@ import type { SimulationDetail } from '@/features/simulation/types'
 
 interface UsePauseControlsOptions {
   simulation: SimulationDetail
-  onSimulationChange: ( simulation: SimulationDetail ) => void
+  onSimulationChange: (
+    simulation: SimulationDetail,
+  ) => void
 }
 
 export function usePauseControls({
@@ -55,9 +57,7 @@ export function usePauseControls({
         )
 
       pauseKeyRef.current = null
-      onSimulationChange(
-        result as SimulationDetail,
-      )
+      onSimulationChange(result)
     } catch {
       setPauseError(
         'The simulation could not be paused. Please try again.',
@@ -95,9 +95,7 @@ export function usePauseControls({
         )
 
       resumeKeyRef.current = null
-      onSimulationChange(
-        result as SimulationDetail,
-      )
+      onSimulationChange(result)
     } catch {
       setResumeError(
         'The simulation could not be resumed. Please try again.',

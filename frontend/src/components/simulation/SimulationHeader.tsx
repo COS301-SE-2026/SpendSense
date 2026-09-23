@@ -1,9 +1,16 @@
-import { Clock3, WalletCards, PiggyBank } from 'lucide-react'
+import { 
+  Clock3, 
+  WalletCards, 
+  PiggyBank, 
+  Pause, 
+} from 'lucide-react'
 import { useSimulationCountdown } from '@/hooks/useSimulationCountdown'
 import type { SimulationDetail } from '../../features/simulation/types'
 
 interface SimulationHeaderProps {
   simulation: SimulationDetail
+  onPause?: () => void
+  pausing?: boolean
 }
 
 function formatMoney(value: string): string {
@@ -15,6 +22,8 @@ function formatMoney(value: string): string {
 
 export function SimulationHeader({
   simulation,
+  onPause,
+  pausing = false,
 }: SimulationHeaderProps) {
   const { session } = simulation
 
@@ -33,15 +42,28 @@ export function SimulationHeader({
             Day {session.currentDay} of {session.daysInMonth}
           </h1>
         </div>
-        {session.timedMode && secondsRemaining !== null && (
-          <div
-            className="flex items-center gap-2 rounded-full bg-[#FFF1C8] px-3 py-2 text-sm font-bold text-[#091828]"
-            aria-label={`${secondsRemaining} seconds until the next simulated day`}
-          >
-            <Clock3 className="size-4"/>
-            {secondsRemaining}s
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {session.timedMode && secondsRemaining !== null && (
+            <div
+              className="flex items-center gap-2 rounded-full bg-[#FFF1C8] px-3 py-2 text-sm font-bold text-[#091828]"
+              aria-label={`${secondsRemaining} seconds until the next simulated day`}
+            >
+              <Clock3 className="size-4"/>
+              {secondsRemaining}s
+            </div>
+          )}
+          {onPause && (
+            <button
+              type="button"
+              onClick={onPause}
+              disabled={pausing}
+              className="flex items-center gap-2 rounded-full border-2 border-[#091828] bg-white px-3 py-2 text-sm font-black text-[#091828] shadow-[2px_2px_0_#091828] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#1C263C] dark:text-white"
+            >
+              <Pause className="size-4"/>
+              {pausing ? 'Pausing...' : 'Pause'}
+            </button>
+          )}
+        </div>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl bg-[#FFD9E6] p-3">
