@@ -22,6 +22,7 @@ export interface GuidanceContextValue{
     localDate:string
     blocked:boolean
     walkthroughVisible:boolean
+    walkthroughStop:number
     dailyRefreshToken:number
     storage?:Storage|null
 
@@ -43,6 +44,8 @@ export interface GuidanceContextValue{
     resumeWalkthrough:()=>void
     replayWalkthrough:()=>void
     goToWalkthroughStep:(step:number)=>void
+    nextWalkthroughStop:()=>void
+    previousWalkthroughStop:()=>void
     suspendWalkthrough:()=>void
     skipWalkthrough:()=>void
     completeWalkthrough:()=>void

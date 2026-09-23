@@ -3,7 +3,7 @@ import {useLocation,useNavigate} from 'react-router-dom'
 import {getCurrentSession} from '@/features/auth/auth.service'
 import {DEFAULT_GUIDANCE_STATE,guidanceApi as defaultGuidanceApi} from './guidanceApi'
 import type {GuidanceApi} from './guidanceApi'
-import {GUIDANCE_CATALOGUE,GUIDANCE_ROUTES,isAllowlistedTipId,walkthroughRouteFor} from './guidanceCatalogue'
+import {GUIDANCE_CATALOGUE,GUIDANCE_ROUTES,isAllowlistedTipId,walkthroughRouteFor,walkthroughStopCount} from './guidanceCatalogue'
 import {GuidanceContext} from './GuidanceContextCore'
 import type {GuidanceContextValue,EvaluateOptions,GuidanceLoadStatus} from './GuidanceContextCore'
 import {clearAutoExpandMarkers,johannesburgDate} from './guidanceLocalDay'
@@ -43,6 +43,7 @@ export function GuidanceProvider({
     const [localDate,setLocalDate]=React.useState(()=>johannesburgDate())
     const [blockedKeys,setBlockedKeys]=React.useState<readonly string[]>([])
     const [walkthroughVisible,setWalkthroughVisible]=React.useState(false)
+    const [walkthroughStop,setWalkthroughStop]=React.useState(0)
     const [dailyRefreshToken,setDailyRefreshToken]=React.useState(0)
     const [reloadToken,setReloadToken]=React.useState(0)
 
@@ -203,6 +204,7 @@ export function GuidanceProvider({
 
     const startWalkthrough=React.useCallback(()=>{
         setWalkthroughVisible(true)
+        setWalkthroughStop(0)
         setWalkthrough(
             {walkthrough:{status:'IN_PROGRESS',currentStep:0}},
             {status:'IN_PROGRESS',currentStep:0},
@@ -212,11 +214,13 @@ export function GuidanceProvider({
 
     const resumeWalkthrough=React.useCallback(()=>{
         setWalkthroughVisible(true)
+        setWalkthroughStop(0)
         showStepPage(stateRef.current.walkthrough.currentStep)
     },[showStepPage])
 
     const replayWalkthrough=React.useCallback(()=>{
         setWalkthroughVisible(true)
+        setWalkthroughStop(0)
         setWalkthrough({replayWalkthrough:true},{status:'IN_PROGRESS',currentStep:0})
         showStepPage(0)
     },[setWalkthrough,showStepPage])
@@ -229,6 +233,40 @@ export function GuidanceProvider({
         )
         showStepPage(clamped)
     },[setWalkthrough,showStepPage])
+
+    const completeWalkthrough=React.useCallback(()=>{
+        setWalkthroughVisible(false)
+        setWalkthrough(
+            {walkthrough:{status:'COMPLETED',currentStep:WALKTHROUGH_MAX_STEP}},
+            {status:'COMPLETED',currentStep:WALKTHROUGH_MAX_STEP},
+        )
+        if(pathname!==GUIDANCE_ROUTES.dashboard) navigate(GUIDANCE_ROUTES.dashboard)
+    },[setWalkthrough,navigate,pathname])
+
+        const nextWalkthroughStop=React.useCallback(()=>{
+        const step=stateRef.current.walkthrough.currentStep
+        if(walkthroughStop+1<walkthroughStopCount(step)){
+            setWalkthroughStop(walkthroughStop+1)
+            return
+        }
+        if(step>=WALKTHROUGH_MAX_STEP){
+            completeWalkthrough()
+            return
+        }
+        setWalkthroughStop(0)
+        goToWalkthroughStep(step+1)
+    },[walkthroughStop,goToWalkthroughStep,completeWalkthrough])
+
+    const previousWalkthroughStop=React.useCallback(()=>{
+        if(walkthroughStop>0){
+            setWalkthroughStop(walkthroughStop-1)
+            return
+        }
+        const step=stateRef.current.walkthrough.currentStep
+        if(step===0) return
+        setWalkthroughStop(walkthroughStopCount(step-1)-1)
+        goToWalkthroughStep(step-1)
+    },[walkthroughStop,goToWalkthroughStep])
 
     const suspendWalkthrough=React.useCallback(()=>setWalkthroughVisible(false),[])
 
@@ -249,14 +287,6 @@ export function GuidanceProvider({
         )
     },[setWalkthrough])
 
-    const completeWalkthrough=React.useCallback(()=>{
-        setWalkthroughVisible(false)
-        setWalkthrough(
-            {walkthrough:{status:'COMPLETED',currentStep:WALKTHROUGH_MAX_STEP}},
-            {status:'COMPLETED',currentStep:WALKTHROUGH_MAX_STEP},
-        )
-        if(pathname!==GUIDANCE_ROUTES.dashboard) navigate(GUIDANCE_ROUTES.dashboard)
-    },[setWalkthrough,navigate,pathname])
 
     const blocked=blockedKeys.length>0
     const route=pathname
@@ -293,6 +323,7 @@ export function GuidanceProvider({
         localDate,
         blocked,
         walkthroughVisible,
+        walkthroughStop,
         dailyRefreshToken,
         storage,
         reload,
@@ -309,6 +340,8 @@ export function GuidanceProvider({
         resumeWalkthrough,
         replayWalkthrough,
         goToWalkthroughStep,
+        nextWalkthroughStop,
+        previousWalkthroughStop,
         suspendWalkthrough,
         skipWalkthrough,
         completeWalkthrough,
@@ -321,6 +354,7 @@ export function GuidanceProvider({
         localDate,
         blocked,
         walkthroughVisible,
+        walkthroughStop,
         dailyRefreshToken,
         storage,
         reload,
@@ -337,6 +371,8 @@ export function GuidanceProvider({
         resumeWalkthrough,
         replayWalkthrough,
         goToWalkthroughStep,
+        nextWalkthroughStop,
+        previousWalkthroughStop,
         suspendWalkthrough,
         skipWalkthrough,
         completeWalkthrough,

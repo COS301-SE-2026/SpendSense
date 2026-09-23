@@ -33,7 +33,6 @@ function GuideDock({payableCount,storage,className}:MascotGuideDockProps){
     const autoOpenAllowed=state.tipsEnabled&&state.dailyExpansionEnabled
 
     useEffect(()=>{
-
         if(!autoOpenAllowed||status==='loading') return
         if(!canAutoExpand(userId,localDate,markerStorage)) return
         markAutoExpanded(userId,localDate,markerStorage)
@@ -100,6 +99,7 @@ function GuideDock({payableCount,storage,className}:MascotGuideDockProps){
             <button
                 type="button"
                 aria-label="Hide your mascot guide"
+                data-tour="dashboard.mascot"
                 onClick={()=>{
                     setOffScreen(true)
                     setBubbleOpen(false)

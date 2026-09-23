@@ -2,6 +2,8 @@ import {X} from 'lucide-react'
 import {useCallback,useEffect,useRef} from 'react'
 import type {KeyboardEvent as ReactKeyboardEvent} from 'react'
 import {GuidanceMascot} from './GuidanceMascot'
+import {TourSpotlight} from './TourSpotlight'
+import {useSpotlightRect} from '@/hooks/useSpotlightRect'
 import {WALKTHROUGH_STEPS} from '@/features/guidance/guidanceCatalogue'
 import {useGuidance,useGuidanceOptional} from '@/features/guidance/useGuidance'
 import {WALKTHROUGH_MAX_STEP,WALKTHROUGH_STEP_COUNT} from '@/features/guidance/guidanceTypes'
@@ -23,9 +25,10 @@ function WalkthroughPanel({className}:{className?:string}){
     const {
         state,
         walkthroughVisible,
-        goToWalkthroughStep,
+        walkthroughStop,
+        nextWalkthroughStop,
+        previousWalkthroughStop,
         skipWalkthrough,
-        completeWalkthrough,
     }=useGuidance()
 
     const panelRef=useRef<HTMLDivElement|null>(null)
@@ -48,78 +51,93 @@ function WalkthroughPanel({className}:{className?:string}){
         }
     },[skipWalkthrough])
 
-    if(!walkthroughVisible) return null
-
     const {currentStep}=state.walkthrough
     const step=WALKTHROUGH_STEPS[Math.min(currentStep,WALKTHROUGH_MAX_STEP)]
-    const isLast=currentStep>=WALKTHROUGH_MAX_STEP
+    const stopIndex=Math.min(walkthroughStop,step.stops.length-1)
+    const stop=step.stops[stopIndex]
+    const rect=useSpotlightRect(stop.target,walkthroughVisible)
+
+    if(!walkthroughVisible) return null
+
+    const isLastStop=currentStep>=WALKTHROUGH_MAX_STEP&&stopIndex===step.stops.length-1
+    const isFirstStop=currentStep===0&&stopIndex===0
+    // keep the panel off whatever is being highlighted
+    const panelAtTop=rect!==null&&rect.top+rect.height/2>window.innerHeight/2
 
     return(
-        <div
-            ref={panelRef}
-            role="dialog"
-            aria-modal="false"
-            aria-labelledby="walkthrough-heading"
-            tabIndex={-1}
-            onKeyDown={onKeyDown}
-            className={cn(
-                'fixed inset-x-4 bottom-20 z-40 mx-auto max-w-md rounded-2xl border-2 border-[#091828] bg-white p-4 shadow-[3px_4px_0_#091828]',
-                'dark:border-[#2d3449] dark:bg-[#131b2e] dark:shadow-none',
-                className,
-            )}
-        >
-            <div className="flex items-start gap-3">
-                <GuidanceMascot className="size-12"/>
-                <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-[#6B6375] dark:text-[#a0aec0]">
-                        Step {currentStep+1} of {WALKTHROUGH_STEP_COUNT}: {step.screen}
-                    </p>
-                    <h2
-                        id="walkthrough-heading"
-                        aria-live="polite"
-                        className="mt-1 text-sm leading-relaxed text-[#091828] dark:text-[#dae2fd]"
+        <>
+            <TourSpotlight rect={rect} target={stop.target}/>
+            <div
+                ref={panelRef}
+                role="dialog"
+                aria-modal="false"
+                aria-labelledby="walkthrough-heading"
+                tabIndex={-1}
+                onKeyDown={onKeyDown}
+                className={cn(
+                    'fixed inset-x-4 z-40 mx-auto max-w-md rounded-2xl border-2 border-[#091828] bg-white p-4 shadow-[3px_4px_0_#091828]',
+                    'dark:border-[#2d3449] dark:bg-[#131b2e] dark:shadow-none',
+                    panelAtTop? 'top-4' : 'bottom-20',
+                    className,
+                )}
+            >
+                <div className="flex items-start gap-3">
+                    {/* the mascot guides every step, not just the first */}
+                    <GuidanceMascot className="size-12"/>
+                    <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-[#6B6375] dark:text-[#a0aec0]">
+                            {step.screen} &middot; step {currentStep+1} of {WALKTHROUGH_STEP_COUNT}
+                            {step.stops.length>1 && ` (${stopIndex+1}/${step.stops.length})`}
+                        </p>
+                        <h2
+                            id="walkthrough-heading"
+                            className="mt-1 text-sm font-bold text-[#091828] dark:text-[#dae2fd]"
+                        >
+                            {stop.title}
+                        </h2>
+                        <p aria-live="polite" className="mt-1 text-sm leading-relaxed text-[#091828] dark:text-[#dae2fd]">
+                            {stop.body}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={skipWalkthrough}
+                        aria-label="Close the tour"
+                        className="shrink-0 rounded-full p-1 text-[#6B6375] hover:bg-[#E8EFEC] focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-[#a0aec0] dark:hover:bg-[#1c263c]"
                     >
-                        {step.prompt}
-                    </h2>
+                        <X aria-hidden="true" className="size-4"/>
+                    </button>
                 </div>
-                <button
-                    type="button"
-                    onClick={skipWalkthrough}
-                    aria-label="Close the tour"
-                    className="shrink-0 rounded-full p-1 text-[#6B6375] hover:bg-[#E8EFEC] focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-[#a0aec0] dark:hover:bg-[#1c263c]"
-                >
-                    <X aria-hidden="true" className="size-4"/>
-                </button>
+
+                <div className="mt-4 flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={skipWalkthrough}
+                        className="rounded-full px-3 py-1.5 text-xs font-bold text-[#6B6375] focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-[#a0aec0]"
+                    >
+                        Skip
+                    </button>
+
+                    <span className="flex-1"/>
+
+                    <button
+                        type="button"
+                        onClick={previousWalkthroughStop}
+                        disabled={isFirstStop}
+                        className="rounded-full px-3 py-1.5 text-xs font-bold text-[#091828] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-[#dae2fd]"
+                    >
+                        Back
+                    </button>
+                    <button
+                        type="button"
+                        onClick={nextWalkthroughStop}
+                        className="rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-3 py-1.5 text-xs font-bold text-[#3F001B] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
+                    >
+                        {isLastStop? 'Finish' : 'Next'}
+                    </button>
+                </div>
             </div>
-
-            <div className="mt-4 flex items-center gap-2">
-                <button
-                    type="button"
-                    onClick={skipWalkthrough}
-                    className="rounded-full px-3 py-1.5 text-xs font-bold text-[#6B6375] focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-[#a0aec0]"
-                >
-                    Skip
-                </button>
-
-                <span className="flex-1"/>
-
-                <button
-                    type="button"
-                    onClick={()=>goToWalkthroughStep(currentStep-1)}
-                    disabled={currentStep===0}
-                    className="rounded-full px-3 py-1.5 text-xs font-bold text-[#091828] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-[#dae2fd]"
-                >
-                    Back
-                </button>
-                <button
-                    type="button"
-                    onClick={()=>(isLast? completeWalkthrough() : goToWalkthroughStep(currentStep+1))}
-                    className="rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-3 py-1.5 text-xs font-bold text-[#3F001B] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
-                >
-                    {isLast? 'Finish' : 'Next'}
-                </button>
-            </div>
-        </div>
+        </>
     )
 }
 
