@@ -5,6 +5,7 @@ import {zodResolver} from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {useNavigate} from "react-router-dom";
 import {CustomBadge} from "@/components/common/CustomBadges";
+import {MascotPeek} from "@/components/guidance/MascotPeek";
 import {Popover, PopoverContent, PopoverTrigger} from "../components/ui/popover";
 import {Calendar} from "@/components/ui/calendar";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -526,12 +527,20 @@ export default function ObligationForm() {
             </div>
 
             {showPopup && (
+                <>
                 <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-[#FF6B9D] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-[#091828] dark:border-[#060e20] dark:bg-[#ff6b9d] dark:text-[#6e0035]">
                     <div className="flex flex-col">
                         <span className="text-sm font-bold">Added new obligation!</span>
                         <CustomBadge variant="xp">+{xpAwarded} xp</CustomBadge>
                     </div>
                 </div>
+                <MascotPeek
+                    surface="payment"
+                    side="right"
+                    facts={{obligationJustCreated:true,xpAwarded}}
+                    className="top-24 bottom-auto z-[60]"
+                />
+                </>
             )}
         </div>
     );

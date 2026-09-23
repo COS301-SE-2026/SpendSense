@@ -207,6 +207,7 @@ export default function QuizQuestionPage(){
                     surface="quiz"
                     side="left"
                     manual
+                    durationMs={null}
                     onContinue={()=>advanceRef.current?.()}
                     facts={{
                         answerSubmitted:true,

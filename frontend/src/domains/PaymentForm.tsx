@@ -12,6 +12,7 @@ import {Calendar as CalenderIcon, CheckCircle2, Coins, Flame, TrendingUp} from "
 import {IconButton} from "@/components/common/IconButton";
 import {Calendar} from "@/components/ui/calendar";
 import {GuideSlot} from "@/components/guidance/GuideSlot";
+import {MascotPeek} from "@/components/guidance/MascotPeek";
 import {useGuidanceOptional,useGuidanceSuppression} from "@/features/guidance/useGuidance";
 
 const paymentSchema=z.object({
@@ -258,6 +259,8 @@ function PaymentImpactModal({
 
     const guidanceFacts={
         paymentResult:result?.paymentImpact?.isLate ? "FINAL_LATE" : "FINAL_ON_TIME",
+        xpAwarded:xp,
+        ...(result?.scoreImpact ? {scoreDelta:scoreDelta,scoreAfter:scoreAfter} : {}),
     };
 
     return(
@@ -275,8 +278,6 @@ function PaymentImpactModal({
                         )}
                     </div>
                 </div>
-
-                <GuideSlot surface="payment" facts={guidanceFacts} className="mt-4" manual/>
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
                     <ImpactStat
@@ -320,6 +321,7 @@ function PaymentImpactModal({
                     Back to dashboard
                 </LongButton>
             </div>
+            <MascotPeek surface="payment" facts={guidanceFacts} side="right" manual className="top-24 bottom-auto z-[60]"/>
         </div>
     );
 }
