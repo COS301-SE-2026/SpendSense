@@ -146,7 +146,7 @@ describe('GuidanceWalkthrough',()=>{
             {api,route:'/help'},
         )
 
-        await userEvent.click(await screen.findByRole('button',{name:'Replay the tour'}))
+        await userEvent.click(await screen.findByRole('button',{name:'Start the tour'}))
 
         expect(await screen.findByText(WALKTHROUGH_STEPS[0].stops[0].title)).toBeInTheDocument()
         expect(path()).toHaveTextContent('/domains/dashboard')

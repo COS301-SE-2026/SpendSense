@@ -65,7 +65,7 @@ function GuidanceSettingsCard({className}:{className?:string}){
                         onClick={replayWalkthrough}
                         className="dark:shadow-[3px_4px_0_#060e20]"
                     >
-                        Replay the tour
+                        Start the tour
                     </LongButton>
                     <button
                         type="button"
