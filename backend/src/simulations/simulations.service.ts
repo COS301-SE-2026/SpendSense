@@ -2679,7 +2679,7 @@ export class SimulationsService {
       typeof value === 'string' || typeof value === 'number'
         ? String(value)
         : value instanceof Prisma.Decimal
-          ? value.toString()
+          ? value.toFixed(2)
           : null,
     );
     return cents === null ? null : this.centsToMoney(cents);
