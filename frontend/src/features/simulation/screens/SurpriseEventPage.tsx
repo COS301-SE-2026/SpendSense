@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react'
-import {AlertTriangle,ArrowRight,Check,Clock3,Coins,Pause,Sparkles} from 'lucide-react'
+import {AlertTriangle,Check,Clock3,Coins,Pause,Sparkles} from 'lucide-react'
 import {useNavigate,useParams} from 'react-router-dom'
 import {ErrorCard,LoadingCard} from '@/components/common/AsyncStates'
 import {LongButton} from '@/components/common/LongButton'
@@ -291,7 +291,7 @@ function EventScreenContent({screen}:Readonly<{screen:EventScreen}>){
                         LongVariant="primaryPink"
                         onClick={()=>navigate(decisionPath)}
                     >
-                        See my options <ArrowRight className="ml-2 size-4" aria-hidden="true"/>
+                        See my options
                     </LongButton>
                 ):(
                     <>

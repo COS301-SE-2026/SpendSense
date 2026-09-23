@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react'
-import {ArrowRight,Check,Clock3,Coins,Wallet} from 'lucide-react'
+import {Check,Clock3,Coins,Wallet} from 'lucide-react'
 import {useLocation,useNavigate,useParams} from 'react-router-dom'
 import {ErrorCard,LoadingCard} from '@/components/common/AsyncStates'
 import {LongButton} from '@/components/common/LongButton'
@@ -259,7 +259,7 @@ export function SurpriseEventResultPage(){
                 >
                     {submitting
                         ?'Returning to game…'
-                        :<>Back to game <ArrowRight className="ml-2 size-4" aria-hidden="true"/></>}
+                        :<>Back to game</>}
                 </LongButton>
             </section>
         </SimulationPageShell>
