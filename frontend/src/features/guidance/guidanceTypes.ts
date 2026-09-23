@@ -4,6 +4,7 @@ export type GuidanceSurface=
     | 'payment'
     | 'quiz'
     | 'insights'
+    | 'friends'
     | 'walkthrough'
 
 export type WalkthroughStatus='NOT_STARTED'|'IN_PROGRESS'|'COMPLETED'|'SKIPPED'
