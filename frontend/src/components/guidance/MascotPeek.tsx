@@ -58,9 +58,10 @@ function Peek({surface,facts,side='right',onRetry,onContinue,manual,durationMs=P
                 className={cn('pointer-events-auto',fromLeft? 'ml-3' : 'mr-3')}
             />
 
-            <div className={cn('w-36 overflow-hidden',fromLeft? 'rounded-r-3xl' : 'rounded-l-3xl')}>
-                <div className={fromLeft? '-translate-x-2 translate-y-4 rotate-[45deg]' : 'translate-x-2 translate-y-4 rotate-[-45deg]'}>
-                    <GuidanceMascot className={cn('size-80',!fromLeft&&'-scale-x-100')}/>
+            {/* the left side is the right side mirrored, so the mascot is cut off at the screen edge */}
+            <div className={cn('h-52 w-36 overflow-hidden rounded-l-3xl',fromLeft&&'-scale-x-100')}>
+                <div className="translate-x-2 translate-y-4 rotate-[-45deg]">
+                    <GuidanceMascot className="size-80 -scale-x-100"/>
                 </div>
             </div>
         </div>
