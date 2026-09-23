@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, CircleAlert, Landmark, PiggyBank } from "lucide-react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -10,7 +9,7 @@ import { getSimulation, setupSimulation } from "../api";
 import { SimulationPageShell } from "../components/SimulationPageShell";
 import { createIdempotencyKey } from "../idempotency";
 import { formatSimulationMoney } from "../presentation";
-import { routeForSimulationState } from "../routing";
+import { pathForSimulationState } from "../routing";
 import type { SetupRequest, SimulationDetail } from "../types";
 
 interface PlanningLocationState {
@@ -21,14 +20,7 @@ function routeAfterSetup(
   detail: SimulationDetail,
   navigate: ReturnType<typeof useNavigate>,
 ) {
-  const route = routeForSimulationState(detail);
-
-  if (route === "briefing") {
-    navigate(`/simulation/setup/${detail.session.id}`, { replace: true });
-    return;
-  }
-
-  navigate(`/simulation/session/${detail.session.id}`, { replace: true });
+  navigate(pathForSimulationState(detail),{replace:true});
 }
 
 export default function MonthPlanningPage() {

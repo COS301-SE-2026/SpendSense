@@ -37,7 +37,7 @@ function renderRoute(
           element={<MonthPlanningPage />}
         />
         <Route
-          path="/simulation/session/:sessionId"
+          path="/simulation/session/:sessionId/board"
           element={<p>Active board handoff</p>}
         />
       </Routes>

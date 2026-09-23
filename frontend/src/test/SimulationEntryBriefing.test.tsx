@@ -83,6 +83,7 @@ function renderRoute(
           path="/simulation/setup/:sessionId"
           element={<p>Budget setup</p>}
         />
+        <Route path="/simulation/recovery" element={<p>Recovery handoff</p>}/>
       </Routes>
     </MemoryRouter>,
   );

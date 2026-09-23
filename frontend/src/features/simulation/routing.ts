@@ -69,8 +69,10 @@ export function pathForSimulationState(
       return `/simulation/session/${sessionId}/board`
 
     case 'event-reveal':
-    case 'event-result':
       return `/simulation/session/${sessionId}/event`
+
+    case 'event-result':
+      return `/simulation/session/${sessionId}/event-result`
 
     case 'summary':
       return `/simulation/session/${sessionId}/summary`
