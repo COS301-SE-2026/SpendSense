@@ -26,17 +26,17 @@ export function MascotPeek(props:Readonly<MascotPeekProps>){
 
 function Peek({surface,facts,side='right',onRetry,onContinue,manual,durationMs=PEEK_DURATION_MS,className}:Readonly<MascotPeekProps>){
     const fromLeft=side==='left'
-    const [expired,setExpired]=useState(false)
-    const factsKey=JSON.stringify(facts)
+    // a new surface, set of facts or duration starts a fresh peek
+    const peekKey=`${surface}|${JSON.stringify(facts)}|${durationMs}`
+    const [expiredKey,setExpiredKey]=useState<string|null>(null)
 
     useEffect(()=>{
-        setExpired(false)
         if(durationMs===null) return
-        const timer=window.setTimeout(()=>setExpired(true),durationMs)
+        const timer=window.setTimeout(()=>setExpiredKey(peekKey),durationMs)
         return ()=>window.clearTimeout(timer)
-    },[surface,factsKey,durationMs])
+    },[peekKey,durationMs])
 
-    if(expired) return null
+    if(expiredKey===peekKey) return null
 
     return(
         <div

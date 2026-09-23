@@ -240,22 +240,6 @@ enum GuidanceWalkthroughStatus {
   SKIPPED
 }
 
-enum PaymentContributionSource {
-  MANUAL
-  RECEIPT_SCAN
-}
-
-enum PaymentContributionState {
-  POSTED
-  VOIDED
-}
-
-enum ReceiptScanStatus {
-  READY_FOR_REVIEW
-  CONSUMED
-  EXPIRED
-}
-
 model User {
   id                     String                  @id @default(uuid())
   supabaseAuthId         String                  @unique

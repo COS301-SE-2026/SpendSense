@@ -23,10 +23,7 @@ export function useSpotlightRect(target:string|undefined,active:boolean):Spotlig
     const [rect,setRect]=useState<SpotlightRect|null>(null)
 
     useEffect(()=>{
-        if(!active||!target){
-            setRect(null)
-            return
-        }
+        if(!active||!target) return
 
         const element=findTarget(target)
         if(element&&typeof element.scrollIntoView==='function'){
@@ -47,5 +44,5 @@ export function useSpotlightRect(target:string|undefined,active:boolean):Spotlig
         }
     },[target,active])
 
-    return rect
+    return active&&target? rect : null
 }

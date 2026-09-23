@@ -39,6 +39,7 @@ function GuideDock({payableCount,storage,className}:Readonly<MascotGuideDockProp
         if(!autoOpenAllowed||status==='loading') return
         if(!canAutoExpand(userId,localDate,markerStorage)) return
         markAutoExpanded(userId,localDate,markerStorage)
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setBubbleOpen(true)
     },[autoOpenAllowed,status,userId,localDate,markerStorage])
 
