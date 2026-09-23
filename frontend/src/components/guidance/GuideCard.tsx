@@ -1,17 +1,20 @@
-import {RefreshCw,X} from 'lucide-react'
+import {ArrowRight,RefreshCw,X} from 'lucide-react'
 import {Link} from 'react-router-dom'
 import {GuidanceMascot} from './GuidanceMascot'
 import {cn} from '@/lib/utils'
 import type {SelectedGuide} from '@/features/guidance/guidanceTypes'
 
 export type GuideCardVariant='card'|'bubble'
+export type GuideBubbleTail='left'|'right'
 
 export interface GuideCardProps{
     guide:SelectedGuide
     variant?:GuideCardVariant
+    bubbleTail?:GuideBubbleTail
     showAvatar?:boolean
     onDismiss?:(id:string)=>void
     onRetry?:()=>void
+    onContinue?:()=>void
     onNavigate?:()=>void
     className?:string
 }
@@ -19,9 +22,11 @@ export interface GuideCardProps{
 export function GuideCard({
     guide,
     variant='card',
+    bubbleTail='right',
     showAvatar=true,
     onDismiss,
     onRetry,
+    onContinue,
     onNavigate,
     className,
 }:GuideCardProps){
@@ -31,6 +36,7 @@ export function GuideCard({
         <aside
             role="status"
             aria-live="polite"
+            data-testid="guide-card"
             data-guide-id={guide.id}
             data-guide-kind={guide.kind}
             data-guide-variant={variant}
@@ -38,10 +44,11 @@ export function GuideCard({
                 'flex items-start gap-3 border-2 border-[#091828] bg-white dark:border-[#2d3449] dark:bg-[#131b2e]',
                 isBubble
                     ? [
-                        'relative max-w-[20rem] rounded-2xl rounded-br-sm p-4',
-                        'after:absolute after:-bottom-[9px] after:right-16 after:size-4 after:rotate-45',
+                        'relative max-w-[20rem] rounded-2xl p-4',
+                        'after:absolute after:-bottom-[9px] after:size-4 after:rotate-45',
                         'after:border-b-2 after:border-r-2 after:border-[#091828] after:bg-white',
                         'dark:after:border-[#2d3449] dark:after:bg-[#131b2e]',
+                        bubbleTail==='left'? 'rounded-bl-sm after:left-8' : 'rounded-br-sm after:right-8',
                     ]
                     : 'rounded-2xl p-4 shadow-[3px_4px_0_#091828] dark:shadow-none',
                 className,
@@ -73,17 +80,29 @@ export function GuideCard({
                                         {action.label}
                                     </Link>
                                 )
-                                : (
-                                    <button
-                                        key={action.label}
-                                        type="button"
-                                        onClick={onRetry}
-                                        className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#091828] bg-[#E8EFEC] px-3 py-1 text-xs font-bold text-[#091828] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#1c263c] dark:text-[#dae2fd]"
-                                    >
-                                        <RefreshCw aria-hidden="true" className="size-3"/>
-                                        {action.label}
-                                    </button>
-                                )
+                                : action.intent==='continue'
+                                    ? (
+                                        <button
+                                            key={action.label}
+                                            type="button"
+                                            onClick={onContinue}
+                                            className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-3 py-1.5 text-xs font-bold text-[#3F001B] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
+                                        >
+                                            {action.label}
+                                            <ArrowRight aria-hidden="true" className="size-3"/>
+                                        </button>
+                                    )
+                                    : (
+                                        <button
+                                            key={action.label}
+                                            type="button"
+                                            onClick={onRetry}
+                                            className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#091828] bg-[#E8EFEC] px-3 py-1 text-xs font-bold text-[#091828] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#1c263c] dark:text-[#dae2fd]"
+                                        >
+                                            <RefreshCw aria-hidden="true" className="size-3"/>
+                                            {action.label}
+                                        </button>
+                                    )
                         ))}
                     </div>
                 )}

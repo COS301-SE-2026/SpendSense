@@ -1,6 +1,6 @@
 import {useEffect,useMemo} from 'react'
 import {GuideCard} from './GuideCard'
-import type {GuideCardVariant} from './GuideCard'
+import type {GuideBubbleTail,GuideCardVariant} from './GuideCard'
 import {useGuidanceOptional} from '@/features/guidance/useGuidance'
 import type {GuidanceSurface,GuideFacts} from '@/features/guidance/guidanceTypes'
 
@@ -8,9 +8,11 @@ export interface GuideSlotProps{
     surface:GuidanceSurface
     facts:GuideFacts
     onRetry?:()=>void
+    onContinue?:()=>void
     manual?:boolean
     showAvatar?:boolean
     variant?:GuideCardVariant
+    bubbleTail?:GuideBubbleTail
     className?:string
 }
 
@@ -18,9 +20,11 @@ export function GuideSlot({
     surface,
     facts,
     onRetry,
+    onContinue,
     manual=false,
     showAvatar=true,
     variant='card',
+    bubbleTail='right',
     className,
 }:GuideSlotProps){
     const guidance=useGuidanceOptional()
@@ -43,9 +47,11 @@ export function GuideSlot({
             guide={guide}
             className={className}
             variant={variant}
+            bubbleTail={bubbleTail}
             showAvatar={showAvatar}
             onDismiss={guidance.dismiss}
             onRetry={onRetry}
+            onContinue={onContinue}
             onNavigate={guidance.suspendWalkthrough}
         />
     )
