@@ -17,6 +17,11 @@ interface ObligationDetailPageProps {
   onPay: () => void
   paying?: boolean
   paymentError?: string | null
+  insufficientFunds?: {
+    currentBalance: string
+    savingsBalance: string
+    remainingAmount: string
+  } | null
 }
 
 export function ObligationDetailPage({
@@ -26,6 +31,7 @@ export function ObligationDetailPage({
   onPay,
   paying = false,
   paymentError = null,
+  insufficientFunds = null,
 }: ObligationDetailPageProps) {
   const canPay =
     simulation.allowedActions.includes('PAY_OBLIGATION') &&
@@ -130,7 +136,6 @@ export function ObligationDetailPage({
                   ? 'Processing payment...'
                   : 'Pay full amount'}
               </button>
-
               {paymentError && (
                 <p
                   role="alert"
@@ -138,6 +143,39 @@ export function ObligationDetailPage({
                 >
                   {paymentError}
                 </p>
+              )}
+              {insufficientFunds && (
+                <div className="mt-3 rounded-2xl bg-[#FFF1C8] p-4">
+                  <p className="text-sm font-black text-[#091828]">
+                    Payment shortfall
+                  </p>
+                  <div className="mt-3 grid gap-2 text-sm text-[#6B6375]">
+                    <p>
+                      Current available:{' '}
+                      <strong className="text-[#091828]">
+                        {formatSimulationMoney(
+                          insufficientFunds.currentBalance,
+                        )}
+                      </strong>
+                    </p>
+                    <p>
+                      Savings available:{' '}
+                      <strong className="text-[#091828]">
+                        {formatSimulationMoney(
+                          insufficientFunds.savingsBalance,
+                        )}
+                      </strong>
+                    </p>
+                    <p>
+                      Still needed:{' '}
+                      <strong className="text-[#091828]">
+                        {formatSimulationMoney(
+                          insufficientFunds.remainingAmount,
+                        )}
+                      </strong>
+                    </p>
+                  </div>
+                </div>
               )}
             </>
           ) : (

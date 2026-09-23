@@ -9,6 +9,12 @@ import { PaymentResult } from '@/components/simulation/PaymentResult'
 import { ResultAcknowledgement } from '@/components/simulation/ResultAcknowledgement'
 import type { PaymentSimulationResponse } from '@/features/simulation/types'
 
+interface InsufficientFundsDetails {
+  currentBalance: string
+  savingsBalance: string
+  remainingAmount: string
+}
+
 export default function SimulationObligationDetailPage() {
   const {
       sessionId,
@@ -48,6 +54,11 @@ export default function SimulationObligationDetailPage() {
   const continueKeyRef = React.useRef<string | null>(null)
 
   const continueInFlightRef = React.useRef(false)
+
+  const [insufficientFunds, setInsufficientFunds] = 
+    React.useState<InsufficientFundsDetails | null>(
+      null,
+    )
 
   if (!simulation && loading) {
     return (
@@ -95,6 +106,7 @@ export default function SimulationObligationDetailPage() {
 
     setPaying(true)
     setPaymentError(null)
+    setInsufficientFunds(null)
 
     try {
       const result =
@@ -114,6 +126,9 @@ export default function SimulationObligationDetailPage() {
         error?: {
           code?: string
           message?: string
+          currentBalance?: string
+          savingsBalance?: string
+          remainingAmount?: string
         }
         message?: string
       }
@@ -126,6 +141,21 @@ export default function SimulationObligationDetailPage() {
           apiError.error.message ??
             'There are not enough simulated funds to pay this obligation.',
         )
+
+        if (
+          apiError.error.currentBalance &&
+          apiError.error.savingsBalance &&
+          apiError.error.remainingAmount
+        ) {
+          setInsufficientFunds({
+            currentBalance:
+              apiError.error.currentBalance,
+            savingsBalance:
+              apiError.error.savingsBalance,
+            remainingAmount:
+              apiError.error.remainingAmount,
+          })
+        }
       } else {
         setPaymentError(
           'The payment could not be confirmed. Please try again.',
@@ -238,6 +268,7 @@ export default function SimulationObligationDetailPage() {
       onPay={() => void handlePay()}
       paying={paying}
       paymentError={paymentError}
+      insufficientFunds={insufficientFunds}
     />
   )
 }
