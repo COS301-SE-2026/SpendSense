@@ -121,6 +121,7 @@ export default function DashboardPage() {
 
 				<GuidanceTourInvitation className="mt-6" />
 
+				<div data-tour="dashboard.score">
 				<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#131b2e] dark:shadow-lg dark:shadow-black/20">
 
 					<div className="flex justify-center">
@@ -142,6 +143,7 @@ export default function DashboardPage() {
 					</div>
 
 				</CustomCard>
+				</div>
 
 				<DashboardCarousel
 					stickersCollected={stickersCollected}
@@ -151,7 +153,7 @@ export default function DashboardPage() {
 				<CreditStatsSection creditScore={creditScore} />
 
 
-				<section aria-label="Experience progress" className="mt-5" >
+				<section aria-label="Experience progress" data-tour="dashboard.xp" className="mt-5" >
 
 					<div className="flex items-center justify-between text-xs font-semibold text-[#091828] dark:text-white">
 						<span>{xp.current.toLocaleString()} / {xp.next.toLocaleString()} XP</span>
@@ -172,7 +174,9 @@ export default function DashboardPage() {
 					</div>
 
 				</section>
-				<UpcomingPaymentsCard upcomingPayments={upcomingPayments} />
+				<div data-tour="dashboard.upcoming">
+					<UpcomingPaymentsCard upcomingPayments={upcomingPayments} />
+				</div>
 			</div>
 			<MascotGuideDock payableCount={dashboard ? upcomingPayments.length : undefined} />
 

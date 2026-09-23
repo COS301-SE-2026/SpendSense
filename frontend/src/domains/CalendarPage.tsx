@@ -216,6 +216,7 @@ export default function CalendarPage(){
           <Link
             to="/calendar/scheduled"
             aria-label="All scheduled payments"
+            data-tour="calendar.all"
             className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#E3EAE6] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#1c263c] dark:shadow-[4px_4px_0_#060e20]"
           >
             <AlignJustify className="size-5 text-[#091828] dark:text-[#a0aec0]" />
@@ -313,7 +314,7 @@ export default function CalendarPage(){
         </div>
  
         {/* CALENDAR GRID */}
-        <div className="mt-6" aria-label="Calendar">
+        <div className="mt-6" aria-label="Calendar" data-tour="calendar.grid">
           <div className="grid grid-cols-7">
             {DAY_HEADERS.map(d => (
               <div key={d} className="py-1 text-center text-[10px] font-semibold text-[#6b6375] dark:text-[#a0aec0]">
@@ -343,7 +344,7 @@ export default function CalendarPage(){
         </div>
  
         {/* CONTEXT PANEL */}
-        <div className="mt-6" style={{ transform: "rotate(1deg)" }}>
+        <div className="mt-6" style={{ transform: "rotate(1deg)" }} data-tour="calendar.day">
           <div className="rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-4 shadow-[2px_2px_0_#091828] dark:border-[#060e20] dark:bg-[#2d1b2e] dark:shadow-[2px_2px_0_#060e20]">
             {selectedDate === null ? (
               <p className="text-xl font-extrabold text-[#091828] dark:text-white" aria-label="Showing all expenses">

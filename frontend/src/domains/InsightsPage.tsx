@@ -101,6 +101,7 @@ export default function InsightsPage() {
 
                         <Link
                             to="/wrapped"
+                            data-tour="insights.wrapped"
                             className="relative mt-6 block overflow-hidden rounded-[2rem] border-2 border-[#091828] bg-[#FFD9E1] p-5 shadow-[6px_6px_0_#091828] transition-transform hover:-translate-y-1 dark:border-[#060e20] dark:bg-[#2d1b2e] dark:shadow-[6px_6px_0_#060e20]"
                         >
                             <motion.div
@@ -158,7 +159,7 @@ export default function InsightsPage() {
                                 </div>
                             </div>
                         </Link>
-                        <div className="mt-8 space-y-3">
+                        <div className="mt-8 space-y-3" data-tour="insights.list">
                             <SectionHeader title="This Month" />
 
                             {insights.length === 0 ? (
