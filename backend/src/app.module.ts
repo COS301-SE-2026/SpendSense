@@ -25,6 +25,7 @@ import { MonthlyWrappedModule } from './wrapped/wrapped.module';
 import { FriendsModule } from './friends/friends.module';
 import { WagersModule } from './wagers/wagers.module';
 import { SimulationsModule } from './simulations/simulations.module';
+import { GuidanceModule } from './guidance/guidance.module';
 import { ReceiptsModule } from './receipts/receipts.module';
 
 @Module({
@@ -53,6 +54,7 @@ import { ReceiptsModule } from './receipts/receipts.module';
     FriendsModule,
     WagersModule,
     SimulationsModule,
+    GuidanceModule,
     ReceiptsModule,
   ],
   controllers: [AppController],

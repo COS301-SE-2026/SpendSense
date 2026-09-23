@@ -1,4 +1,3 @@
-
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
 import {BrowserRouter,Routes,Route} from 'react-router-dom'
@@ -61,9 +60,11 @@ import ScoreBreakdownPage from './domains/ScoreBreakdownPage.tsx'
 import SimulationBoardPage from './domains/SimulationBoardPage.tsx'
 import SimulationObligationDetailPage from './domains/SimulationObligationDetailPage.tsx'
 import SimulationRecovery from './domains/SimulationRecovery.tsx'
-import PaymentForm from './domains/PaymentForm.tsx'
+import { GuidanceProvider } from './features/guidance/GuidanceProvider.tsx'
+import { GuidanceWalkthrough } from './components/guidance/GuidanceWalkthrough.tsx'
 import ReceiptScanPage from './domains/ReceiptScanPage'
 import ReceiptReviewPage from './domains/ReceiptReviewPage'
+import PaymentForm from './domains/PaymentForm.tsx'
 
 initAuthListener()
 initTheme()
@@ -75,7 +76,8 @@ createRoot(document.getElementById('root')!).render(
             <ScrollToTop/>
             <NotificationsProvider>
                 <NotificationListener/>
-                <Routes>
+                <GuidanceProvider>
+                    <Routes>
                     <Route path="/" element={<HomeRoute/>}/>
                     <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage/></ProtectedRoute>}/>
                     <Route path="/dev" element={<App/>}/>
@@ -131,7 +133,9 @@ createRoot(document.getElementById('root')!).render(
                     <Route path="/simulation/session/:sessionId/summary" element={<ProtectedRoute><MonthSummaryPage/></ProtectedRoute>}/>
                     <Route path="/receipts/new" element={<ProtectedRoute><ReceiptScanPage/></ProtectedRoute>}/>
                     <Route path="/receipts/scans/:scanId/review" element={<ProtectedRoute><ReceiptReviewPage/></ProtectedRoute>}/>
-                </Routes>
+                    </Routes>
+                    <GuidanceWalkthrough/>
+                </GuidanceProvider>
             </NotificationsProvider>
         </BrowserRouter>
     </StrictMode>,

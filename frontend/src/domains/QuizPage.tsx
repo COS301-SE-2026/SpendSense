@@ -4,6 +4,7 @@ import {getDailyQuiz,getQuizTopic,getQuizTopics} from "@/features/quiz/quizApi"
 import type {DailyQuizState,QuizSessionType,QuizTopic,QuizTopicDetail} from "@/features/quiz/quizTypes"
 import {useQuizSession} from "@/hooks/useQuizSession"
 import {useCallback,useEffect,useState} from "react"
+import {GuideSlot} from "@/components/guidance/GuideSlot"
 
 function isAbortError(error:unknown){
     return error instanceof Error && error.name==="AbortError"
@@ -126,6 +127,7 @@ export default function QuizPage(){
                 <p className="max-w-xs text-sm text-[#6b6375] dark:text-[#a0aec0]">
                     {error}
                 </p>
+                <GuideSlot surface="quiz" facts={{quizRequestFailed:true}} onRetry={reload} className="max-w-sm text-left"/>
                 <LongButton  LongVariant="primaryPinkBorder"  LongSize="md"  showArrow={false} onClick={reload} className="dark:shadow-[3px_4px_0_#060e20]">
                     Retry
                 </LongButton>
@@ -198,7 +200,7 @@ export default function QuizPage(){
             </h1>
             <p className="max-w-xs text-sm text-[#6b6375] dark:text-[#a0aec0]">Test your money smarts and earn coins!</p>
             <p className="text-sm font-medium text-[#091828] dark:text-white"> Quiz type: Daily</p>
-            <p className="text-sm text-[#6b6375] dark:text-[#a0aec0]">
+            <p data-tour="quiz.summary" className="text-sm text-[#6b6375] dark:text-[#a0aec0]">
                 {questionCount} questions
                 {" • +"}{rewardPreview.xp} XP
                 {" • +"}{rewardPreview.coins} coins
@@ -218,9 +220,12 @@ export default function QuizPage(){
             {startError && (
                 <p className="text-sm text-red-500 dark:text-[#ffb4ab]">{startError}</p>
             )}
-            <LongButton LongVariant="primaryPinkBorder" LongSize="md" showArrow={false} className="dark:shadow-[3px_4px_0_#060e20]" onClick={handleStartOrResume} disabled={starting}>
-                {starting?inProgress?"Resuming...":"Starting...":inProgress?"Resume daily quiz":"Start daily quiz"}
-            </LongButton>
+            <GuideSlot surface="quiz" facts={{dailyQuizStatus:dailyData.status}} className="max-w-sm text-left"/>
+            <div data-tour="quiz.start">
+                <LongButton LongVariant="primaryPinkBorder" LongSize="md" showArrow={false} className="dark:shadow-[3px_4px_0_#060e20]" onClick={handleStartOrResume} disabled={starting}>
+                    {starting?inProgress?"Resuming...":"Starting...":inProgress?"Resume daily quiz":"Start daily quiz"}
+                </LongButton>
+            </div>
             <LongButton LongVariant="outline" LongSize="md" showArrow={false} asChild className="dark:border-[#060e20] dark:bg-[#1c263c] dark:text-white dark:shadow-[3px_4px_0_#060e20] dark:hover:bg-[#2d3449]">
                 <Link to="/quests">Back to Quests</Link>
             </LongButton>
