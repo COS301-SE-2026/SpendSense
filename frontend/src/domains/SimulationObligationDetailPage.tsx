@@ -7,7 +7,7 @@ import { continueSimulation, paySimulationObligation } from '@/features/simulati
 import { createIdempotencyKey } from '@/features/simulation/idempotency'
 import { PaymentResult } from '@/components/simulation/PaymentResult'
 import { ResultAcknowledgement } from '@/components/simulation/ResultAcknowledgement'
-import { routeForSimulationState } from '@/features/simulation/routing'
+import { pathForSimulationState } from '@/features/simulation/routing'
 import type { PaymentSimulationResponse } from '@/features/simulation/types'
 
 interface InsufficientFundsDetails {
@@ -74,11 +74,11 @@ export default function SimulationObligationDetailPage() {
     }
 
     setSimulation(refreshed)
-    const route = routeForSimulationState(refreshed)
-
-    console.info(
-      'Simulation should route to: ',
-      route,
+    navigate(
+      pathForSimulationState(refreshed),
+      {
+        replace: true,
+      },
     )
   }
 
@@ -218,7 +218,12 @@ export default function SimulationObligationDetailPage() {
 
       setSimulation(result)
       setPaymentResult(null)
-      navigate(-1) // temp nav for now (until all routes connected)
+      navigate(
+        pathForSimulationState(result),
+        {
+          replace: true,
+        },
+      )
     } catch {
       setContinueError(
         'Could not return to the month. Please try again.',

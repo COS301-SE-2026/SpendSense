@@ -76,6 +76,8 @@ describe('Simulation pause and resume', () => {
         simulation={activeBoardFixture}
         onSimulationChange={onSimulationChange}
         onRefetch={vi.fn()}
+        onLeave={vi.fn()}
+        onDiscarded={vi.fn()}
       />,
     )
 
@@ -116,6 +118,8 @@ describe('Simulation pause and resume', () => {
         simulation={activeBoardFixture}
         onSimulationChange={vi.fn()}
         onRefetch={vi.fn()}
+        onLeave={vi.fn()}
+        onDiscarded={vi.fn()}
       />,
     )
 
@@ -140,6 +144,8 @@ describe('Simulation pause and resume', () => {
         simulation={pausedSimulation()}
         onSimulationChange={vi.fn()}
         onRefetch={vi.fn()}
+        onLeave={vi.fn()}
+        onDiscarded={vi.fn()}
       />,
     )
 
@@ -181,6 +187,8 @@ describe('Simulation pause and resume', () => {
         simulation={paused}
         onSimulationChange={onSimulationChange}
         onRefetch={vi.fn()}
+        onLeave={vi.fn()}
+        onDiscarded={vi.fn()}
       />,
     )
 
@@ -229,6 +237,8 @@ describe('Simulation pause and resume', () => {
         simulation={activeBoardFixture}
         onSimulationChange={vi.fn()}
         onRefetch={vi.fn()}
+        onLeave={vi.fn()}
+        onDiscarded={vi.fn()}
       />,
     )
 

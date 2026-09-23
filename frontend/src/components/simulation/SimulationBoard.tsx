@@ -14,14 +14,20 @@ import type { SimulationDetail } from '../../features/simulation/types'
 
 interface SimulationBoardProps {
   simulation: SimulationDetail
-  onSimulationChange: (simulation: SimulationDetail) => void
+  onSimulationChange: (
+    simulation: SimulationDetail,
+  ) => void
   onRefetch: () => Promise<unknown> | void
+  onLeave: () => void
+  onDiscarded: () => void
 }
 
 export function SimulationBoard({
   simulation,
   onSimulationChange,
   onRefetch,
+  onLeave,
+  onDiscarded,
 }: SimulationBoardProps) {
   const [advancing, setAdvancing] = React.useState(false)
   const [advanceError, setAdvanceError] =
@@ -67,19 +73,11 @@ export function SimulationBoard({
     saveError,
     discardError,
   } = useExitControls({
-    simulation,
-    onSimulationChange,
-    onLeave: () => {
-      console.info(
-        'Simulation should leave to entry/dashboard',
-      )
-    },
-    onDiscarded: () => {
-      console.info(
-        'Discarded simulation should route to entry',
-      )
-    },
-  })
+  simulation,
+  onSimulationChange,
+  onLeave,
+  onDiscarded,
+})
 
   useSimulationPolling(
     shouldPoll,

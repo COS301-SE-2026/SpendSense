@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   beforeEach,
@@ -10,7 +10,7 @@ import {
 } from 'vitest'
 import { SimulationBoard } from '@/components/simulation/SimulationBoard'
 import { activeBoardFixture } from '@/features/simulation/fixtures/SimulationDetail'
-import { updateSimulationStatus } from '@/features/simulation/api'
+import { updateSimulationStatus, getActiveSimulation } from '@/features/simulation/api'
 import type { SimulationDetail } from '@/features/simulation/types'
 
 vi.mock('@/hooks/useSimulationPolling', () => ({ useSimulationPolling: vi.fn() }))
@@ -31,6 +31,7 @@ vi.mock('@/features/simulation/api', async () => {
   return {
     ...actual,
     updateSimulationStatus: vi.fn(),
+    getActiveSimulation: vi.fn(),
   }
 })
 
@@ -45,6 +46,11 @@ vi.mock(
 
 const mockedUpdateSimulationStatus =
   vi.mocked(updateSimulationStatus)
+const mockedGetActiveSimulation =
+  vi.mocked(getActiveSimulation)
+
+const onLeave = vi.fn()
+const onDiscarded = vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -76,6 +82,8 @@ describe('Simulation exit and discard', () => {
         simulation={activeBoardFixture}
         onSimulationChange={onSimulationChange}
         onRefetch={vi.fn()}
+        onLeave={onLeave}
+        onDiscarded={onDiscarded}
       />,
     )
 
@@ -108,6 +116,8 @@ describe('Simulation exit and discard', () => {
         }),
       }),
     )
+
+    expect(onLeave).toHaveBeenCalledTimes(1)
   })
 
   it('will open exit confirmation', async () => {
@@ -118,6 +128,8 @@ describe('Simulation exit and discard', () => {
         simulation={activeBoardFixture}
         onSimulationChange={vi.fn()}
         onRefetch={vi.fn()}
+        onLeave={onLeave}
+        onDiscarded={onDiscarded}
       />,
     )
 
@@ -157,6 +169,8 @@ describe('Simulation exit and discard', () => {
         simulation={activeBoardFixture}
         onSimulationChange={vi.fn()}
         onRefetch={vi.fn()}
+        onLeave={onLeave}
+        onDiscarded={onDiscarded}
       />,
     )
 
@@ -182,7 +196,7 @@ describe('Simulation exit and discard', () => {
     ).not.toHaveBeenCalled()
   })
 
-    it('will need confirmation before discarding', async () => {
+  it('will need confirmation before discarding', async () => {
     const user = userEvent.setup()
 
     mockedUpdateSimulationStatus.mockResolvedValue({
@@ -200,6 +214,8 @@ describe('Simulation exit and discard', () => {
         simulation={activeBoardFixture}
         onSimulationChange={vi.fn()}
         onRefetch={vi.fn()}
+        onLeave={onLeave}
+        onDiscarded={onDiscarded}
       />,
     )
 
@@ -236,5 +252,71 @@ describe('Simulation exit and discard', () => {
       'discard',
       'test-exit-key',
     )
+
+    await waitFor(() => {
+      expect(onDiscarded).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('will refetch the active state when discard is not allowed', async () => {
+    const user = userEvent.setup()
+
+    mockedUpdateSimulationStatus.mockRejectedValue({
+      statusCode: 409,
+      error: {
+        code: 'SIMULATION_DISCARD_NOT_ALLOWED',
+        message: 'Simulation cannot be discarded',
+      },
+    })
+
+    mockedGetActiveSimulation.mockResolvedValue({
+      active: null,
+      latestCompleted: null,
+    })
+
+    render(
+      <SimulationBoard
+        simulation={activeBoardFixture}
+        onSimulationChange={vi.fn()}
+        onRefetch={vi.fn()}
+        onLeave={onLeave}
+        onDiscarded={onDiscarded}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Exit',
+      }),
+    )
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Discard run',
+      }),
+    )
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Discard run',
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        mockedGetActiveSimulation,
+      ).toHaveBeenCalledTimes(1)
+    })
+
+    expect(
+      mockedUpdateSimulationStatus,
+    ).toHaveBeenCalledWith(
+      activeBoardFixture.session.id,
+      'discard',
+      'test-exit-key',
+    )
+    expect(
+      onDiscarded,
+    ).toHaveBeenCalledTimes(1)
   })
 })

@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   beforeEach,
@@ -408,6 +408,12 @@ describe('Simulation obligation payment', () => {
       'sim_fixture_active',
       'test-idempotency-key',
     )
+    expect(navigate).toHaveBeenCalledWith(
+      `/simulations/${simulation.session.id}/board`,
+      {
+        replace: true,
+      },
+    )
   })
 
   it('will refetch state after a stale payment conflict', async () => {
@@ -448,5 +454,14 @@ describe('Simulation obligation payment', () => {
     )
 
     expect(refetch).toHaveBeenCalledTimes(1)
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith(
+        `/simulations/${simulation.session.id}/board`,
+        {
+          replace: true,
+        },
+      )
+    })
   })
 })

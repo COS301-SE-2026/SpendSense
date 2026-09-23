@@ -49,6 +49,9 @@ import EditProfilePage from './domains/EditProfilePage.tsx'
 import HelpPage from './domains/HelpPage.tsx'
 import HomeRoute from './components/HomeRoute'
 import ScrollToTop from './components/common/ScrollToTop.tsx'
+import SimulationBoardPage from './domains/SimulationBoardPage.tsx'
+import SimulationObligationDetailPage from './domains/SimulationObligationDetailPage.tsx'
+import SimulationRecovery from './domains/SimulationRecovery.tsx'
 
 initAuthListener()
 initTheme()
@@ -103,6 +106,9 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/settings/account" element={<SettingsAccountPage/>}/>
           <Route path="/edit-profile" element={<EditProfilePage/>}/>
           <Route path="/help" element={<HelpPage/>}/>
+          <Route path="/simulations/recovery" element={<ProtectedRoute><SimulationRecovery/></ProtectedRoute>}/>
+          <Route path="/simulations/:sessionId/board" element={<ProtectedRoute><SimulationBoardPage/></ProtectedRoute>}/>
+          <Route path="/simulations/:sessionId/obligations/:obligationId" element={<ProtectedRoute><SimulationObligationDetailPage/></ProtectedRoute>}/>
         </Routes>
       </NotificationsProvider>
     </BrowserRouter>

@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AlertTriangle, LoaderCircle } from 'lucide-react'
 import { SimulationBoard } from '@/components/simulation/SimulationBoard'
-import { routeForSimulationState } from '@/features/simulation/routing'
+import { routeForSimulationState, pathForSimulationState } from '@/features/simulation/routing'
 import { useSimulation } from '@/hooks/useSimulation'
 
 export default function SimulationBoardPage() {
@@ -22,15 +22,21 @@ export default function SimulationBoardPage() {
       return
     }
 
-    const route = routeForSimulationState(simulation)
-    if (route !== 'board') {
-      console.info(
-        'Simulation should route to:',
-        route,
+    const route =
+      routeForSimulationState(simulation)
+
+    if (
+      route !== 'board' &&
+      route !== 'paused'
+    ) {
+      navigate(
+        pathForSimulationState(simulation),
+        {
+          replace: true,
+        },
       )
-      // temp until the remaining simulation routes are connected
     }
-  }, [simulation])
+  }, [simulation, navigate])
 
   if (!sessionId) {
     return (
@@ -123,6 +129,14 @@ export default function SimulationBoardPage() {
         simulation={simulation}
         onSimulationChange={setSimulation}
         onRefetch={refetch}
+        onLeave={() => {
+          navigate('/simulations')
+        }}
+        onDiscarded={() => {
+          navigate('/simulations', {
+            replace: true,
+          })
+        }}
       />
     </>
   )

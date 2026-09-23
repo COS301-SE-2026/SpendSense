@@ -84,6 +84,8 @@ describe('SimulationBoard', () => {
         simulation={activeBoardFixture}
         onSimulationChange={vi.fn()}
         onRefetch={vi.fn()}
+        onLeave={vi.fn()}
+        onDiscarded={vi.fn()}
       />,
     )
 

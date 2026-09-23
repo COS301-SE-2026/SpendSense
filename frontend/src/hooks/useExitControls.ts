@@ -1,8 +1,6 @@
 import * as React from 'react'
-import { updateSimulationStatus } from '@/features/simulation/api'
-
+import { updateSimulationStatus, getActiveSimulation } from '@/features/simulation/api'
 import { createIdempotencyKey } from '@/features/simulation/idempotency'
-
 import type { SimulationDetail } from '@/features/simulation/types'
 
 interface UseExitControlsOptions {
@@ -112,7 +110,34 @@ export function useExitControls({
 
       discardKeyRef.current = null
       onDiscarded()
-    } catch {
+    } catch (caughtError) {
+      const apiError = caughtError as {
+        statusCode?: number
+        error?: {
+          code?: string
+          message?: string
+        }
+      }
+
+      if (
+        apiError.statusCode === 409 &&
+        apiError.error?.code ===
+          'SIMULATION_DISCARD_NOT_ALLOWED'
+      ) {
+        try {
+          await getActiveSimulation()
+
+          discardKeyRef.current = null
+          onDiscarded()
+          return
+        } catch {
+          setDiscardError(
+            'The latest simulation state could not be loaded. Please try again.',
+          )
+          return
+        }
+      }
+
       setDiscardError(
         'The simulation could not be discarded. Please try again.',
       )
