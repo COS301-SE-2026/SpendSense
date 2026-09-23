@@ -11,6 +11,9 @@ import {Popover,PopoverContent, PopoverTrigger} from "../components/ui/popover";
 import {Calendar as CalenderIcon, CheckCircle2, Coins, Flame, TrendingUp} from "lucide-react";
 import {IconButton} from "@/components/common/IconButton";
 import {Calendar} from "@/components/ui/calendar";
+import {GuideSlot} from "@/components/guidance/GuideSlot";
+import {MascotPeek} from "@/components/guidance/MascotPeek";
+import {useGuidanceOptional,useGuidanceSuppression} from "@/features/guidance/useGuidance";
 
 const paymentSchema=z.object({
     occurrenceId:z 
@@ -71,6 +74,8 @@ export default function ObligationForm(){
     const [paymentResult,setPaymentResult]=useState<PaymentResult|null>(null);
     const [submitError,setSubmitError]=useState<string|null>(null);
     const [isSubmitting,setSubmitting]=useState(false);
+    const guidance=useGuidanceOptional();
+    useGuidanceSuppression("payment-form",!showPopup);
     const{
         register,
         handleSubmit,
@@ -97,6 +102,8 @@ export default function ObligationForm(){
             });
             setPaymentResult((response as {data:PaymentResult}).data);
             setShowPopup(true);
+
+            guidance?.requestDailyRefresh();
        }catch(error){
             console.error("Failed to log payment: ",error);
             setSubmitError(error instanceof Error ? error.message : "Failed to log payment");
@@ -212,6 +219,9 @@ export default function ObligationForm(){
                     </div>
                     {errors.notes?.message && <p className="text-xs text-red-500 dark:text-[#ffb4ab]">{errors.notes.message}</p>}
                     {submitError && <p className="rounded-2xl bg-[#FFD9E1] px-4 py-3 text-xs font-semibold text-[#AC2A5D] dark:bg-[#93000a]/30 dark:text-[#ffb4ab]">{submitError}</p>}
+                    {submitError && (
+                        <GuideSlot surface="payment" facts={{paymentResult:"FAILED"}} manual/>
+                    )}
                     <LongButton 
                         LongVariant="primaryDark" 
                         type="submit" 
@@ -246,6 +256,12 @@ function PaymentImpactModal({
     const xp=result?.rewards?.xpAwarded ?? 10;
     const streak=result?.rewards?.currentPaymentStreak ?? 0;
     const mood=result?.rewards?.mascotMood;
+
+    const guidanceFacts={
+        paymentResult:result?.paymentImpact?.isLate ? "FINAL_LATE" : "FINAL_ON_TIME",
+        xpAwarded:xp,
+        ...(result?.scoreImpact ? {scoreDelta:scoreDelta,scoreAfter:scoreAfter} : {}),
+    };
 
     return(
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#091828]/40 px-4 pb-6 dark:bg-black/70">
@@ -305,6 +321,7 @@ function PaymentImpactModal({
                     Back to dashboard
                 </LongButton>
             </div>
+            <MascotPeek surface="payment" facts={guidanceFacts} side="right" manual className="top-24 bottom-auto z-[60]"/>
         </div>
     );
 }

@@ -6,6 +6,8 @@ import { CustomCard } from "@/components/ui/CustomCard"
 import { SectionHeader } from "@/components/common/SectionHeader"
 import { CategoryIcon } from "@/components/common/CategoryIcon"
 import { useInsights } from "@/hooks/useInsights"
+import { GuideSlot } from "@/components/guidance/GuideSlot"
+import { insightGuidanceFacts } from "@/features/guidance/insightGuidanceFacts"
 import type { InsightCard, InsightKey, InsightSeverity } from "@/features/insights/insightsApi"
 
 
@@ -41,6 +43,11 @@ export default function InsightsPage() {
     const nav = useNavigate()
     const { asOf, insights, loading, error, refetch } = useInsights()
 
+    const guidanceFacts = React.useMemo(
+        () => insightGuidanceFacts(insights, { loading, error }),
+        [insights, loading, error],
+    )
+
     return (
         <div className="min-h-screen bg-[#f4fbf7] pb-24 dark:bg-[#0b1326]">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
@@ -60,6 +67,13 @@ export default function InsightsPage() {
                     <div aria-hidden="true" className="size-12 shrink-0" />
 
                 </header>
+
+                <GuideSlot
+                    surface="insights"
+                    facts={guidanceFacts}
+                    onRetry={refetch}
+                    className="mt-5"
+                />
 
 
                 {loading && (
@@ -87,6 +101,7 @@ export default function InsightsPage() {
 
                         <Link
                             to="/wrapped"
+                            data-tour="insights.wrapped"
                             className="relative mt-6 block overflow-hidden rounded-[2rem] border-2 border-[#091828] bg-[#FFD9E1] p-5 shadow-[6px_6px_0_#091828] transition-transform hover:-translate-y-1 dark:border-[#060e20] dark:bg-[#2d1b2e] dark:shadow-[6px_6px_0_#060e20]"
                         >
                             <motion.div
@@ -144,7 +159,7 @@ export default function InsightsPage() {
                                 </div>
                             </div>
                         </Link>
-                        <div className="mt-8 space-y-3">
+                        <div className="mt-8 space-y-3" data-tour="insights.list">
                             <SectionHeader title="This Month" />
 
                             {insights.length === 0 ? (

@@ -17,7 +17,8 @@ describe('HelpPage', ()=> {
     it('renders the walkthrough steps in order', ()=> {
         renderPage()
         expect(screen.getByText(/1\. start on the dashboard/i)).toBeInTheDocument()
-        expect(screen.getByText(/7\. make it yours in profile/i)).toBeInTheDocument()
+        expect(screen.getByText(/7\. learn with daily and topic quizzes/i)).toBeInTheDocument()
+        expect(screen.getByText(/12\. make it yours in profile/i)).toBeInTheDocument()
     })
 
     it('renders the FAQ questions collapsed by default', ()=> {
