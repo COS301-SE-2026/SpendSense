@@ -5,8 +5,13 @@ import {
 	PlusCircle,
 	Trophy,
 	User,
+	Users,
 	BarChart3,
 	Gauge,
+	GraduationCap,
+	Sparkles,
+	Swords,
+	Bell,
 	ChevronDown,
 	Search,
 } from "lucide-react"
@@ -70,9 +75,44 @@ const walkThrough: {
 
 
 	{
+		icon: <GraduationCap className="size-5"/>,
+		tone:"lilac",
+		title: "7. Learn with daily and topic quizzes",
+		body:"A short quiz is waiting each day, and topic quizzes cover budgeting, credit scores, interest, debt, BNPL and subscriptions at your own pace. Your mascot explains every answer as you go, and finishing one builds your knowledge streak.",
+	},
+
+	{
+		icon: <Sparkles className="size-5"/>,
+		tone:"pink",
+		title: "8. Meet your mascot",
+		body:"Mascot Home shows your level, mood and everything you have unlocked, and the shop is where coins turn into hats and accessories. Your mascot also waits in the corner of the Dashboard with a short note about your day, tap to send them away and tap the tab on the edge to bring them back.",
+	},
+
+	{
+		icon: <Users className="size-5"/>,
+		tone:"mint",
+		title: "9. Compare with Friends",
+		body:"Add friends to see a leaderboard, follow their activity and keep each other honest. You choose what you share and you can remove a friend at any time.",
+	},
+
+	{
+		icon: <Swords className="size-5"/>,
+		tone:"yellow",
+		title: "10. Take on Wagers",
+		body:"Wagers are friendly coin challenges between friends: agree the terms, both of you stake coins and the winner takes the pot. No real money is involved.",
+	},
+
+	{
+		icon: <Bell className="size-5"/>,
+		tone:"lilac",
+		title: "11. Keep an eye on Notifications",
+		body:"Reminders about payments coming due, rewards you have earned and friend activity all collect here. Choose which ones reach you in Settings then Notifications.",
+	},
+
+	{
 		icon: <User className="size-5"/>,
 		tone:"lilac",
-		title: "7. Make it yours in Profile",
+		title: "12. Make it yours in Profile",
 		body:"Profile is your identity and settings hub: edit your details, tweak preferences and notifications and see your tier, streak and coins.",
 	},
 ]
@@ -121,6 +161,31 @@ const faqs: {question: string; answer: string}[]=[
 	{
 		question: "Can I export or delete my data?",
 		answer:"Yes, Settings -> Account lets you download everything SpendSense stores about you as a JSON file, and deactivate your account if you want to stop using the app.",
+	},
+
+	{
+		question: "What is the difference between the daily quiz and a topic quiz?",
+		answer:"The daily quiz is one short set per day and it is what builds your knowledge streak. Topic quizzes are there whenever you want to go deeper on a single subject, and finishing one does not count as your daily quiz.",
+	},
+
+	{
+		question: "How do I turn the mascot's tips off, or take the tour again?",
+		answer:"Both live at the top of this page and in Settings under Mascot Guidance. Turning tips off keeps your progress and hidden tips, and the tour stays available to replay whenever you want it.",
+	},
+
+	{
+		question: "Where did my mascot go on the Dashboard?",
+		answer:"Tapping the mascot sends them off screen and leaves a small tab on the right edge. Tapping that tab brings them straight back. If you leave the tab alone it disappears, and your mascot returns next time you open the Dashboard.",
+	},
+
+	{
+		question: "What is Monthly Wrapped?",
+		answer:"A replay of your month: what you paid, how your score moved, the streaks you kept and the badges you collected. You will find it on the Insights page once there is enough activity to summarise.",
+	},
+
+	{
+		question: "Do wagers cost real money?",
+		answer:"No. Wagers are staked in coins you earned inside SpendSense, so the only thing at risk is your mascot's next accessory.",
 	},
 
 	{
