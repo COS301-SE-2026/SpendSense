@@ -70,6 +70,7 @@ export default function SimulationObligationDetailPage() {
   const handlePay = async () => {
     if (
       !sessionId ||
+      !obligation ||
       paymentInFlightRef.current
     ) {
       return
@@ -139,7 +140,6 @@ export default function SimulationObligationDetailPage() {
   const handleContinue = async () => {
     if (
       !sessionId ||
-      !paymentResult ||
       continueInFlightRef.current
     ) {
       return
@@ -219,7 +219,7 @@ export default function SimulationObligationDetailPage() {
   }
 
   if (
-    simulation.session.pending.type === ' PAYMENT_RESULT'
+    simulation.session.pending.type === 'PAYMENT_RESULT'
   ) {
     return (
       <ResultAcknowledgement
