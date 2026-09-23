@@ -69,7 +69,7 @@ export type GuideFacts=Record<string,unknown>
 export interface GuideAction{
     label:string
     to?:string
-    intent?:'retry'
+    intent?:'retry'|'continue'
 }
 
 export interface GuideCandidate{

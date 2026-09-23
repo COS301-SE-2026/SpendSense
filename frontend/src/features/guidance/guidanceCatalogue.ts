@@ -190,12 +190,23 @@ export const GUIDANCE_CATALOGUE:readonly GuideCandidate[]=[
         eligible:(facts)=>isTrue(facts,'dailyQuizJustCompleted'),
     },
     {
+        id:'quiz.topic.completed',
+        surface:'quiz',
+        kind:'result',
+        priority:93,
+        dismissible:true,
+        text:'That topic quiz is done, and you earned {coinsAwarded} coins and {xpAwarded} XP. It does not count as today\u2019s daily quiz.',
+        placeholders:['coinsAwarded','xpAwarded'],
+        actions:[{label:'Daily quiz',to:GUIDANCE_ROUTES.quiz}],
+        eligible:(facts)=>isTrue(facts,'topicQuizJustCompleted'),
+    },
+    {
         id:'quiz.feedback.correct',
         surface:'quiz',
         kind:'result',
         priority:90,
         dismissible:false,
-        text:'Great thinking. {explanation}',
+        text:'Great thinking, that is right. {explanation}',
         placeholders:['explanation'],
         eligible:(facts)=>isTrue(facts,'answerSubmitted')&&isTrue(facts,'answerCorrect'),
     },
@@ -205,9 +216,25 @@ export const GUIDANCE_CATALOGUE:readonly GuideCandidate[]=[
         kind:'result',
         priority:90,
         dismissible:false,
-        text:'Not quite, here is the key idea: {explanation}',
+        text:'Not quite, and that is a normal part of learning. Here is the key idea: {explanation}',
         placeholders:['explanation'],
-        eligible:(facts)=>isTrue(facts,'answerSubmitted')&&isFalse(facts,'answerCorrect'),
+        actions:[{label:'Next question',intent:'continue'}],
+        eligible:(facts)=>isTrue(facts,'answerSubmitted')
+            &&isFalse(facts,'answerCorrect')
+            &&!isTrue(facts,'answerRequeued'),
+    },
+    {
+        id:'quiz.feedback.incorrect-requeued',
+        surface:'quiz',
+        kind:'result',
+        priority:91,
+        dismissible:false,
+        text:'Not quite. This one comes back later in the quiz, so hold on to this: {explanation}',
+        placeholders:['explanation'],
+        actions:[{label:'Next question',intent:'continue'}],
+        eligible:(facts)=>isTrue(facts,'answerSubmitted')
+            &&isFalse(facts,'answerCorrect')
+            &&isTrue(facts,'answerRequeued'),
     },
     {
         id:'quiz.daily.in-progress',
@@ -230,7 +257,7 @@ export const GUIDANCE_CATALOGUE:readonly GuideCandidate[]=[
         eligible:(facts)=>stringEquals(facts,'dailyQuizStatus','AVAILABLE'),
     },
 
-    {
+     {
         id:'insights.request.failed',
         surface:'insights',
         kind:'result',

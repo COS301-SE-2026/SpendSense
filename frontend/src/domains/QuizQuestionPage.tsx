@@ -9,8 +9,14 @@ import {
 } from "lucide-react"
 import {LongButton} from "@/components/common/LongButton"
 import {CustomCard} from "@/components/ui/CustomCard"
+import {MascotPeek} from "@/components/guidance/MascotPeek"
+import {useGuidanceOptional} from "@/features/guidance/useGuidance"
 import {cn} from "@/lib/utils"
 import {useQuizSession} from "@/hooks/useQuizSession"
+
+export const FEEDBACK_PAUSE_CORRECT_MS=2600
+
+export const FEEDBACK_PAUSE_INCORRECT_MS=6500
 
 export default function QuizQuestionPage(){
     const navigate=useNavigate()
@@ -18,6 +24,8 @@ export default function QuizQuestionPage(){
     const [selectedOptionKey,setSelectedOptionKey]=useState<string|null>(null)
     const [hasSubmitted,setHasSubmitted]=useState(false)
     const [answerToast,setAnswerToast]=useState<{isCorrect:boolean;explanation:string;requeued:boolean}|null>(null)
+    const hasGuidance=useGuidanceOptional()!==null
+    const advanceRef=useRef<(()=>void)|null>(null)
     const [isShaking,setIsShaking]=useState(false)
     const advanceTimeoutRef=useRef<number|null>(null)
     const shakeTimeoutRef=useRef<number|null>(null)
@@ -109,10 +117,7 @@ export default function QuizQuestionPage(){
                 setIsShaking(false)
             },500)
         }
-        if(advanceTimeoutRef.current!==null){
-            window.clearTimeout(advanceTimeoutRef.current)
-        }
-        advanceTimeoutRef.current=window.setTimeout(()=>{
+        const advance=()=>{
             setAnswerToast(null)
             if(result){
                 navigate(`/quiz/session/${sessionId}/results`)
@@ -121,9 +126,21 @@ export default function QuizQuestionPage(){
             setSelectedOptionKey(null)
             setHasSubmitted(false)
             continueToNextQuestion(nextQuestion)
-        },feedback.isCorrect?1100:1500)
+        }
+        if(advanceTimeoutRef.current!==null){
+            window.clearTimeout(advanceTimeoutRef.current)
+        }
+        if(feedback.isCorrect){
+            advanceTimeoutRef.current=window.setTimeout(advance,FEEDBACK_PAUSE_CORRECT_MS)
+            return
+        }
+        advanceRef.current=advance
+        if(!hasGuidance){
+            advanceTimeoutRef.current=window.setTimeout(advance,FEEDBACK_PAUSE_INCORRECT_MS)
+        }
     },[
         answerQuestion,
+        hasGuidance,
         clearError,
         continueToNextQuestion,
         currentQuestion,
@@ -184,40 +201,20 @@ export default function QuizQuestionPage(){
     }
     const interactionDisabled=isSubmitting||hasSubmitted
     return(
-        <div className="min-h-screen bg-[#F4FBF7] pb-10 dark:bg-[#0b1326]">
+        <div className="min-h-screen bg-[#F4FBF7] pb-44 dark:bg-[#0b1326]">
             {answerToast&&(
-                <div
-                    className="fixed inset-x-0 top-4 z-50 flex justify-center px-5"
-                    role="status"
-                    aria-live="polite"
-                >
-                    <div
-                        className={cn(
-                            "flex w-full max-w-md items-start gap-3 rounded-2xl border-2 border-[#091828] px-4 py-3 shadow-[4px_4px_0_#091828] animate-ss-toast-in",
-                            "dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20]",
-                            answerToast.isCorrect
-                                ?"bg-[#DCEFE8] dark:bg-[#0f4f42]"
-                                :"bg-[#FFD9E1] dark:bg-[#2d1b2e]",
-                        )}
-                    >
-                        <span
-                            className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-white dark:border-[#060e20] dark:bg-[#131b2e]"
-                        >
-                            {answerToast.isCorrect?(
-                                <Check className="size-4 text-[#0E7A5F] dark:text-[#5eead4]" strokeWidth={3}/>
-                            ):(
-                                <X className="size-4 text-[#AC2A5D] dark:text-[#ff6b9d]" strokeWidth={3}/>
-                            )}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                            <p className="text-sm font-extrabold text-[#091828] dark:text-white">{answerToast.isCorrect?"Correct!":"Not quite"}</p>
-                            <p className="mt-0.5 text-xs font-semibold leading-relaxed text-[#091828]/70 dark:text-white/70">{answerToast.explanation}</p>
-                            {!answerToast.isCorrect&&answerToast.requeued&&(
-                                <p className="mt-1 text-xs font-bold text-[#8A6D00] dark:text-[#ffdf9b]">This question will come back later.</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                <MascotPeek
+                    surface="quiz"
+                    side="left"
+                    manual
+                    onContinue={()=>advanceRef.current?.()}
+                    facts={{
+                        answerSubmitted:true,
+                        answerCorrect:answerToast.isCorrect,
+                        answerRequeued:answerToast.requeued,
+                        explanation:answerToast.explanation,
+                    }}
+                />
             )}
             <main className="mx-auto w-full max-w-md px-5 pt-6">
                 <header>
