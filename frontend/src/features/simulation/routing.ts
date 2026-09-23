@@ -55,31 +55,31 @@ export function pathForSimulationState(
 
   switch (route) {
     case 'briefing':
-      return `/simulations/${sessionId}/briefing`
+      return `/simulation/setup/${sessionId}`
 
     case 'board':
     case 'paused':
-      return `/simulations/${sessionId}/board`
+      return `/simulation/session/${sessionId}/board`
 
     case 'payment-result':
       if (detail.session.pending.id) {
-        return `/simulations/${sessionId}/obligations/${detail.session.pending.id}`
+        return `/simulation/session/${sessionId}/obligations/${detail.session.pending.id}`
       }
 
-      return `/simulations/${sessionId}/board`
+      return `/simulation/session/${sessionId}/board`
 
     case 'event-reveal':
     case 'event-result':
-      return `/simulations/${sessionId}/event`
+      return `/simulation/session/${sessionId}/event`
 
     case 'summary':
-      return `/simulations/${sessionId}/summary`
+      return `/simulation/session/${sessionId}/summary`
 
     case 'entry':
-      return '/simulations'
+      return '/simulation'
 
     case 'recovery':
     default:
-      return '/simulations/recovery'
+      return '/simulation/recovery'
   }
 }

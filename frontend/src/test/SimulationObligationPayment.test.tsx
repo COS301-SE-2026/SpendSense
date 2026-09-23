@@ -409,7 +409,7 @@ describe('Simulation obligation payment', () => {
       'test-idempotency-key',
     )
     expect(navigate).toHaveBeenCalledWith(
-      `/simulations/${simulation.session.id}/board`,
+      `/simulation/session/${activeBoardFixture.session.id}/board`,
       {
         replace: true,
       },
@@ -457,7 +457,7 @@ describe('Simulation obligation payment', () => {
 
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith(
-        `/simulations/${simulation.session.id}/board`,
+        `/simulation/session/${activeBoardFixture.session.id}/board`,
         {
           replace: true,
         },

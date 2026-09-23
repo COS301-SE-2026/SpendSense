@@ -107,7 +107,7 @@ describe('Simulation recovery', () => {
 
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith(
-        `/simulations/${activeBoardFixture.session.id}/board`,
+        `/simulation/session/${activeBoardFixture.session.id}/board`,
         {
           replace: true,
         },
@@ -131,7 +131,7 @@ describe('Simulation recovery', () => {
 
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith(
-        `/simulations/${paused.session.id}/board`,
+        `/simulation/session/${activeBoardFixture.session.id}/board`,
         {
           replace: true,
         },
@@ -245,7 +245,7 @@ describe('Simulation recovery', () => {
 
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith(
-        `/simulations/${activeBoardFixture.session.id}/board`,
+        `/simulation/session/${activeBoardFixture.session.id}/board`,
         {
           replace: true,
         },

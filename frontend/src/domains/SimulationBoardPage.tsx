@@ -130,10 +130,10 @@ export default function SimulationBoardPage() {
         onSimulationChange={setSimulation}
         onRefetch={refetch}
         onLeave={() => {
-          navigate('/simulations')
+          navigate('/simulation')
         }}
         onDiscarded={() => {
-          navigate('/simulations', {
+          navigate('/simulation', {
             replace: true,
           })
         }}

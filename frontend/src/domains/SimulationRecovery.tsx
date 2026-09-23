@@ -126,7 +126,7 @@ export default function SimulationRecoveryPage() {
           </p>
           <button
             type="button"
-            onClick={() => navigate('/simulations')}
+            onClick={() => navigate('/simulation')}
             className="mt-6 w-full rounded-full border-2 border-[#091828] bg-[#FF6B9D] px-5 py-3 text-sm font-black text-[#091828] shadow-[3px_3px_0_#091828]"
           >
             Start a new month
@@ -149,7 +149,7 @@ export default function SimulationRecoveryPage() {
           </p>
           <button
             type="button"
-            onClick={() => navigate('/simulations')}
+            onClick={() => navigate('/simulation')}
             className="mt-6 w-full rounded-full border-2 border-[#091828] bg-[#FF6B9D] px-5 py-3 text-sm font-black text-[#091828] shadow-[3px_3px_0_#091828]"
           >
             Start a new month
