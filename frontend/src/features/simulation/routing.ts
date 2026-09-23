@@ -46,3 +46,40 @@ export function routeForSimulationState(
 
   return 'recovery'
 }
+
+export function pathForSimulationState(
+  detail: SimulationDetail,
+): string {
+  const route = routeForSimulationState(detail)
+  const sessionId = detail.session.id
+
+  switch (route) {
+    case 'briefing':
+      return `/simulation/setup/${sessionId}`
+
+    case 'board':
+    case 'paused':
+      return `/simulation/session/${sessionId}/board`
+
+    case 'payment-result':
+      if (detail.session.pending.id) {
+        return `/simulation/session/${sessionId}/obligations/${detail.session.pending.id}`
+      }
+
+      return `/simulation/session/${sessionId}/board`
+
+    case 'event-reveal':
+    case 'event-result':
+      return `/simulation/session/${sessionId}/event`
+
+    case 'summary':
+      return `/simulation/session/${sessionId}/summary`
+
+    case 'entry':
+      return '/simulation'
+
+    case 'recovery':
+    default:
+      return '/simulation/recovery'
+  }
+}

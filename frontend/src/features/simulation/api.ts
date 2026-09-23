@@ -8,6 +8,8 @@ import type {
   SimulationActionResponse,
   SimulationDetail,
   SimulationStatusAction,
+  DiscardSimulationResponse,
+  SimulationStatusResponse
 } from "./types";
 
 // apiDataFetch already prefixes paths with VITE_API_URL, which is configured as
@@ -100,6 +102,18 @@ export function continueSimulation(sessionId: string, idempotencyKey: string) {
     },
   );
 }
+
+export function updateSimulationStatus(
+  sessionId: string,
+  action: 'pause' | 'resume',
+  idempotencyKey: string,
+): Promise<SimulationStatusResponse>
+
+export function updateSimulationStatus(
+  sessionId: string,
+  action: 'discard',
+  idempotencyKey: string,
+): Promise<DiscardSimulationResponse>
 
 export function updateSimulationStatus(
   sessionId: string,

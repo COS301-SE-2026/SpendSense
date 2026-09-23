@@ -54,10 +54,14 @@ import SimulationBriefingPage from "./features/simulation/screens/SimulationBrie
 import BudgetAllocationPage from "./features/simulation/screens/BudgetAllocationPage.tsx";
 import MonthPlanningPage from "./features/simulation/screens/MonthPlanningPage.tsx";
 import ScoreBreakdownPage from "./domains/ScoreBreakdownPage.tsx";
+import SimulationBoardPage from "./domains/SimulationBoardPage.tsx";
+import SimulationObligationDetailPage from "./domains/SimulationObligationDetailPage.tsx";
+import SimulationRecovery from "./domains/SimulationRecovery.tsx";
 
 initAuthListener();
 initTheme();
 initReducedMotion();
+
 import PaymentForm from "./domains/PaymentForm.tsx";
 
 createRoot(document.getElementById("root")!).render(
@@ -68,126 +72,28 @@ createRoot(document.getElementById("root")!).render(
         <NotificationListener />
         <Routes>
           <Route path="/" element={<HomeRoute />} />
-          <Route
-            path="/domains/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/domains/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dev" element={<App />} />
           <Route path="/calendar" element={<CalendarPage />} />
-          <Route
-            path="/calendar/scheduled"
-            element={
-              <ProtectedRoute>
-                <ScheduledPaymentsPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/calendar/scheduled" element={<ProtectedRoute><ScheduledPaymentsPage /></ProtectedRoute>} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/obligationForm"
-            element={
-              <ProtectedRoute>
-                <ObligationForm />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/obligationForm" element={<ProtectedRoute><ObligationForm /></ProtectedRoute>} />
           <Route path="/stickers" element={<StickerAlbumPage />} />
           <Route path="/stickers/:badgeKey" element={<StickerDetailPage />} />
           <Route path="/paymentForm" element={<PaymentForm />} />
-          <Route
-            path="/insights"
-            element={
-              <ProtectedRoute>
-                <InsightsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/insights" element={<ProtectedRoute><InsightsPage /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/landing" element={<LandingPage />} />
-          <Route
-            path="/onboarding"
-            element={
-              <ProtectedRoute>
-                <OnboardingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <NotificationsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/quests"
-            element={
-              <ProtectedRoute>
-                <QuestsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/quiz"
-            element={
-              <ProtectedRoute>
-                <QuizPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/quiz/topics/:topic"
-            element={
-              <ProtectedRoute>
-                <TopicQuizTeachingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/quiz/session/:sessionId"
-            element={
-              <ProtectedRoute>
-                <QuizQuestionPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/quiz/topics"
-            element={
-              <ProtectedRoute>
-                <TopicQuizPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/quiz/session/:sessionId/feedback"
-            element={
-              <ProtectedRoute>
-                <QuizAnswerFeedbackPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/quiz/session/:sessionId/results"
-            element={
-              <ProtectedRoute>
-                <QuizResultsPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+          <Route path="/quests" element={<ProtectedRoute><QuestsPage /></ProtectedRoute>} />
+          <Route path="/quiz" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />
+          <Route path="/quiz/topics/:topic" element={<ProtectedRoute><TopicQuizTeachingPage /></ProtectedRoute>} />
+          <Route path="/quiz/session/:sessionId" element={<ProtectedRoute><QuizQuestionPage /></ProtectedRoute>} />
+          <Route path="/quiz/topics" element={<ProtectedRoute><TopicQuizPage /></ProtectedRoute>} />
+          <Route path="/quiz/session/:sessionId/feedback" element={<ProtectedRoute><QuizAnswerFeedbackPage /></ProtectedRoute>} />
+          <Route path="/quiz/session/:sessionId/results" element={<ProtectedRoute><QuizResultsPage /></ProtectedRoute>} />
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/friends/list" element={<FriendsListPage />} />
           <Route path="/friends/add" element={<AddFriendPage />} />
@@ -201,57 +107,19 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/mascot/shop" element={<MascotShopPage />} />
           <Route path="/wrapped" element={<WrappedPage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route
-            path="/settings/preferences"
-            element={<SettingsPreferencesPage />}
-          />
-          <Route
-            path="/settings/notifications"
-            element={<SettingsNotificationsPage />}
-          />
+          <Route path="/settings/preferences" element={<SettingsPreferencesPage />} />
+          <Route path="/settings/notifications" element={<SettingsNotificationsPage />} />
           <Route path="/settings/account" element={<SettingsAccountPage />} />
           <Route path="/edit-profile" element={<EditProfilePage />} />
           <Route path="/help" element={<HelpPage />} />
-          <Route
-            path="/simulation"
-            element={
-              <ProtectedRoute>
-                <SimulationEntryPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/simulation/briefing"
-            element={
-              <ProtectedRoute>
-                <SimulationBriefingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/simulation/setup/:sessionId"
-            element={
-              <ProtectedRoute>
-                <BudgetAllocationPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/simulation/setup/:sessionId/planning"
-            element={
-              <ProtectedRoute>
-                <MonthPlanningPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/simulation/session/:sessionId/score-breakdown"
-            element={
-              <ProtectedRoute>
-                <ScoreBreakdownPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/simulation" element={<ProtectedRoute><SimulationEntryPage /></ProtectedRoute>} />
+          <Route path="/simulation/briefing" element={<ProtectedRoute><SimulationBriefingPage /></ProtectedRoute>} />
+          <Route path="/simulation/setup/:sessionId" element={<ProtectedRoute><BudgetAllocationPage /></ProtectedRoute>} />
+          <Route path="/simulation/setup/:sessionId/planning" element={<ProtectedRoute><MonthPlanningPage /></ProtectedRoute>} />
+          <Route path="/simulation/recovery" element={<ProtectedRoute><SimulationRecovery /></ProtectedRoute>} />
+          <Route path="/simulation/session/:sessionId/board" element={<ProtectedRoute><SimulationBoardPage /></ProtectedRoute>} />
+          <Route path="/simulation/session/:sessionId/obligations/:obligationId" element={<ProtectedRoute><SimulationObligationDetailPage /></ProtectedRoute>} />
+          <Route path="/simulation/session/:sessionId/score-breakdown" element={<ProtectedRoute><ScoreBreakdownPage /></ProtectedRoute>} />
         </Routes>
       </NotificationsProvider>
     </BrowserRouter>
