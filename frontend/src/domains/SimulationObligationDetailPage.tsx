@@ -7,6 +7,7 @@ import { continueSimulation, paySimulationObligation } from '@/features/simulati
 import { createIdempotencyKey } from '@/features/simulation/idempotency'
 import { PaymentResult } from '@/components/simulation/PaymentResult'
 import { ResultAcknowledgement } from '@/components/simulation/ResultAcknowledgement'
+import { routeForSimulationState } from '@/features/simulation/routing'
 import type { PaymentSimulationResponse } from '@/features/simulation/types'
 
 interface InsufficientFundsDetails {
@@ -32,6 +33,7 @@ export default function SimulationObligationDetailPage() {
     loading,
     error,
     setSimulation,
+    refetch,
   } = useSimulation(sessionId)
 
   const [paying, setPaying] = React.useState(false)
@@ -59,6 +61,26 @@ export default function SimulationObligationDetailPage() {
     React.useState<InsufficientFundsDetails | null>(
       null,
     )
+
+  const handleStaleSimulationState = async () => {
+    const refreshed = await refetch()
+
+    if (!refreshed) {
+      setPaymentError(
+        'The latest state could not be loaded after the simulation state changed. Please try again.',
+      )
+
+      return
+    }
+
+    setSimulation(refreshed)
+    const route = routeForSimulationState(refreshed)
+
+    console.info(
+      'Simulation should route to: ',
+      route,
+    )
+  }
 
   if (!simulation && loading) {
     return (
@@ -156,6 +178,8 @@ export default function SimulationObligationDetailPage() {
               apiError.error.remainingAmount,
           })
         }
+      } else if (apiError.statusCode === 409) {
+        await handleStaleSimulationState()
       } else {
         setPaymentError(
           'The payment could not be confirmed. Please try again.',
