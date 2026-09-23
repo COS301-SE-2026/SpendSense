@@ -1,12 +1,21 @@
 import React from 'react'
-import {screen,waitFor} from '@testing-library/react'
+import {screen,waitFor,within} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {Link,useLocation} from 'react-router-dom'
-import {describe,expect,it} from 'vitest'
+import {describe,expect,it,vi} from 'vitest'
 import '@testing-library/jest-dom'
 import {GuidanceTourInvitation,GuidanceWalkthrough} from '../components/guidance/GuidanceWalkthrough'
 import {GuidanceSettings} from '../components/guidance/GuidanceSettings'
 import {createFakeGuidanceApi,makeGuidanceState,renderWithGuidance} from './guidanceTestUtils'
+
+vi.mock('@/hooks/useGamificationProfile',()=>({
+    useGamificationProfile:()=>({
+        profile:{mascotMood:'HAPPY',equippedCosmetics:[]},
+        loading:false,
+        error:null,
+        refetch:vi.fn(),
+    }),
+}))
 
 function Shell(){
     const location=useLocation()
@@ -51,11 +60,14 @@ describe('GuidanceWalkthrough',()=>{
             ['Step 4 of 5: Daily quiz','/quiz'],
             ['Step 5 of 5: Insights','/insights'],
         ]
+        expect(within(screen.getByRole('dialog')).getByRole('img',{name:/Mascot/})).toBeInTheDocument()
+
         for(const [label,route] of expected){
             await userEvent.click(screen.getByRole('button',{name:'Next'}))
             expect(await screen.findByText(label)).toBeInTheDocument()
             expect(path()).toHaveTextContent(new RegExp(`^${route}$`))
-            expect(screen.getByRole('dialog')).toBeInTheDocument()
+            const dialog=screen.getByRole('dialog')
+            expect(within(dialog).getByRole('img',{name:/Mascot/})).toBeInTheDocument()
         }
     })
 
