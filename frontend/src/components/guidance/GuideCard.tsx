@@ -4,8 +4,11 @@ import {GuidanceMascot} from './GuidanceMascot'
 import {cn} from '@/lib/utils'
 import type {SelectedGuide} from '@/features/guidance/guidanceTypes'
 
+export type GuideCardVariant='card'|'bubble'
+
 export interface GuideCardProps{
     guide:SelectedGuide
+    variant?:GuideCardVariant
     showAvatar?:boolean
     onDismiss?:(id:string)=>void
     onRetry?:()=>void
@@ -15,33 +18,49 @@ export interface GuideCardProps{
 
 export function GuideCard({
     guide,
+    variant='card',
     showAvatar=true,
     onDismiss,
     onRetry,
     onNavigate,
     className,
 }:GuideCardProps){
+    const isBubble=variant==='bubble'
+
     return(
         <aside
             role="status"
             aria-live="polite"
             data-guide-id={guide.id}
             data-guide-kind={guide.kind}
+            data-guide-variant={variant}
             className={cn(
-                'flex items-start gap-3 rounded-2xl border-2 border-[#091828] bg-white p-4 shadow-[3px_4px_0_#091828]',
-                'dark:border-[#2d3449] dark:bg-[#131b2e] dark:shadow-none',
+                'flex items-start gap-3 border-2 border-[#091828] bg-white dark:border-[#2d3449] dark:bg-[#131b2e]',
+                isBubble
+                    ? [
+                        'relative max-w-[17rem] rounded-2xl rounded-br-sm p-3',
+                        'after:absolute after:-bottom-[9px] after:right-5 after:size-3 after:rotate-45',
+                        'after:border-b-2 after:border-r-2 after:border-[#091828] after:bg-white',
+                        'dark:after:border-[#2d3449] dark:after:bg-[#131b2e]',
+                    ]
+                    : 'rounded-2xl p-4 shadow-[3px_4px_0_#091828] dark:shadow-none',
                 className,
             )}
         >
-            {showAvatar && <GuidanceMascot/>}
+            {showAvatar && !isBubble && <GuidanceMascot/>}
 
             <div className="min-w-0 flex-1">
-                <p className="text-sm leading-relaxed text-[#091828] dark:text-[#dae2fd]">
+                <p
+                    className={cn(
+                        'leading-relaxed text-[#091828] dark:text-[#dae2fd]',
+                        isBubble? 'text-xs' : 'text-sm',
+                    )}
+                >
                     {guide.text}
                 </p>
 
                 {guide.actions.length>0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className={cn('flex flex-wrap gap-2',isBubble? 'mt-2' : 'mt-3')}>
                         {guide.actions.map((action)=>(
                             action.to
                                 ? (
@@ -49,7 +68,7 @@ export function GuideCard({
                                         key={`${action.label}-${action.to}`}
                                         to={action.to}
                                         onClick={onNavigate}
-                                        className="rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-3 py-1.5 text-xs font-bold text-[#3F001B] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
+                                        className="rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-3 py-1 text-xs font-bold text-[#3F001B] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
                                     >
                                         {action.label}
                                     </Link>
@@ -59,7 +78,7 @@ export function GuideCard({
                                         key={action.label}
                                         type="button"
                                         onClick={onRetry}
-                                        className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#091828] bg-[#E8EFEC] px-3 py-1.5 text-xs font-bold text-[#091828] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#1c263c] dark:text-[#dae2fd]"
+                                        className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#091828] bg-[#E8EFEC] px-3 py-1 text-xs font-bold text-[#091828] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#1c263c] dark:text-[#dae2fd]"
                                     >
                                         <RefreshCw aria-hidden="true" className="size-3"/>
                                         {action.label}

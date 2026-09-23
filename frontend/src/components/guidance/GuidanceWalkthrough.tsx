@@ -1,6 +1,7 @@
 import {X} from 'lucide-react'
 import {useCallback,useEffect,useRef} from 'react'
 import type {KeyboardEvent as ReactKeyboardEvent} from 'react'
+import {GuidanceMascot} from './GuidanceMascot'
 import {WALKTHROUGH_STEPS} from '@/features/guidance/guidanceCatalogue'
 import {useGuidance,useGuidanceOptional} from '@/features/guidance/useGuidance'
 import {WALKTHROUGH_MAX_STEP,WALKTHROUGH_STEP_COUNT} from '@/features/guidance/guidanceTypes'
@@ -68,6 +69,7 @@ function WalkthroughPanel({className}:{className?:string}){
             )}
         >
             <div className="flex items-start gap-3">
+                <GuidanceMascot className="size-12"/>
                 <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-[#6B6375] dark:text-[#a0aec0]">
                         Step {currentStep+1} of {WALKTHROUGH_STEP_COUNT}: {step.screen}
