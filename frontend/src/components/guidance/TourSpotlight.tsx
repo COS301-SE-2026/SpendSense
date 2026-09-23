@@ -1,6 +1,6 @@
 import type {SpotlightRect} from '@/hooks/useSpotlightRect'
 
-export function TourSpotlight({rect,target}:{rect:SpotlightRect|null;target?:string}){
+export function TourSpotlight({rect,target}:Readonly<{rect:SpotlightRect|null;target?:string}>){
     if(!rect) return null
 
     return(

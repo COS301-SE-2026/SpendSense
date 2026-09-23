@@ -67,42 +67,15 @@ export function GuideCard({
                 </p>
 
                 {guide.actions.length>0 && (
-                    <div className={cn('flex flex-wrap gap-2',isBubble? 'mt-3' : 'mt-3')}>
+                    <div className={'mt-3 flex flex-wrap gap-2'}>
                         {guide.actions.map((action)=>(
-                            action.to
-                                ? (
-                                    <Link
-                                        key={`${action.label}-${action.to}`}
-                                        to={action.to}
-                                        onClick={onNavigate}
-                                        className="rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-3 py-1 text-xs font-bold text-[#3F001B] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
-                                    >
-                                        {action.label}
-                                    </Link>
-                                )
-                                : action.intent==='continue'
-                                    ? (
-                                        <button
-                                            key={action.label}
-                                            type="button"
-                                            onClick={onContinue}
-                                            className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-3 py-1.5 text-xs font-bold text-[#3F001B] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
-                                        >
-                                            {action.label}
-                                            <ArrowRight aria-hidden="true" className="size-3"/>
-                                        </button>
-                                    )
-                                    : (
-                                        <button
-                                            key={action.label}
-                                            type="button"
-                                            onClick={onRetry}
-                                            className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#091828] bg-[#E8EFEC] px-3 py-1 text-xs font-bold text-[#091828] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#1c263c] dark:text-[#dae2fd]"
-                                        >
-                                            <RefreshCw aria-hidden="true" className="size-3"/>
-                                            {action.label}
-                                        </button>
-                                    )
+                            <GuideAction
+                                key={`${action.label}-${action.to ?? ''}`}
+                                action={action}
+                                onNavigate={onNavigate}
+                                onContinue={onContinue}
+                                onRetry={onRetry}
+                            />
                         ))}
                     </div>
                 )}
@@ -119,5 +92,48 @@ export function GuideCard({
                 </button>
             )}
         </aside>
+    )
+}
+
+type GuideActionProps={
+    action:SelectedGuide['actions'][number]
+    onNavigate?:()=>void
+    onContinue?:()=>void
+    onRetry?:()=>void
+}
+
+function GuideAction({action,onNavigate,onContinue,onRetry}:Readonly<GuideActionProps>){
+    if(action.to){
+        return(
+            <Link
+                to={action.to}
+                onClick={onNavigate}
+                className="rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-3 py-1 text-xs font-bold text-[#3F001B] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
+            >
+                {action.label}
+            </Link>
+        )
+    }
+    if(action.intent==='continue'){
+        return(
+            <button
+                type="button"
+                onClick={onContinue}
+                className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#091828] bg-[#FFD9E1] px-3 py-1.5 text-xs font-bold text-[#3F001B] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#2d1b2e] dark:text-[#ff6b9d]"
+            >
+                {action.label}
+                <ArrowRight aria-hidden="true" className="size-3"/>
+            </button>
+        )
+    }
+    return(
+        <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#091828] bg-[#E8EFEC] px-3 py-1 text-xs font-bold text-[#091828] focus-visible:outline-2 focus-visible:outline-offset-2 dark:border-[#2d3449] dark:bg-[#1c263c] dark:text-[#dae2fd]"
+        >
+            <RefreshCw aria-hidden="true" className="size-3"/>
+            {action.label}
+        </button>
     )
 }

@@ -8,7 +8,9 @@ function groupThousands(amount:string):string{
     const negative=amount.startsWith('-')
     const bare=negative? amount.slice(1) : amount
     const [whole,fraction='00']=bare.split('.')
-    const grouped=whole.replace(/\B(?=(\d{3})+(?!\d))/g,' ')
+    const groups:string[]=[]
+    for(let end=whole.length;end>0;end-=3) groups.unshift(whole.slice(Math.max(0,end-3),end))
+    const grouped=groups.join(' ')
     return `${negative? '-' : ''}${grouped}.${fraction}`
 }
 

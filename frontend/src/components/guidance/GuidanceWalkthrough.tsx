@@ -1,6 +1,5 @@
 import {X} from 'lucide-react'
-import {useCallback,useEffect,useRef} from 'react'
-import type {KeyboardEvent as ReactKeyboardEvent} from 'react'
+import {useEffect,useRef} from 'react'
 import {GuidanceMascot} from './GuidanceMascot'
 import {TourSpotlight} from './TourSpotlight'
 import {useSpotlightRect} from '@/hooks/useSpotlightRect'
@@ -31,7 +30,7 @@ function WalkthroughPanel({className}:Readonly<{className?:string}>){
         skipWalkthrough,
     }=useGuidance()
 
-    const panelRef=useRef<HTMLDivElement|null>(null)
+    const panelRef=useRef<HTMLDialogElement|null>(null)
     const returnFocusTo=useRef<HTMLElement|null>(null)
 
     useEffect(()=>{
@@ -44,12 +43,17 @@ function WalkthroughPanel({className}:Readonly<{className?:string}>){
         returnFocusTo.current=null
     },[walkthroughVisible])
 
-    const onKeyDown=useCallback((event:ReactKeyboardEvent<HTMLDivElement>)=>{
-        if(event.key==='Escape'){
-            event.stopPropagation()
-            skipWalkthrough()
+    useEffect(()=>{
+        if(!walkthroughVisible) return
+        const onKeyDown=(event:KeyboardEvent)=>{
+            if(event.key==='Escape'){
+                event.stopPropagation()
+                skipWalkthrough()
+            }
         }
-    },[skipWalkthrough])
+        document.addEventListener('keydown',onKeyDown)
+        return ()=>document.removeEventListener('keydown',onKeyDown)
+    },[walkthroughVisible,skipWalkthrough])
 
     const {currentStep}=state.walkthrough
     const step=WALKTHROUGH_STEPS[Math.min(currentStep,WALKTHROUGH_MAX_STEP)]
@@ -67,15 +71,14 @@ function WalkthroughPanel({className}:Readonly<{className?:string}>){
     return(
         <>
             <TourSpotlight rect={rect} target={stop.target}/>
-            <div
+            <dialog
                 ref={panelRef}
-                role="dialog"
+                open
                 aria-modal="false"
                 aria-labelledby="walkthrough-heading"
                 tabIndex={-1}
-                onKeyDown={onKeyDown}
                 className={cn(
-                    'fixed inset-x-4 z-40 mx-auto max-w-md rounded-2xl border-2 border-[#091828] bg-white p-4 shadow-[3px_4px_0_#091828]',
+                    'fixed inset-x-4 z-40 m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border-2 border-[#091828] bg-white p-4 shadow-[3px_4px_0_#091828]',
                     'dark:border-[#2d3449] dark:bg-[#131b2e] dark:shadow-none',
                     panelAtTop? 'top-4' : 'bottom-20',
                     className,
@@ -136,7 +139,7 @@ function WalkthroughPanel({className}:Readonly<{className?:string}>){
                         {isLastStop? 'Finish' : 'Next'}
                     </button>
                 </div>
-            </div>
+            </dialog>
         </>
     )
 }

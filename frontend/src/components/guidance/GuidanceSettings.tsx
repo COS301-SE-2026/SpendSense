@@ -93,7 +93,7 @@ function SyncNotice({className}:Readonly<{className?:string}>){
     const {retrySync}=useGuidance()
 
     return(
-        <p role="status" className={cn('text-center text-xs text-[#AC2A5D] dark:text-[#ffb4ab]',className)}>
+        <output className={cn('block text-center text-xs text-[#AC2A5D] dark:text-[#ffb4ab]',className)}>
             Your guidance settings are saved on this device but not to your account yet.{' '}
             <button
                 type="button"
@@ -102,6 +102,6 @@ function SyncNotice({className}:Readonly<{className?:string}>){
             >
                 Try again
             </button>
-        </p>
+        </output>
     )
 }

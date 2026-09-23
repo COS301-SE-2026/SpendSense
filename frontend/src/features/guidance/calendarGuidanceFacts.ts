@@ -1,7 +1,7 @@
 import type {CalendarOccurrence} from '@/hooks/useCalendarOccurrences'
 import type {GuideFacts} from './guidanceTypes'
 
-const PAYABLE_STATUSES=['PENDING','OVERDUE']
+const PAYABLE_STATUSES=new Set(['PENDING','OVERDUE'])
 
 export function calendarGuidanceFacts(
     occurrences:readonly CalendarOccurrence[],
@@ -15,7 +15,7 @@ export function calendarGuidanceFacts(
         isOverdue:visible.some((occurrence)=>occurrence.status==='OVERDUE'),
     }
 
-    const payable=visible.filter((occurrence)=>PAYABLE_STATUSES.includes(occurrence.status))
+    const payable=visible.filter((occurrence)=>PAYABLE_STATUSES.has(occurrence.status))
     if(payable.length===1){
         facts.isPayable=true
         facts.dueDate=formatDueDate(payable[0].dueDate)

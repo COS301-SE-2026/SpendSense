@@ -55,7 +55,7 @@ export function clearAutoExpandMarkers(storage?:Storage|null):void{
         const doomed:string[]=[]
         for(let index=0;index<store.length;index+=1){
             const key=store.key(index)
-            if(key&&key.startsWith(AUTO_EXPAND_KEY_PREFIX)) doomed.push(key)
+            if(key?.startsWith(AUTO_EXPAND_KEY_PREFIX)) doomed.push(key)
         }
         doomed.forEach((key)=>store.removeItem(key))
     }catch{

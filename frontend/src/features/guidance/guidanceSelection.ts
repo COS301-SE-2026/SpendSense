@@ -14,7 +14,7 @@ const KIND_RANK:Record<GuideKind,number>={
     ordinary:1,
 }
 
-const PLACEHOLDER_PATTERN=/\{([a-zA-Z0-9_]+)\}/g
+const PLACEHOLDER_PATTERN=/\{(\w+)\}/g
 
 export function interpolate(
     text:string,
