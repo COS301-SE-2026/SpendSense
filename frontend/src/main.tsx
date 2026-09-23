@@ -53,6 +53,7 @@ import SimulationEntryPage from './features/simulation/screens/SimulationEntryPa
 import SimulationBriefingPage from './features/simulation/screens/SimulationBriefingPage.tsx'
 import BudgetAllocationPage from './features/simulation/screens/BudgetAllocationPage.tsx'
 import MonthPlanningPage from './features/simulation/screens/MonthPlanningPage.tsx'
+import {SurpriseEventRevealPage,SurpriseEventDecisionPage} from './features/simulation/screens/SurpriseEventPage.tsx'
 
 initAuthListener()
 initTheme()
@@ -111,6 +112,8 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/simulation/briefing" element={<ProtectedRoute><SimulationBriefingPage/></ProtectedRoute>}/>
           <Route path="/simulation/setup/:sessionId" element={<ProtectedRoute><BudgetAllocationPage/></ProtectedRoute>}/>
           <Route path="/simulation/setup/:sessionId/planning" element={<ProtectedRoute><MonthPlanningPage/></ProtectedRoute>}/>
+          <Route path="/simulation/session/:sessionId/event" element={<ProtectedRoute><SurpriseEventRevealPage/></ProtectedRoute>}/>
+<Route path="/simulation/session/:sessionId/event/decision" element={<ProtectedRoute><SurpriseEventDecisionPage/></ProtectedRoute>}/>
         </Routes>
       </NotificationsProvider>
     </BrowserRouter>
