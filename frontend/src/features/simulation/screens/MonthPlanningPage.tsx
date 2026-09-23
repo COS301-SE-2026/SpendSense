@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, CircleAlert, Landmark, PiggyBank } from "lucide-react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -118,7 +119,7 @@ export default function MonthPlanningPage() {
     );
   }
 
-  if (error || !detail || !sessionId) {
+  if(!detail||!sessionId){
     return (
       <SimulationPageShell title="Your month at a glance">
         <ErrorCard

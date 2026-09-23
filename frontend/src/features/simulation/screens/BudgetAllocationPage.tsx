@@ -15,6 +15,12 @@ function amountToNumber(amount: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function amountToCents(amount:string):number|null{
+    if(!/^\d+(?:\.\d{1,2})?$/.test(amount))return null
+    const value=Math.round(Number(amount)*100)
+    return Number.isSafeInteger(value)?value:null
+}
+
 export default function BudgetAllocationPage() {
   const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -56,26 +62,34 @@ export default function BudgetAllocationPage() {
     void Promise.resolve().then(loadDetail);
   }, [loadDetail]);
 
-  const custom = detail?.allocation.custom;
-  const startingBudget = amountToNumber(detail?.session.startingBudget ?? "0");
-  const customCurrent = amountToNumber(customCurrentAmount);
-  const customSavings = Math.max(0, startingBudget - customCurrent);
-  const selectedPreset =
-    detail?.allocation.options.find(
-      (option) => option.id === selectedPresetId,
-    ) ?? null;
-  const selectedCurrentAmount =
-    selectedPreset?.currentAmount ??
-    (customCurrentAmount === "" ? null : customCurrent.toFixed(2));
-  const selectedSavingsAmount =
-    selectedPreset?.savingsAmount ??
-    (customCurrentAmount === "" ? null : customSavings.toFixed(2));
+  const custom=detail?.allocation.custom
+  const startingBudget=amountToNumber(detail?.session.startingBudget??"0")
+  const customCents=amountToCents(customCurrentAmount)
+  const minimumCents=custom?amountToCents(custom.minCurrentAmount):null
+  const maximumCents=custom?amountToCents(custom.maxCurrentAmount):null
+  const incrementCents=custom?amountToCents(custom.increment):null
+  const validCustom=customCents!==null&&minimumCents!==null&&
+      maximumCents!==null&&incrementCents!==null&&incrementCents>0&&
+      customCents>=minimumCents&&customCents<=maximumCents&&
+      (customCents-minimumCents)%incrementCents===0
+  const customCurrent=customCents===null?0:customCents/100
+  const customSavings=Math.max(0,startingBudget-customCurrent)
+  const selectedPreset=
+      detail?.allocation.options.find(
+          (option)=>option.id===selectedPresetId,
+      )??null
+  const selectedCurrentAmount=
+      selectedPreset?.currentAmount??
+      (validCustom?customCurrent.toFixed(2):null)
+  const selectedSavingsAmount=
+      selectedPreset?.savingsAmount??
+      (validCustom?customSavings.toFixed(2):null)
 
-  const setupRequest: SetupRequest | null = selectedPreset
-    ? { allocationId: selectedPreset.id }
-    : custom && customCurrentAmount !== ""
-      ? { currentAmount: customCurrent.toFixed(2) }
-      : null;
+  const setupRequest:SetupRequest|null=selectedPreset
+      ?{allocationId:selectedPreset.id}
+      :custom&&validCustom
+          ?{currentAmount:customCurrent.toFixed(2)}
+          :null
 
   if (loading) {
     return (
@@ -167,6 +181,8 @@ export default function BudgetAllocationPage() {
                 max={custom.maxCurrentAmount}
                 step={custom.increment}
                 value={customCurrentAmount}
+                aria-invalid={customCurrentAmount!==""&&!validCustom}
+                aria-describedby="custom-current-help"
                 onChange={(event) => {
                   setCustomCurrentAmount(event.target.value);
                   setSelectedPresetId(null);
@@ -174,6 +190,11 @@ export default function BudgetAllocationPage() {
                 placeholder={`${custom.minCurrentAmount}–${custom.maxCurrentAmount}`}
                 className="mt-2 w-full rounded-xl border-2 border-[#091828] bg-white px-3 py-2 text-sm font-semibold dark:border-[#2D3449] dark:bg-[#1C263C]"
               />
+              <p id="custom-current-help" className="mt-2 text-xs font-semibold" role={customCurrentAmount!==""&&!validCustom?"alert":undefined}>
+                {customCurrentAmount!==""&&!validCustom
+                    ?`Enter an amount from ${custom.minCurrentAmount} to ${custom.maxCurrentAmount} in steps of ${custom.increment}.`
+                    :`Allowed: ${custom.minCurrentAmount} to ${custom.maxCurrentAmount}, steps of ${custom.increment}.`}
+              </p>
             </div>
           )}
 
