@@ -1,8 +1,9 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import {fireEvent,render,screen,waitFor} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import '@testing-library/jest-dom'
 
 import BudgetAllocationPage from "../features/simulation/screens/BudgetAllocationPage";
 import MonthPlanningPage from "../features/simulation/screens/MonthPlanningPage";
@@ -100,5 +101,108 @@ describe("Simulation allocation and planning", () => {
       );
     });
     expect(await screen.findByText("Active board handoff")).toBeInTheDocument();
+  });
+
+  it("rejects custom amounts outside server bounds, invalid steps and extra decimals",async()=>{
+    vi.mocked(getSimulation).mockResolvedValue(briefingFixture);
+    const custom=briefingFixture.allocation.custom;
+    if(!custom)throw new Error("Custom allocation fixture is required");
+
+    renderRoute(`/simulation/setup/${briefingFixture.session.id}`);
+    const input=await screen.findByRole("spinbutton",{name:/custom current amount/i});
+    const review=screen.getByRole("button",{name:/review your month/i});
+    const minimum=Number(custom.minCurrentAmount);
+    const maximum=Number(custom.maxCurrentAmount);
+    const increment=Number(custom.increment);
+
+    fireEvent.change(input,{target:{value:(minimum-increment).toFixed(2)}});
+    expect(review).toBeDisabled();
+    expect(input).toHaveAttribute("aria-invalid","true");
+
+    fireEvent.change(input,{target:{value:(maximum+increment).toFixed(2)}});
+    expect(review).toBeDisabled();
+
+    if(increment>0.01){
+      fireEvent.change(input,{target:{value:(minimum+0.01).toFixed(2)}});
+      expect(review).toBeDisabled();
+    }
+
+    fireEvent.change(input,{target:{value:`${minimum.toFixed(2)}1`}});
+    expect(review).toBeDisabled();
+
+    fireEvent.change(input,{target:{value:custom.minCurrentAmount}});
+    expect(input).toHaveAttribute("aria-invalid","false");
+    expect(review).toBeEnabled();
+  });
+
+  it("passes a valid custom amount into planning without sending setup early",async()=>{
+    const user=userEvent.setup();
+    vi.mocked(getSimulation).mockResolvedValue(briefingFixture);
+    const custom=briefingFixture.allocation.custom;
+    if(!custom)throw new Error("Custom allocation fixture is required");
+
+    renderRoute(`/simulation/setup/${briefingFixture.session.id}`);
+    const input=await screen.findByRole("spinbutton",{name:/custom current amount/i});
+    fireEvent.change(input,{target:{value:custom.minCurrentAmount}});
+    await user.click(screen.getByRole("button",{name:/review your month/i}));
+
+    expect(await screen.findByRole("button",{name:/^start month$/i})).toBeInTheDocument();
+    expect(setupSimulation).not.toHaveBeenCalled();
+  });
+
+  it("routes a resumed active session to its board without setting up again",async()=>{
+    const setupRequest:SetupRequest={
+      allocationId:briefingFixture.allocation.options[0].id,
+    };
+    vi.mocked(getSimulation).mockResolvedValue(activeBoardFixture);
+
+    renderRoute({
+      pathname:`/simulation/setup/${briefingFixture.session.id}/planning`,
+      state:{setupRequest},
+    });
+
+    expect(await screen.findByText("Active board handoff")).toBeInTheDocument();
+    expect(setupSimulation).not.toHaveBeenCalled();
+  });
+
+  it("recovers an already-confirmed setup from authoritative server state",async()=>{
+    const user=userEvent.setup();
+    const setupRequest:SetupRequest={
+      allocationId:briefingFixture.allocation.options[0].id,
+    };
+    vi.mocked(getSimulation)
+      .mockResolvedValueOnce(briefingFixture)
+      .mockResolvedValueOnce(activeBoardFixture);
+    vi.mocked(setupSimulation).mockRejectedValue(new Error("SETUP_ALREADY_CONFIRMED"));
+
+    renderRoute({
+      pathname:`/simulation/setup/${briefingFixture.session.id}/planning`,
+      state:{setupRequest},
+    });
+
+    await user.click(await screen.findByRole("button",{name:/^start month$/i}));
+
+    expect(await screen.findByText("Active board handoff")).toBeInTheDocument();
+    expect(setupSimulation).toHaveBeenCalledTimes(1);
+    expect(getSimulation).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the planning screen available when setup fails",async()=>{
+    const user=userEvent.setup();
+    const setupRequest:SetupRequest={
+      allocationId:briefingFixture.allocation.options[0].id,
+    };
+    vi.mocked(getSimulation).mockResolvedValue(briefingFixture);
+    vi.mocked(setupSimulation).mockRejectedValue(new Error("Setup unavailable"));
+
+    renderRoute({
+      pathname:`/simulation/setup/${briefingFixture.session.id}/planning`,
+      state:{setupRequest},
+    });
+
+    await user.click(await screen.findByRole("button",{name:/^start month$/i}));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Setup unavailable");
+    expect(screen.getByRole("button",{name:/^start month$/i})).toBeEnabled();
   });
 });
