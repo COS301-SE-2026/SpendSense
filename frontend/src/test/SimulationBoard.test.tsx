@@ -8,7 +8,7 @@ import {
   it,
   vi,
 } from 'vitest'
-import { SimulationBoard } from '@/features/simulation/components/SimulationBoard'
+import { SimulationBoard } from '@/components/simulation/SimulationBoard'
 import { activeBoardFixture } from '@/features/simulation/fixtures/SimulationDetail'
 import { advanceSimulation } from '@/features/simulation/api'
 import type { SimulationActionResponse } from '@/features/simulation/types'

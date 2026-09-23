@@ -8,7 +8,7 @@ import {
   it,
   vi,
 } from 'vitest'
-import { SimulationHeader } from '@/features/simulation/components/SimulationHeader'
+import { SimulationHeader } from '@/components/simulation/SimulationHeader'
 import { activeBoardFixture } from '@/features/simulation/fixtures/SimulationDetail'
 
 beforeEach(() => {

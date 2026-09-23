@@ -104,6 +104,7 @@ export default function SimulationObligationDetailPage() {
     if (
       !sessionId ||
       !obligation ||
+      !simulation ||
       paymentInFlightRef.current
     ) {
       return
