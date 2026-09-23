@@ -1,15 +1,16 @@
 import {useCallback,useEffect,useRef,useState} from 'react'
-import {AlertTriangle,ArrowRight,Check,Clock3,Coins,Sparkles} from 'lucide-react'
+import {AlertTriangle,ArrowRight,Check,Clock3,Coins,Pause,Sparkles} from 'lucide-react'
 import {useNavigate,useParams} from 'react-router-dom'
 import {ErrorCard,LoadingCard} from '@/components/common/AsyncStates'
 import {LongButton} from '@/components/common/LongButton'
 import {useSimulation} from '@/hooks/useSimulation'
+import {usePauseControls} from '@/hooks/usePauseControls'
 import {useRefetchAtDeadline} from '../hooks/useRefetchAtDeadline'
 import {resolveSimulationEvent} from '../api'
 import {SimulationPageShell} from '../components/SimulationPageShell'
 import {createIdempotencyKey} from '../idempotency'
 import {formatSimulationMoney} from '../presentation'
-import {routeForSimulationState} from '../routing'
+import {pathForSimulationState,routeForSimulationState} from '../routing'
 import type {SimulationDetail} from '../types'
 
 type EventScreen='reveal'|'decision'
@@ -68,6 +69,28 @@ function EventCountdown({deadline}:Readonly<{deadline:string|null}>){
     )
 }
 
+function EventPauseButton({simulation,onSimulationChange,disabled}:Readonly<{
+    simulation:SimulationDetail
+    onSimulationChange:(detail:SimulationDetail)=>void
+    disabled:boolean
+}>){
+    const {pause,pausing,pauseError}=usePauseControls({simulation,onSimulationChange})
+    return(
+        <div className="flex flex-col items-center gap-2">
+            <button
+                type="button"
+                disabled={disabled||pausing||simulation.session.status!=='ACTIVE'}
+                onClick={()=>void pause()}
+                className="flex items-center gap-2 rounded-full border-2 border-[#091828] bg-white px-4 py-2 text-sm font-extrabold text-[#091828] shadow-[2px_2px_0_#091828] disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#2D3449] dark:bg-[#131B2E] dark:text-white"
+            >
+                <Pause className="size-4" aria-hidden="true"/>
+                {pausing?'Pausing…':'Pause month'}
+            </button>
+            {pauseError&&<p role="alert" className="text-sm font-semibold text-[#AC2A5D]">{pauseError}</p>}
+        </div>
+    )
+}
+
 function EventScreenContent({screen}:Readonly<{screen:EventScreen}>){
     const navigate=useNavigate()
     const {sessionId}=useParams<{sessionId:string}>()
@@ -95,15 +118,7 @@ function EventScreenContent({screen}:Readonly<{screen:EventScreen}>){
             navigate(getEventResultPath(sessionId),{replace:true})
             return
         }
-        if(route==='briefing'){
-            navigate(`/simulation/setup/${sessionId}`,{replace:true})
-            return
-        }
-        if(route==='summary'){
-            navigate(`${getSessionPath(sessionId)}/summary`,{replace:true})
-            return
-        }
-        navigate(getSessionPath(sessionId),{replace:true})
+        navigate(pathForSimulationState(detail),{replace:true})
     },[navigate,sessionId])
 
     const refreshEvent=useCallback(async()=>{
@@ -247,6 +262,11 @@ function EventScreenContent({screen}:Readonly<{screen:EventScreen}>){
                         This is a fictional scenario. Your real finances are not affected.
                     </p>
                 </div>
+                <EventPauseButton
+                    simulation={data}
+                    onSimulationChange={setSimulation}
+                    disabled={submitting||checkingDeadline}
+                />
                 {data.session.timedMode&&event.decisionExpiresAt&&(
                     <div className="flex justify-center">
                         <EventCountdown deadline={event.decisionExpiresAt}/>

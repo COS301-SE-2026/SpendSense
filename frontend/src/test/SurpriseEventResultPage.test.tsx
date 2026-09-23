@@ -50,8 +50,8 @@ function renderRoute(eventResult?:EventResolutionResult){
                     element={<p>Event reveal handoff</p>}
                 />
                 <Route
-                    path="/simulation/session/:sessionId/summary"
-                    element={<p>Summary handoff</p>}
+                    path="/simulation/session/:sessionId/board"
+                    element={<p>Board handoff</p>}
                 />
                 <Route
                     path="/simulation"
@@ -90,7 +90,7 @@ describe('Surprise event result',()=>{
     })
     it('recovers after refresh without inventing the missing event explanation',async()=>{
         renderRoute()
-        expect(await screen.findByText('Event result recorded')).toBeInTheDocument()
+        expect(await screen.findByRole('heading',{name:'Decision applied'})).toBeInTheDocument()
         expect(screen.queryByText(resolvedEvent.explanation)).not.toBeInTheDocument()
         expect(screen.getByText('Recent event activity')).toBeInTheDocument()
         expect(screen.getByRole('button',{name:/back to game/i})).toBeEnabled()
@@ -109,8 +109,8 @@ describe('Surprise event result',()=>{
             }]
         })
         renderRoute()
-        expect(await screen.findByText('Time ran out')).toBeInTheDocument()
-        expect(screen.getByText('Event timed out')).toBeInTheDocument()
+        expect((await screen.findAllByText('Time ran out')).length).toBeGreaterThan(0)
+        expect(screen.getByText(/decision deadline passed/i)).toBeInTheDocument()
         expect(screen.getByText('-10.00 points')).toBeInTheDocument()
     })
     it('shows a newly introduced obligation from the returned simulation detail',async()=>{
@@ -203,6 +203,6 @@ describe('Surprise event result',()=>{
         renderRoute()
         expect(await screen.findByText('Result unavailable')).toBeInTheDocument()
         fireEvent.click(screen.getByRole('button',{name:/please try again/i}))
-        expect(await screen.findByText('Event result recorded')).toBeInTheDocument()
+        expect(await screen.findByRole('heading',{name:'Decision applied'})).toBeInTheDocument()
     })
 })
