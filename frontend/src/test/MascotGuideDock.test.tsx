@@ -1,9 +1,9 @@
 import React from 'react'
-import {screen,waitFor} from '@testing-library/react'
+import {act,screen,waitFor} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {describe,expect,it,vi} from 'vitest'
 import '@testing-library/jest-dom'
-import {MascotGuideDock} from '../components/guidance/MascotGuideDock'
+import {MascotGuideDock,RETURN_TAB_TIMEOUT_MS} from '../components/guidance/MascotGuideDock'
 import {johannesburgDate} from '../features/guidance/guidanceLocalDay'
 import {
     createFakeGuidanceApi,
@@ -77,6 +77,32 @@ describe('MascotGuideDock',()=>{
 
         expect(hideButton()).toBeInTheDocument()
         expect(await screen.findByText(/Nothing has been recorded today yet/)).toBeInTheDocument()
+    })
+
+    it('leaves the edge tab for ten seconds, then lets him go',async()=>{
+        vi.useFakeTimers({shouldAdvanceTime:true})
+        const user=userEvent.setup({advanceTimers:vi.advanceTimersByTime})
+        try{
+            const api=createFakeGuidanceApi({daily:makeDaily()})
+            renderWithGuidance(<MascotGuideDock/>,{api,storage:createFakeStorage()})
+
+            await waitFor(()=>expect(hideButton()).toBeInTheDocument())
+            await user.click(hideButton())
+            expect(returnTab()).toBeInTheDocument()
+
+            await act(async()=>{
+                vi.advanceTimersByTime(RETURN_TAB_TIMEOUT_MS-1000)
+            })
+            expect(returnTab()).toBeInTheDocument()
+
+            await act(async()=>{
+                vi.advanceTimersByTime(1000)
+            })
+            expect(screen.queryByRole('button',{name:'Bring your mascot guide back'})).toBeNull()
+            expect(screen.queryByRole('button',{name:'Hide your mascot guide'})).toBeNull()
+        }finally{
+            vi.useRealTimers()
+        }
     })
 
     it('brings the bubble back by hand even when automatic tips are off',async()=>{

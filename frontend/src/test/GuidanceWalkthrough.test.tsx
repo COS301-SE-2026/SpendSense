@@ -6,6 +6,7 @@ import {describe,expect,it,vi} from 'vitest'
 import '@testing-library/jest-dom'
 import {GuidanceTourInvitation,GuidanceWalkthrough} from '../components/guidance/GuidanceWalkthrough'
 import {GuidanceSettings} from '../components/guidance/GuidanceSettings'
+import {WALKTHROUGH_STEPS} from '../features/guidance/guidanceCatalogue'
 import {createFakeGuidanceApi,makeGuidanceState,renderWithGuidance} from './guidanceTestUtils'
 
 vi.mock('@/hooks/useGamificationProfile',()=>({
@@ -46,29 +47,27 @@ describe('GuidanceWalkthrough',()=>{
         expect(path()).toHaveTextContent('/domains/dashboard')
     })
 
-    it('takes the user to each step page on Next without pausing',async()=>{
+    it('takes the user through every stop of each step page on Next without pausing',async()=>{
         const api=createFakeGuidanceApi()
         renderWithGuidance(<Shell/>,{api})
 
         await userEvent.click(await screen.findByRole('button',{name:'Take the tour'}))
-        expect(await screen.findByText(/Step 1 of 5: Dashboard/)).toBeInTheDocument()
-        expect(path()).toHaveTextContent('/domains/dashboard')
 
-        const expected=[
-            ['Step 2 of 5: Calendar','/calendar'],
-            ['Step 3 of 5: Scheduled payments','/calendar/scheduled'],
-            ['Step 4 of 5: Daily quiz','/quiz'],
-            ['Step 5 of 5: Insights','/insights'],
-        ]
-        expect(within(screen.getByRole('dialog')).getByRole('img',{name:/Mascot/})).toBeInTheDocument()
+        for(const [stepIndex,step] of WALKTHROUGH_STEPS.entries()){
+            expect(path()).toHaveTextContent(new RegExp(`^${step.route}$`))
+            for(const [stopIndex,stop] of step.stops.entries()){
+                expect(await screen.findByText(new RegExp(`${step.screen} . step ${stepIndex+1} of 5`))).toBeInTheDocument()
+                expect(screen.getByRole('heading',{name:stop.title})).toBeInTheDocument()
+                const dialog=screen.getByRole('dialog')
+                expect(within(dialog).getByRole('img',{name:/Mascot/})).toBeInTheDocument()
 
-        for(const [label,route] of expected){
-            await userEvent.click(screen.getByRole('button',{name:'Next'}))
-            expect(await screen.findByText(label)).toBeInTheDocument()
-            expect(path()).toHaveTextContent(new RegExp(`^${route}$`))
-            const dialog=screen.getByRole('dialog')
-            expect(within(dialog).getByRole('img',{name:/Mascot/})).toBeInTheDocument()
+                const isVeryLast=stepIndex===WALKTHROUGH_STEPS.length-1&&stopIndex===step.stops.length-1
+                await userEvent.click(screen.getByRole('button',{name:isVeryLast? 'Finish' : 'Next'}))
+            }
         }
+
+        expect(screen.queryByRole('dialog')).toBeNull()
+        expect(path()).toHaveTextContent('/domains/dashboard')
     })
 
     it('takes the user back a page on Back',async()=>{
@@ -80,7 +79,9 @@ describe('GuidanceWalkthrough',()=>{
         await userEvent.click(await screen.findByRole('button',{name:'Resume the tour'}))
         await userEvent.click(await screen.findByRole('button',{name:'Back'}))
 
-        expect(await screen.findByText(/Step 2 of 5: Calendar/)).toBeInTheDocument()
+        expect(await screen.findByText(/Calendar . step 2 of 5/)).toBeInTheDocument()
+        const calendarStops=WALKTHROUGH_STEPS[1].stops
+        expect(screen.getByRole('heading',{name:calendarStops[calendarStops.length-1].title})).toBeInTheDocument()
         expect(path()).toHaveTextContent(/^\/calendar$/)
         expect(screen.getByRole('button',{name:'Back'})).toBeEnabled()
     })
@@ -94,7 +95,8 @@ describe('GuidanceWalkthrough',()=>{
         expect(await screen.findByText(/You stopped at step 4 of 5/)).toBeInTheDocument()
         await userEvent.click(screen.getByRole('button',{name:'Resume the tour'}))
 
-        expect(await screen.findByText(/Step 4 of 5: Daily quiz/)).toBeInTheDocument()
+        expect(await screen.findByText(/Daily quiz . step 4 of 5/)).toBeInTheDocument()
+        expect(screen.getByRole('heading',{name:WALKTHROUGH_STEPS[3].stops[0].title})).toBeInTheDocument()
         expect(path()).toHaveTextContent(/^\/quiz$/)
     })
 
@@ -112,7 +114,8 @@ describe('GuidanceWalkthrough',()=>{
 
         await userEvent.click(await screen.findByRole('button',{name:'Replay the tour'}))
 
-        expect(await screen.findByText(/Step 1 of 5: Dashboard/)).toBeInTheDocument()
+        expect(await screen.findByText(/Dashboard . step 1 of 5/)).toBeInTheDocument()
+        expect(screen.getByRole('heading',{name:WALKTHROUGH_STEPS[0].stops[0].title})).toBeInTheDocument()
         expect(path()).toHaveTextContent('/domains/dashboard')
         await waitFor(()=>expect(api.calls).toContainEqual({replayWalkthrough:true}))
     })
@@ -122,8 +125,11 @@ describe('GuidanceWalkthrough',()=>{
         renderWithGuidance(<Shell/>,{api})
 
         await userEvent.click(await screen.findByRole('button',{name:'Take the tour'}))
-        await userEvent.click(await screen.findByRole('button',{name:'Next'}))
-        expect(await screen.findByText(/Step 2 of 5/)).toBeInTheDocument()
+        const dashboardStopCount=WALKTHROUGH_STEPS[0].stops.length
+        for(let i=0;i<dashboardStopCount;i++){
+            await userEvent.click(screen.getByRole('button',{name:'Next'}))
+        }
+        expect(await screen.findByText(/Calendar . step 2 of 5/)).toBeInTheDocument()
 
         await userEvent.click(screen.getByRole('link',{name:'Friends'}))
 
@@ -152,6 +158,10 @@ describe('GuidanceWalkthrough',()=>{
         renderWithGuidance(<Shell/>,{api})
 
         await userEvent.click(await screen.findByRole('button',{name:'Resume the tour'}))
+        const lastStepStopCount=WALKTHROUGH_STEPS[WALKTHROUGH_STEPS.length-1].stops.length
+        for(let i=0;i<lastStepStopCount-1;i++){
+            await userEvent.click(screen.getByRole('button',{name:'Next'}))
+        }
         await userEvent.click(await screen.findByRole('button',{name:'Finish'}))
 
         await waitFor(()=>expect(api.calls).toContainEqual({

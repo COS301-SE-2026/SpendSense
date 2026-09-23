@@ -63,7 +63,11 @@ describe("guidance catalogue", () => {
   it("has exactly five walkthrough steps, each with a prompt and its own page", () => {
     expect(WALKTHROUGH_STEPS).toHaveLength(WALKTHROUGH_STEP_COUNT);
     for (const step of WALKTHROUGH_STEPS) {
-      expect(step.prompt.length).toBeGreaterThan(0);
+      expect(step.stops.length).toBeGreaterThan(0);
+      for (const stop of step.stops) {
+        expect(stop.title.length).toBeGreaterThan(0);
+        expect(stop.body.length).toBeGreaterThan(0);
+      }
       expect(step.route.startsWith("/")).toBe(true);
     }
     expect(new Set(WALKTHROUGH_STEPS.map((step) => step.route)).size).toBe(WALKTHROUGH_STEP_COUNT);
