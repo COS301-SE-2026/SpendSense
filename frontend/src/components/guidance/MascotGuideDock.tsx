@@ -9,6 +9,8 @@ import {useDailyGuidance} from '@/hooks/useDailyGuidance'
 import {cn} from '@/lib/utils'
 import type {GuideFacts} from '@/features/guidance/guidanceTypes'
 
+export const RETURN_TAB_TIMEOUT_MS=10_000
+
 export interface MascotGuideDockProps{
     payableCount?:number
     storage?:Storage|null
@@ -27,6 +29,7 @@ function GuideDock({payableCount,storage,className}:MascotGuideDockProps){
     const markerStorage=storage===undefined? providerStorage : storage
 
     const [offScreen,setOffScreen]=useState(false)
+    const [tabVisible,setTabVisible]=useState(false)
     const [bubbleOpen,setBubbleOpen]=useState(false)
     const [openedManually,setOpenedManually]=useState(false)
 
@@ -54,7 +57,15 @@ function GuideDock({payableCount,storage,className}:MascotGuideDockProps){
         }
     },[status,data,payableCount])
 
+    useEffect(()=>{
+        if(!offScreen||!tabVisible) return
+        const timer=window.setTimeout(()=>setTabVisible(false),RETURN_TAB_TIMEOUT_MS)
+        return ()=>window.clearTimeout(timer)
+    },[offScreen,tabVisible])
+
     if(walkthroughVisible) return null
+
+    if(offScreen&&!tabVisible) return null
 
     if(offScreen){
         return(
@@ -63,17 +74,18 @@ function GuideDock({payableCount,storage,className}:MascotGuideDockProps){
                 aria-label="Bring your mascot guide back"
                 onClick={()=>{
                     setOffScreen(false)
+                    setTabVisible(false)
                     setBubbleOpen(true)
                     setOpenedManually(true)
                 }}
                 className={cn(
-                    'fixed right-0 bottom-28 z-30 flex items-center gap-0.5 rounded-l-2xl border-2 border-r-0 border-[#091828] bg-white py-1.5 pl-1.5 pr-1',
+                    'fixed right-0 bottom-28 z-30 flex items-center gap-0.5 overflow-hidden rounded-l-2xl border-2 border-r-0 border-[#091828] bg-white py-1.5 pl-1.5 pr-0',
                     'dark:border-[#2d3449] dark:bg-[#131b2e]',
                     className,
                 )}
             >
                 <ChevronLeft aria-hidden="true" className="size-4 text-[#6B6375] dark:text-[#a0aec0]"/>
-                <GuidanceMascot className="size-8"/>
+                <GuidanceMascot className="size-10"/>        
             </button>
         )
     }
@@ -81,7 +93,7 @@ function GuideDock({payableCount,storage,className}:MascotGuideDockProps){
     return(
         <div
             className={cn(
-                'fixed right-4 bottom-24 z-30 flex flex-col items-end gap-2',
+                'fixed right-0 bottom-16 z-30 flex flex-col items-end gap-3',
                 className,
             )}
         >
@@ -93,6 +105,7 @@ function GuideDock({payableCount,storage,className}:MascotGuideDockProps){
                     manual={openedManually}
                     variant="bubble"
                     showAvatar={false}
+                    className="mr-3"
                 />
             )}
 
@@ -102,11 +115,14 @@ function GuideDock({payableCount,storage,className}:MascotGuideDockProps){
                 data-tour="dashboard.mascot"
                 onClick={()=>{
                     setOffScreen(true)
+                    setTabVisible(true)
                     setBubbleOpen(false)
                 }}
-                className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
+                className="w-36 overflow-hidden rounded-l-3xl focus-visible:outline-2 focus-visible:outline-offset-2"
             >
-                <GuidanceMascot className="size-16"/>
+                <div className="translate-x-2 translate-y-4 rotate-[-45deg]">
+                    <GuidanceMascot className="size-80 -scale-x-100"/>
+                </div>
             </button>
         </div>
     )

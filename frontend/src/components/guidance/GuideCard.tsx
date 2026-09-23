@@ -38,8 +38,8 @@ export function GuideCard({
                 'flex items-start gap-3 border-2 border-[#091828] bg-white dark:border-[#2d3449] dark:bg-[#131b2e]',
                 isBubble
                     ? [
-                        'relative max-w-[17rem] rounded-2xl rounded-br-sm p-3',
-                        'after:absolute after:-bottom-[9px] after:right-5 after:size-3 after:rotate-45',
+                        'relative max-w-[20rem] rounded-2xl rounded-br-sm p-4',
+                        'after:absolute after:-bottom-[9px] after:right-16 after:size-4 after:rotate-45',
                         'after:border-b-2 after:border-r-2 after:border-[#091828] after:bg-white',
                         'dark:after:border-[#2d3449] dark:after:bg-[#131b2e]',
                     ]
@@ -53,14 +53,14 @@ export function GuideCard({
                 <p
                     className={cn(
                         'leading-relaxed text-[#091828] dark:text-[#dae2fd]',
-                        isBubble? 'text-xs' : 'text-sm',
+                        'text-sm',
                     )}
                 >
                     {guide.text}
                 </p>
 
                 {guide.actions.length>0 && (
-                    <div className={cn('flex flex-wrap gap-2',isBubble? 'mt-2' : 'mt-3')}>
+                    <div className={cn('flex flex-wrap gap-2',isBubble? 'mt-3' : 'mt-3')}>
                         {guide.actions.map((action)=>(
                             action.to
                                 ? (
