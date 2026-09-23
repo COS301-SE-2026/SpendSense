@@ -330,41 +330,142 @@ export function isAllowlistedTipId(id:string):boolean{
     return GUIDANCE_TIP_ID_ALLOWLIST.includes(id)
 }
 
+export interface WalkthroughStop{
+    title:string
+    body:string
+    target?:string
+}
+
 export interface WalkthroughStepCopy{
     screen:string
-    prompt:string
     route:string
+    stops:readonly WalkthroughStop[]
 }
 
 export const WALKTHROUGH_STEPS:readonly WalkthroughStepCopy[]=[
     {
         screen:'Dashboard',
-        prompt:'This is your home base. I will help you spot what needs attention first.',
         route:GUIDANCE_ROUTES.dashboard,
+        stops:[
+            {
+                title:'Your home base',
+                body:'This is your home base. I will help you spot what needs attention first.',
+            },
+            {
+                title:'Your simulated score',
+                body:'This gauge is a practice credit score built from the payments you record here. It is a learning tool, not a real credit-bureau score.',
+                target:'dashboard.score',
+            },
+            {
+                title:'Level and XP',
+                body:'Recording payments and finishing quizzes earns XP, which fills this bar and raises your level. Coins from rewards are what you spend on mascot cosmetics.',
+                target:'dashboard.xp',
+            },
+            {
+                title:'What is coming up',
+                body:'Your next scheduled payments sit here, soonest first, so you can see what is due before it slips past.',
+                target:'dashboard.upcoming',
+            },
+            {
+                title:'Me, in the corner',
+                body:'I stay down here with a short note about today. Tap me to send me off screen, and tap the tab on the edge to bring me back.',
+                target:'dashboard.mascot',
+            },
+        ],
     },
     {
         screen:'Calendar',
-        prompt:'Each obligation creates scheduled payment occurrences. Dates and statuses show what still needs attention.',
         route:GUIDANCE_ROUTES.calendar,
+        stops:[
+            {
+                title:'Your month at a glance',
+                body:'Each obligation creates scheduled payment occurrences. Dates and statuses show what still needs attention.',
+            },
+            {
+                title:'The month grid',
+                body:'Days with a scheduled payment are marked. Tap a day to narrow everything below it to that date, and tap it again to go back to the whole month.',
+                target:'calendar.grid',
+            },
+            {
+                title:'The day panel',
+                body:'This panel follows your selection: it names the day you are looking at and lists what falls on it.',
+                target:'calendar.day',
+            },
+            {
+                title:'The full list',
+                body:'This opens every scheduled occurrence in one list, grouped by month, which is usually the fastest way to find something specific.',
+                target:'calendar.all',
+            },
+        ],
     },
     {
         screen:'Scheduled payments',
-        prompt:'You can record a full payment or make progress with a partial payment. Always check the remaining balance before confirming.',
         route:GUIDANCE_ROUTES.scheduledPayments,
+        stops:[
+            {
+                title:'Recording a payment',
+                body:'You can record a full payment or make progress with a partial payment. Always check the remaining balance before confirming.',
+            },
+            {
+                title:'Grouped by month',
+                body:'Occurrences are grouped by month and the current month opens first, so what is due soonest is already in front of you.',
+                target:'scheduled.month',
+            },
+            {
+                title:'One occurrence',
+                body:'Each row shows the amount, the due date and the status. Tap one to open the payment form with that occurrence already selected.',
+                target:'scheduled.occurrence',
+            },
+        ],
     },
     {
         screen:'Daily quiz',
-        prompt:'Daily quizzes build financial knowledge. You can resume an unfinished one whenever you are ready.',
         route:GUIDANCE_ROUTES.quiz,
+        stops:[
+            {
+                title:'A quiz a day',
+                body:'Daily quizzes build financial knowledge. You can resume an unfinished one whenever you are ready.',
+            },
+            {
+                title:'What you are about to do',
+                body:'Before you start, this tells you how many questions there are and what finishing is worth in XP and coins.',
+                target:'quiz.summary',
+            },
+            {
+                title:'Start or resume',
+                body:'Leaving halfway is fine. Your answers are kept, and this button picks up from the question you stopped on.',
+                target:'quiz.start',
+            },
+        ],
     },
     {
         screen:'Insights',
-        prompt:'Insights explain your recorded patterns; coins, XP and streaks reflect actions you have actually completed.',
         route:GUIDANCE_ROUTES.insights,
+        stops:[
+            {
+                title:'Reading your patterns',
+                body:'Insights explain your recorded patterns; coins, XP and streaks reflect actions you have actually completed.',
+            },
+            {
+                title:'Monthly Wrapped',
+                body:'A replay of your month: payments, score progress, streaks and badges collected into one summary.',
+                target:'insights.wrapped',
+            },
+            {
+                title:'This month\u2019s insights',
+                body:'Each card reads one pattern out of what you have recorded, like upcoming pressure or your on-time rate. I will explain whichever one is on screen.',
+                target:'insights.list',
+            },
+        ],
     },
 ]
 
 export function walkthroughRouteFor(step:number):string{
     const index=Math.min(Math.max(Math.trunc(step),0),WALKTHROUGH_STEPS.length-1)
     return WALKTHROUGH_STEPS[index].route
+}
+
+export function walkthroughStopCount(step:number):number{
+    const index=Math.min(Math.max(Math.trunc(step),0),WALKTHROUGH_STEPS.length-1)
+    return WALKTHROUGH_STEPS[index].stops.length
 }
