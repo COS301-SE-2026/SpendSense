@@ -95,7 +95,7 @@ describe('DashboardPage', () => {
   it('renders the user greeting', async () => {
     await renderLoadedDashboard()
     const heading = screen.getByRole('heading', { level: 1 })
-    expect(heading).toHaveTextContent('Hey')
+    expect(heading).toHaveTextContent('Hey,')
     expect(heading).toHaveTextContent('Rachel')
   })
 

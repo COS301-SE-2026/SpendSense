@@ -102,7 +102,7 @@ export default function DashboardPage() {
 				<header className="flex items-start justify-between gap-3">
 					<div>
 						<h1 className="text-3xl font-extrabold leading-tight text-[#091828] dark:text-white">
-							Hey<br />{name}
+							Hey,<br />{name}
 						</h1>
 					</div>
 
