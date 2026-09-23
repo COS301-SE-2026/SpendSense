@@ -53,7 +53,7 @@ import SimulationEntryPage from "./features/simulation/screens/SimulationEntryPa
 import SimulationBriefingPage from "./features/simulation/screens/SimulationBriefingPage.tsx";
 import BudgetAllocationPage from "./features/simulation/screens/BudgetAllocationPage.tsx";
 import MonthPlanningPage from "./features/simulation/screens/MonthPlanningPage.tsx";
-import ScoreBreakdownPage from "./features/simulation/screens/ScoreBreakdownPage.tsx";
+import ScoreBreakdownPage from "./domains/ScoreBreakdownPage.tsx";
 
 initAuthListener();
 initTheme();

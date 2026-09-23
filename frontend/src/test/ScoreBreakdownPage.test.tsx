@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import ScoreBreakdownPage from "../features/simulation/screens/ScoreBreakdownPage";
+import ScoreBreakdownPage from "../domains/ScoreBreakdownPage";
 import {
   activeBoardFixture,
   completedFixture,

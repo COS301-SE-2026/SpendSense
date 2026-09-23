@@ -3,9 +3,12 @@ import { CircleAlert, Landmark, PiggyBank, Sparkles } from "lucide-react";
 
 import { ErrorCard, LoadingCard } from "@/components/common/AsyncStates";
 
-import { SimulationPageShell } from "../components/SimulationPageShell";
-import { formatSimulationMoney } from "../presentation";
-import type { CompletionSummary, SimulationScoreEntry } from "../types";
+import { SimulationPageShell } from "@/features/simulation/components/SimulationPageShell";
+import { formatSimulationMoney } from "@/features/simulation/presentation";
+import type {
+  CompletionSummary,
+  SimulationScoreEntry,
+} from "@/features/simulation/types";
 import { useSimulation } from "@/hooks/useSimulation";
 
 const obligationOutcomeLabels: Record<string, string> = {
