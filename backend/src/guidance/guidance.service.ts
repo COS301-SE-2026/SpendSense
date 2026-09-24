@@ -35,7 +35,7 @@ export class GuidanceService {
   ) {}
 
   private validateUpdate(dto: UpdateGuidanceStateDto): void {
-    if (Object.keys(dto).length === 0) {
+    if (Object.values(dto).every((value) => value === undefined)) {
       this.invalidGuidanceState('Guidance state cannot be empty');
     }
 
