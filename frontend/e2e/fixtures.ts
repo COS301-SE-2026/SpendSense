@@ -1,6 +1,7 @@
 import { expect, test as base } from '@playwright/test';
 import type { ProfileProgress } from '../../test-support/scenarios/profile';
 import type { ReminderPreferences } from '../../test-support/scenarios/reminders';
+import type { GuidanceStateInput } from '../../test-support/scenarios/guidance';
 import type { NotificationInput } from '../../test-support/factories/notification';
 
 type PaymentScenarioResult = {
@@ -55,6 +56,15 @@ type NotificationScenarioResult = {
   notifications: Array<{ id: string; title: string }>;
 };
 
+type GuidanceScenarioResult = {
+  user: {
+    id: string;
+    displayName: string | null;
+    email: string;
+  };
+  guidance: GuidanceStateInput;
+};
+
 type E2eFixtures = {
   scenario: {
     payments: {
@@ -74,6 +84,12 @@ type E2eFixtures = {
       userWithPreferences: (
         input?: Partial<ReminderPreferences>,
       ) => Promise<ReminderScenarioResult>;
+    };
+    guidance: {
+      userWithState: (
+        input?: Partial<GuidanceStateInput>,
+        options?: { dailyQuizCompleted?: boolean },
+      ) => Promise<GuidanceScenarioResult>;
     };
     notifications: {
       userWithInboxItems: (
@@ -167,6 +183,20 @@ export const test = base.extend<E2eFixtures>({
             'reminders.userWithPreferences',
             {
               preferences: input,
+            },
+          ),
+      },
+
+      guidance: {
+        userWithState: (
+          input: Partial<GuidanceStateInput> = {},
+          options: { dailyQuizCompleted?: boolean } = {},
+        ) =>
+          provisionScenario<GuidanceScenarioResult>(
+            'guidance.userWithState',
+            {
+              guidance: input,
+              dailyQuizCompleted: options.dailyQuizCompleted,
             },
           ),
       },
