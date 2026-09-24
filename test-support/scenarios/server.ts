@@ -9,6 +9,12 @@ import {
   type ReminderPreferences,
 } from './reminders';
 import {
+  addGuidanceStateForUser,
+  completeDailyQuizForUser,
+  removeDailyQuizForUser,
+  type GuidanceStateInput,
+} from './guidance';
+import {
   addNotificationsForUser,
   type NotificationInput,
 } from './notifications';
@@ -78,6 +84,29 @@ const { PrismaClient } = requireFromProject('@prisma/client') as {
         update: Record<string, unknown>;
       }) => Promise<{ id: string }>;
     };
+    quizSession: {
+      deleteMany: (args: {
+        where: { userId: string; type: 'DAILY' };
+      }) => Promise<unknown>;
+      upsert: (args: {
+        where: {
+          userId_type_quizDate: {
+            userId: string;
+            type: 'DAILY';
+            quizDate: Date;
+          };
+        };
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
+      }) => Promise<{ id: string }>;
+    };
+    guidanceState: {
+      upsert: (args: {
+        where: { userId: string };
+        create: Record<string, unknown>;
+        update: Record<string, unknown>;
+      }) => Promise<{ id: string }>;
+    };
     notification: {
       create: (args: {
         data: Record<string, unknown>;
@@ -102,6 +131,8 @@ type ProvisionRequest = {
   progress?: Partial<ProfileProgress>;
   preferences?: Partial<ReminderPreferences>;
   notifications?: Omit<NotificationInput, 'userId'>[];
+  guidance?: Partial<GuidanceStateInput>;
+  dailyQuizCompleted?: boolean;
 };
 
 const validScenarios = new Set([
@@ -110,6 +141,7 @@ const validScenarios = new Set([
   'profile.userWithProgress',
   'reminders.userWithPreferences',
   'notifications.userWithInboxItems',
+  'guidance.userWithState',
 ]);
 
 const secret = process.env.E2E_SCENARIO_SECRET;
@@ -273,6 +305,27 @@ const server = createServer(async (request, response) => {
       sendJson(response, 201, {
         user,
         notifications,
+      });
+      return;
+    }
+    if (scenario === 'guidance.userWithState') {
+      const user = await findOrCreateBrowserUser(
+        supabaseAuthId,
+        email,
+      );
+      const guidance = await addGuidanceStateForUser(
+        prisma,
+        user,
+        body.guidance ?? {},
+      );
+      if (body.dailyQuizCompleted === true) {
+        await completeDailyQuizForUser(prisma, user);
+      } else if (body.dailyQuizCompleted === false) {
+        await removeDailyQuizForUser(prisma, user);
+      }
+      sendJson(response, 201, {
+        user,
+        guidance,
       });
       return;
     }
