@@ -273,7 +273,7 @@ export function AddTransactionButton() {
                 aria-label="Add transaction options"
                 whileHover={{scale:1.06}}
                 whileTap={{scale:0.88}}
-                className="relative flex size-16 -translate-y-2 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFD9E1] text-[#091828] shadow-[5px_5px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:text-[#650030] dark:shadow-[5px_5px_0_#060e20]"
+                className="relative flex size-16 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFD9E1] text-[#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:text-[#650030]"
             >
                 <AnimatePresence>
                     {isOpen && (

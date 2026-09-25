@@ -82,9 +82,9 @@ describe('ReceiptExtractionForm',()=>{    it('displays all amount candidates and
                 warnings:[],
             }}/>
         )
-        expect(screen.getByText('No amount was found. Enter the payment amount and currency manually.')).toBeInTheDocument()
+        expect(screen.getByText('No amount was found. Enter the payment amount manually.')).toBeInTheDocument()
         expect(screen.getByLabelText('Amount paid')).toHaveValue('')
-        expect(screen.getByLabelText('Currency')).toHaveValue('')
+        expect(screen.getByLabelText('Currency')).toHaveValue('ZAR')
         expect(screen.getByLabelText('Merchant')).toHaveValue('')
         expect(screen.getByLabelText('Receipt date')).toHaveValue('')
         fireEvent.change(screen.getByLabelText('Amount paid'),{target:{value:'250.00'}})
