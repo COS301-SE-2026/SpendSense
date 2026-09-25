@@ -36,8 +36,20 @@ type SessionCreateArgs = {
     startingBudget: string;
     currentBalance: string;
     savingsBalance: string;
-    scenarioSnapshot: { obligations: unknown[]; events: unknown[] };
+    scenarioSnapshot: {
+      obligations: unknown[];
+      obligationSchedules: unknown[];
+      events: unknown[];
+    };
     obligations: { create: Array<{ templateCode: string }> };
+    obligationSchedules: {
+      create: Array<{
+        scheduleKey: string;
+        templateCode: string;
+        triggerDay: number;
+        obligationSnapshot: unknown;
+      }>;
+    };
     events: { create: Array<{ templateCode: string }> };
   };
 };
@@ -211,18 +223,33 @@ describe('SimulationsService', () => {
     expect(result.briefing.allocationOptions[0].id).toBe(
       'current_80_savings_20',
     );
-    expect(result.briefing.obligations.length).toBeGreaterThanOrEqual(5);
+    expect(result.briefing.obligations).toHaveLength(5);
+    expect(result.briefing).not.toHaveProperty('obligationSchedules');
+    expect(result).not.toHaveProperty('scenarioSnapshot');
 
     const sessionCreate = transaction.simulationSession.create.mock.calls[0][0];
     expect(Array.isArray(sessionCreate.data.scenarioSnapshot.obligations)).toBe(
       true,
     );
+    expect(
+      Array.isArray(sessionCreate.data.scenarioSnapshot.obligationSchedules),
+    ).toBe(true);
     expect(Array.isArray(sessionCreate.data.scenarioSnapshot.events)).toBe(
       true,
     );
-    expect(sessionCreate.data.obligations.create).toHaveLength(
-      result.briefing.obligations.length,
+    expect(sessionCreate.data.obligations.create).toHaveLength(5);
+    expect(
+      sessionCreate.data.obligationSchedules.create.length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      sessionCreate.data.obligationSchedules.create.length,
+    ).toBeLessThanOrEqual(2);
+    expect(sessionCreate.data.obligationSchedules.create).toEqual(
+      sessionCreate.data.scenarioSnapshot.obligationSchedules,
     );
+    for (const schedule of sessionCreate.data.obligationSchedules.create) {
+      expect(JSON.stringify(result)).not.toContain(schedule.templateCode);
+    }
     expect(sessionCreate.data.events.create).toHaveLength(
       result.briefing.surpriseEventCount,
     );
@@ -420,6 +447,12 @@ describe('SimulationsService', () => {
           increment: '50.00',
         },
         events: [{ title: 'Future event that must stay hidden' }],
+        obligationSchedules: [
+          {
+            templateCode: 'SIM_OBL_SECRET_FUTURE_BILL',
+            triggerDay: 12,
+          },
+        ],
       },
       obligations: [
         {
@@ -501,6 +534,7 @@ describe('SimulationsService', () => {
     expect(JSON.stringify(result)).not.toContain(
       'Future event that must stay hidden',
     );
+    expect(JSON.stringify(result)).not.toContain('SIM_OBL_SECRET_FUTURE_BILL');
     expect(result.allowedActions).toEqual(['RESOLVE_EVENT']);
   });
 

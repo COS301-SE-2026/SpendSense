@@ -23,6 +23,14 @@ function randomSequence(values: number[]): () => number {
   return () => values[index++] ?? 0.5;
 }
 
+function seededRandom(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 48271) % 2_147_483_647;
+    return state / 2_147_483_647;
+  };
+}
+
 describe('buildSimulationScenario', () => {
   it('builds an affordable, resumable scenario with defaults and custom allocation rules', () => {
     const scenario = buildSimulationScenario({
@@ -32,8 +40,11 @@ describe('buildSimulationScenario', () => {
     });
 
     expect(scenario.startingBudget).toBe('4000.00');
-    expect(scenario.obligations.length).toBeGreaterThanOrEqual(5);
-    expect(scenario.obligations.length).toBeLessThanOrEqual(7);
+    expect(scenario.obligations).toHaveLength(5);
+    const initialDueDays = scenario.obligations.map((item) => item.dueDay);
+    expect(initialDueDays.some((day) => day <= 10)).toBe(true);
+    expect(initialDueDays.some((day) => day >= 11 && day <= 20)).toBe(true);
+    expect(initialDueDays.some((day) => day >= 21)).toBe(true);
     expect(scenario.events.length).toBeGreaterThanOrEqual(2);
     expect(scenario.events.length).toBeLessThanOrEqual(4);
     expect(
@@ -53,14 +64,72 @@ describe('buildSimulationScenario', () => {
       maxCurrentAmount: '4000.00',
       increment: '50.00',
     });
-    expect(scenario.scenarioVersion).toBe('catalogue-v2');
-    expect(scenario.obligations).toContainEqual(
-      expect.objectContaining({
-        templateCode: 'SIM_OBL_FRIEND_IOU',
-        importance: 'LOW',
-        importanceWeight: '0.50',
-        baseMissPenalty: '20.00',
-      }),
+    expect(scenario.scenarioVersion).toBe('catalogue-v3');
+  });
+
+  it('always keeps the five-obligation count and due-day spread across random scenarios', () => {
+    for (let seed = 1; seed <= 100; seed += 1) {
+      const scenario = buildSimulationScenario({
+        obligations: activeObligations,
+        events: activeEvents,
+        random: seededRandom(seed),
+      });
+      const dueDays = scenario.obligations.map((item) => item.dueDay);
+
+      expect(scenario.obligations).toHaveLength(5);
+      expect(
+        new Set(scenario.obligations.map((item) => item.templateCode)).size,
+      ).toBe(5);
+      expect(dueDays.some((day) => day <= 10)).toBe(true);
+      expect(dueDays.some((day) => day >= 11 && day <= 20)).toBe(true);
+      expect(dueDays.some((day) => day >= 21 && day <= 30)).toBe(true);
+      expect(
+        scenario.obligations.reduce(
+          (total, obligation) => total + Number(obligation.amountDue),
+          0,
+        ),
+      ).toBeLessThanOrEqual(Number(scenario.initialObligationBudgetCap));
+    }
+  });
+
+  it('schedules hidden, distinct future obligations with stable snapshots and trigger days', () => {
+    const firstScenario = buildSimulationScenario({
+      obligations: activeObligations,
+      events: activeEvents,
+      random: randomSequence([0.5]),
+    });
+    const secondScenario = buildSimulationScenario({
+      obligations: activeObligations,
+      events: activeEvents,
+      random: randomSequence([0.5]),
+    });
+    const initialCodes = new Set(
+      firstScenario.obligations.map((item) => item.templateCode),
+    );
+    const scheduleKeys = firstScenario.obligationSchedules.map(
+      (item) => item.scheduleKey,
+    );
+    const scheduledCodes = firstScenario.obligationSchedules.map(
+      (item) => item.templateCode,
+    );
+
+    expect(firstScenario.obligationSchedules.length).toBeGreaterThanOrEqual(1);
+    expect(firstScenario.obligationSchedules.length).toBeLessThanOrEqual(2);
+    expect(new Set(scheduleKeys).size).toBe(scheduleKeys.length);
+    expect(new Set(scheduledCodes).size).toBe(scheduledCodes.length);
+    expect(scheduledCodes.every((code) => !initialCodes.has(code))).toBe(true);
+    for (const schedule of firstScenario.obligationSchedules) {
+      expect(schedule.triggerDay).toBeGreaterThanOrEqual(3);
+      expect(schedule.triggerDay).toBeLessThanOrEqual(24);
+      expect(schedule.obligationSnapshot.dueDay).toBeGreaterThan(
+        schedule.triggerDay,
+      );
+      expect(schedule.obligationSnapshot.templateCode).toBe(
+        schedule.templateCode,
+      );
+    }
+    expect(secondScenario.obligationSchedules).toEqual(
+      firstScenario.obligationSchedules,
     );
   });
 

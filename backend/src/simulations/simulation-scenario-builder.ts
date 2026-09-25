@@ -77,6 +77,12 @@ export type SimulationScenario = {
     increment: string;
   };
   obligations: SessionObligationSnapshot[];
+  obligationSchedules: Array<{
+    scheduleKey: string;
+    templateCode: string;
+    triggerDay: number;
+    obligationSnapshot: SessionObligationSnapshot;
+  }>;
   events: Array<{
     templateCode: string;
     triggerDay: number;
@@ -93,9 +99,12 @@ export type SimulationScenarioBuilderInput = {
 const STARTING_BUDGET_MIN_CENTS = 400_000;
 const STARTING_BUDGET_MAX_CENTS = 700_000;
 const STARTING_BUDGET_STEP_CENTS = 50_000;
-const INITIAL_OBLIGATION_MINIMUM = 5;
-const INITIAL_OBLIGATION_MAXIMUM = 7;
+const INITIAL_OBLIGATION_COUNT = 5;
 const INITIAL_OBLIGATION_CAP_PERCENT = 70;
+const FUTURE_OBLIGATION_SCHEDULE_MINIMUM = 1;
+const FUTURE_OBLIGATION_SCHEDULE_MAXIMUM = 2;
+const FUTURE_OBLIGATION_TRIGGER_MINIMUM = 3;
+const FUTURE_OBLIGATION_TRIGGER_MAXIMUM = 24;
 const EVENT_MINIMUM = 2;
 const EVENT_MAXIMUM = 4;
 const CUSTOM_ALLOCATION_STEP_CENTS = 5_000;
@@ -106,12 +115,9 @@ export function buildSimulationScenario(
 ): SimulationScenario {
   const random = input.random ?? Math.random;
   const activeObligations = input.obligations.filter((item) => item.isActive);
-  const initialCandidates = activeObligations.filter(
-    (item) => !item.eligibleForEventIntroduction,
-  );
   const activeEvents = input.events.filter((item) => item.isActive);
 
-  if (initialCandidates.length < INITIAL_OBLIGATION_MINIMUM) {
+  if (activeObligations.length < INITIAL_OBLIGATION_COUNT) {
     throw new Error('Not enough active initial obligation templates.');
   }
   if (activeEvents.length < EVENT_MINIMUM) {
@@ -122,15 +128,36 @@ export function buildSimulationScenario(
   const initialObligationCapCents = Math.floor(
     (startingBudgetCents * INITIAL_OBLIGATION_CAP_PERCENT) / 100,
   );
-  const requestedObligationCount = randomInteger(
-    INITIAL_OBLIGATION_MINIMUM,
-    Math.min(INITIAL_OBLIGATION_MAXIMUM, initialCandidates.length),
+  const selectedObligations = selectObligationsWithinBudget(
+    activeObligations,
+    INITIAL_OBLIGATION_COUNT,
+    initialObligationCapCents,
     random,
   );
-  const selectedObligations = selectObligationsWithinBudget(
-    initialCandidates,
-    requestedObligationCount,
-    initialObligationCapCents,
+  const initialCodes = new Set(selectedObligations.map((item) => item.code));
+  const futureCandidates = activeObligations.filter(
+    (item) =>
+      item.eligibleForEventIntroduction &&
+      !initialCodes.has(item.code) &&
+      item.dueDay > FUTURE_OBLIGATION_TRIGGER_MAXIMUM,
+  );
+  if (futureCandidates.length < FUTURE_OBLIGATION_SCHEDULE_MINIMUM) {
+    throw new Error(
+      'Not enough eligible obligation templates for future introductions.',
+    );
+  }
+  const futureScheduleCount = randomInteger(
+    FUTURE_OBLIGATION_SCHEDULE_MINIMUM,
+    Math.min(FUTURE_OBLIGATION_SCHEDULE_MAXIMUM, futureCandidates.length),
+    random,
+  );
+  const futureTemplates = selectWeightedDistinct(
+    futureCandidates,
+    futureScheduleCount,
+    random,
+  );
+  const futureTriggerDays = selectFutureTriggerDays(
+    futureScheduleCount,
     random,
   );
   const eventCount = randomInteger(
@@ -148,7 +175,7 @@ export function buildSimulationScenario(
   );
 
   return {
-    scenarioVersion: 'catalogue-v2',
+    scenarioVersion: 'catalogue-v3',
     startingBudget: centsToMoney(startingBudgetCents),
     initialObligationBudgetCap: centsToMoney(initialObligationCapCents),
     allocationOptions: buildAllocationOptions(startingBudgetCents),
@@ -159,6 +186,12 @@ export function buildSimulationScenario(
       increment: centsToMoney(CUSTOM_ALLOCATION_STEP_CENTS),
     },
     obligations: selectedObligations.map(toObligationSnapshot),
+    obligationSchedules: futureTemplates.map((template, index) => ({
+      scheduleKey: `random-obligation-${index + 1}`,
+      templateCode: template.code,
+      triggerDay: futureTriggerDays[index],
+      obligationSnapshot: toObligationSnapshot(template),
+    })),
     events: selectedEvents.map((item) => ({
       templateCode: item.code,
       triggerDay: item.triggerDay,
@@ -196,54 +229,84 @@ function buildAllocationOptions(
   });
 }
 
+function selectFutureTriggerDays(
+  count: number,
+  random: () => number,
+): number[] {
+  const availableDays = Array.from(
+    {
+      length:
+        FUTURE_OBLIGATION_TRIGGER_MAXIMUM -
+        FUTURE_OBLIGATION_TRIGGER_MINIMUM +
+        1,
+    },
+    (_, index) => FUTURE_OBLIGATION_TRIGGER_MINIMUM + index,
+  );
+  return selectWeightedDistinct(
+    availableDays.map((day) => ({ day, selectionWeight: 1 })),
+    count,
+    random,
+  ).map(({ day }) => day);
+}
+
 function selectObligationsWithinBudget(
   candidates: CatalogueObligation[],
   requestedCount: number,
   capCents: number,
   random: () => number,
 ): CatalogueObligation[] {
-  for (
-    let count = requestedCount;
-    count >= INITIAL_OBLIGATION_MINIMUM;
-    count -= 1
-  ) {
-    const selected: CatalogueObligation[] = [];
-    let remaining = [...candidates];
-    let totalCents = 0;
+  const affordableSpreadSets: Array<{
+    obligations: CatalogueObligation[];
+    selectionWeight: number;
+  }> = [];
+  const selected: CatalogueObligation[] = [];
 
-    while (selected.length < count) {
-      const slotsAfterSelection = count - selected.length - 1;
-      const viable = remaining.filter((candidate) => {
-        const candidateCost = moneyToCents(candidate.amountDue);
-        const remainingCheapestCost = remaining
-          .filter((item) => item.code !== candidate.code)
-          .map((item) => moneyToCents(item.amountDue))
-          .sort((left, right) => left - right)
-          .slice(0, slotsAfterSelection)
-          .reduce((sum, amount) => sum + amount, 0);
-        return totalCents + candidateCost + remainingCheapestCost <= capCents;
-      });
-
-      if (viable.length === 0) {
-        break;
+  function collectSets(startIndex: number, totalCents: number): void {
+    if (selected.length === requestedCount) {
+      if (totalCents <= capCents && hasDueDaySpread(selected)) {
+        affordableSpreadSets.push({
+          obligations: [...selected],
+          selectionWeight: selected.reduce(
+            (weight, obligation) => weight * obligation.selectionWeight,
+            1,
+          ),
+        });
       }
-
-      const chosen = selectWeightedDistinct(viable, 1, random)[0];
-      if (!chosen) {
-        break;
-      }
-      selected.push(chosen);
-      totalCents += moneyToCents(chosen.amountDue);
-      remaining = remaining.filter((item) => item.code !== chosen.code);
+      return;
     }
 
-    if (selected.length === count) {
-      return selected;
+    const remainingSlots = requestedCount - selected.length;
+    for (
+      let index = startIndex;
+      index <= candidates.length - remainingSlots;
+      index += 1
+    ) {
+      const candidate = candidates[index];
+      const nextTotal = totalCents + moneyToCents(candidate.amountDue);
+      if (nextTotal > capCents) {
+        continue;
+      }
+      selected.push(candidate);
+      collectSets(index + 1, nextTotal);
+      selected.pop();
     }
   }
 
-  throw new Error(
-    'Active obligation templates cannot provide five affordable initial obligations.',
+  collectSets(0, 0);
+  if (affordableSpreadSets.length === 0) {
+    throw new Error(
+      'Active obligation templates cannot provide five affordable obligations spread across the month.',
+    );
+  }
+  return selectWeightedDistinct(affordableSpreadSets, 1, random)[0].obligations;
+}
+
+function hasDueDaySpread(obligations: CatalogueObligation[]): boolean {
+  const dueDays = obligations.map((item) => item.dueDay);
+  return (
+    dueDays.some((day) => day >= 1 && day <= 10) &&
+    dueDays.some((day) => day >= 11 && day <= 20) &&
+    dueDays.some((day) => day >= 21 && day <= 30)
   );
 }
 

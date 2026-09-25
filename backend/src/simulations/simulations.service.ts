@@ -510,6 +510,14 @@ export class SimulationsService {
                 },
               })),
             },
+            obligationSchedules: {
+              create: scenario.obligationSchedules.map((schedule) => ({
+                scheduleKey: schedule.scheduleKey,
+                templateCode: schedule.templateCode,
+                triggerDay: schedule.triggerDay,
+                obligationSnapshot: schedule.obligationSnapshot,
+              })),
+            },
             events: {
               create: scenario.events.map((event) => ({
                 templateCode: event.templateCode,
