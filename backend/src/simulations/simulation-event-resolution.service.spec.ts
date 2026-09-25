@@ -180,11 +180,14 @@ describe('SimulationsService resolveEvent', () => {
       explanation: 'The lower immediate cost creates a future repayment.',
       immediateCost: '150.00',
       feeOrDebt: '80.00',
+      feeChargedNow: '80.00',
+      cashRequiredNow: '230.00',
       currentUsed: '100.00',
       savingsUsed: '130.00',
       uncoveredAmount: '0.00',
       pointsAwarded: '4.00',
       introducedObligationId: 'introduced-obligation-1',
+      installmentsCreated: [],
     });
     expect(result.session.pending).toEqual({ type: 'EVENT_RESULT', id: null });
     expect(transaction.simulationEvent.update).toHaveBeenCalledTimes(1);
@@ -204,6 +207,88 @@ describe('SimulationsService resolveEvent', () => {
     expect(transaction.simulationObligation.create).toHaveBeenCalledTimes(1);
     expect(transaction.simulationScoreEntry.create).toHaveBeenCalledTimes(1);
     expect(transaction.simulationAction.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects unaffordable cash choices without any partial debit or score mutation', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValueOnce(
+      resolutionSession({
+        currentBalance: new Prisma.Decimal('100.00'),
+        savingsBalance: new Prisma.Decimal('0.00'),
+      }),
+    );
+    const error: unknown = await service
+      .resolveEvent(
+        'user-1',
+        sessionId,
+        eventId,
+        { optionId: 'payment_plan' },
+        idempotencyKey,
+      )
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ConflictException);
+    const response = (error as ConflictException).getResponse();
+    expect(typeof response).toBe('object');
+    if (typeof response === 'object' && response !== null) {
+      expect(response['message']).toBe('SIMULATION_EVENT_OPTION_UNAFFORDABLE');
+      expect(response['shortfall']).toBe('130.00');
+    }
+    expect(transaction.simulationEvent.update).not.toHaveBeenCalled();
+    expect(transaction.simulationObligation.create).not.toHaveBeenCalled();
+    expect(transaction.simulationScoreEntry.create).not.toHaveBeenCalled();
+    expect(transaction.simulationSession.update).not.toHaveBeenCalled();
+  });
+
+  it('creates only future in-month installments and records their installment scoring marker', async () => {
+    const session = resolutionSession();
+    session.events[0].eventSnapshot.options[0].installmentSchedule = [
+      {
+        templateCode: 'IN_MONTH',
+        name: 'In-month instalment',
+        category: 'Debt',
+        amountDue: '265.00',
+        dueDay: 12,
+        basePoints: '15.00',
+        savingsPointsFactor: '0.80',
+        importance: 'HIGH',
+        importanceWeight: '1.50',
+        baseMissPenalty: '20.00',
+      },
+      {
+        templateCode: 'OUT_MONTH',
+        name: 'Future portion',
+        category: 'Debt',
+        amountDue: '265.00',
+        dueDay: 34,
+        basePoints: '15.00',
+        savingsPointsFactor: '0.80',
+        importance: 'HIGH',
+        importanceWeight: '1.50',
+        baseMissPenalty: '20.00',
+      },
+    ];
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow
+      .mockResolvedValueOnce(session)
+      .mockResolvedValueOnce(refreshedSession());
+    await service.resolveEvent(
+      'user-1',
+      sessionId,
+      eventId,
+      { optionId: 'payment_plan' },
+      idempotencyKey,
+    );
+    expect(transaction.simulationObligation.create).toHaveBeenCalledTimes(2);
+    expect(
+      transaction.simulationObligation.create.mock.calls[1][0].data,
+    ).toMatchObject({
+      templateCode: 'IN_MONTH',
+      dueDay: 12,
+      consequenceSnapshot: { kind: 'INSTALLMENT', importance: 'HIGH' },
+    });
+    expect(
+      JSON.stringify(transaction.simulationObligation.create.mock.calls),
+    ).not.toContain('OUT_MONTH');
   });
 
   it('rejects an option not in the persisted event without mutating state', async () => {

@@ -19,7 +19,13 @@ export const SIMULATION_COMPLETION_XP = 15;
 
 export type SimulationTransitionResult = {
   currentDay: number;
-  stoppedFor: 'NONE' | 'PAYMENT' | 'EVENT' | 'EVENT_RESULT' | 'SUMMARY';
+  stoppedFor:
+    | 'NONE'
+    | 'PAYMENT'
+    | 'EVENT'
+    | 'EVENT_RESULT'
+    | 'NEW_OBLIGATION'
+    | 'SUMMARY';
 };
 
 @Injectable()
@@ -82,6 +88,11 @@ export class SimulationTransitionService {
       return this.result(session.currentDay, 'SUMMARY');
     }
     if (session.status !== SimulationSessionStatus.ACTIVE) {
+      return this.result(session.currentDay, 'NONE');
+    }
+    if (
+      session.presentationHold === SimulationPresentationHold.NEW_OBLIGATION
+    ) {
       return this.result(session.currentDay, 'NONE');
     }
 
@@ -303,6 +314,7 @@ export class SimulationTransitionService {
       ),
     );
 
+    let materializedObligation = false;
     for (const schedule of session.obligationSchedules.filter(
       (candidate) =>
         candidate.status === SimulationObligationScheduleStatus.SCHEDULED &&
@@ -350,6 +362,18 @@ export class SimulationTransitionService {
           },
         },
       });
+      materializedObligation = true;
+    }
+
+    if (materializedObligation) {
+      await tx.simulationSession.update({
+        where: { id: session.id },
+        data: {
+          nextDayAt: null,
+          presentationHold: SimulationPresentationHold.NEW_OBLIGATION,
+        },
+      });
+      return 'NEW_OBLIGATION';
     }
 
     const dueIds = session.obligations
@@ -666,7 +690,10 @@ export class SimulationTransitionService {
       savingsBalance: unknown;
       savingsRetentionMultiplier: unknown;
       score: unknown;
-      obligations: Array<{ status: SimulationObligationStatus }>;
+      obligations: Array<{
+        status: SimulationObligationStatus;
+        amountDue: unknown;
+      }>;
       events: Array<{ status: SimulationEventStatus }>;
     },
     completedAt: Date,
@@ -745,35 +772,34 @@ export class SimulationTransitionService {
         total: session.obligations.length,
         paid: count(
           session.obligations,
-          (obligation) => obligation.status === SimulationObligationStatus.PAID,
+          (item) => item.status === SimulationObligationStatus.PAID,
         ),
         missed: count(
           session.obligations,
-          (obligation) =>
-            obligation.status === SimulationObligationStatus.MISSED,
+          (item) => item.status === SimulationObligationStatus.MISSED,
         ),
         unresolved: count(
           session.obligations,
-          (obligation) =>
-            obligation.status === SimulationObligationStatus.SCHEDULED ||
-            obligation.status === SimulationObligationStatus.PAYABLE,
+          (item) =>
+            item.status === SimulationObligationStatus.SCHEDULED ||
+            item.status === SimulationObligationStatus.PAYABLE,
         ),
       },
       events: {
         total: session.events.length,
         resolved: count(
           session.events,
-          (event) => event.status === SimulationEventStatus.RESOLVED,
+          (item) => item.status === SimulationEventStatus.RESOLVED,
         ),
         expired: count(
           session.events,
-          (event) => event.status === SimulationEventStatus.EXPIRED,
+          (item) => item.status === SimulationEventStatus.EXPIRED,
         ),
         unresolved: count(
           session.events,
-          (event) =>
-            event.status === SimulationEventStatus.SCHEDULED ||
-            event.status === SimulationEventStatus.REVEALED,
+          (item) =>
+            item.status === SimulationEventStatus.SCHEDULED ||
+            item.status === SimulationEventStatus.REVEALED,
         ),
       },
     };

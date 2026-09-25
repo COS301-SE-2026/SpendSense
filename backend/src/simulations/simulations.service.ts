@@ -84,6 +84,23 @@ const simulationDetailSelect = {
       decisionExpiresAt: true,
     },
   },
+  obligationSchedules: {
+    where: { status: 'MATERIALIZED', acknowledgedAt: null },
+    orderBy: { materializedAt: 'asc' },
+    take: 1,
+    select: {
+      id: true,
+      materializedObligation: {
+        select: {
+          id: true,
+          name: true,
+          amountDue: true,
+          dueDay: true,
+          consequenceSnapshot: true,
+        },
+      },
+    },
+  },
   scoreEntries: {
     orderBy: { createdAt: 'desc' },
     take: 20,
@@ -95,6 +112,7 @@ const simulationDetailSelect = {
       pointsDelta: true,
       reason: true,
       createdAt: true,
+      calculationData: true,
     },
   },
 } satisfies Prisma.SimulationSessionSelect;
@@ -169,6 +187,10 @@ type SafeEventOption = {
   label: string;
   immediateCost: string;
   feeOrDebt: string;
+  cashRequiredNow: string;
+  affordable: boolean;
+  shortfall: string;
+  installments: Array<{ name: string; amountDue: string; dueDay: number }>;
 };
 
 type SimulationDetailResponse = {
@@ -214,6 +236,13 @@ type SimulationDetailResponse = {
     createdAt: string;
   }>;
   completion: CompletionSummary | null;
+  newObligation: {
+    id: string;
+    name: string;
+    amountDue: string;
+    dueDay: number;
+    importance: string;
+  } | null;
   allowedActions: string[];
 };
 
@@ -301,6 +330,18 @@ type EventResolutionOption = {
   feeOrDebt: string;
   scoreDelta: string;
   explanation: string;
+  installmentSchedule: Array<{
+    templateCode: string;
+    name: string;
+    category: string;
+    amountDue: string;
+    dueDay: number;
+    basePoints: string;
+    savingsPointsFactor: string;
+    importance: string;
+    importanceWeight: string;
+    baseMissPenalty: string;
+  }>;
   introducedObligation: {
     templateCode: string;
     name: string;
@@ -326,11 +367,19 @@ type EventResolutionResponse = SimulationDetailResponse & {
     explanation: string;
     immediateCost: string;
     feeOrDebt: string;
+    feeChargedNow: string;
+    cashRequiredNow: string;
     currentUsed: string;
     savingsUsed: string;
     uncoveredAmount: string;
     pointsAwarded: string;
     introducedObligationId: string | null;
+    installmentsCreated: Array<{
+      id: string;
+      name: string;
+      amountDue: string;
+      dueDay: number;
+    }>;
   };
   replayed: boolean;
 };
@@ -978,6 +1027,48 @@ export class SimulationsService {
               select: { id: true },
             })
           : null;
+        const installmentsCreated: Array<{
+          id: string;
+          name: string;
+          amountDue: string;
+          dueDay: number;
+        }> = [];
+        for (const installment of option.installmentSchedule) {
+          if (
+            installment.dueDay <= session.currentDay ||
+            installment.dueDay > 30
+          )
+            continue;
+          const createdInstallment = await tx.simulationObligation.create({
+            data: {
+              sessionId,
+              templateCode: installment.templateCode,
+              name: installment.name,
+              category: installment.category,
+              amountDue: installment.amountDue,
+              dueDay: installment.dueDay,
+              status:
+                installment.dueDay <= session.currentDay
+                  ? SimulationObligationStatus.PAYABLE
+                  : SimulationObligationStatus.SCHEDULED,
+              consequenceSnapshot: {
+                kind: 'INSTALLMENT',
+                basePoints: installment.basePoints,
+                savingsPointsFactor: installment.savingsPointsFactor,
+                importance: installment.importance,
+                importanceWeight: installment.importanceWeight,
+                baseMissPenalty: installment.baseMissPenalty,
+              },
+            },
+            select: { id: true },
+          });
+          installmentsCreated.push({
+            id: createdInstallment.id,
+            name: installment.name,
+            amountDue: installment.amountDue,
+            dueDay: installment.dueDay,
+          });
+        }
 
         await tx.simulationScoreEntry.create({
           data: {
@@ -1021,11 +1112,17 @@ export class SimulationsService {
             explanation: option.explanation,
             immediateCost: option.immediateCost,
             feeOrDebt: option.feeOrDebt,
+            feeChargedNow: option.feeOrDebt,
+            cashRequiredNow: this.centsToMoney(
+              (this.moneyToCents(option.immediateCost) ?? 0) +
+                (this.moneyToCents(option.feeOrDebt) ?? 0),
+            ),
             currentUsed: effect.currentUsed,
             savingsUsed: effect.savingsUsed,
             uncoveredAmount: effect.uncoveredAmount,
             pointsAwarded: option.scoreDelta,
             introducedObligationId: introducedObligation?.id ?? null,
+            installmentsCreated,
           },
           replayed: false,
         };
@@ -1089,6 +1186,28 @@ export class SimulationsService {
         });
         this.assertContinueAllowed(session);
 
+        const acknowledgingIntroduction =
+          session.presentationHold ===
+          SimulationPresentationHold.NEW_OBLIGATION;
+        if (acknowledgingIntroduction) {
+          const pendingSchedule =
+            await tx.simulationObligationSchedule.findFirst({
+              where: {
+                sessionId,
+                status: 'MATERIALIZED',
+                acknowledgedAt: null,
+              },
+              select: { id: true },
+            });
+          if (!pendingSchedule)
+            throw new ConflictException(
+              'SIMULATION_NEW_OBLIGATION_NOT_PENDING',
+            );
+          await tx.simulationObligationSchedule.update({
+            where: { id: pendingSchedule.id },
+            data: { acknowledgedAt: new Date() },
+          });
+        }
         const update = await tx.simulationSession.updateMany({
           where: {
             id: sessionId,
@@ -1097,6 +1216,7 @@ export class SimulationsService {
               in: [
                 SimulationPresentationHold.PAYMENT_RESULT,
                 SimulationPresentationHold.EVENT_RESULT,
+                SimulationPresentationHold.NEW_OBLIGATION,
               ],
             },
           },
@@ -1126,6 +1246,44 @@ export class SimulationsService {
           throw new ConflictException('SIMULATION_CONTINUE_NOT_ALLOWED');
         }
 
+        if (acknowledgingIntroduction) {
+          const dueEvent = await tx.simulationEvent.findFirst({
+            where: {
+              sessionId,
+              status: SimulationEventStatus.SCHEDULED,
+              triggerDay: {
+                lte: (
+                  await tx.simulationSession.findUniqueOrThrow({
+                    where: { id: sessionId },
+                    select: { currentDay: true },
+                  })
+                ).currentDay,
+              },
+            },
+            orderBy: [{ triggerDay: 'asc' }, { createdAt: 'asc' }],
+            select: { id: true },
+          });
+          if (dueEvent) {
+            const now = new Date();
+            await tx.simulationEvent.update({
+              where: { id: dueEvent.id },
+              data: {
+                status: SimulationEventStatus.REVEALED,
+                revealedAt: now,
+                decisionExpiresAt: session.timedMode
+                  ? new Date(now.getTime() + 30_000)
+                  : null,
+              },
+            });
+            await tx.simulationSession.update({
+              where: { id: sessionId },
+              data: {
+                presentationHold: SimulationPresentationHold.EVENT_REVEAL,
+                nextDayAt: null,
+              },
+            });
+          }
+        }
         const refreshedSession = await tx.simulationSession.findUniqueOrThrow({
           where: { id: sessionId },
           select: simulationDetailSelect,
@@ -1219,6 +1377,7 @@ export class SimulationsService {
               in: [
                 SimulationPresentationHold.NONE,
                 SimulationPresentationHold.EVENT_REVEAL,
+                SimulationPresentationHold.NEW_OBLIGATION,
               ],
             },
           },
@@ -1341,6 +1500,7 @@ export class SimulationsService {
               in: [
                 SimulationPresentationHold.NONE,
                 SimulationPresentationHold.EVENT_REVEAL,
+                SimulationPresentationHold.NEW_OBLIGATION,
               ],
             },
           },
@@ -1348,7 +1508,12 @@ export class SimulationsService {
             status: SimulationSessionStatus.ACTIVE,
             pausedAt: null,
             pausedDecisionSeconds: null,
-            nextDayAt: resumingEvent ? null : restoredDeadline,
+            nextDayAt:
+              resumingEvent ||
+              session.presentationHold ===
+                SimulationPresentationHold.NEW_OBLIGATION
+                ? null
+                : restoredDeadline,
           },
         });
         if (update.count === 0) {
@@ -1525,7 +1690,8 @@ export class SimulationsService {
     }
     if (
       session.presentationHold !== SimulationPresentationHold.NONE &&
-      session.presentationHold !== SimulationPresentationHold.EVENT_REVEAL
+      session.presentationHold !== SimulationPresentationHold.EVENT_REVEAL &&
+      session.presentationHold !== SimulationPresentationHold.NEW_OBLIGATION
     ) {
       throw new ConflictException('SIMULATION_PAUSE_NOT_ALLOWED');
     }
@@ -1549,7 +1715,8 @@ export class SimulationsService {
     }
     if (
       session.presentationHold !== SimulationPresentationHold.NONE &&
-      session.presentationHold !== SimulationPresentationHold.EVENT_REVEAL
+      session.presentationHold !== SimulationPresentationHold.EVENT_REVEAL &&
+      session.presentationHold !== SimulationPresentationHold.NEW_OBLIGATION
     ) {
       throw new ConflictException('SIMULATION_RESUME_NOT_ALLOWED');
     }
@@ -1561,6 +1728,7 @@ export class SimulationsService {
     }
     if (
       session.timedMode &&
+      session.presentationHold !== SimulationPresentationHold.NEW_OBLIGATION &&
       (session.pausedDecisionSeconds === null ||
         !Number.isInteger(session.pausedDecisionSeconds) ||
         session.pausedDecisionSeconds < 0)
@@ -1603,7 +1771,8 @@ export class SimulationsService {
     }
     if (
       session.presentationHold !== SimulationPresentationHold.PAYMENT_RESULT &&
-      session.presentationHold !== SimulationPresentationHold.EVENT_RESULT
+      session.presentationHold !== SimulationPresentationHold.EVENT_RESULT &&
+      session.presentationHold !== SimulationPresentationHold.NEW_OBLIGATION
     ) {
       throw new ConflictException('SIMULATION_CONTINUE_NOT_ALLOWED');
     }
@@ -1666,6 +1835,39 @@ export class SimulationsService {
     const feeOrDebt = this.normalizedMoney(option?.feeOrDebt);
     const scoreDelta = this.normalizedSignedMoney(option?.scoreDelta);
     const explanation = this.string(option?.explanation);
+    const installmentSchedule = (
+      Array.isArray(option?.installmentSchedule)
+        ? option.installmentSchedule.flatMap((raw) => {
+            const item = this.record(raw);
+            const itemDueDay = item?.dueDay;
+            const parsed = {
+              templateCode: this.string(item?.templateCode),
+              name: this.string(item?.name),
+              category: this.string(item?.category),
+              amountDue: this.normalizedMoney(item?.amountDue),
+              dueDay: itemDueDay,
+              basePoints: this.normalizedMoney(item?.basePoints),
+              savingsPointsFactor: this.normalizedMoney(
+                item?.savingsPointsFactor,
+              ),
+              importance: this.string(item?.importance) ?? 'STANDARD',
+              importanceWeight:
+                this.normalizedMoney(item?.importanceWeight) ?? '1.00',
+              baseMissPenalty:
+                this.normalizedMoney(item?.baseMissPenalty) ?? '20.00',
+            };
+            return parsed.templateCode &&
+              parsed.name &&
+              parsed.category &&
+              parsed.amountDue &&
+              Number.isInteger(parsed.dueDay) &&
+              parsed.basePoints &&
+              parsed.savingsPointsFactor
+              ? [parsed as typeof parsed & { dueDay: number }]
+              : [];
+          })
+        : []
+    ) as EventResolutionOption['installmentSchedule'];
     if (
       !id ||
       !label ||
@@ -1732,6 +1934,7 @@ export class SimulationsService {
       feeOrDebt,
       scoreDelta,
       explanation,
+      installmentSchedule,
       introducedObligation: hasIntroducedObligation
         ? {
             templateCode: templateCode!,
@@ -1777,6 +1980,15 @@ export class SimulationsService {
       throw new ServiceUnavailableException('SIMULATION_EVENT_UNAVAILABLE');
     }
     const totalCost = immediateCostCents + feeOrDebtCents;
+    if (currentCents + savingsCents < totalCost) {
+      throw new ConflictException({
+        message: 'SIMULATION_EVENT_OPTION_UNAFFORDABLE',
+        immediateCost: option.immediateCost,
+        feeOrDebt: option.feeOrDebt,
+        cashRequiredNow: this.centsToMoney(totalCost),
+        shortfall: this.centsToMoney(totalCost - currentCents - savingsCents),
+      });
+    }
     const currentUsed = Math.min(currentCents, totalCost);
     const savingsUsed = Math.min(savingsCents, totalCost - currentUsed);
     return {
@@ -1973,56 +2185,89 @@ export class SimulationsService {
     };
   }
 
-  private toSimulationDetailResponse(session: {
-    status: SimulationSessionStatus;
-    presentationHold: SimulationPresentationHold;
-    scenarioSnapshot: unknown;
-    completionSnapshot: unknown;
-    events: Array<{
+  private toSimulationDetailResponse(
+    session: {
+      status: SimulationSessionStatus;
+      presentationHold: SimulationPresentationHold;
+      scenarioSnapshot: unknown;
+      completionSnapshot: unknown;
+      events: Array<{
+        id: string;
+        triggerDay: number;
+        eventSnapshot: unknown;
+        decisionExpiresAt: Date | null;
+      }>;
+      obligations: Array<{
+        id: string;
+        templateCode: string;
+        name: string;
+        category: string;
+        amountDue: unknown;
+        dueDay: number;
+        status: string;
+        paidAt: Date | null;
+        currentUsed: unknown;
+        savingsUsed: unknown;
+        pointsAwarded: unknown;
+        consequenceSnapshot: unknown;
+      }>;
+      scoreEntries: Array<{
+        id: string;
+        sourceType: string;
+        sourceId: string | null;
+        simulatedDay: number;
+        pointsDelta: unknown;
+        reason: string;
+        createdAt: Date;
+      }>;
       id: string;
-      triggerDay: number;
-      eventSnapshot: unknown;
-      decisionExpiresAt: Date | null;
-    }>;
-    obligations: Array<{
-      id: string;
-      templateCode: string;
-      name: string;
-      category: string;
-      amountDue: unknown;
-      dueDay: number;
-      status: string;
-      paidAt: Date | null;
-      currentUsed: unknown;
-      savingsUsed: unknown;
-      pointsAwarded: unknown;
-      consequenceSnapshot: unknown;
-    }>;
-    scoreEntries: Array<{
-      id: string;
-      sourceType: string;
-      sourceId: string | null;
-      simulatedDay: number;
-      pointsDelta: unknown;
-      reason: string;
+      timedMode: boolean;
+      currentDay: number;
+      daysInMonth: number;
+      nextDayAt: Date | null;
+      startingBudget: unknown;
+      currentBalance: unknown;
+      savingsBalance: unknown;
+      score: unknown;
       createdAt: Date;
-    }>;
-    id: string;
-    timedMode: boolean;
-    currentDay: number;
-    daysInMonth: number;
-    nextDayAt: Date | null;
-    startingBudget: unknown;
-    currentBalance: unknown;
-    savingsBalance: unknown;
-    score: unknown;
-    createdAt: Date;
-    updatedAt: Date;
-    completedAt: Date | null;
-  }): SimulationDetailResponse {
+      updatedAt: Date;
+      completedAt: Date | null;
+    },
+  ): SimulationDetailResponse {
     const scenario = this.readScenarioSnapshot(session.scenarioSnapshot);
     const currentEvent = session.events[0]
-      ? this.toSafeRevealedEvent(session.events[0])
+      ? this.toSafeRevealedEvent(
+          session.events[0],
+          session.currentBalance,
+          session.savingsBalance,
+        )
+      : null;
+    const pendingSchedule = (
+      session as typeof session & {
+        obligationSchedules?: Array<{
+          id: string;
+          materializedObligation: {
+            id: string;
+            name: string;
+            amountDue: unknown;
+            dueDay: number;
+            consequenceSnapshot: unknown;
+          } | null;
+        }>;
+      }
+    ).obligationSchedules?.[0];
+    const newObligation = pendingSchedule?.materializedObligation
+      ? {
+          id: pendingSchedule.materializedObligation.id,
+          name: pendingSchedule.materializedObligation.name,
+          amountDue: this.money(
+            pendingSchedule.materializedObligation.amountDue,
+          ),
+          dueDay: pendingSchedule.materializedObligation.dueDay,
+          importance: this.readObligationScoring(
+            pendingSchedule.materializedObligation.consequenceSnapshot,
+          ).importance,
+        }
       : null;
 
     return {
@@ -2030,7 +2275,7 @@ export class SimulationsService {
         ...this.toSimulationSummary(session),
         pending: {
           type: session.presentationHold,
-          id: currentEvent?.id ?? null,
+          id: newObligation?.id ?? currentEvent?.id ?? null,
         },
       },
       allocation: {
@@ -2065,6 +2310,7 @@ export class SimulationsService {
         createdAt: entry.createdAt.toISOString(),
       })),
       completion: this.readCompletionSummary(session.completionSnapshot),
+      newObligation,
       allowedActions: this.allowedActions(session),
     };
   }
@@ -2626,12 +2872,16 @@ export class SimulationsService {
     };
   }
 
-  private toSafeRevealedEvent(event: {
-    id: string;
-    triggerDay: number;
-    eventSnapshot: unknown;
-    decisionExpiresAt: Date | null;
-  }): SimulationDetailResponse['currentEvent'] {
+  private toSafeRevealedEvent(
+    event: {
+      id: string;
+      triggerDay: number;
+      eventSnapshot: unknown;
+      decisionExpiresAt: Date | null;
+    },
+    currentBalance: unknown,
+    savingsBalance: unknown,
+  ): SimulationDetailResponse['currentEvent'] {
     const snapshot = this.record(event.eventSnapshot);
     if (!snapshot || !Array.isArray(snapshot.options)) {
       throw new ServiceUnavailableException(
@@ -2641,7 +2891,14 @@ export class SimulationsService {
     const title = this.string(snapshot.title);
     const context = this.string(snapshot.context);
     const options = snapshot.options
-      .map((option) => this.toSafeEventOption(option))
+      .map((option) =>
+        this.toSafeEventOption(
+          option,
+          currentBalance,
+          savingsBalance,
+          event.triggerDay,
+        ),
+      )
       .filter((option): option is SafeEventOption => option !== null);
     if (!title || !context || options.length !== snapshot.options.length) {
       throw new ServiceUnavailableException(
@@ -2690,7 +2947,12 @@ export class SimulationsService {
     return { enabled: true, minCurrentAmount, maxCurrentAmount, increment };
   }
 
-  private toSafeEventOption(value: unknown): SafeEventOption | null {
+  private toSafeEventOption(
+    value: unknown,
+    currentBalance: unknown,
+    savingsBalance: unknown,
+    triggerDay: number,
+  ): SafeEventOption | null {
     const record = this.record(value);
     const id = this.string(record?.id);
     const label = this.string(record?.label);
@@ -2699,7 +2961,40 @@ export class SimulationsService {
     if (!id || !label || !immediateCost || !feeOrDebt) {
       return null;
     }
-    return { id, label, immediateCost, feeOrDebt };
+    const cashRequiredCents =
+      (this.moneyToCents(immediateCost) ?? 0) +
+      (this.moneyToCents(feeOrDebt) ?? 0);
+    const availableCents =
+      (this.moneyToCents(this.normalizedMoney(currentBalance)) ?? 0) +
+      (this.moneyToCents(this.normalizedMoney(savingsBalance)) ?? 0);
+    const installments = Array.isArray(record?.installmentSchedule)
+      ? record.installmentSchedule.flatMap((value) => {
+          const item = this.record(value);
+          const dueDay = item?.dueDay;
+          const name = this.string(item?.name);
+          const amountDue = this.normalizedMoney(item?.amountDue);
+          return name &&
+            amountDue &&
+            typeof dueDay === 'number' &&
+            Number.isInteger(dueDay) &&
+            dueDay > triggerDay &&
+            dueDay <= 30
+            ? [{ name, amountDue, dueDay }]
+            : [];
+        })
+      : [];
+    return {
+      id,
+      label,
+      immediateCost,
+      feeOrDebt,
+      installments,
+      cashRequiredNow: this.centsToMoney(cashRequiredCents),
+      affordable: availableCents >= cashRequiredCents,
+      shortfall: this.centsToMoney(
+        Math.max(0, cashRequiredCents - availableCents),
+      ),
+    };
   }
 
   private allowedActions(session: {
@@ -2712,6 +3007,12 @@ export class SimulationsService {
   }): string[] {
     if (session.status === SimulationSessionStatus.BRIEFING) {
       return ['SETUP'];
+    }
+    if (
+      session.status === SimulationSessionStatus.ACTIVE &&
+      session.presentationHold === SimulationPresentationHold.NEW_OBLIGATION
+    ) {
+      return ['ACKNOWLEDGE_NEW_OBLIGATION'];
     }
     if (
       session.status === SimulationSessionStatus.ACTIVE &&
@@ -2802,7 +3103,7 @@ export class SimulationsService {
       return null;
     }
     return {
-      version: 'v1',
+      version: summary.version,
       completedAt,
       startingBudget: this.normalizedMoney(summary.startingBudget)!,
       currentBalance: this.normalizedMoney(summary.currentBalance)!,

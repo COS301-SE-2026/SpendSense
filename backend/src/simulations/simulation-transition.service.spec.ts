@@ -377,7 +377,12 @@ describe('SimulationTransitionService', () => {
     transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
       activeSession({ currentDay: 3, obligationSchedules: [schedule] }),
     );
-    await service.resolveDueTransitions('simulation-1');
+    await expect(
+      service.resolveDueTransitions('simulation-1'),
+    ).resolves.toMatchObject({ stoppedFor: 'NEW_OBLIGATION' });
+    expect(
+      transaction.simulationSession.update.mock.calls[0][0].data,
+    ).toMatchObject({ presentationHold: 'NEW_OBLIGATION', nextDayAt: null });
     expect(
       transaction.simulationObligation.create.mock.calls[0][0],
     ).toMatchObject({

@@ -25,6 +25,14 @@ describe('simulation catalogue seed', () => {
         importanceWeight: 0.5,
       }),
     );
+    for (const event of simulationEventTemplates) {
+      expect(
+        event.eventSnapshot.options.some(
+          (candidate) =>
+            Number(candidate.immediateCost) + Number(candidate.feeOrDebt) === 0,
+        ),
+      ).toBe(true);
+    }
     expect(
       simulationObligationTemplates.filter(
         (obligation) => obligation.eligibleForEventIntroduction,

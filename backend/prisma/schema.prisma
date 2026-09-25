@@ -281,6 +281,7 @@ enum SimulationPresentationHold {
   PAYMENT_RESULT
   EVENT_REVEAL
   EVENT_RESULT
+  NEW_OBLIGATION
   SUMMARY
 }
 
@@ -944,6 +945,7 @@ model SimulationObligationSchedule {
   status             SimulationObligationScheduleStatus @default(SCHEDULED)
   obligationSnapshot Json
   materializedAt     DateTime?
+  acknowledgedAt     DateTime?
   createdAt          DateTime                           @default(now())
   updatedAt          DateTime                           @updatedAt
 

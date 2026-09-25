@@ -407,6 +407,90 @@ describe('SimulationsService', () => {
     expect(prisma.simulationSession.findFirst).toHaveBeenCalledTimes(2);
   });
 
+  it('restores an unacknowledged new-obligation popup on refresh', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000013';
+    prisma.simulationSession.findFirst.mockResolvedValue({
+      id: sessionId,
+      status: 'ACTIVE',
+      timedMode: true,
+      currentDay: 7,
+      daysInMonth: 30,
+      nextDayAt: null,
+      startingBudget: '5000.00',
+      currentBalance: '3000.00',
+      savingsBalance: '2000.00',
+      score: '0.00',
+      createdAt,
+      updatedAt: createdAt,
+      completedAt: null,
+      presentationHold: 'NEW_OBLIGATION',
+      scenarioSnapshot: {
+        allocationOptions: [],
+        customAllocation: {
+          enabled: true,
+          minCurrentAmount: '0.00',
+          maxCurrentAmount: '5000.00',
+          increment: '50.00',
+        },
+      },
+      completionSnapshot: null,
+      obligations: [],
+      events: [],
+      scoreEntries: [],
+      obligationSchedules: [
+        {
+          id: 'schedule-1',
+          materializedObligation: {
+            id: 'bill-1',
+            name: 'New bill',
+            amountDue: '250.00',
+            dueDay: 12,
+            consequenceSnapshot: { importance: 'HIGH' },
+          },
+        },
+      ],
+    });
+    const result = await service.getSession('user-1', sessionId);
+    expect(result.session.pending).toEqual({
+      type: 'NEW_OBLIGATION',
+      id: 'bill-1',
+    });
+    expect(result.newObligation).toEqual({
+      id: 'bill-1',
+      name: 'New bill',
+      amountDue: '250.00',
+      dueDay: 12,
+      importance: 'HIGH',
+    });
+    expect(result.allowedActions).toEqual(['ACKNOWLEDGE_NEW_OBLIGATION']);
+  });
+
+  it('keeps legacy v1 completion snapshots readable', () => {
+    const legacy = {
+      version: 'v1',
+      completedAt: '2026-09-13T12:00:00.000Z',
+      startingBudget: '5000.00',
+      currentBalance: '900.00',
+      savingsBalance: '1100.00',
+      totalRemaining: '2000.00',
+      weightedRemaining: '2220.00',
+      remainingBudgetPercentage: '0.4440',
+      savingsRetentionMultiplier: '1.20',
+      budgetBonus: '13.32',
+      finalScore: '311.25',
+      obligations: { total: 5, paid: 3, missed: 2, unresolved: 0 },
+      events: { total: 3, resolved: 2, expired: 1, unresolved: 0 },
+    };
+    expect(
+      (
+        service as unknown as { readCompletionSummary(value: unknown): unknown }
+      ).readCompletionSummary(legacy),
+    ).toMatchObject({
+      version: 'v1',
+      finalScore: '311.25',
+    });
+  });
+
   it('returns null summaries when the player has no resumable or completed simulation', async () => {
     await expect(service.getActiveSession('user-1')).resolves.toEqual({
       active: null,
@@ -542,6 +626,10 @@ describe('SimulationsService', () => {
           label: 'Pay now',
           immediateCost: '600.00',
           feeOrDebt: '0.00',
+          installments: [],
+          cashRequiredNow: '600.00',
+          affordable: true,
+          shortfall: '0.00',
         },
       ],
       decisionExpiresAt: '2026-09-14T12:00:30.000Z',

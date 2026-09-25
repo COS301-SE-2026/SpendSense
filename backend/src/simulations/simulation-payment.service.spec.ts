@@ -307,6 +307,53 @@ describe('SimulationsService payObligation', () => {
     });
   });
 
+  it('pays an in-month installment early through the normal full-payment path', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow
+      .mockResolvedValueOnce(
+        payableSession({
+          currentDay: 8,
+          obligations: [
+            {
+              id: obligationId,
+              name: 'Repair installment',
+              amountDue: '265.00',
+              dueDay: 12,
+              status: 'SCHEDULED',
+              consequenceSnapshot: {
+                kind: 'INSTALLMENT',
+                basePoints: '15.00',
+                savingsPointsFactor: '0.80',
+                importance: 'HIGH',
+                importanceWeight: '1.50',
+                baseMissPenalty: '20.00',
+                amountReference: '1000.00',
+                minimumCostFactor: '0.50',
+                maximumCostFactor: '1.50',
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(refreshedSession());
+    const result = await service.payObligation(
+      'user-1',
+      sessionId,
+      obligationId,
+      idempotencyKey,
+    );
+    expect(result.payment).toMatchObject({
+      timing: 'EARLY',
+      amountDue: '265.00',
+    });
+    expect(
+      transaction.simulationObligation.update.mock.calls[0][0].data.status,
+    ).toBe('PAID');
+    const installmentPaymentEntry = transaction.simulationScoreEntry.create.mock
+      .calls[0]?.[0] as { data: { sourceType: string } };
+    expect(installmentPaymentEntry.data.sourceType).toBe('OBLIGATION_PAYMENT');
+  });
+
   it('keeps the legacy score formula for obligations from older snapshots', async () => {
     transaction.simulationSession.findUniqueOrThrow.mockReset();
     transaction.simulationSession.findUniqueOrThrow.mockResolvedValueOnce(
