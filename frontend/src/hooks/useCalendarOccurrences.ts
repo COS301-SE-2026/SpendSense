@@ -49,7 +49,7 @@ function toDateKey(date: Date): string{
 
 export function getMonthBounds(year:number, month: number):{from:string, to:string}{
     const from = new Date(year, month, 1)
-    const to = new Date(year, month+1, 0)
+    const to = new Date(year, month+1, 1)
 
     return{
         from: toDateKey(from),

@@ -38,7 +38,7 @@ export class PaymentOccurrencesService {
     const where = {
       userId,
       deletedAt: null,
-      dueDate: { gte: fromDate, lte: toDate },
+      dueDate: { gte: fromDate, lt: toDate },
       status: { in: statusFilter },
       ...(obligationId ? { obligationId } : {}),
     };
