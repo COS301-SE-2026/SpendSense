@@ -65,7 +65,6 @@ function WalkthroughPanel({className}:Readonly<{className?:string}>){
 
     const isLastStop=currentStep>=WALKTHROUGH_MAX_STEP&&stopIndex===step.stops.length-1
     const isFirstStop=currentStep===0&&stopIndex===0
-    // keep the panel off whatever is being highlighted
     const panelAtTop=rect!==null&&rect.top+rect.height/2>window.innerHeight/2
 
     return(
@@ -78,14 +77,13 @@ function WalkthroughPanel({className}:Readonly<{className?:string}>){
                 aria-labelledby="walkthrough-heading"
                 tabIndex={-1}
                 className={cn(
-                    'fixed inset-x-4 z-40 m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border-2 border-[#091828] bg-white p-4 shadow-[3px_4px_0_#091828]',
+                    'fixed inset-x-4 z-[56] m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border-2 border-[#091828] bg-white p-4 shadow-[3px_4px_0_#091828]',
                     'dark:border-[#2d3449] dark:bg-[#131b2e] dark:shadow-none',
                     panelAtTop? 'top-4' : 'bottom-20',
                     className,
                 )}
             >
                 <div className="flex items-start gap-3">
-                    {/* the mascot guides every step, not just the first */}
                     <GuidanceMascot className="size-12"/>
                     <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-[#6B6375] dark:text-[#a0aec0]">
