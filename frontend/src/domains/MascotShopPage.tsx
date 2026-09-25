@@ -104,7 +104,11 @@ export default function MascotShopPage(){
 	}
 
     return(
-        <SubPageShell title="Shop" subtitle="Spend the coins you have earned or wear something you own.">
+        <SubPageShell
+			title="Shop"
+			subtitle="Spend the coins you have earned or wear something you own."
+			backTo="/mascot"
+		>
             <div className="flex items-center justify-between gap-3">
 				<FilterChips
 					options={FILTERS.map((entry) => ({

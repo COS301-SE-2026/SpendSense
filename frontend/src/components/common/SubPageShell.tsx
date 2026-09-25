@@ -10,6 +10,7 @@ export function SubPageShell({
     stickyHeader = false,
     showBackButton = true,
     children,
+    backTo,
 }: Readonly<{
     title: string
     subtitle?: string
@@ -34,7 +35,13 @@ export function SubPageShell({
                         <button 
                             type ="button" 
                             aria-label="Back"
-                            onClick={() => navigate(-1)}
+                            onClick={() => {
+                                if (backTo) {
+                                    navigate(backTo)
+                                } else {
+                                    navigate(-1)
+                                }
+                            }}
                             className = "flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FF6B9D] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#060e20]">
 
                                 <ChevronLeft className="size-5 text-[#6E0034] dark:text-[#650030]" />
