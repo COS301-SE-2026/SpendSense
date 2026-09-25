@@ -70,6 +70,7 @@ const simulationDetailSelect = {
       currentUsed: true,
       savingsUsed: true,
       pointsAwarded: true,
+      consequenceSnapshot: true,
     },
   },
   events: {
@@ -131,6 +132,9 @@ type BriefingResponse = {
       category: string;
       amountDue: string;
       dueDay: number;
+      importance: string;
+      importanceWeight: string;
+      baseMissPenalty: string;
       status: string;
     }>;
     surpriseEventCount: number;
@@ -183,6 +187,9 @@ type SimulationDetailResponse = {
     category: string;
     amountDue: string;
     dueDay: number;
+    importance: string;
+    importanceWeight: string;
+    baseMissPenalty: string;
     status: string;
     paidAt: string | null;
     currentUsed: string;
@@ -291,6 +298,9 @@ type EventResolutionOption = {
     dueDay: number;
     basePoints: string;
     savingsPointsFactor: string;
+    importance: string;
+    importanceWeight: string;
+    baseMissPenalty: string;
   } | null;
 };
 
@@ -494,6 +504,9 @@ export class SimulationsService {
                 consequenceSnapshot: {
                   basePoints: obligation.basePoints,
                   savingsPointsFactor: obligation.savingsPointsFactor,
+                  importance: obligation.importance,
+                  importanceWeight: obligation.importanceWeight,
+                  baseMissPenalty: obligation.baseMissPenalty,
                 },
               })),
             },
@@ -905,6 +918,10 @@ export class SimulationsService {
                   basePoints: option.introducedObligation.basePoints,
                   savingsPointsFactor:
                     option.introducedObligation.savingsPointsFactor,
+                  importance: option.introducedObligation.importance,
+                  importanceWeight:
+                    option.introducedObligation.importanceWeight,
+                  baseMissPenalty: option.introducedObligation.baseMissPenalty,
                 },
               },
               select: { id: true },
@@ -1621,6 +1638,18 @@ export class SimulationsService {
     const savingsPointsFactor = this.normalizedMoney(
       introduced?.savingsPointsFactor,
     );
+    const rawImportance = introduced?.importance;
+    const importance =
+      rawImportance === 'CRITICAL' ||
+      rawImportance === 'HIGH' ||
+      rawImportance === 'STANDARD' ||
+      rawImportance === 'LOW'
+        ? rawImportance
+        : 'STANDARD';
+    const importanceWeight =
+      this.normalizedMoney(introduced?.importanceWeight) ?? '1.00';
+    const baseMissPenalty =
+      this.normalizedMoney(introduced?.baseMissPenalty) ?? '20.00';
     const hasIntroducedObligation = introduced !== null;
     if (
       hasIntroducedObligation &&
@@ -1654,6 +1683,9 @@ export class SimulationsService {
             dueDay: dueDay as number,
             basePoints: basePoints!,
             savingsPointsFactor: savingsPointsFactor!,
+            importance,
+            importanceWeight,
+            baseMissPenalty,
           }
         : null,
     };
@@ -1824,6 +1856,7 @@ export class SimulationsService {
       currentUsed: unknown;
       savingsUsed: unknown;
       pointsAwarded: unknown;
+      consequenceSnapshot: unknown;
     }>;
     scoreEntries: Array<{
       id: string;
@@ -1872,6 +1905,7 @@ export class SimulationsService {
         category: obligation.category,
         amountDue: this.money(obligation.amountDue),
         dueDay: obligation.dueDay,
+        ...this.readObligationScoring(obligation.consequenceSnapshot),
         status: obligation.status,
         paidAt: obligation.paidAt?.toISOString() ?? null,
         currentUsed: this.money(obligation.currentUsed),
@@ -2362,6 +2396,7 @@ export class SimulationsService {
         category: string;
         amountDue: unknown;
         dueDay: number;
+        consequenceSnapshot: unknown;
         status: string;
       }>;
       events: unknown[];
@@ -2393,11 +2428,34 @@ export class SimulationsService {
           category: obligation.category,
           amountDue: this.money(obligation.amountDue),
           dueDay: obligation.dueDay,
+          ...this.readObligationScoring(obligation.consequenceSnapshot),
           status: obligation.status,
         })),
         surpriseEventCount: session.events.length,
       },
       replayed,
+    };
+  }
+
+  private readObligationScoring(snapshot: unknown): {
+    importance: string;
+    importanceWeight: string;
+    baseMissPenalty: string;
+  } {
+    const consequence = this.record(snapshot);
+    const importance = consequence?.importance;
+    const validImportance =
+      importance === 'CRITICAL' ||
+      importance === 'HIGH' ||
+      importance === 'STANDARD' ||
+      importance === 'LOW';
+
+    return {
+      importance: validImportance ? importance : 'STANDARD',
+      importanceWeight:
+        this.normalizedMoney(consequence?.importanceWeight) ?? '1.00',
+      baseMissPenalty:
+        this.normalizedMoney(consequence?.baseMissPenalty) ?? '20.00',
     };
   }
 

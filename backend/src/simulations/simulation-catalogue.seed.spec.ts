@@ -8,8 +8,23 @@ import {
 describe('simulation catalogue seed', () => {
   it('contains a valid, sufficiently large pool of fictional content', () => {
     expect(() => validateSimulationCatalogue()).not.toThrow();
-    expect(simulationObligationTemplates).toHaveLength(12);
+    expect(simulationObligationTemplates).toHaveLength(13);
     expect(simulationEventTemplates).toHaveLength(6);
+    expect(simulationObligationTemplates).toContainEqual(
+      expect.objectContaining({
+        code: 'SIM_OBL_RENT',
+        importance: 'CRITICAL',
+        importanceWeight: 2.5,
+      }),
+    );
+    expect(simulationObligationTemplates).toContainEqual(
+      expect.objectContaining({
+        code: 'SIM_OBL_FRIEND_IOU',
+        amountDue: 100,
+        importance: 'LOW',
+        importanceWeight: 0.5,
+      }),
+    );
     expect(
       simulationObligationTemplates.filter(
         (obligation) => obligation.eligibleForEventIntroduction,

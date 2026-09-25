@@ -188,6 +188,19 @@ describe('SimulationsService resolveEvent', () => {
     });
     expect(result.session.pending).toEqual({ type: 'EVENT_RESULT', id: null });
     expect(transaction.simulationEvent.update).toHaveBeenCalledTimes(1);
+    const createdObligation =
+      transaction.simulationObligation.create.mock.calls[0]?.[0];
+    expect(createdObligation).toMatchObject({
+      data: {
+        consequenceSnapshot: {
+          basePoints: '35.00',
+          savingsPointsFactor: '0.80',
+          importance: 'STANDARD',
+          importanceWeight: '1.00',
+          baseMissPenalty: '20.00',
+        },
+      },
+    });
     expect(transaction.simulationObligation.create).toHaveBeenCalledTimes(1);
     expect(transaction.simulationScoreEntry.create).toHaveBeenCalledTimes(1);
     expect(transaction.simulationAction.create).toHaveBeenCalledTimes(1);

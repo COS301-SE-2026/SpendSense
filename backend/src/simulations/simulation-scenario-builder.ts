@@ -1,3 +1,5 @@
+export type ObligationImportance = 'CRITICAL' | 'HIGH' | 'STANDARD' | 'LOW';
+
 export type CatalogueObligation = {
   code: string;
   name: string;
@@ -6,6 +8,9 @@ export type CatalogueObligation = {
   dueDay: number;
   basePoints: MoneyInput;
   savingsPointsFactor?: MoneyInput;
+  importance: ObligationImportance;
+  importanceWeight: MoneyInput;
+  baseMissPenalty: MoneyInput;
   selectionWeight: number;
   isActive: boolean;
   eligibleForEventIntroduction: boolean;
@@ -28,6 +33,7 @@ type EventOption = {
   feeOrDebt: string;
   scoreDelta: string;
   explanation: string;
+  installmentSchedule?: SessionObligationSnapshot[];
   introducedObligationTemplateCode?: string;
   introducedObligation?: SessionObligationSnapshot;
 };
@@ -47,6 +53,9 @@ export type SessionObligationSnapshot = {
   dueDay: number;
   basePoints: string;
   savingsPointsFactor: string;
+  importance: ObligationImportance;
+  importanceWeight: string;
+  baseMissPenalty: string;
 };
 
 export type SimulationAllocationOption = {
@@ -139,7 +148,7 @@ export function buildSimulationScenario(
   );
 
   return {
-    scenarioVersion: 'catalogue-v1',
+    scenarioVersion: 'catalogue-v2',
     startingBudget: centsToMoney(startingBudgetCents),
     initialObligationBudgetCap: centsToMoney(initialObligationCapCents),
     allocationOptions: buildAllocationOptions(startingBudgetCents),
@@ -336,9 +345,56 @@ function parseEventOption(value: unknown): EventOption {
     feeOrDebt: requiredMoney(record.feeOrDebt, 'event fee or debt'),
     scoreDelta: requiredMoney(record.scoreDelta, 'event score delta'),
     explanation: requiredString(record.explanation, 'event explanation'),
+    ...(record.installmentSchedule !== undefined && {
+      installmentSchedule: requiredArray(
+        record.installmentSchedule,
+        'event installment schedule',
+      ).map((item) => parseInstallmentSnapshot(item)),
+    }),
     ...(introducedObligationTemplateCode && {
       introducedObligationTemplateCode,
     }),
+  };
+}
+
+function parseInstallmentSnapshot(value: unknown): SessionObligationSnapshot {
+  const record = asRecord(value, 'installment snapshot');
+  const importance = record.importance;
+  if (
+    importance !== 'CRITICAL' &&
+    importance !== 'HIGH' &&
+    importance !== 'STANDARD' &&
+    importance !== 'LOW'
+  ) {
+    throw new Error('Invalid installment importance.');
+  }
+  const dueDay = record.dueDay;
+  if (typeof dueDay !== 'number' || !Number.isInteger(dueDay) || dueDay < 1) {
+    throw new Error('Invalid installment due day.');
+  }
+  return {
+    templateCode: requiredString(
+      record.templateCode,
+      'installment template code',
+    ),
+    name: requiredString(record.name, 'installment name'),
+    category: requiredString(record.category, 'installment category'),
+    amountDue: requiredMoney(record.amountDue, 'installment amount'),
+    dueDay,
+    basePoints: requiredMoney(record.basePoints, 'installment base points'),
+    savingsPointsFactor: requiredMoney(
+      record.savingsPointsFactor,
+      'installment savings factor',
+    ),
+    importance,
+    importanceWeight: requiredMoney(
+      record.importanceWeight,
+      'installment importance weight',
+    ),
+    baseMissPenalty: requiredMoney(
+      record.baseMissPenalty,
+      'installment base miss penalty',
+    ),
   };
 }
 
@@ -353,6 +409,9 @@ function toObligationSnapshot(
     dueDay: template.dueDay,
     basePoints: centsToMoney(moneyToCents(template.basePoints)),
     savingsPointsFactor: Number(template.savingsPointsFactor ?? 0.8).toFixed(2),
+    importance: template.importance,
+    importanceWeight: centsToMoney(moneyToCents(template.importanceWeight)),
+    baseMissPenalty: centsToMoney(moneyToCents(template.baseMissPenalty)),
   };
 }
 

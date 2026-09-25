@@ -1,4 +1,8 @@
-import { Prisma, type PrismaClient } from '@prisma/client';
+import {
+  Prisma,
+  SimulationObligationImportance,
+  type PrismaClient,
+} from '@prisma/client';
 
 type SimulationCataloguePrisma = Pick<
   PrismaClient,
@@ -12,6 +16,18 @@ type EventOption = {
   feeOrDebt: string;
   scoreDelta: string;
   explanation: string;
+  installmentSchedule?: Array<{
+    templateCode: string;
+    name: string;
+    category: string;
+    amountDue: string;
+    dueDay: number;
+    basePoints: string;
+    savingsPointsFactor: string;
+    importance: 'CRITICAL' | 'HIGH' | 'STANDARD' | 'LOW';
+    importanceWeight: string;
+    baseMissPenalty: string;
+  }>;
   introducedObligationTemplateCode?: string;
 };
 
@@ -36,6 +52,11 @@ function obligation(
   basePoints: number,
   selectionWeight: number,
   eligibleForEventIntroduction = false,
+  scoring: {
+    importance?: SimulationObligationImportance;
+    importanceWeight?: number;
+    baseMissPenalty?: number;
+  } = {},
 ): Prisma.SimulationObligationTemplateCreateInput {
   return {
     code,
@@ -44,6 +65,9 @@ function obligation(
     amountDue,
     dueDay,
     basePoints,
+    importance: scoring.importance ?? SimulationObligationImportance.STANDARD,
+    importanceWeight: scoring.importanceWeight ?? 1,
+    baseMissPenalty: scoring.baseMissPenalty ?? 20,
     selectionWeight,
     eligibleForEventIntroduction,
   };
@@ -100,13 +124,94 @@ function event(
 }
 
 export const simulationObligationTemplates = [
-  obligation('SIM_OBL_RENT', 'Rent', 'Housing', 1800, 3, 60, 5),
-  obligation('SIM_OBL_GROCERIES', 'Groceries', 'Essentials', 650, 5, 45, 5),
-  obligation('SIM_OBL_TRANSPORT', 'Transport pass', 'Transport', 450, 7, 40, 5),
-  obligation('SIM_OBL_ELECTRICITY', 'Electricity', 'Utilities', 420, 9, 40, 4),
-  obligation('SIM_OBL_PHONE', 'Mobile plan', 'Utilities', 250, 11, 30, 4),
-  obligation('SIM_OBL_INTERNET', 'Home internet', 'Utilities', 400, 14, 35, 3),
-  obligation('SIM_OBL_MEDICAL_AID', 'Medical aid', 'Health', 550, 15, 50, 3),
+  obligation('SIM_OBL_RENT', 'Rent', 'Housing', 1800, 3, 60, 5, false, {
+    importance: SimulationObligationImportance.CRITICAL,
+    importanceWeight: 2.5,
+  }),
+  obligation(
+    'SIM_OBL_GROCERIES',
+    'Groceries',
+    'Essentials',
+    650,
+    5,
+    45,
+    5,
+    false,
+    {
+      importance: SimulationObligationImportance.HIGH,
+      importanceWeight: 1.5,
+    },
+  ),
+  obligation(
+    'SIM_OBL_TRANSPORT',
+    'Transport pass',
+    'Transport',
+    450,
+    7,
+    40,
+    5,
+    false,
+    {
+      importance: SimulationObligationImportance.HIGH,
+      importanceWeight: 1.25,
+    },
+  ),
+  obligation(
+    'SIM_OBL_ELECTRICITY',
+    'Electricity',
+    'Utilities',
+    420,
+    9,
+    40,
+    4,
+    false,
+    {
+      importance: SimulationObligationImportance.HIGH,
+      importanceWeight: 1.25,
+    },
+  ),
+  obligation(
+    'SIM_OBL_PHONE',
+    'Mobile plan',
+    'Utilities',
+    250,
+    11,
+    30,
+    4,
+    false,
+    {
+      importance: SimulationObligationImportance.STANDARD,
+      importanceWeight: 1,
+    },
+  ),
+  obligation(
+    'SIM_OBL_INTERNET',
+    'Home internet',
+    'Utilities',
+    400,
+    14,
+    35,
+    3,
+    false,
+    {
+      importance: SimulationObligationImportance.STANDARD,
+      importanceWeight: 1,
+    },
+  ),
+  obligation(
+    'SIM_OBL_MEDICAL_AID',
+    'Medical aid',
+    'Health',
+    550,
+    15,
+    50,
+    3,
+    false,
+    {
+      importance: SimulationObligationImportance.CRITICAL,
+      importanceWeight: 2,
+    },
+  ),
   obligation(
     'SIM_OBL_DEBT_REPAYMENT',
     'Debt repayment',
@@ -115,6 +220,8 @@ export const simulationObligationTemplates = [
     19,
     50,
     3,
+    false,
+    { importance: SimulationObligationImportance.HIGH, importanceWeight: 1.5 },
   ),
   obligation(
     'SIM_OBL_CAR_REPAIR_REPAYMENT',
@@ -125,6 +232,7 @@ export const simulationObligationTemplates = [
     35,
     1,
     true,
+    { importance: SimulationObligationImportance.HIGH, importanceWeight: 1.5 },
   ),
   obligation(
     'SIM_OBL_MEDICAL_PAYMENT_PLAN',
@@ -135,6 +243,7 @@ export const simulationObligationTemplates = [
     35,
     1,
     true,
+    { importance: SimulationObligationImportance.HIGH, importanceWeight: 1.5 },
   ),
   obligation(
     'SIM_OBL_FAMILY_LOAN_REPAYMENT',
@@ -145,6 +254,7 @@ export const simulationObligationTemplates = [
     30,
     1,
     true,
+    { importance: SimulationObligationImportance.LOW, importanceWeight: 0.6 },
   ),
   obligation(
     'SIM_OBL_HOME_REPAIR_REPAYMENT',
@@ -155,6 +265,18 @@ export const simulationObligationTemplates = [
     35,
     1,
     true,
+    { importance: SimulationObligationImportance.HIGH, importanceWeight: 1.5 },
+  ),
+  obligation(
+    'SIM_OBL_FRIEND_IOU',
+    'Coffee IOU to a friend',
+    'Personal',
+    100,
+    18,
+    10,
+    1,
+    false,
+    { importance: SimulationObligationImportance.LOW, importanceWeight: 0.5 },
   ),
 ];
 

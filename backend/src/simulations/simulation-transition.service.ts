@@ -125,6 +125,11 @@ export class SimulationTransitionService {
                 basePoints: expiryOutcome.introducedObligation.basePoints,
                 savingsPointsFactor:
                   expiryOutcome.introducedObligation.savingsPointsFactor,
+                importance: expiryOutcome.introducedObligation.importance,
+                importanceWeight:
+                  expiryOutcome.introducedObligation.importanceWeight,
+                baseMissPenalty:
+                  expiryOutcome.introducedObligation.baseMissPenalty,
               },
             },
           });
@@ -588,6 +593,9 @@ export class SimulationTransitionService {
       dueDay: number;
       basePoints: string;
       savingsPointsFactor: string;
+      importance: string;
+      importanceWeight: string;
+      baseMissPenalty: string;
     };
   } | null {
     const snapshot = this.record(eventSnapshot);
@@ -608,6 +616,16 @@ export class SimulationTransitionService {
     const dueDay = obligation?.dueDay;
     const basePoints = this.money(obligation?.basePoints);
     const savingsPointsFactor = this.money(obligation?.savingsPointsFactor);
+    const rawImportance = this.string(obligation?.importance);
+    const importance =
+      rawImportance === 'CRITICAL' ||
+      rawImportance === 'HIGH' ||
+      rawImportance === 'STANDARD' ||
+      rawImportance === 'LOW'
+        ? rawImportance
+        : 'STANDARD';
+    const importanceWeight = this.money(obligation?.importanceWeight) ?? '1.00';
+    const baseMissPenalty = this.money(obligation?.baseMissPenalty) ?? '20.00';
     const introducedObligation =
       templateCode &&
       name &&
@@ -625,6 +643,9 @@ export class SimulationTransitionService {
             dueDay,
             basePoints,
             savingsPointsFactor,
+            importance,
+            importanceWeight,
+            baseMissPenalty,
           }
         : undefined;
 

@@ -53,6 +53,15 @@ describe('buildSimulationScenario', () => {
       maxCurrentAmount: '4000.00',
       increment: '50.00',
     });
+    expect(scenario.scenarioVersion).toBe('catalogue-v2');
+    expect(scenario.obligations).toContainEqual(
+      expect.objectContaining({
+        templateCode: 'SIM_OBL_FRIEND_IOU',
+        importance: 'LOW',
+        importanceWeight: '0.50',
+        baseMissPenalty: '20.00',
+      }),
+    );
   });
 
   it('excludes inactive content and expands selected event obligations into snapshots', () => {
@@ -81,6 +90,52 @@ describe('buildSimulationScenario', () => {
       .find((option) => option.introducedObligation)?.introducedObligation;
     expect(introducedObligation).toBeDefined();
     expect(introducedObligation?.templateCode).toBeTruthy();
+  });
+
+  it('preserves scoring metadata on event installments', () => {
+    const installmentSchedule = [
+      {
+        templateCode: 'SIM_OBL_CAR_REPAIR_REPAYMENT',
+        name: 'Car repair installment',
+        category: 'Debt',
+        amountDue: '350.00',
+        dueDay: 15,
+        basePoints: '35.00',
+        savingsPointsFactor: '0.80',
+        importance: 'HIGH',
+        importanceWeight: '1.50',
+        baseMissPenalty: '20.00',
+      },
+    ];
+    const events = activeEvents.map((item) => {
+      const snapshot = item.eventSnapshot as {
+        options: Array<Record<string, unknown>>;
+        expiryOutcome: Record<string, unknown>;
+        [key: string]: unknown;
+      };
+      return {
+        ...item,
+        eventSnapshot: {
+          ...snapshot,
+          options: snapshot.options.map((option, index) =>
+            index === 0 ? { ...option, installmentSchedule } : option,
+          ),
+        },
+      };
+    });
+    const scenario = buildSimulationScenario({
+      obligations: activeObligations,
+      events,
+      random: randomSequence([0.4, 0.1, 0.2, 0.3, 0.4, 0.5]),
+    });
+
+    expect(
+      scenario.events
+        .flatMap((item) => item.eventSnapshot.options)
+        .some(
+          (option) => option.installmentSchedule?.[0]?.importance === 'HIGH',
+        ),
+    ).toBe(true);
   });
 
   it('creates independent snapshots and rejects an insufficient catalogue', () => {
