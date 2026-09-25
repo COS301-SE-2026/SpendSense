@@ -23,7 +23,7 @@ const pauseableSession = (overrides: Record<string, unknown> = {}) => ({
 
 const refreshedSession = (overrides: Record<string, unknown> = {}) => ({
   id: sessionId,
-  ...simulationStatusSession(now,'PAUSED',null,overrides),
+  ...simulationStatusSession(now, 'PAUSED', null, overrides),
 });
 
 type UpdateManyArgs = {
