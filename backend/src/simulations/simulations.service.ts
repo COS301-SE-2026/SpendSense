@@ -371,6 +371,7 @@ const paymentSessionSelect = {
   id: true,
   status: true,
   currentDay: true,
+  daysInMonth: true,
   currentBalance: true,
   savingsBalance: true,
   presentationHold: true,
@@ -1791,6 +1792,7 @@ export class SimulationsService {
     session: {
       status: SimulationSessionStatus;
       currentDay: number;
+      daysInMonth: number;
       presentationHold: SimulationPresentationHold;
     },
     obligation:
@@ -1821,7 +1823,8 @@ export class SimulationsService {
       !obligation ||
       (obligation.status !== SimulationObligationStatus.PAYABLE &&
         obligation.status !== SimulationObligationStatus.SCHEDULED) ||
-      session.currentDay > obligation.dueDay
+      session.currentDay > obligation.dueDay ||
+      obligation.dueDay > session.daysInMonth
     ) {
       throw new ConflictException('SIMULATION_OBLIGATION_NOT_PAYABLE');
     }
@@ -2035,20 +2038,22 @@ export class SimulationsService {
         custom: scenario?.customAllocation ?? null,
         selected: scenario?.selectedAllocation ?? null,
       },
-      obligations: session.obligations.map((obligation) => ({
-        id: obligation.id,
-        templateCode: obligation.templateCode,
-        name: obligation.name,
-        category: obligation.category,
-        amountDue: this.money(obligation.amountDue),
-        dueDay: obligation.dueDay,
-        ...this.readObligationScoring(obligation.consequenceSnapshot),
-        status: obligation.status,
-        paidAt: obligation.paidAt?.toISOString() ?? null,
-        currentUsed: this.money(obligation.currentUsed),
-        savingsUsed: this.money(obligation.savingsUsed),
-        pointsAwarded: this.money(obligation.pointsAwarded),
-      })),
+      obligations: session.obligations
+        .filter((obligation) => obligation.dueDay <= session.daysInMonth)
+        .map((obligation) => ({
+          id: obligation.id,
+          templateCode: obligation.templateCode,
+          name: obligation.name,
+          category: obligation.category,
+          amountDue: this.money(obligation.amountDue),
+          dueDay: obligation.dueDay,
+          ...this.readObligationScoring(obligation.consequenceSnapshot),
+          status: obligation.status,
+          paidAt: obligation.paidAt?.toISOString() ?? null,
+          currentUsed: this.money(obligation.currentUsed),
+          savingsUsed: this.money(obligation.savingsUsed),
+          pointsAwarded: this.money(obligation.pointsAwarded),
+        })),
       currentEvent,
       recentScoreEntries: session.scoreEntries.map((entry) => ({
         id: entry.id,
@@ -2701,7 +2706,8 @@ export class SimulationsService {
     status: SimulationSessionStatus;
     timedMode: boolean;
     presentationHold: SimulationPresentationHold;
-    obligations: Array<{ status: string }>;
+    daysInMonth: number;
+    obligations: Array<{ status: string; dueDay: number }>;
     events: unknown[];
   }): string[] {
     if (session.status === SimulationSessionStatus.BRIEFING) {
@@ -2730,8 +2736,9 @@ export class SimulationsService {
       if (
         session.obligations.some(
           (obligation) =>
-            obligation.status === SimulationObligationStatus.SCHEDULED ||
-            obligation.status === SimulationObligationStatus.PAYABLE,
+            obligation.dueDay <= session.daysInMonth &&
+            (obligation.status === SimulationObligationStatus.SCHEDULED ||
+              obligation.status === SimulationObligationStatus.PAYABLE),
         )
       ) {
         actions.push('PAY_OBLIGATION');

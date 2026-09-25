@@ -396,7 +396,33 @@ describe('SimulationTransitionService', () => {
     expect(transaction.simulationObligation.create).toHaveBeenCalledTimes(1);
   });
 
-  it('misses a post-month installment before the final bonus without debiting balances', async () => {
+  it('scores an in-month missed installment with its own ledger source', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+      activeSession({
+        currentDay: 13,
+        obligations: [
+          {
+            id: 'installment-1',
+            name: 'Repair plan',
+            amountDue: '500.00',
+            dueDay: 12,
+            status: 'PAYABLE',
+            consequenceSnapshot: { kind: 'INSTALLMENT' },
+          },
+        ],
+      }),
+    );
+    await service.resolveDueTransitions('simulation-1');
+    expect(
+      transaction.simulationScoreEntry.create.mock.calls[0][0].data,
+    ).toMatchObject({
+      sourceType: 'INSTALLMENT_MISSED',
+      simulatedDay: 13,
+      pointsDelta: '-20.00',
+    });
+  });
+
+  it('ignores obligations due after the month without a miss, debit, or score effect', async () => {
     transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
       activeSession({
         currentDay: 30,
@@ -409,41 +435,29 @@ describe('SimulationTransitionService', () => {
             amountDue: '500.00',
             dueDay: 35,
             status: 'SCHEDULED',
-            consequenceSnapshot: {
-              kind: 'INSTALLMENT',
-              baseMissPenalty: '20.00',
-              importance: 'HIGH',
-              importanceWeight: '1.50',
-              amountReference: '1000.00',
-              minimumCostFactor: '0.50',
-              maximumCostFactor: '1.50',
-            },
+            consequenceSnapshot: { kind: 'INSTALLMENT' },
           },
         ],
       }),
     );
     await service.advanceOneDay('simulation-1');
+    expect(transaction.simulationObligation.updateMany).not.toHaveBeenCalled();
+    expect(transaction.simulationScoreEntry.create).toHaveBeenCalledTimes(1);
     expect(
-      transaction.simulationScoreEntry.create.mock.calls[0][0].data,
-    ).toMatchObject({
-      sourceType: 'INSTALLMENT_MISSED',
-      pointsDelta: '-15.00',
-    });
-    expect(
-      transaction.simulationScoreEntry.create.mock.calls[1][0].data.sourceType,
+      transaction.simulationScoreEntry.create.mock.calls[0][0].data.sourceType,
     ).toBe('FINAL_BUDGET_BONUS');
     const completion =
       transaction.simulationSession.updateMany.mock.calls[0][0].data;
     expect(completion).not.toHaveProperty('currentBalance');
     expect(completion).not.toHaveProperty('savingsBalance');
     expect(completion).toMatchObject({
-      score: '36.00',
+      score: '51.00',
       completionSnapshot: {
         currentBalance: '1000.00',
         savingsBalance: '1000.00',
         budgetBonus: '11.00',
-        finalScore: '36.00',
-        obligations: { total: 1, paid: 0, missed: 1, unresolved: 0 },
+        finalScore: '51.00',
+        obligations: { total: 0, paid: 0, missed: 0, unresolved: 0 },
       },
     });
   });
@@ -455,9 +469,22 @@ describe('SimulationTransitionService', () => {
         currentBalance: '1000.00',
         savingsBalance: '1000.00',
         obligations: [
-          { status: 'PAID' },
-          { status: 'MISSED' },
-          { status: 'SCHEDULED' },
+          { status: 'PAID', dueDay: 3 },
+          { status: 'MISSED', dueDay: 10 },
+          {
+            id: 'day-30-bill',
+            name: 'Final bill',
+            amountDue: '400.00',
+            status: 'PAYABLE',
+            dueDay: 30,
+            consequenceSnapshot: {
+              baseMissPenalty: '20.00',
+              importanceWeight: '1.00',
+              amountReference: '1000.00',
+              minimumCostFactor: '0.50',
+              maximumCostFactor: '1.50',
+            },
+          },
         ],
         events: [
           { status: 'RESOLVED' },
@@ -479,17 +506,24 @@ describe('SimulationTransitionService', () => {
     expect(update.data).toMatchObject({
       status: 'COMPLETED',
       nextDayAt: null,
-      score: '51.00',
+      score: '41.00',
     });
     expect(update.data.completionSnapshot).toMatchObject({
       budgetBonus: '11.00',
-      finalScore: '51.00',
-      obligations: { total: 3, paid: 1, missed: 1, unresolved: 1 },
+      finalScore: '41.00',
+      obligations: { total: 3, paid: 1, missed: 2, unresolved: 0 },
       events: { total: 3, resolved: 1, expired: 1, unresolved: 1 },
     });
-    const scoreEntry = transaction.simulationScoreEntry.create.mock.calls[0][0];
-    expect(scoreEntry.data.sourceType).toBe('FINAL_BUDGET_BONUS');
-    expect(scoreEntry.data.pointsDelta).toBe('11.00');
+    const missedEntry =
+      transaction.simulationScoreEntry.create.mock.calls[0][0];
+    expect(missedEntry.data).toMatchObject({
+      sourceType: 'OBLIGATION_MISSED',
+      sourceId: 'day-30-bill',
+      pointsDelta: '-10.00',
+    });
+    const bonusEntry = transaction.simulationScoreEntry.create.mock.calls[1][0];
+    expect(bonusEntry.data.sourceType).toBe('FINAL_BUDGET_BONUS');
+    expect(bonusEntry.data.pointsDelta).toBe('11.00');
     expect(rewardService.grantXp).toHaveBeenCalledWith(transaction, {
       userId: 'user-1',
       amount: 15,

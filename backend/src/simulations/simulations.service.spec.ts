@@ -468,6 +468,20 @@ describe('SimulationsService', () => {
           savingsUsed: '0.00',
           pointsAwarded: '60.00',
         },
+        {
+          id: 'out-of-month-installment',
+          templateCode: 'SIM_OBL_FUTURE_REPAYMENT',
+          name: 'Future repayment',
+          category: 'Debt',
+          amountDue: '265.00',
+          dueDay: 34,
+          status: 'SCHEDULED',
+          paidAt: null,
+          currentUsed: '0.00',
+          savingsUsed: '0.00',
+          pointsAwarded: '0.00',
+          consequenceSnapshot: { kind: 'INSTALLMENT' },
+        },
       ],
       events: [
         {
@@ -515,6 +529,8 @@ describe('SimulationsService', () => {
     expect(result.obligations[0]).toEqual(
       expect.objectContaining({ id: 'obligation-1', pointsAwarded: '60.00' }),
     );
+    expect(result.obligations).toHaveLength(1);
+    expect(JSON.stringify(result)).not.toContain('out-of-month-installment');
     expect(result.currentEvent).toEqual({
       id: 'event-1',
       triggerDay: 7,

@@ -408,7 +408,6 @@ export class SimulationTransitionService {
       status: SimulationObligationStatus;
       consequenceSnapshot: unknown;
     }>,
-    installment = false,
   ): Promise<number> {
     let totalCents = 0;
     for (const obligation of obligations) {
@@ -461,13 +460,13 @@ export class SimulationTransitionService {
         data: {
           sessionId,
           sourceType:
-            installment || snapshot?.kind === 'INSTALLMENT'
+            snapshot?.kind === 'INSTALLMENT'
               ? SimulationScoreSourceType.INSTALLMENT_MISSED
               : SimulationScoreSourceType.OBLIGATION_MISSED,
           sourceId: obligation.id,
           simulatedDay: day,
           pointsDelta: this.moneyFromCents(-penalty),
-          reason: `${installment || snapshot?.kind === 'INSTALLMENT' ? 'Missed installment' : 'Missed obligation'}: ${obligation.name}`,
+          reason: `${snapshot?.kind === 'INSTALLMENT' ? 'Missed installment' : 'Missed obligation'}: ${obligation.name}`,
           calculationData: {
             scoringVersion: weighted ? 'WEIGHTED_V1' : 'LEGACY',
             amountDue: this.moneyFromCents(amount),
@@ -548,31 +547,33 @@ export class SimulationTransitionService {
       return this.result(session.currentDay, 'SUMMARY');
     }
 
-    const postMonthInstallments = session.obligations.filter(
+    // Closing day 30 ends the final due-day grace period. Only obligations
+    // within this month can become missed or appear in its completion result.
+    const monthObligations = session.obligations.filter(
+      (obligation) => obligation.dueDay <= session.daysInMonth,
+    );
+    const unpaid = monthObligations.filter(
       (obligation) =>
-        obligation.dueDay > session.daysInMonth &&
-        (obligation.status === SimulationObligationStatus.SCHEDULED ||
-          obligation.status === SimulationObligationStatus.PAYABLE) &&
-        this.record(obligation.consequenceSnapshot)?.kind === 'INSTALLMENT',
+        obligation.status === SimulationObligationStatus.SCHEDULED ||
+        obligation.status === SimulationObligationStatus.PAYABLE,
     );
     const missedPenalty = await this.scoreMissedObligations(
       tx,
       session.id,
       session.currentDay,
-      postMonthInstallments,
-      true,
+      unpaid,
     );
-    const missedIds = new Set(postMonthInstallments.map((item) => item.id));
+    const missedIds = new Set(unpaid.map((obligation) => obligation.id));
     const summary = this.completionSummary(
       {
         ...session,
         score: this.moneyFromCents(
           this.requiredSignedCents(session.score, 'score') + missedPenalty,
         ),
-        obligations: session.obligations.map((item) =>
-          missedIds.has(item.id)
-            ? { ...item, status: SimulationObligationStatus.MISSED }
-            : item,
+        obligations: monthObligations.map((obligation) =>
+          missedIds.has(obligation.id)
+            ? { ...obligation, status: SimulationObligationStatus.MISSED }
+            : obligation,
         ),
       },
       completedAt,

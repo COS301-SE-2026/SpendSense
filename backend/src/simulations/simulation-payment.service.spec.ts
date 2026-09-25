@@ -14,6 +14,7 @@ const payableSession = (overrides: Record<string, unknown> = {}) => ({
   id: sessionId,
   status: 'ACTIVE',
   currentDay: 3,
+  daysInMonth: 30,
   currentBalance: '1000.00',
   savingsBalance: '1000.00',
   presentationHold: 'NONE',
@@ -172,6 +173,29 @@ describe('SimulationsService payObligation', () => {
       prisma as unknown as PrismaService,
       transitionService as unknown as SimulationTransitionService,
     );
+  });
+
+  it('does not allow payment of an obligation due outside this month', async () => {
+    transaction.simulationSession.findUniqueOrThrow
+      .mockReset()
+      .mockResolvedValue(
+        payableSession({
+          obligations: [
+            {
+              ...payableSession().obligations[0],
+              dueDay: 35,
+              consequenceSnapshot: { kind: 'INSTALLMENT' },
+            },
+          ],
+        }),
+      );
+    await expect(
+      service.payObligation('user-1', sessionId, obligationId, idempotencyKey),
+    ).rejects.toThrow(
+      new ConflictException('SIMULATION_OBLIGATION_NOT_PAYABLE'),
+    );
+    expect(transaction.simulationObligation.update).not.toHaveBeenCalled();
+    expect(transaction.simulationScoreEntry.create).not.toHaveBeenCalled();
   });
 
   it('pays the full fictional amount Current-first, then Savings, and records one result', async () => {
