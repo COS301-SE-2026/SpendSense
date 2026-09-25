@@ -188,7 +188,18 @@ describe('FriendsService', () => {
           displayName: 'Sender',
           avatarUrl: null,
           creditProfile: { scoreTier: 'GOOD' },
-          gamificationProfile: { currentPaymentStreak: 3 },
+          gamificationProfile: {
+            currentPaymentStreak: 3,
+            mascotMood: 'HAPPY',
+          },
+          inventoryItems: [
+            {
+              cosmeticItem: {
+                slot: 'HAT',
+                code: 'party_hat',
+              },
+            },
+          ],
           badges: [{ id: 'badge-id' }],
         }),
       },
@@ -275,7 +286,18 @@ describe('FriendsService', () => {
           displayName: 'Friend',
           avatarUrl: null,
           creditProfile: { scoreTier: 'EXCELLENT' },
-          gamificationProfile: { currentPaymentStreak: 5 },
+          gamificationProfile: {
+            currentPaymentStreak: 5,
+            mascotMood: 'CELEBRATING',
+          },
+          inventoryItems: [
+            {
+              cosmeticItem: {
+                slot: 'HAT',
+                code: 'party_hat',
+              },
+            },
+          ],
           badges: [{ id: 'badge-one' }, { id: 'badge-two' }],
         },
       },
@@ -289,6 +311,13 @@ describe('FriendsService', () => {
         avatarUrl: null,
         scoreTier: 'EXCELLENT',
         currentPaymentStreak: 5,
+        mascotMood: 'CELEBRATING',
+        equippedCosmetics: [
+          {
+            slot: 'HAT',
+            code: 'party_hat',
+          },
+        ],
         badgeCount: 2,
       },
     ]);
@@ -302,7 +331,11 @@ describe('FriendsService', () => {
         displayName: 'Friend',
         avatarUrl: null,
         creditProfile: { scoreTier: 'GOOD' },
-        gamificationProfile: { currentPaymentStreak: 2 },
+        gamificationProfile: {
+          currentPaymentStreak: 2,
+          mascotMood: 'NEUTRAL',
+        },
+        inventoryItems: [],
         badges: [],
       },
     });
@@ -313,6 +346,8 @@ describe('FriendsService', () => {
       friendshipId: 'friendship-id',
       friendId: 'friend-id',
       scoreTier: 'GOOD',
+      mascotMood: 'NEUTRAL',
+      equippedCosmetics: [],
     });
 
     prisma.friendship.findUnique.mockResolvedValueOnce(null);

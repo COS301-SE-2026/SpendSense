@@ -1,3 +1,6 @@
+import type {EquippedCosmetic} from "@/features/cosmetics/cosmeticsTypes"
+import type {MascotMood} from "@/lib/mascot"
+
 export type ScoreTier = "BUILDING" | "FAIR" | "GOOD" | "EXCELLENT" | "ELITE"
 
 export type FriendRequestStatus = "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELLED"
@@ -30,6 +33,8 @@ export interface FriendSummary {
 	avatarUrl: string | null
 	scoreTier: ScoreTier
 	currentPaymentStreak: number
+	mascotMood: MascotMood
+    equippedCosmetics: EquippedCosmetic[]
 	badgeCount: number
 }
 

@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { Award, Flame, Swords, UserMinus } from "lucide-react"
-
+import { MascotAvatar } from "@/components/mascot/MascotAvatar"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { LongButton } from "@/components/common/LongButton"
 import { FriendsPageShell } from "@/components/common/FriendsPageShell"
@@ -93,9 +93,18 @@ export default function FriendProfilePage() {
 				<p className="mt-3 text-lg font-extrabold text-[#091828] dark:text-white">
 					{friend.displayName}
 				</p>
+
 				<p className="text-xs text-[#6B6375] dark:text-[#a0aec0]">
-					Public profile - only their tier, streak and badges are shared.
+					Public profile - mascot, tier, streak and badges are shared.
 				</p>
+
+				<div className="mt-3 flex justify-center">
+					<MascotAvatar
+						mood={friend.mascotMood}
+						equipped={friend.equippedCosmetics}
+						size="lg"
+					/>
+				</div>
 
 				<div className="mt-4 grid grid-cols-3 gap-2">
 					<StatTile
