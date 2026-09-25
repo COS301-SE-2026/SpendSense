@@ -56,6 +56,14 @@ const scanResponse={
     preselectedOccurrenceId:'occ_123',
 }
 
+function getToday(){
+    const today=new Date()
+    const year=today.getFullYear()
+    const month=String(today.getMonth()+1).padStart(2,'0')
+    const day=String(today.getDate()).padStart(2,'0')
+    return `${year}-${month}-${day}`
+}
+
 function renderReview(state?:unknown){
     return render(
         <MemoryRouter initialEntries={[{pathname:'/receipts/scans/scan_abc/review',state}]}>
@@ -78,7 +86,7 @@ describe('ReceiptReviewPage',()=>{
     })
     it('renders the review page using the scan passed from upload',()=>{
         renderReview({scan:scanResponse})
-        expect(screen.getByRole('heading',{name:'Review your receipt'})).toBeInTheDocument()
+        expect(screen.getByText('Receipt review')).toBeInTheDocument()
         expect(screen.getByText(`Draft expires ${new Date(scanResponse.expiresAt).toLocaleString('en-ZA')}`)).toBeInTheDocument()
         expect(screen.queryByText('scan_abc')).not.toBeInTheDocument()
         expect(getReceiptScan).not.toHaveBeenCalled()
@@ -91,6 +99,82 @@ describe('ReceiptReviewPage',()=>{
         expect(screen.getByLabelText('Merchant')).toHaveValue('City Power')
         expect(screen.getByLabelText('Receipt date')).toHaveValue('2026-09-20')
     })
+    it('defaults to ZAR when OCR cannot detect a currency',()=>{
+        const response={
+            ...scanResponse,
+            extraction:{
+                ...scanResponse.extraction,
+                amountCandidates:[
+                    {value:'100.00',currency:'',confidence:'HIGH' as const,label:'total'},
+                ],
+            },
+        }
+        renderReview({scan:response})
+        expect(screen.getByLabelText('Currency')).toHaveValue('ZAR')
+        expect(screen.getByText('Assumed')).toBeInTheDocument()
+        expect(screen.getByText('Defaulted to ZAR. Please double-check.')).toBeInTheDocument()
+    })
+    it('does not show the currency warning when OCR detects ZAR',()=>{
+        renderReview({scan:scanResponse})
+        expect(screen.getByLabelText('Currency')).toHaveValue('ZAR')
+        expect(screen.queryByText('Defaulted to ZAR. Please double-check.')).not.toBeInTheDocument()
+    })
+    it('allows the user to correct a defaulted currency',()=>{
+        const response={
+            ...scanResponse,
+            extraction:{
+                ...scanResponse.extraction,
+                amountCandidates:[
+                    {value:'100.00',currency:'',confidence:'HIGH' as const,label:'total'},
+                ],
+            },
+        }
+        renderReview({scan:response})
+        expect(screen.getByText('Defaulted to ZAR. Please double-check.')).toBeInTheDocument()
+        fireEvent.change(screen.getByLabelText('Currency'),{target:{value:'usd'}})
+        expect(screen.getByLabelText('Currency')).toHaveValue('USD')
+        expect(screen.queryByText('Defaulted to ZAR. Please double-check.')).not.toBeInTheDocument()
+    })
+    it('leaves the receipt date empty when OCR cannot detect one',()=>{
+        const response={
+            ...scanResponse,
+            extraction:{
+                ...scanResponse.extraction,
+                receiptDate:null,
+            },
+        }
+        renderReview({scan:response})
+        expect(screen.getByLabelText('Receipt date')).toHaveValue('')
+        expect(screen.getByRole('button',{name:'Choose receipt date'})).toBeInTheDocument()
+    })
+    it('opens the calendar on the current month without filling an empty date',()=>{
+        const response={
+            ...scanResponse,
+            extraction:{
+                ...scanResponse.extraction,
+                receiptDate:null,
+            },
+        }
+        renderReview({scan:response})
+        fireEvent.click(screen.getByRole('button',{name:'Choose receipt date'}))
+        expect(screen.getByLabelText('Receipt date')).toHaveValue('')
+        expect(screen.getByLabelText('Receipt date calendar')).toBeInTheDocument()
+        expect(screen.getByRole('button',{name:getToday()})).toBeInTheDocument()
+    })
+    it('updates the payment date when the user selects today from the calendar',()=>{
+        const response={
+            ...scanResponse,
+            extraction:{
+                ...scanResponse.extraction,
+                receiptDate:null,
+            },
+        }
+        renderReview({scan:response})
+        fireEvent.click(screen.getByRole('button',{name:'Choose receipt date'}))
+        fireEvent.click(screen.getByRole('button',{name:'Today'}))
+        expect(screen.getByLabelText('Receipt date')).toHaveValue(getToday())
+        expect(screen.queryByLabelText('Receipt date calendar')).not.toBeInTheDocument()
+    })
     it('preserves the occurrence preselection',async()=>{
         renderReview({scan:scanResponse})
         await waitFor(()=>{
@@ -100,7 +184,7 @@ describe('ReceiptReviewPage',()=>{
     it('loads the scan from the API after a refresh',async()=>{
         renderReview()
         expect(screen.getByRole('status')).toHaveTextContent('Loading your receipt...')
-        expect(await screen.findByRole('heading',{name:'Review your receipt'})).toBeInTheDocument()
+        expect(await screen.findByRole('heading',{name:'Check your receipt'})).toBeInTheDocument()
         expect(getReceiptScan).toHaveBeenCalledWith('scan_abc')
         expect(screen.getByText(`Draft expires ${new Date(scanResponse.expiresAt).toLocaleString('en-ZA')}`)).toBeInTheDocument()
     })
@@ -131,7 +215,7 @@ describe('ReceiptReviewPage',()=>{
         await waitFor(()=>{
             expect(getReceiptScan).toHaveBeenCalledTimes(2)
         })
-        expect(await screen.findByRole('heading',{name:'Review your receipt'})).toBeInTheDocument()
+        expect(await screen.findByRole('heading',{name:'Check your receipt'})).toBeInTheDocument()
     })
     it('shows confirmation but requires explicit acknowledgement',async()=>{
         renderReview({scan:scanResponse})

@@ -133,7 +133,7 @@ export default function ReceiptOccurrencePicker({
         Number(selectedOccurrence.amountRemaining)>0
     )
     return(
-        <section className="rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[5px_5px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[5px_5px_0_#060e20] sm:p-6">
+        <section className="rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20] sm:p-6">
             <div className="flex items-start gap-3">
                 <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#E8E4F4] dark:bg-[#302A43]">
                     <Wallet className="size-6 text-[#5B4D8B] dark:text-[#c5b3f0]"/>
