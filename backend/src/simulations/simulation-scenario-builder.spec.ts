@@ -64,7 +64,14 @@ describe('buildSimulationScenario', () => {
       maxCurrentAmount: '4000.00',
       increment: '50.00',
     });
-    expect(scenario.scenarioVersion).toBe('catalogue-v3');
+    expect(scenario.scenarioVersion).toBe('catalogue-v4');
+    expect(scenario.obligations[0]).toEqual(
+      expect.objectContaining({
+        amountReference: '1000.00',
+        minimumCostFactor: '0.50',
+        maximumCostFactor: '1.50',
+      }),
+    );
   });
 
   it('always keeps the five-obligation count and due-day spread across random scenarios', () => {

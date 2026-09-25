@@ -130,6 +130,14 @@ export class SimulationTransitionService {
                   expiryOutcome.introducedObligation.importanceWeight,
                 baseMissPenalty:
                   expiryOutcome.introducedObligation.baseMissPenalty,
+                ...(expiryOutcome.introducedObligation.amountReference && {
+                  amountReference:
+                    expiryOutcome.introducedObligation.amountReference,
+                  minimumCostFactor:
+                    expiryOutcome.introducedObligation.minimumCostFactor,
+                  maximumCostFactor:
+                    expiryOutcome.introducedObligation.maximumCostFactor,
+                }),
               },
             },
           });
@@ -596,6 +604,9 @@ export class SimulationTransitionService {
       importance: string;
       importanceWeight: string;
       baseMissPenalty: string;
+      amountReference?: string;
+      minimumCostFactor?: string;
+      maximumCostFactor?: string;
     };
   } | null {
     const snapshot = this.record(eventSnapshot);
@@ -626,6 +637,9 @@ export class SimulationTransitionService {
         : 'STANDARD';
     const importanceWeight = this.money(obligation?.importanceWeight) ?? '1.00';
     const baseMissPenalty = this.money(obligation?.baseMissPenalty) ?? '20.00';
+    const amountReference = this.money(obligation?.amountReference);
+    const minimumCostFactor = this.money(obligation?.minimumCostFactor);
+    const maximumCostFactor = this.money(obligation?.maximumCostFactor);
     const introducedObligation =
       templateCode &&
       name &&
@@ -646,6 +660,9 @@ export class SimulationTransitionService {
             importance,
             importanceWeight,
             baseMissPenalty,
+            ...(amountReference && minimumCostFactor && maximumCostFactor
+              ? { amountReference, minimumCostFactor, maximumCostFactor }
+              : {}),
           }
         : undefined;
 

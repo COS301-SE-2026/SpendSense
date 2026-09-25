@@ -56,6 +56,9 @@ export type SessionObligationSnapshot = {
   importance: ObligationImportance;
   importanceWeight: string;
   baseMissPenalty: string;
+  amountReference: string;
+  minimumCostFactor: string;
+  maximumCostFactor: string;
 };
 
 export type SimulationAllocationOption = {
@@ -105,6 +108,9 @@ const FUTURE_OBLIGATION_SCHEDULE_MINIMUM = 1;
 const FUTURE_OBLIGATION_SCHEDULE_MAXIMUM = 2;
 const FUTURE_OBLIGATION_TRIGGER_MINIMUM = 3;
 const FUTURE_OBLIGATION_TRIGGER_MAXIMUM = 24;
+const OBLIGATION_AMOUNT_REFERENCE = '1000.00';
+const MINIMUM_COST_FACTOR = '0.50';
+const MAXIMUM_COST_FACTOR = '1.50';
 const EVENT_MINIMUM = 2;
 const EVENT_MAXIMUM = 4;
 const CUSTOM_ALLOCATION_STEP_CENTS = 5_000;
@@ -175,7 +181,7 @@ export function buildSimulationScenario(
   );
 
   return {
-    scenarioVersion: 'catalogue-v3',
+    scenarioVersion: 'catalogue-v4',
     startingBudget: centsToMoney(startingBudgetCents),
     initialObligationBudgetCap: centsToMoney(initialObligationCapCents),
     allocationOptions: buildAllocationOptions(startingBudgetCents),
@@ -458,6 +464,12 @@ function parseInstallmentSnapshot(value: unknown): SessionObligationSnapshot {
       record.baseMissPenalty,
       'installment base miss penalty',
     ),
+    amountReference:
+      optionalMoney(record.amountReference) ?? OBLIGATION_AMOUNT_REFERENCE,
+    minimumCostFactor:
+      optionalMoney(record.minimumCostFactor) ?? MINIMUM_COST_FACTOR,
+    maximumCostFactor:
+      optionalMoney(record.maximumCostFactor) ?? MAXIMUM_COST_FACTOR,
   };
 }
 
@@ -475,6 +487,9 @@ function toObligationSnapshot(
     importance: template.importance,
     importanceWeight: centsToMoney(moneyToCents(template.importanceWeight)),
     baseMissPenalty: centsToMoney(moneyToCents(template.baseMissPenalty)),
+    amountReference: OBLIGATION_AMOUNT_REFERENCE,
+    minimumCostFactor: MINIMUM_COST_FACTOR,
+    maximumCostFactor: MAXIMUM_COST_FACTOR,
   };
 }
 
@@ -508,6 +523,12 @@ function requiredMoney(value: unknown, label: string): string {
     throw new Error(`Invalid ${label}.`);
   }
   return centsToMoney(moneyToCents(value));
+}
+
+function optionalMoney(value: unknown): string | undefined {
+  return typeof value === 'string' && Number.isFinite(Number(value))
+    ? centsToMoney(moneyToCents(value))
+    : undefined;
 }
 
 function moneyToCents(value: MoneyInput): number {

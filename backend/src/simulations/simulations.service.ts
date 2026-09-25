@@ -260,8 +260,19 @@ type AdvanceResponse = SimulationDetailResponse & { replayed: boolean };
 type PaymentResponse = SimulationDetailResponse & {
   payment: {
     obligationId: string;
+    timing: 'EARLY' | 'ON_TIME';
+    amountDue: string;
     currentUsed: string;
     savingsUsed: string;
+    basePoints: string;
+    savingsPointsFactor: string;
+    amountReference: string | null;
+    costFactor: string;
+    importance: string;
+    importanceWeight: string;
+    effectiveWeight: string;
+    accountFactor: string;
+    scoringVersion: 'LEGACY' | 'WEIGHTED_V1';
     pointsAwarded: string;
   };
   replayed: boolean;
@@ -301,6 +312,9 @@ type EventResolutionOption = {
     importance: string;
     importanceWeight: string;
     baseMissPenalty: string;
+    amountReference?: string;
+    minimumCostFactor?: string;
+    maximumCostFactor?: string;
   } | null;
 };
 
@@ -370,6 +384,7 @@ const paymentSessionSelect = {
       id: true,
       name: true,
       amountDue: true,
+      dueDay: true,
       status: true,
       consequenceSnapshot: true,
     },
@@ -507,6 +522,9 @@ export class SimulationsService {
                   importance: obligation.importance,
                   importanceWeight: obligation.importanceWeight,
                   baseMissPenalty: obligation.baseMissPenalty,
+                  amountReference: obligation.amountReference,
+                  minimumCostFactor: obligation.minimumCostFactor,
+                  maximumCostFactor: obligation.maximumCostFactor,
                 },
               })),
             },
@@ -776,14 +794,24 @@ export class SimulationsService {
             simulatedDay: session.currentDay,
             pointsDelta: payment.pointsAwarded,
             reason:
-              payment.savingsUsed === '0.00'
-                ? `Paid on time: ${obligation.name}`
-                : `Paid using Savings: ${obligation.name}`,
+              payment.timing === 'EARLY'
+                ? `Paid early: ${obligation.name}`
+                : payment.savingsUsed === '0.00'
+                  ? `Paid on time: ${obligation.name}`
+                  : `Paid using Savings: ${obligation.name}`,
             calculationData: {
               amountDue: payment.amountDue,
               currentUsed: payment.currentUsed,
               savingsUsed: payment.savingsUsed,
+              timing: payment.timing,
               basePoints: payment.basePoints,
+              amountReference: payment.amountReference,
+              costFactor: payment.costFactor,
+              importance: payment.importance,
+              importanceWeight: payment.importanceWeight,
+              effectiveWeight: payment.effectiveWeight,
+              accountFactor: payment.accountFactor,
+              scoringVersion: payment.scoringVersion,
               savingsPointsFactor: payment.savingsPointsFactor,
             },
           },
@@ -807,8 +835,19 @@ export class SimulationsService {
           ...this.toSimulationDetailResponse(refreshedSession),
           payment: {
             obligationId: obligation.id,
+            timing: payment.timing,
+            amountDue: payment.amountDue,
             currentUsed: payment.currentUsed,
             savingsUsed: payment.savingsUsed,
+            basePoints: payment.basePoints,
+            savingsPointsFactor: payment.savingsPointsFactor,
+            amountReference: payment.amountReference,
+            costFactor: payment.costFactor,
+            importance: payment.importance,
+            importanceWeight: payment.importanceWeight,
+            effectiveWeight: payment.effectiveWeight,
+            accountFactor: payment.accountFactor,
+            scoringVersion: payment.scoringVersion,
             pointsAwarded: payment.pointsAwarded,
           },
           replayed: false,
@@ -930,6 +969,14 @@ export class SimulationsService {
                   importanceWeight:
                     option.introducedObligation.importanceWeight,
                   baseMissPenalty: option.introducedObligation.baseMissPenalty,
+                  ...(option.introducedObligation.amountReference && {
+                    amountReference:
+                      option.introducedObligation.amountReference,
+                    minimumCostFactor:
+                      option.introducedObligation.minimumCostFactor,
+                    maximumCostFactor:
+                      option.introducedObligation.maximumCostFactor,
+                  }),
                 },
               },
               select: { id: true },
@@ -1658,6 +1705,13 @@ export class SimulationsService {
       this.normalizedMoney(introduced?.importanceWeight) ?? '1.00';
     const baseMissPenalty =
       this.normalizedMoney(introduced?.baseMissPenalty) ?? '20.00';
+    const amountReference = this.normalizedMoney(introduced?.amountReference);
+    const minimumCostFactor = this.normalizedMoney(
+      introduced?.minimumCostFactor,
+    );
+    const maximumCostFactor = this.normalizedMoney(
+      introduced?.maximumCostFactor,
+    );
     const hasIntroducedObligation = introduced !== null;
     if (
       hasIntroducedObligation &&
@@ -1694,6 +1748,9 @@ export class SimulationsService {
             importance,
             importanceWeight,
             baseMissPenalty,
+            ...(amountReference && minimumCostFactor && maximumCostFactor
+              ? { amountReference, minimumCostFactor, maximumCostFactor }
+              : {}),
           }
         : null,
     };
@@ -1738,6 +1795,7 @@ export class SimulationsService {
   private assertPaymentAllowed(
     session: {
       status: SimulationSessionStatus;
+      currentDay: number;
       presentationHold: SimulationPresentationHold;
     },
     obligation:
@@ -1745,6 +1803,7 @@ export class SimulationsService {
           id: string;
           name: string;
           amountDue: unknown;
+          dueDay: number;
           status: SimulationObligationStatus;
           consequenceSnapshot: unknown;
         }
@@ -1753,6 +1812,7 @@ export class SimulationsService {
     id: string;
     name: string;
     amountDue: unknown;
+    dueDay: number;
     status: SimulationObligationStatus;
     consequenceSnapshot: unknown;
   } {
@@ -1764,16 +1824,23 @@ export class SimulationsService {
     }
     if (
       !obligation ||
-      obligation.status !== SimulationObligationStatus.PAYABLE
+      (obligation.status !== SimulationObligationStatus.PAYABLE &&
+        obligation.status !== SimulationObligationStatus.SCHEDULED) ||
+      session.currentDay > obligation.dueDay
     ) {
       throw new ConflictException('SIMULATION_OBLIGATION_NOT_PAYABLE');
     }
   }
 
   private calculatePayment(
-    session: { currentBalance: unknown; savingsBalance: unknown },
+    session: {
+      currentDay: number;
+      currentBalance: unknown;
+      savingsBalance: unknown;
+    },
     obligation: {
       amountDue: unknown;
+      dueDay: number;
       consequenceSnapshot: unknown;
     },
   ): {
@@ -1783,9 +1850,17 @@ export class SimulationsService {
     currentBalance: string;
     savingsBalance: string;
     remainingAmount: string;
-    pointsAwarded: string;
+    timing: 'EARLY' | 'ON_TIME';
     basePoints: string;
     savingsPointsFactor: string;
+    amountReference: string | null;
+    costFactor: string;
+    importance: string;
+    importanceWeight: string;
+    effectiveWeight: string;
+    accountFactor: string;
+    scoringVersion: 'LEGACY' | 'WEIGHTED_V1';
+    pointsAwarded: string;
   } {
     const amountDue = this.money(obligation.amountDue);
     const currentBalance = this.money(session.currentBalance);
@@ -1798,6 +1873,35 @@ export class SimulationsService {
     const savingsPointsFactor = this.string(consequence?.savingsPointsFactor);
     const basePointsCents = this.moneyToCents(basePoints);
     const savingsFactorCents = this.moneyToCents(savingsPointsFactor);
+    const rawImportance = consequence?.importance;
+    const importance =
+      rawImportance === 'CRITICAL' ||
+      rawImportance === 'HIGH' ||
+      rawImportance === 'STANDARD' ||
+      rawImportance === 'LOW'
+        ? rawImportance
+        : 'STANDARD';
+    const importanceWeight =
+      this.normalizedMoney(consequence?.importanceWeight) ?? '1.00';
+    const referenceInput = consequence?.amountReference;
+    const minimumFactorInput = consequence?.minimumCostFactor;
+    const maximumFactorInput = consequence?.maximumCostFactor;
+    const hasAnyWeightedInput =
+      referenceInput !== undefined ||
+      minimumFactorInput !== undefined ||
+      maximumFactorInput !== undefined;
+    const hasAllWeightedInputs =
+      referenceInput !== undefined &&
+      minimumFactorInput !== undefined &&
+      maximumFactorInput !== undefined;
+    const amountReference = this.normalizedMoney(referenceInput);
+    const minimumCostFactor = this.normalizedMoney(minimumFactorInput);
+    const maximumCostFactor = this.normalizedMoney(maximumFactorInput);
+    const importanceWeightCents = this.moneyToCents(importanceWeight);
+    const amountReferenceCents = this.moneyToCents(amountReference);
+    const minimumCostFactorCents = this.moneyToCents(minimumCostFactor);
+    const maximumCostFactorCents = this.moneyToCents(maximumCostFactor);
+
     if (
       amountDueCents === null ||
       amountDueCents <= 0 ||
@@ -1811,7 +1915,17 @@ export class SimulationsService {
       !savingsPointsFactor ||
       savingsFactorCents === null ||
       savingsFactorCents < 0 ||
-      savingsFactorCents > 100
+      savingsFactorCents > 100 ||
+      importanceWeightCents === null ||
+      importanceWeightCents < 0 ||
+      (hasAnyWeightedInput &&
+        (!hasAllWeightedInputs ||
+          amountReferenceCents === null ||
+          amountReferenceCents <= 0 ||
+          minimumCostFactorCents === null ||
+          minimumCostFactorCents <= 0 ||
+          maximumCostFactorCents === null ||
+          maximumCostFactorCents < minimumCostFactorCents))
     ) {
       throw new ServiceUnavailableException('SIMULATION_PAYMENT_UNAVAILABLE');
     }
@@ -1822,10 +1936,22 @@ export class SimulationsService {
       amountDueCents - currentUsedCents,
     );
     const remainingCents = amountDueCents - currentUsedCents - savingsUsedCents;
-    const pointsMultiplierCents =
-      savingsUsedCents > 0 ? savingsFactorCents : 100;
+    const accountFactorCents = savingsUsedCents > 0 ? savingsFactorCents : 100;
+    const isWeightedScoring = hasAllWeightedInputs;
+    const costFactorCents = isWeightedScoring
+      ? Math.min(
+          maximumCostFactorCents!,
+          Math.max(
+            minimumCostFactorCents!,
+            Math.round((amountDueCents * 100) / amountReferenceCents!),
+          ),
+        )
+      : 100;
+    const effectiveWeightCents = isWeightedScoring
+      ? Math.round((importanceWeightCents * costFactorCents) / 100)
+      : 100;
     const pointsAwardedCents = Math.round(
-      (basePointsCents * pointsMultiplierCents) / 100,
+      (basePointsCents * effectiveWeightCents * accountFactorCents) / 10_000,
     );
 
     return {
@@ -1835,9 +1961,17 @@ export class SimulationsService {
       currentBalance: this.centsToMoney(currentBalanceCents - currentUsedCents),
       savingsBalance: this.centsToMoney(savingsBalanceCents - savingsUsedCents),
       remainingAmount: this.centsToMoney(remainingCents),
-      pointsAwarded: this.centsToMoney(pointsAwardedCents),
+      timing: session.currentDay < obligation.dueDay ? 'EARLY' : 'ON_TIME',
       basePoints,
       savingsPointsFactor,
+      amountReference: isWeightedScoring ? amountReference : null,
+      costFactor: this.centsToMoney(costFactorCents),
+      importance,
+      importanceWeight,
+      effectiveWeight: this.centsToMoney(effectiveWeightCents),
+      accountFactor: this.centsToMoney(accountFactorCents),
+      scoringVersion: isWeightedScoring ? 'WEIGHTED_V1' : 'LEGACY',
+      pointsAwarded: this.centsToMoney(pointsAwardedCents),
     };
   }
 
