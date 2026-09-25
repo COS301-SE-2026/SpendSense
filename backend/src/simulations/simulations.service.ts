@@ -353,7 +353,6 @@ type AdvanceableSession = {
   status: SimulationSessionStatus;
   timedMode: boolean;
   presentationHold: SimulationPresentationHold;
-  obligations: Array<{ id: string }>;
   events: Array<{ id: string }>;
 };
 
@@ -362,10 +361,6 @@ const advanceableSessionSelect = {
   status: true,
   timedMode: true,
   presentationHold: true,
-  obligations: {
-    where: { status: SimulationObligationStatus.PAYABLE },
-    select: { id: true },
-  },
   events: {
     where: { status: SimulationEventStatus.REVEALED },
     select: { id: true },
@@ -2242,7 +2237,6 @@ export class SimulationsService {
     }
     if (
       session.presentationHold !== SimulationPresentationHold.NONE ||
-      session.obligations.length > 0 ||
       session.events.length > 0
     ) {
       throw new ConflictException('SIMULATION_ACTION_PENDING');
@@ -2730,20 +2724,20 @@ export class SimulationsService {
     if (
       session.status === SimulationSessionStatus.ACTIVE &&
       session.presentationHold === SimulationPresentationHold.NONE &&
-      session.obligations.some(
-        (obligation) =>
-          obligation.status === SimulationObligationStatus.PAYABLE,
-      )
-    ) {
-      return ['PAY_OBLIGATION'];
-    }
-    if (
-      session.status === SimulationSessionStatus.ACTIVE &&
-      !session.timedMode &&
-      session.presentationHold === SimulationPresentationHold.NONE &&
       session.events.length === 0
     ) {
-      return ['ADVANCE_DAY'];
+      const actions: string[] = [];
+      if (
+        session.obligations.some(
+          (obligation) =>
+            obligation.status === SimulationObligationStatus.SCHEDULED ||
+            obligation.status === SimulationObligationStatus.PAYABLE,
+        )
+      ) {
+        actions.push('PAY_OBLIGATION');
+      }
+      if (!session.timedMode) actions.push('ADVANCE_DAY');
+      return actions;
     }
     return [];
   }

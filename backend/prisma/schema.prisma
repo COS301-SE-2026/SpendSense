@@ -258,6 +258,7 @@ enum SimulationEventStatus {
 enum SimulationScoreSourceType {
   OBLIGATION_PAYMENT
   OBLIGATION_MISSED
+  INSTALLMENT_MISSED
   EVENT_DECISION
   EVENT_EXPIRY
   FEE_OR_DEBT

@@ -3,6 +3,7 @@ import {
   Prisma,
   SimulationEventStatus,
   SimulationObligationStatus,
+  SimulationObligationScheduleStatus,
   SimulationPresentationHold,
   SimulationScoreSourceType,
   SimulationSessionStatus,
@@ -13,7 +14,6 @@ import { RewardService } from '../rewards/reward.service';
 
 const DAY_DURATION_MS = 15_000;
 const EVENT_DECISION_DURATION_MS = 30_000;
-const MISSED_OBLIGATION_POINTS = -20;
 const FINAL_BUDGET_BONUS_CEILING_CENTS = 3_000;
 export const SIMULATION_COMPLETION_XP = 15;
 
@@ -68,9 +68,11 @@ export class SimulationTransitionService {
     sessionId: string,
     manuallyAdvance: boolean,
   ): Promise<SimulationTransitionResult> {
+    await tx.$queryRaw`SELECT id FROM "SimulationSession" WHERE id = ${sessionId} FOR UPDATE`;
     const session = await tx.simulationSession.findUniqueOrThrow({
       where: { id: sessionId },
       include: {
+        obligationSchedules: true,
         obligations: { orderBy: [{ dueDay: 'asc' }, { createdAt: 'asc' }] },
         events: { orderBy: [{ triggerDay: 'asc' }, { createdAt: 'asc' }] },
       },
@@ -182,6 +184,19 @@ export class SimulationTransitionService {
       return this.result(session.currentDay, initialStop);
     }
 
+    // Sessions stopped at an old payable-bill boundary had no running timer.
+    if (
+      session.timedMode &&
+      !session.nextDayAt &&
+      session.presentationHold === SimulationPresentationHold.NONE
+    ) {
+      await tx.simulationSession.update({
+        where: { id: sessionId },
+        data: { nextDayAt: new Date(now.getTime() + DAY_DURATION_MS) },
+      });
+      return this.result(session.currentDay, 'NONE');
+    }
+
     if (manuallyAdvance) {
       if (session.timedMode) {
         return this.result(session.currentDay, 'NONE');
@@ -201,6 +216,7 @@ export class SimulationTransitionService {
       current = await tx.simulationSession.findUniqueOrThrow({
         where: { id: sessionId },
         include: {
+          obligationSchedules: true,
           obligations: { orderBy: [{ dueDay: 'asc' }, { createdAt: 'asc' }] },
           events: { orderBy: [{ triggerDay: 'asc' }, { createdAt: 'asc' }] },
         },
@@ -238,6 +254,7 @@ export class SimulationTransitionService {
     const refreshed = await tx.simulationSession.findUniqueOrThrow({
       where: { id: session.id },
       include: {
+        obligationSchedules: true,
         obligations: { orderBy: [{ dueDay: 'asc' }, { createdAt: 'asc' }] },
         events: { orderBy: [{ triggerDay: 'asc' }, { createdAt: 'asc' }] },
       },
@@ -257,8 +274,17 @@ export class SimulationTransitionService {
       obligations: Array<{
         id: string;
         name: string;
+        amountDue: unknown;
         dueDay: number;
         status: SimulationObligationStatus;
+        consequenceSnapshot: unknown;
+        introducedByEventId: string | null;
+      }>;
+      obligationSchedules: Array<{
+        id: string;
+        triggerDay: number;
+        status: SimulationObligationScheduleStatus;
+        obligationSnapshot: unknown;
       }>;
       events: Array<{
         id: string;
@@ -268,35 +294,59 @@ export class SimulationTransitionService {
     },
     now: Date,
   ): Promise<SimulationTransitionResult['stoppedFor']> {
-    const overdueObligations = session.obligations.filter(
-      (obligation) =>
-        obligation.dueDay < session.currentDay &&
-        (obligation.status === SimulationObligationStatus.SCHEDULED ||
-          obligation.status === SimulationObligationStatus.PAYABLE),
+    await this.scoreMissedObligations(
+      tx,
+      session.id,
+      session.currentDay,
+      session.obligations.filter(
+        (obligation) => obligation.dueDay < session.currentDay,
+      ),
     );
-    if (overdueObligations.length > 0) {
-      await tx.simulationObligation.updateMany({
+
+    for (const schedule of session.obligationSchedules.filter(
+      (candidate) =>
+        candidate.status === SimulationObligationScheduleStatus.SCHEDULED &&
+        candidate.triggerDay <= session.currentDay,
+    )) {
+      const snapshot = this.record(schedule.obligationSnapshot);
+      if (!snapshot) {
+        throw new Error('Simulation obligation schedule has no snapshot');
+      }
+      const claimed = await tx.simulationObligationSchedule.updateMany({
         where: {
-          id: { in: overdueObligations.map((obligation) => obligation.id) },
+          id: schedule.id,
+          status: SimulationObligationScheduleStatus.SCHEDULED,
         },
-        data: { status: SimulationObligationStatus.MISSED },
-      });
-      await tx.simulationScoreEntry.createMany({
-        data: overdueObligations.map((obligation) => ({
-          sessionId: session.id,
-          sourceType: SimulationScoreSourceType.OBLIGATION_MISSED,
-          sourceId: obligation.id,
-          simulatedDay: session.currentDay,
-          pointsDelta: MISSED_OBLIGATION_POINTS,
-          reason: `Missed obligation: ${obligation.name}`,
-          calculationData: { penalty: Math.abs(MISSED_OBLIGATION_POINTS) },
-        })),
-      });
-      await tx.simulationSession.update({
-        where: { id: session.id },
         data: {
-          score: {
-            increment: MISSED_OBLIGATION_POINTS * overdueObligations.length,
+          status: SimulationObligationScheduleStatus.MATERIALIZED,
+          materializedAt: now,
+        },
+      });
+      if (claimed.count === 0) continue;
+      await tx.simulationObligation.create({
+        data: {
+          sessionId: session.id,
+          introducedByScheduleId: schedule.id,
+          templateCode: this.requiredString(snapshot.templateCode),
+          name: this.requiredString(snapshot.name),
+          category: this.requiredString(snapshot.category),
+          amountDue: this.requiredMoney(snapshot.amountDue),
+          dueDay: this.requiredDay(snapshot.dueDay),
+          status:
+            this.requiredDay(snapshot.dueDay) <= session.currentDay
+              ? SimulationObligationStatus.PAYABLE
+              : SimulationObligationStatus.SCHEDULED,
+          consequenceSnapshot: {
+            basePoints: this.requiredMoney(snapshot.basePoints),
+            savingsPointsFactor: this.requiredMoney(
+              snapshot.savingsPointsFactor,
+            ),
+            importance: this.requiredString(snapshot.importance),
+            importanceWeight: this.requiredMoney(snapshot.importanceWeight),
+            baseMissPenalty: this.requiredMoney(snapshot.baseMissPenalty),
+            amountReference: this.requiredMoney(snapshot.amountReference),
+            minimumCostFactor: this.requiredMoney(snapshot.minimumCostFactor),
+            maximumCostFactor: this.requiredMoney(snapshot.maximumCostFactor),
           },
         },
       });
@@ -311,14 +361,12 @@ export class SimulationTransitionService {
       .map((obligation) => obligation.id);
     if (dueIds.length > 0) {
       await tx.simulationObligation.updateMany({
-        where: { id: { in: dueIds } },
+        where: {
+          id: { in: dueIds },
+          status: SimulationObligationStatus.SCHEDULED,
+        },
         data: { status: SimulationObligationStatus.PAYABLE },
       });
-      await tx.simulationSession.update({
-        where: { id: session.id },
-        data: { nextDayAt: null },
-      });
-      return 'PAYMENT';
     }
 
     const event = session.events.find(
@@ -347,6 +395,120 @@ export class SimulationTransitionService {
       return 'EVENT';
     }
     return 'NONE';
+  }
+
+  private async scoreMissedObligations(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+    day: number,
+    obligations: Array<{
+      id: string;
+      name: string;
+      amountDue: unknown;
+      status: SimulationObligationStatus;
+      consequenceSnapshot: unknown;
+    }>,
+    installment = false,
+  ): Promise<number> {
+    let totalCents = 0;
+    for (const obligation of obligations) {
+      if (
+        obligation.status !== SimulationObligationStatus.SCHEDULED &&
+        obligation.status !== SimulationObligationStatus.PAYABLE
+      )
+        continue;
+      const claimed = await tx.simulationObligation.updateMany({
+        where: {
+          id: obligation.id,
+          status: {
+            in: [
+              SimulationObligationStatus.SCHEDULED,
+              SimulationObligationStatus.PAYABLE,
+            ],
+          },
+        },
+        data: { status: SimulationObligationStatus.MISSED },
+      });
+      if (claimed.count === 0) continue;
+      const snapshot = this.record(obligation.consequenceSnapshot);
+      const basePenalty = this.cents(snapshot?.baseMissPenalty) ?? 2000;
+      const importanceWeight = this.cents(snapshot?.importanceWeight) ?? 100;
+      const reference = this.cents(snapshot?.amountReference);
+      const minimum = this.cents(snapshot?.minimumCostFactor);
+      const maximum = this.cents(snapshot?.maximumCostFactor);
+      const amount = this.requiredCents(
+        obligation.amountDue,
+        'obligation amount',
+      );
+      const weighted =
+        reference !== null &&
+        reference > 0 &&
+        minimum !== null &&
+        maximum !== null &&
+        minimum <= maximum;
+      const costFactor = weighted
+        ? Math.max(
+            minimum,
+            Math.min(maximum, Math.round((amount * 100) / reference)),
+          )
+        : 100;
+      const effectiveWeight = weighted
+        ? Math.round((importanceWeight * costFactor) / 100)
+        : 100;
+      const penalty = Math.round((basePenalty * effectiveWeight) / 100);
+      totalCents -= penalty;
+      await tx.simulationScoreEntry.create({
+        data: {
+          sessionId,
+          sourceType:
+            installment || snapshot?.kind === 'INSTALLMENT'
+              ? SimulationScoreSourceType.INSTALLMENT_MISSED
+              : SimulationScoreSourceType.OBLIGATION_MISSED,
+          sourceId: obligation.id,
+          simulatedDay: day,
+          pointsDelta: this.moneyFromCents(-penalty),
+          reason: `${installment || snapshot?.kind === 'INSTALLMENT' ? 'Missed installment' : 'Missed obligation'}: ${obligation.name}`,
+          calculationData: {
+            scoringVersion: weighted ? 'WEIGHTED_V1' : 'LEGACY',
+            amountDue: this.moneyFromCents(amount),
+            baseMissPenalty: this.moneyFromCents(basePenalty),
+            importance: snapshot?.importance ?? 'STANDARD',
+            importanceWeight: this.moneyFromCents(importanceWeight),
+            amountReference:
+              reference === null ? null : this.moneyFromCents(reference),
+            costFactor: this.moneyFromCents(costFactor),
+            effectiveWeight: this.moneyFromCents(effectiveWeight),
+            penalty: this.moneyFromCents(penalty),
+          },
+        },
+      });
+    }
+    if (totalCents !== 0) {
+      await tx.simulationSession.update({
+        where: { id: sessionId },
+        data: { score: { increment: this.moneyFromCents(totalCents) } },
+      });
+    }
+    return totalCents;
+  }
+
+  private requiredString(value: unknown): string {
+    const result = this.string(value);
+    if (!result)
+      throw new Error('Simulation obligation schedule has invalid content');
+    return result;
+  }
+
+  private requiredMoney(value: unknown): string {
+    const cents = this.requiredCents(value, 'scheduled obligation amount');
+    return this.moneyFromCents(cents);
+  }
+
+  private requiredDay(value: unknown): number {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+      throw new Error('Simulation obligation schedule has invalid due day');
+    }
+    return value;
   }
 
   private expirySnapshot(
@@ -386,7 +548,35 @@ export class SimulationTransitionService {
       return this.result(session.currentDay, 'SUMMARY');
     }
 
-    const summary = this.completionSummary(session, completedAt);
+    const postMonthInstallments = session.obligations.filter(
+      (obligation) =>
+        obligation.dueDay > session.daysInMonth &&
+        (obligation.status === SimulationObligationStatus.SCHEDULED ||
+          obligation.status === SimulationObligationStatus.PAYABLE) &&
+        this.record(obligation.consequenceSnapshot)?.kind === 'INSTALLMENT',
+    );
+    const missedPenalty = await this.scoreMissedObligations(
+      tx,
+      session.id,
+      session.currentDay,
+      postMonthInstallments,
+      true,
+    );
+    const missedIds = new Set(postMonthInstallments.map((item) => item.id));
+    const summary = this.completionSummary(
+      {
+        ...session,
+        score: this.moneyFromCents(
+          this.requiredSignedCents(session.score, 'score') + missedPenalty,
+        ),
+        obligations: session.obligations.map((item) =>
+          missedIds.has(item.id)
+            ? { ...item, status: SimulationObligationStatus.MISSED }
+            : item,
+        ),
+      },
+      completedAt,
+    );
     const update = await tx.simulationSession.updateMany({
       where: {
         id: sessionId,
