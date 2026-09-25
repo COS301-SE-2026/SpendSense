@@ -17,6 +17,7 @@ export function SubPageShell({
     stickyHeader?: boolean
     showBackButton?: boolean
     children: React.ReactNode
+    backTo?: string
 }>){
     
     const navigate =useNavigate()
