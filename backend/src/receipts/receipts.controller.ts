@@ -32,6 +32,7 @@ import { ReceiptsService } from './receipts.service';
 import { CreateReceiptScanDto } from './dto/create-receipt-scan.dto';
 import type { Response } from 'express';
 import { ConfirmReceiptScanDto } from './dto/confirm-receipt-scan.dto';
+import { CreateReceiptObligationDto } from './dto/create-receipt-obligation.dto';
 
 @ApiTags('receipts')
 @ApiBearerAuth()
@@ -41,7 +42,7 @@ export class ReceiptsController {
   constructor(
     private readonly receiptsService: ReceiptsService,
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   // POST /receipts/scans
   @Post('scans')
@@ -157,6 +158,49 @@ export class ReceiptsController {
 
     response.status(result.replayed ? HttpStatus.OK : HttpStatus.CREATED);
 
+    return result;
+  }
+
+  // POST /receipts/scans/:scanId/create-obligation
+  @Post('scans/:scanId/create-obligation')
+  @ApiOperation({
+    summary: 'Create an obligation from a reviewed receipt and record its payment',
+  })
+  @ApiParam({ name: 'scanId', description: 'Receipt scan UUID' })
+
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    description: 'UUID v4 used to safely retry the receipt confirmation',
+    required: true,
+  })
+  
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description:
+      'The obligation was created and the receipt payment was recorded successfully.',
+  })
+  
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid receipt, obligation details, or payment details.',
+  })
+  
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Receipt scan or category not found.',
+  })
+
+  async createObligationFromScan(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Param('scanId') scanId: string,
+    @Body() dto: CreateReceiptObligationDto,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Res({ passthrough: true }) response: Response,
+
+  ) {
+    const user = await this.usersService.findOrCreateUser(authUser);
+    const result = await this.receiptsService.createObligationFromReceipt(user.id, scanId, dto, idempotencyKey,);
+    response.status(result.replayed ? HttpStatus.OK : HttpStatus.CREATED);
     return result;
   }
 }
