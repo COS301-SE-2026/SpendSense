@@ -1,6 +1,3 @@
-// TODO: register ui
-// replace stub placeholders with real form when auth ui feature is built
-
 // this page will:
 // 1. collect users email & password (and confirm password)
 // 2. call signUp() from auth.service.ts
@@ -13,10 +10,11 @@ import {zodResolver} from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {signUp} from "../features/auth/auth.service";
 import { Link, useNavigate} from "react-router-dom";
-import logo from "../components/SpendSenseLogoLight.svg";
 import { LongButton } from "../components/common/LongButton";
 import { CustomInput } from "../components/common/CustomInput";
+import { AuthLayout } from "../components/AuthLayout";
 import { checkDisplayName, getMe } from "../features/users/usersApi";
+import { Eye, EyeOff } from "lucide-react";
 
 //validation rules
 const registrationSchema=z.object({
@@ -57,6 +55,8 @@ export default function RegisterPage(){
 	const navigate=useNavigate();
 	const [error,setError]=useState<string|null>(null);
 	const [isLoading,setIsLoading]=useState(false);
+	const [showPassword,setShowPassword]=useState(false);
+	const [showConfirmPassword,setShowConfirmPassword]=useState(false);
 	const {register,handleSubmit,formState:{errors}}=useForm<registrationFormData>({
 		resolver:zodResolver(registrationSchema),
 	});
@@ -88,63 +88,90 @@ export default function RegisterPage(){
 		}
 	}
 	return(
-		<div className="min-h-screen flex flex-col items-center justify-center bg-[#F4FBF7] px-4">
-			<div className="w-full max-w-sm space-y-5">
-				{/* header */}
-				<div className="text-center space-y-1">  
-					<img src={logo} alt="SpendSense" className="h-24 mx-auto"/>
-					<h1 className="text-[#091828] text-3xl font-bold">Create Account</h1>
-					<p className="text-[#44474C]">Master your money, one quest at a time.</p>
-				</div> 
-				<form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+		<AuthLayout>
+			<div className="rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[5px_6px_0_#091828] sm:p-8 dark:border-[#2d3449] dark:bg-[#131b2e] dark:shadow-[5px_6px_0_#060e20]">
+				<div className="mb-5">
+					<span className="inline-block rounded-full bg-[#FFD8E6] px-3 py-1.5 text-[11px] font-extrabold text-[#AC2A5D] dark:bg-[#ff6b9d]/20 dark:text-[#ff6b9d]">LET'S GET STARTED</span>
+					<h2 className="mt-3 text-3xl font-black tracking-[-1px] text-[#091828] dark:text-white">Create Account</h2>
+					<p className="mt-1 text-sm text-[#6B6375] dark:text-[#a0aec0]"></p>
+				</div>
+				<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 						{/* inputs */}
 					{/* display name */}
-					<div className="space-y-1">
-						<label htmlFor="displayName" className="text-xs font-semibold text-[#091828]">Display name</label>
+					<div className="space-y-2">
+						<label htmlFor="displayName" className="text-sm font-bold text-[#091828] dark:text-white">Display name</label>
 						<CustomInput
 							id="displayName"
 							variant="regLog"
 							{...register("displayName")}
 							placeholder="Morgie Walrus"
-							className="w-full"
+							className="w-full text-[#091828] placeholder:text-[#A0A9B1] dark:text-white"
 						/>
 						{errors.displayName && (<p className="text-xs text-red-600">{errors.displayName.message}</p>)}
 					</div>
-					<div className="space-y-1">
-						<label htmlFor="email" className="text-xs font-semibold text-[#091828]">Email Address</label>
+					<div className="space-y-2">
+						<label htmlFor="email" className="text-sm font-bold text-[#091828] dark:text-white">Email address</label>
 						<CustomInput
 							id="email"
 							variant="regLog"
 							{...register("email")}
 							placeholder="morgie@tuks.co.za"
-							className="w-full"
+							className="w-full text-[#091828] placeholder:text-[#A0A9B1] dark:text-white"
 						/>
 						{errors.email && (<p className="text-xs text-red-600">{errors.email.message}</p>)}
 					</div>
-					<div className="space-y-3">
-						<label htmlFor="password" className="text-xs font-semibold text-[#091828]">Password</label>
-						<CustomInput
-						id="password"
-							{...register("password")}
-							variant="regLog"
-							type="password"
-							placeholder="SuperSecretPassword"
-							className="w-full"
-						/>
-						<p className="text-xs text-[#667085]">Use at least 8 characters with an uppercase letter, lowercase letter, number, and special character.</p>
+					<div className="space-y-2">
+						<label htmlFor="password" className="text-sm font-bold text-[#091828] dark:text-white">Password</label>
+						<div className="relative">
+							<CustomInput
+								id="password"
+								{...register("password")}
+								variant="regLog"
+								type={showPassword ? "text" : "password"}
+								placeholder="SuperSecretPassword"
+								className="w-full pr-14 text-[#091828] placeholder:text-[#A0A9B1] dark:text-white"
+							/>
+							<button
+								type="button"
+								onClick={() => setShowPassword((visible) => !visible)}
+								aria-label={showPassword ? "Hide password" : "Show password"}
+								aria-pressed={showPassword}
+								className="absolute inset-y-0 right-4 flex items-center text-[#667085] hover:text-[#091828] dark:text-[#a0aec0] dark:hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AC2A5D]"
+							>
+								{showPassword ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+							</button>
+						</div>
+						<ul aria-label="Password requirements" className="grid list-disc grid-cols-2 gap-x-3 gap-y-1 pl-4 text-xs leading-4 text-[#6B6375] dark:text-[#a0aec0]">
+							<li>8+ characters</li>
+							<li>Uppercase letter</li>
+							<li>Lowercase letter</li>
+							<li>Number</li>
+							<li>Special character</li>
+						</ul>
 						{errors.password && (<p className="text-xs text-red-600">{errors.password.message}</p>)}
 					</div>
-					{/* confirm pass->confimPassowrd */}
-					<div className="space-y-3">
-						<label htmlFor="confirmPassword" className="text-xs font-semibold text-[#091828]">Confirm password</label>
-						<CustomInput
-							id="confirmPassword"
-							{...register("confirmPassword")}
-							variant="regLog"
-							type="password"
-							placeholder="SuperSecretPassword"
-							className="w-full"
-						/>
+					{/* Confirm password */}
+					<div className="space-y-2">
+						<label htmlFor="confirmPassword" className="text-sm font-bold text-[#091828] dark:text-white">Confirm password</label>
+						<div className="relative">
+							<CustomInput
+								id="confirmPassword"
+								{...register("confirmPassword")}
+								variant="regLog"
+								type={showConfirmPassword ? "text" : "password"}
+								placeholder="SuperSecretPassword"
+								className="w-full pr-14 text-[#091828] placeholder:text-[#A0A9B1] dark:text-white"
+							/>
+							<button
+								type="button"
+								onClick={() => setShowConfirmPassword((visible) => !visible)}
+								aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+								aria-pressed={showConfirmPassword}
+								className="absolute inset-y-0 right-4 flex items-center text-[#667085] hover:text-[#091828] dark:text-[#a0aec0] dark:hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AC2A5D]"
+							>
+								{showConfirmPassword ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+							</button>
+						</div>
 						{errors.confirmPassword && (<p className="text-xs text-red-600">{errors.confirmPassword.message}</p>)}
 					</div>
 					{error && <p className="text-xs text-red-600">{error}</p>}
@@ -154,14 +181,14 @@ export default function RegisterPage(){
 							{isLoading ? "Loading...":"JOIN THE QUEST"}
 						</LongButton>
 					</div>
-					<div className="text-center text-[#44474C]">
+					<p className="text-center text-sm text-[#6B6375] dark:text-[#a0aec0]">
 						Already have an account?{" "}
-						<Link to="/login" className="text-[#AC2A5D] text-princple hover:underline">
+						<Link to="/login" className="font-extrabold text-[#AC2A5D] hover:underline dark:text-[#ff6b9d]">
 							Log in
 						</Link>
-					</div>
+					</p>
 				</form>
-			</div>	
-		</div>
+			</div>
+		</AuthLayout>
 	)
 }

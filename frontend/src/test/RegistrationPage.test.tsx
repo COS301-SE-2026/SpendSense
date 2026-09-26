@@ -51,6 +51,21 @@ describe("RegisterPage Component",()=>{
         expect(screen.getByRole("button",{name:/join the quest/i})).toBeInTheDocument();
    });
 
+    it("should toggle each registration password field independently", async () => {
+        renderComponent();
+        const user = userEvent.setup();
+        const password = screen.getByLabelText(/^password$/i);
+        const confirmPassword = screen.getByLabelText(/confirm password/i);
+
+        expect(password).toHaveAttribute("type", "password");
+        expect(confirmPassword).toHaveAttribute("type", "password");
+        await user.click(screen.getAllByRole("button", { name: "Show password" })[0]);
+        expect(password).toHaveAttribute("type", "text");
+        expect(confirmPassword).toHaveAttribute("type", "password");
+        await user.click(screen.getByRole("button", { name: "Show password" }));
+        expect(confirmPassword).toHaveAttribute("type", "text");
+    });
+
     //validation rules
     it("should display validation errors when fields fail Zod schema requirements",async ()=>{
         renderComponent();
