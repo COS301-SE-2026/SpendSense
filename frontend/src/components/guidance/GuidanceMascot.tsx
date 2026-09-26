@@ -1,11 +1,35 @@
 import {MascotAvatar} from '@/components/mascot/MascotAvatar'
 import {useGamificationProfile} from '@/hooks/useGamificationProfile'
 import {isMascotMood} from '@/lib/mascot'
+import {cn} from '@/lib/utils'
 
-export function GuidanceMascot({className='size-12'}:Readonly<{className?:string}>){
-    const {profile}=useGamificationProfile()
-    const mood=isMascotMood(profile?.mascotMood)? profile.mascotMood : 'NEUTRAL'
-    const equipped=(profile?.equippedCosmetics??[]).map((item)=>({slot:item.slot,code:item.code}))
+export function GuidanceMascot({
+    className = 'size-12',
+}: Readonly<{className?: string}>) {
+    const {profile, loading} = useGamificationProfile()
 
-    return <MascotAvatar mood={mood} equipped={equipped} size="sm" className={className}/>
+    if (loading || !profile) {
+        return (
+            <div
+                aria-hidden="true"
+                className={cn('shrink-0', className)}
+            />
+        )
+    }
+
+    const mood = isMascotMood(profile.mascotMood) ? profile.mascotMood : 'NEUTRAL'
+
+    const equipped = (profile.equippedCosmetics ?? []).map((item) => ({
+        slot: item.slot,
+        code: item.code,
+    }))
+
+    return (
+        <MascotAvatar
+            mood={mood}
+            equipped={equipped}
+            size="sm"
+            className={className}
+        />
+    )
 }
