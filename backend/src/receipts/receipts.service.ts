@@ -20,6 +20,9 @@ import {
 import { isUUID } from 'class-validator';
 import { ConfirmReceiptScanDto } from './dto/confirm-receipt-scan.dto';
 import { PaymentContributionsService } from '../payments/payment-contributions.service';
+import { CreateReceiptObligationDto } from './dto/create-receipt-obligation.dto';
+import { CreateObligationDto } from '../obligations/dto/create-obligation.dto';
+import { ObligationsService } from '../obligations/obligations.service';
 
 type PreselectedOccurrenceProjection = {
   id: string;
@@ -55,6 +58,7 @@ export class ReceiptsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly paymentContributionsService: PaymentContributionsService,
+    private readonly obligationsService: ObligationsService,
   ) {}
 
   async validateReceiptUpload(
@@ -491,6 +495,116 @@ export class ReceiptsService {
       idempotencyKey,
       notes,
       receiptScanId: scanId,
+    });
+  }
+
+  async createObligationFromReceipt(
+    userId: string,
+    scanId: string,
+    dto: CreateReceiptObligationDto,
+    idempotencyKey?: string,
+  ) {
+    if (!isUUID(scanId)) {
+      throw new BadRequestException('Invalid receipt scan ID');
+    }
+
+    if (!idempotencyKey || !isUUID(idempotencyKey)) {
+      throw new BadRequestException(
+        'A valid UUID Idempotency-Key header is required',
+      );
+    }
+
+    if (dto.acknowledged !== true) {
+      throw new BadRequestException(
+        'Receipt payment must be acknowledged before confirmation',
+      );
+    }
+
+    const replay =
+      await this.paymentContributionsService.getReceiptCreationReplay(
+        userId,
+        idempotencyKey,
+        scanId,
+      );
+
+    if (replay) {
+      return replay;
+    }
+
+    const scan = await this.prisma.receiptScan.findFirst({
+      where: {
+        id: scanId,
+        userId,
+      },
+    });
+
+    if (!scan) {
+      throw new NotFoundException('Receipt scan not found');
+    }
+    if (scan.status !== ReceiptScanStatus.READY_FOR_REVIEW) {
+      throw new BadRequestException(
+        'Receipt scan is no longer available for confirmation',
+      );
+    }
+
+    const scannedDate = new Date();
+
+    // belwo cinvertin the JS date into calendar form
+    const scannedDateString = [
+      scannedDate.getFullYear(), // get the year (2026 in this case)
+      String(scannedDate.getMonth() + 1).padStart(2, '0'), // ge tthe month - js indexes monmths from 0 so we add 1 and put a '0' before it
+      String(scannedDate.getDate()).padStart(2, '0'), // same as getMonth - without the zero indesing issue
+    ].join('-');
+
+    const obligationDto: CreateObligationDto = {
+      name: dto.name,
+      categoryId: dto.categoryId,
+      type: dto.type,
+      priority: dto.priority,
+      amount: dto.amount,
+      currency: dto.currency,
+      startDate: scannedDateString,
+
+      schedule: {
+        frequency: dto.frequency,
+        interval: 1,
+      },
+
+      reminders: {
+        enabled: false,
+      },
+    };
+
+    return this.prisma.$transaction(async (tx) => {
+      const obligation = await this.obligationsService.createWithTransaction(
+        tx,
+        userId,
+        obligationDto,
+        0,
+      );
+      const occurrence = obligation.generatedOccurrences[0];
+
+      if (!occurrence) {
+        throw new BadRequestException(
+          'No payment occurrence was generated for the obligation',
+        );
+      }
+
+      const contribution =
+        await this.paymentContributionsService.createContributionWithTransaction(
+          tx,
+          {
+            userId,
+            occurrenceId: occurrence.id,
+            amount: new Prisma.Decimal(dto.amount),
+            currency: dto.currency,
+            paidDate: scannedDate,
+            source: PaymentContributionSource.RECEIPT_SCAN,
+            idempotencyKey,
+            receiptScanId: scanId,
+          },
+        );
+      return contribution;
     });
   }
 }
