@@ -187,7 +187,9 @@ type SafeEventOption = {
   label: string;
   immediateCost: string;
   feeOrDebt: string;
+  feeChargedNow: string;
   cashRequiredNow: string;
+  inMonthObligation: { name: string; amountDue: string; dueDay: number } | null;
   affordable: boolean;
   shortfall: string;
   installments: Array<{ name: string; amountDue: string; dueDay: number }>;
@@ -386,6 +388,11 @@ type EventResolutionResponse = SimulationDetailResponse & {
     feeOrDebt: string;
     feeChargedNow: string;
     cashRequiredNow: string;
+    inMonthObligation: {
+      name: string;
+      amountDue: string;
+      dueDay: number;
+    } | null;
     currentUsed: string;
     savingsUsed: string;
     uncoveredAmount: string;
@@ -1012,6 +1019,7 @@ export class SimulationsService {
         const option = this.readEventResolutionOption(
           event.eventSnapshot,
           dto.optionId,
+          event.triggerDay,
         );
         const effect = this.calculateEventEffect(session, option);
         const now = new Date();
@@ -1026,6 +1034,18 @@ export class SimulationsService {
               optionId: option.id,
               immediateCost: option.immediateCost,
               feeOrDebt: option.feeOrDebt,
+              feeChargedNow: option.feeOrDebt,
+              cashRequiredNow: this.centsToMoney(
+                (this.moneyToCents(option.immediateCost) ?? 0) +
+                  (this.moneyToCents(option.feeOrDebt) ?? 0),
+              ),
+              inMonthObligation: option.introducedObligation
+                ? {
+                    name: option.introducedObligation.name,
+                    amountDue: option.introducedObligation.amountDue,
+                    dueDay: option.introducedObligation.dueDay,
+                  }
+                : null,
               currentUsed: effect.currentUsed,
               savingsUsed: effect.savingsUsed,
               uncoveredAmount: effect.uncoveredAmount,
@@ -1155,6 +1175,13 @@ export class SimulationsService {
               (this.moneyToCents(option.immediateCost) ?? 0) +
                 (this.moneyToCents(option.feeOrDebt) ?? 0),
             ),
+            inMonthObligation: option.introducedObligation
+              ? {
+                  name: option.introducedObligation.name,
+                  amountDue: option.introducedObligation.amountDue,
+                  dueDay: option.introducedObligation.dueDay,
+                }
+              : null,
             currentUsed: effect.currentUsed,
             savingsUsed: effect.savingsUsed,
             uncoveredAmount: effect.uncoveredAmount,
@@ -1824,6 +1851,7 @@ export class SimulationsService {
     event:
       | {
           id: string;
+          triggerDay: number;
           status: SimulationEventStatus;
           eventSnapshot: unknown;
           decisionExpiresAt: Date | null;
@@ -1831,6 +1859,7 @@ export class SimulationsService {
       | undefined,
   ): asserts event is {
     id: string;
+    triggerDay: number;
     status: SimulationEventStatus;
     eventSnapshot: unknown;
     decisionExpiresAt: Date | null;
@@ -1852,6 +1881,7 @@ export class SimulationsService {
   private readEventResolutionOption(
     eventSnapshot: unknown,
     optionId: string,
+    triggerDay: number,
   ): EventResolutionOption {
     const snapshot = this.record(eventSnapshot);
     if (!snapshot || !Array.isArray(snapshot.options)) {
@@ -1948,7 +1978,12 @@ export class SimulationsService {
     const maximumCostFactor = this.normalizedMoney(
       introduced?.maximumCostFactor,
     );
-    const hasIntroducedObligation = introduced !== null;
+    const hasIntroducedObligation =
+      introduced !== null &&
+      typeof dueDay === 'number' &&
+      Number.isInteger(dueDay) &&
+      dueDay > triggerDay &&
+      dueDay <= 30;
     if (
       hasIntroducedObligation &&
       (!templateCode ||
@@ -1979,7 +2014,7 @@ export class SimulationsService {
             name: name!,
             category: category!,
             amountDue: amountDue!,
-            dueDay: dueDay as number,
+            dueDay,
             basePoints: basePoints!,
             savingsPointsFactor: savingsPointsFactor!,
             importance,
@@ -2304,19 +2339,21 @@ export class SimulationsService {
         }>;
       }
     ).obligationSchedules?.[0];
-    const newObligation = pendingSchedule?.materializedObligation
-      ? {
-          id: pendingSchedule.materializedObligation.id,
-          name: pendingSchedule.materializedObligation.name,
-          amountDue: this.money(
-            pendingSchedule.materializedObligation.amountDue,
-          ),
-          dueDay: pendingSchedule.materializedObligation.dueDay,
-          importance: this.readObligationScoring(
-            pendingSchedule.materializedObligation.consequenceSnapshot,
-          ).importance,
-        }
-      : null;
+    const newObligation =
+      pendingSchedule?.materializedObligation &&
+      pendingSchedule.materializedObligation.dueDay <= session.daysInMonth
+        ? {
+            id: pendingSchedule.materializedObligation.id,
+            name: pendingSchedule.materializedObligation.name,
+            amountDue: this.money(
+              pendingSchedule.materializedObligation.amountDue,
+            ),
+            dueDay: pendingSchedule.materializedObligation.dueDay,
+            importance: this.readObligationScoring(
+              pendingSchedule.materializedObligation.consequenceSnapshot,
+            ).importance,
+          }
+        : null;
 
     return {
       session: {
@@ -3043,6 +3080,11 @@ export class SimulationsService {
       label,
       immediateCost,
       feeOrDebt,
+      feeChargedNow: feeOrDebt,
+      inMonthObligation: this.toSafeInMonthObligation(
+        record?.introducedObligation,
+        triggerDay,
+      ),
       installments,
       cashRequiredNow: this.centsToMoney(cashRequiredCents),
       affordable: availableCents >= cashRequiredCents,
@@ -3050,6 +3092,27 @@ export class SimulationsService {
         Math.max(0, cashRequiredCents - availableCents),
       ),
     };
+  }
+
+  private toSafeInMonthObligation(
+    value: unknown,
+    triggerDay: number,
+  ): SafeEventOption['inMonthObligation'] {
+    const record = this.record(value);
+    const name = this.string(record?.name);
+    const amountDue = this.normalizedMoney(record?.amountDue);
+    const dueDay = record?.dueDay;
+    if (
+      !name ||
+      !amountDue ||
+      typeof dueDay !== 'number' ||
+      !Number.isInteger(dueDay) ||
+      dueDay <= triggerDay ||
+      dueDay > 30
+    ) {
+      return null;
+    }
+    return { name, amountDue, dueDay };
   }
 
   private allowedActions(session: {

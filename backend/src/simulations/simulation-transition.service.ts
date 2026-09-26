@@ -106,7 +106,10 @@ export class SimulationTransitionService {
         revealed.decisionExpiresAt &&
         revealed.decisionExpiresAt <= now
       ) {
-        const expiryOutcome = this.expiryOutcome(revealed.eventSnapshot);
+        const expiryOutcome = this.expiryOutcome(
+          revealed.eventSnapshot,
+          session.currentDay,
+        );
         const debit = this.debitBalances(
           session.currentBalance,
           session.savingsBalance,
@@ -279,6 +282,7 @@ export class SimulationTransitionService {
     session: {
       id: string;
       currentDay: number;
+      daysInMonth: number;
       timedMode: boolean;
       currentBalance: unknown;
       savingsBalance: unknown;
@@ -318,7 +322,9 @@ export class SimulationTransitionService {
     for (const schedule of session.obligationSchedules.filter(
       (candidate) =>
         candidate.status === SimulationObligationScheduleStatus.SCHEDULED &&
-        candidate.triggerDay <= session.currentDay,
+        candidate.triggerDay <= session.currentDay &&
+        (this.record(candidate.obligationSnapshot)?.dueDay ?? 31) <=
+          session.daysInMonth,
     )) {
       const snapshot = this.record(schedule.obligationSnapshot);
       if (!snapshot) {
@@ -899,7 +905,10 @@ export class SimulationTransitionService {
     };
   }
 
-  private expiryOutcome(eventSnapshot: unknown): {
+  private expiryOutcome(
+    eventSnapshot: unknown,
+    triggerDay: number,
+  ): {
     id: string;
     immediateCost: string;
     feeOrDebt: string;
@@ -958,6 +967,8 @@ export class SimulationTransitionService {
       amountDue &&
       typeof dueDay === 'number' &&
       Number.isInteger(dueDay) &&
+      dueDay > triggerDay &&
+      dueDay <= 30 &&
       basePoints &&
       savingsPointsFactor
         ? {

@@ -168,6 +168,97 @@ describe('buildSimulationScenario', () => {
     expect(introducedObligation?.templateCode).toBeTruthy();
   });
 
+  it('excludes out-of-month catalogue obligations and installment snapshots', () => {
+    const obligations = activeObligations.map((item) =>
+      item.code === 'SIM_OBL_FRIEND_IOU' ? { ...item, dueDay: 34 } : item,
+    );
+    const installmentSchedule = [
+      {
+        templateCode: 'IN_MONTH',
+        name: 'In-month bill',
+        category: 'Debt',
+        amountDue: '100.00',
+        dueDay: 29,
+        basePoints: '10.00',
+        savingsPointsFactor: '0.80',
+        importance: 'STANDARD',
+        importanceWeight: '1.00',
+        baseMissPenalty: '20.00',
+      },
+      {
+        templateCode: 'OUT_OF_MONTH',
+        name: 'Later bill',
+        category: 'Debt',
+        amountDue: '100.00',
+        dueDay: 34,
+        basePoints: '10.00',
+        savingsPointsFactor: '0.80',
+        importance: 'STANDARD',
+        importanceWeight: '1.00',
+        baseMissPenalty: '20.00',
+      },
+    ];
+    const events = activeEvents.map((item) => {
+      const snapshot = item.eventSnapshot as {
+        options: Array<Record<string, unknown>>;
+        [key: string]: unknown;
+      };
+      return {
+        ...item,
+        eventSnapshot: {
+          ...snapshot,
+          options: snapshot.options.map((option, index) =>
+            index === 0 ? { ...option, installmentSchedule } : option,
+          ),
+        },
+      };
+    });
+    const scenario = buildSimulationScenario({
+      obligations,
+      events,
+      random: seededRandom(24),
+    });
+
+    expect(scenario.obligations.every((item) => item.dueDay <= 30)).toBe(true);
+    expect(
+      scenario.obligationSchedules.every(
+        (item) => item.obligationSnapshot.dueDay <= 30,
+      ),
+    ).toBe(true);
+    for (const option of scenario.events.flatMap(
+      (item) => item.eventSnapshot.options,
+    )) {
+      if (option.installmentSchedule) {
+        expect(
+          option.installmentSchedule.every((item) => item.dueDay <= 30),
+        ).toBe(true);
+      }
+      if (option.installmentSchedule?.length) {
+        expect(option.installmentSchedule).toEqual([
+          expect.objectContaining({ templateCode: 'IN_MONTH' }),
+        ]);
+      }
+    }
+  });
+
+  it('rejects an event option that introduces an out-of-month obligation', () => {
+    const obligations = activeObligations.map((item) =>
+      item.code === 'SIM_OBL_CAR_REPAIR_REPAYMENT'
+        ? { ...item, dueDay: 34 }
+        : item,
+    );
+    const events = activeEvents.map((item) => ({
+      ...item,
+      isActive: ['SIM_EVT_URGENT_CAR_REPAIR', 'SIM_EVT_MEDICAL_COST'].includes(
+        item.code,
+      ),
+    }));
+
+    expect(() =>
+      buildSimulationScenario({ obligations, events, random: seededRandom(7) }),
+    ).toThrow('unavailable obligation template: SIM_OBL_CAR_REPAIR_REPAYMENT');
+  });
+
   it('preserves scoring metadata on event installments', () => {
     const installmentSchedule = [
       {

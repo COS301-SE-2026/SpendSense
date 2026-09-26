@@ -196,6 +196,42 @@ describe('SimulationTransitionService', () => {
     expect(transaction.simulationScoreEntry.create).toHaveBeenCalledTimes(1);
   });
 
+  it('does not materialize a legacy scheduled bill due after the month', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+      activeSession({
+        currentDay: 10,
+        obligationSchedules: [
+          {
+            id: 'schedule-1',
+            triggerDay: 8,
+            status: 'SCHEDULED',
+            obligationSnapshot: {
+              templateCode: 'LATER_BILL',
+              name: 'Later bill',
+              category: 'Debt',
+              amountDue: '300.00',
+              dueDay: 34,
+              basePoints: '10.00',
+              savingsPointsFactor: '0.80',
+              importance: 'STANDARD',
+              importanceWeight: '1.00',
+              baseMissPenalty: '20.00',
+            },
+          },
+        ],
+      }),
+    );
+
+    await expect(
+      service.resolveDueTransitions('simulation-1'),
+    ).resolves.toEqual({ currentDay: 10, stoppedFor: 'NONE' });
+    expect(
+      transaction.simulationObligationSchedule.updateMany,
+    ).not.toHaveBeenCalled();
+    expect(transaction.simulationObligation.create).not.toHaveBeenCalled();
+    expect(transaction.simulationSession.update).not.toHaveBeenCalled();
+  });
+
   it('scores a missed obligation once from its saved amount and importance', async () => {
     transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
       activeSession({

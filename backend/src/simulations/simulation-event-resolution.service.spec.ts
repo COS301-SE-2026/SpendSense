@@ -13,6 +13,7 @@ const createdAt = new Date('2026-09-17T10:00:00.000Z');
 const revealedEvent = (overrides: Record<string, unknown> = {}) => ({
   id: eventId,
   status: 'REVEALED',
+  triggerDay: 4,
   decisionExpiresAt: null,
   eventSnapshot: {
     title: 'Urgent car repair',
@@ -182,6 +183,11 @@ describe('SimulationsService resolveEvent', () => {
       feeOrDebt: '80.00',
       feeChargedNow: '80.00',
       cashRequiredNow: '230.00',
+      inMonthObligation: {
+        name: 'Car repair repayment',
+        amountDue: '500.00',
+        dueDay: 25,
+      },
       currentUsed: '100.00',
       savingsUsed: '130.00',
       uncoveredAmount: '0.00',
@@ -237,6 +243,33 @@ describe('SimulationsService resolveEvent', () => {
     expect(transaction.simulationObligation.create).not.toHaveBeenCalled();
     expect(transaction.simulationScoreEntry.create).not.toHaveBeenCalled();
     expect(transaction.simulationSession.update).not.toHaveBeenCalled();
+  });
+
+  it('ignores a legacy event-introduced bill due after the 30-day month', async () => {
+    const session = resolutionSession();
+    session.events[0].eventSnapshot.options[0].introducedObligation.dueDay = 34;
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow
+      .mockResolvedValueOnce(session)
+      .mockResolvedValueOnce(refreshedSession());
+
+    const result = await service.resolveEvent(
+      'user-1',
+      sessionId,
+      eventId,
+      { optionId: 'payment_plan' },
+      idempotencyKey,
+    );
+
+    expect(result.event.inMonthObligation).toBeNull();
+    expect(result.event.introducedObligationId).toBeNull();
+    expect(transaction.simulationObligation.create).not.toHaveBeenCalled();
+    expect(
+      JSON.stringify(transaction.simulationEvent.update.mock.calls[0]?.[0]),
+    ).toContain('"feeChargedNow":"80.00"');
+    expect(
+      JSON.stringify(transaction.simulationEvent.update.mock.calls[0]?.[0]),
+    ).toContain('"cashRequiredNow":"230.00"');
   });
 
   it('creates only future in-month installments and records their installment scoring marker', async () => {

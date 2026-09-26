@@ -120,7 +120,13 @@ export function buildSimulationScenario(
   input: SimulationScenarioBuilderInput,
 ): SimulationScenario {
   const random = input.random ?? Math.random;
-  const activeObligations = input.obligations.filter((item) => item.isActive);
+  const activeObligations = input.obligations.filter(
+    (item) =>
+      item.isActive &&
+      Number.isInteger(item.dueDay) &&
+      item.dueDay >= 1 &&
+      item.dueDay <= 30,
+  );
   const activeEvents = input.events.filter((item) => item.isActive);
 
   if (activeObligations.length < INITIAL_OBLIGATION_COUNT) {
@@ -201,7 +207,11 @@ export function buildSimulationScenario(
     events: selectedEvents.map((item) => ({
       templateCode: item.code,
       triggerDay: item.triggerDay,
-      eventSnapshot: expandEventSnapshot(item.eventSnapshot, templatesByCode),
+      eventSnapshot: expandEventSnapshot(
+        item.eventSnapshot,
+        templatesByCode,
+        item.triggerDay,
+      ),
     })),
   };
 }
@@ -359,33 +369,54 @@ function selectWeightedDistinct<T extends { selectionWeight: number }>(
 function expandEventSnapshot(
   snapshot: unknown,
   templatesByCode: Map<string, CatalogueObligation>,
+  triggerDay: number,
 ): EventSnapshot {
   const parsed = parseEventSnapshot(snapshot);
   return {
     ...parsed,
     options: parsed.options.map((option) =>
-      expandEventOption(option, templatesByCode),
+      expandEventOption(option, templatesByCode, triggerDay),
     ),
-    expiryOutcome: expandEventOption(parsed.expiryOutcome, templatesByCode),
+    expiryOutcome: expandEventOption(
+      parsed.expiryOutcome,
+      templatesByCode,
+      triggerDay,
+    ),
   };
 }
 
 function expandEventOption(
   option: EventOption,
   templatesByCode: Map<string, CatalogueObligation>,
+  triggerDay: number,
 ): EventOption {
+  const inMonthInstallments = option.installmentSchedule?.filter(
+    (installment) =>
+      installment.dueDay > triggerDay && installment.dueDay <= 30,
+  );
+  const normalizedOption = {
+    ...option,
+    ...(option.installmentSchedule && {
+      installmentSchedule: inMonthInstallments,
+    }),
+  };
   if (!option.introducedObligationTemplateCode) {
-    return { ...option };
+    return normalizedOption;
   }
 
   const template = templatesByCode.get(option.introducedObligationTemplateCode);
-  if (!template || !template.eligibleForEventIntroduction) {
+  if (
+    !template ||
+    !template.eligibleForEventIntroduction ||
+    template.dueDay <= triggerDay ||
+    template.dueDay > 30
+  ) {
     throw new Error(
       `Event option references an unavailable obligation template: ${option.introducedObligationTemplateCode}.`,
     );
   }
   return {
-    ...option,
+    ...normalizedOption,
     introducedObligation: toObligationSnapshot(template),
   };
 }
