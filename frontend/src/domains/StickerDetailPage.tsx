@@ -143,8 +143,8 @@ export default function StickerDetailPage(){
     if(!badge){
         return(
             <div className="min-h-screen bg-[#F5F0E8] flex flex-col items-center justify-center gap-4 px-6 text-center dark:bg-[#0b1326]">
-                <p className="text-[#091828] font-bold text-lg dark:text-[#ffffff]">Sticker not found</p>
-                <p className="text-sm text-[#6b6375] dark:text-[#a0aec0]">Navigate from the sticker album to view badge details.</p>
+                <p className="text-[#091828] font-bold text-lg dark:text-[#ffffff]">Badge not found</p>
+                <p className="text-sm text-[#6b6375] dark:text-[#a0aec0]">Navigate from the Badge album to view badge details.</p>
                 <button
                     type="button"
                     onClick={()=>navigate("/stickers")}
