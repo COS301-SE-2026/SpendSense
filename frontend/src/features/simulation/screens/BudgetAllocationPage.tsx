@@ -11,6 +11,21 @@ import { formatSimulationMoney } from "../presentation";
 import { pathForSimulationState } from "../routing";
 import type { SetupRequest, SimulationDetail } from "../types";
 
+const budgetInfo = (
+  <ul className="list-disc space-y-2 pl-5">
+    <li>
+      Your starting budget is fictional and only applies to this simulation.
+    </li>
+    <li>Current is available for paying obligations during the month.</li>
+    <li>Savings can support payments and earns more points.</li>
+    <li>
+      Choose a suggested split or enter a custom Current amount in the allowed
+      range.
+    </li>
+    <li>Choosing a split does not move real money.</li>
+  </ul>
+);
+
 function amountToNumber(amount: string): number {
   const parsed = Number(amount);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -94,7 +109,11 @@ export default function BudgetAllocationPage() {
 
   if (loading) {
     return (
-      <SimulationPageShell title="Set up your budget">
+      <SimulationPageShell
+        title="Set up your budget"
+        infoTitle="About your budget"
+        infoContent={budgetInfo}
+      >
         <LoadingCard label="Loading your fictional budget" />
       </SimulationPageShell>
     );
@@ -102,7 +121,11 @@ export default function BudgetAllocationPage() {
 
   if (error || !detail || !sessionId) {
     return (
-      <SimulationPageShell title="Set up your budget">
+      <SimulationPageShell
+        title="Set up your budget"
+        infoTitle="About your budget"
+        infoContent={budgetInfo}
+      >
         <ErrorCard
           message={error ?? "Unable to load your fictional budget."}
           onRetry={() => void loadDetail()}
@@ -120,6 +143,8 @@ export default function BudgetAllocationPage() {
         })
       }
       progress={1}
+      infoTitle="About your budget"
+      infoContent={budgetInfo}
     >
       <section className="space-y-5">
         <div className="rounded-[20px] border-2 border-[#091828] bg-gradient-to-br from-[#FFF0F6] via-[#FFE1EC] to-[#F2EAFF] p-5 text-center shadow-[5px_6px_0_#091828] dark:border-[#060E20] dark:from-[#2D1B2E] dark:via-[#241D35] dark:to-[#1E243B] dark:shadow-[5px_6px_0_#060E20]">

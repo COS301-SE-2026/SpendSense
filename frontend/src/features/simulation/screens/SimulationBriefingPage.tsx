@@ -62,12 +62,26 @@ export default function SimulationBriefingPage() {
       title="How it works"
       onBack={() => navigate("/simulation")}
       progress={0}
+      infoTitle="About this month"
+      infoContent={
+        <ul className="list-disc space-y-2 pl-5">
+          <li>
+            Play through 30 fictional days, usually 15 seconds per day.
+          </li>
+          <li>Pay simulated obligations in full.</li>
+          <li>Handle 2–4 surprise events.</li>
+          <li>Your decisions affect the points you earn.</li>
+          <li>
+            Easy mode turns off the timer so you can advance each day yourself.
+          </li>
+        </ul>
+      }
     >
       <section className="space-y-6">
         <div className="text-center">
           <h2 className="text-3xl font-black tracking-tight">How it works</h2>
           <p className="mt-2 text-sm text-[#6B6375] dark:text-[#A0AEC0]">
-            You’ll manage a fictional month with realistic situations.
+            Make choices. See what happens.
           </p>
         </div>
 
@@ -76,33 +90,25 @@ export default function SimulationBriefingPage() {
             <li className="flex gap-3">
               <Clock3 className="size-5 shrink-0 text-[#AC2A5D]" />
               <span>
-                <strong className="block">30 simulated days</strong>
-                <small className="text-[#6B6375] dark:text-[#A0AEC0]">
-                  (15 seconds per day)
-                </small>
+                <strong className="block">30 days</strong>
               </span>
             </li>
             <li className="flex gap-3">
               <Landmark className="size-5 shrink-0 text-[#AC2A5D]" />
               <span>
-                <strong className="block">Pay fictional obligations</strong>
-                <small className="text-[#6B6375] dark:text-[#A0AEC0]">
-                  (full payments only)
-                </small>
+                <strong className="block">Pay obligations</strong>
               </span>
             </li>
             <li className="flex gap-3">
               <Sparkles className="size-5 shrink-0 text-[#AC2A5D]" />
               <span>
-                <strong className="block">Handle 2–4 surprise events</strong>
+                <strong className="block">Handle surprise events</strong>
               </span>
             </li>
             <li className="flex gap-3">
               <Star className="size-5 shrink-0 text-[#6650B0]" />
               <span>
-                <strong className="block">
-                  Earn points and learn from your decisions
-                </strong>
+                <strong className="block">Learn as you go</strong>
               </span>
             </li>
           </ul>
@@ -126,7 +132,7 @@ export default function SimulationBriefingPage() {
             <span>
               <strong className="block text-sm">Easy mode</strong>
               <small className="text-xs text-[#6B6375] dark:text-[#A0AEC0]">
-                Disable timers and use manual Advance day.
+                Play at your own pace.
               </small>
             </span>
           </label>

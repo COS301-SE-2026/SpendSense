@@ -62,16 +62,46 @@ describe("Simulation allocation and planning", () => {
     );
 
     expect(
-      (
-        await screen.findAllByRole("heading", {
-          name: /your month at a glance/i,
-        })
-      ).at(-1),
+      await screen.findByRole("heading", { name: "Month overview", level: 1 }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: /your month at a glance/i,
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: /about simulated month/i }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "About your month" }),
+    ).toHaveTextContent(/each obligation shows its amount and due day/i);
+    expect(
+      screen.getByRole("dialog", { name: "About your month" }),
+    ).toHaveTextContent(/no payments are made/i);
+    await user.click(screen.getByRole("button", { name: /close information/i }));
     expect(screen.getAllByText("Transport")).not.toHaveLength(0);
     expect(
       screen.getByText(/planning does not make payments/i),
     ).toBeInTheDocument();
+  });
+
+  it("shows information specific to the budget setup page", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getSimulation).mockResolvedValue(briefingFixture);
+
+    renderRoute(`/simulation/setup/${briefingFixture.session.id}`);
+
+    await user.click(
+      screen.getByRole("button", { name: /about simulated month/i }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "About your budget" }),
+    ).toHaveTextContent(/current is available for paying obligations/i);
+    expect(
+      screen.getByRole("dialog", { name: "About your budget" }),
+    ).toHaveTextContent(/does not move real money/i);
   });
 
   it("submits setup once, then fetches authoritative detail before the board handoff", async () => {

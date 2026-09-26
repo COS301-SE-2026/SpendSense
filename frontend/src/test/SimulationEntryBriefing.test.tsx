@@ -110,6 +110,25 @@ describe("Simulation entry and briefing", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the simulation details from the info button", async () => {
+    const user = userEvent.setup();
+
+    renderRoute("/simulation/briefing");
+
+    await user.click(
+      screen.getByRole("button", { name: /about simulated month/i }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "About this month" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/15 seconds per day/)).toBeInTheDocument();
+    expect(screen.getByText(/2–4 surprise events/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /close information/i }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("creates the briefing with easy mode selected", async () => {
     const user = userEvent.setup();
     vi.mocked(createSimulation).mockResolvedValue({
