@@ -9,8 +9,8 @@ import {
   vi,
 } from 'vitest'
 import { SimulationBoard } from '@/components/simulation/SimulationBoard'
-import { activeBoardFixture } from '@/features/simulation/fixtures/SimulationDetail'
-import { advanceSimulation } from '@/features/simulation/api'
+import { activeBoardFixture, newObligationFixture } from '@/features/simulation/fixtures/SimulationDetail'
+import { advanceSimulation, continueSimulation } from '@/features/simulation/api'
 import type { SimulationActionResponse } from '@/features/simulation/types'
 
 vi.mock('@/hooks/useSimulationPolling', () => ({
@@ -33,6 +33,7 @@ vi.mock('@/features/simulation/api', async () => {
   return {
     ...actual,
     advanceSimulation: vi.fn(),
+    continueSimulation: vi.fn(),
   }
 })
 
@@ -47,6 +48,9 @@ vi.mock(
 
 const mockedAdvanceSimulation =
   vi.mocked(advanceSimulation)
+
+const mockedContinueSimulation =
+  vi.mocked(continueSimulation)
 
 function accessibilityFixture() {
   return {
@@ -90,10 +94,8 @@ describe('SimulationBoard', () => {
     )
 
     expect(
-      screen.getByRole('heading', {
-        name: 'Transport',
-      }),
-    ).toBeInTheDocument()
+      screen.getByLabelText('Days in the simulated month'),
+    ).toHaveTextContent('Transport')
 
     expect(
       screen.getByRole('heading', {
@@ -121,7 +123,7 @@ describe('SimulationBoard', () => {
 
     expect(
       screen.getByRole('button', {
-        name: 'Pay',
+        name: 'Pay Utilities',
       }),
     ).toBeInTheDocument()
   })
@@ -144,7 +146,7 @@ describe('SimulationBoard', () => {
 
     expect(
       screen.queryByRole('button', {
-        name: 'Pay',
+        name: /^Pay /,
       }),
     ).not.toBeInTheDocument()
   })
@@ -267,9 +269,7 @@ describe('SimulationBoard', () => {
     )
 
     expect(
-      screen.getByRole('heading', {
-        name: 'Day 8 of 30',
-      }),
+      screen.getByText('Day 08 of 30'),
     ).toBeInTheDocument()
 
     resolveAdvance?.({
@@ -364,6 +364,71 @@ describe('SimulationBoard', () => {
       'test-idempotency-key',
     )
   })
+  it('will allow an upcoming obligation to be paid early', () => {
+    const simulation = {
+      ...accessibilityFixture(),
+      obligations: activeBoardFixture.obligations,
+    }
+
+    render(
+      <SimulationBoard
+        simulation={simulation}
+        onSimulationChange={vi.fn()}
+        onRefetch={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Pay Utilities',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Due day 14')).toBeInTheDocument()
+  })
+
+  it('will not list paid or past-due obligations as payable', () => {
+    const simulation = {
+      ...accessibilityFixture(),
+      session: {
+        ...accessibilityFixture().session,
+        currentDay: 15,
+      },
+    }
+
+    render(
+      <SimulationBoard
+        simulation={simulation}
+        onSimulationChange={vi.fn()}
+        onRefetch={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByRole('button', {
+        name: /^Pay /,
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText('No obligations remain this month.'),
+    ).toBeInTheDocument()
+  })
+
+  it('will mark the current day in the agenda', () => {
+    render(
+      <SimulationBoard
+        simulation={activeBoardFixture}
+        onSimulationChange={vi.fn()}
+        onRefetch={vi.fn()}
+      />,
+    )
+
+    const days = screen.getByLabelText('Days in the simulated month')
+    const current = days.querySelector('[aria-current="date"]')
+
+    expect(current).toHaveTextContent('Day 8')
+    expect(days.querySelectorAll(':scope > div > ol > li')).toHaveLength(30)
+  })
+
   it('will open the selected obligation when Pay is clicked',async()=>{
     const user=userEvent.setup()
     const onOpenObligation=vi.fn()
@@ -378,9 +443,122 @@ describe('SimulationBoard', () => {
       />,
     )
     await user.click(
-      screen.getByRole('button',{name:'Pay'}),
+      screen.getByRole('button',{name:'Pay Utilities'}),
     )
     expect(onOpenObligation).toHaveBeenCalledWith('ob_fixture_2')
     expect(onOpenObligation).toHaveBeenCalledTimes(1)
+  })
+
+  describe('new obligation popup', () => {
+    it('will show the introduced bill while the server holds for acknowledgement', () => {
+      render(
+        <SimulationBoard
+          simulation={newObligationFixture}
+          onSimulationChange={vi.fn()}
+          onRefetch={vi.fn()}
+        />,
+      )
+
+      const dialog = screen.getByRole('dialog', {
+        name: 'A new bill has arrived',
+      })
+      expect(dialog).toHaveTextContent('Device licence renewal')
+      expect(dialog).toHaveTextContent('Due day 27')
+      expect(dialog).toHaveTextContent('Low priority')
+      expect(dialog).toHaveTextContent(/R\s360/)
+    })
+
+    it('will acknowledge through continue and replace the simulation state', async () => {
+      const user = userEvent.setup()
+      const onSimulationChange = vi.fn()
+      const acknowledged = {
+        ...newObligationFixture,
+        session: {
+          ...newObligationFixture.session,
+          pending: { type: 'NONE' as const, id: null },
+        },
+        newObligation: null,
+        allowedActions: ['PAY_OBLIGATION' as const],
+        replayed: false,
+      }
+      mockedContinueSimulation.mockResolvedValue(acknowledged)
+
+      render(
+        <SimulationBoard
+          simulation={newObligationFixture}
+          onSimulationChange={onSimulationChange}
+          onRefetch={vi.fn()}
+        />,
+      )
+
+      await user.click(
+        screen.getByRole('button', {
+          name: 'Acknowledge and continue',
+        }),
+      )
+
+      expect(mockedContinueSimulation).toHaveBeenCalledWith(
+        newObligationFixture.session.id,
+        'test-idempotency-key',
+      )
+      expect(onSimulationChange).toHaveBeenCalledWith(acknowledged)
+    })
+
+    it('will keep the same idempotency key when retrying a failed acknowledgement', async () => {
+      const user = userEvent.setup()
+      mockedContinueSimulation
+        .mockRejectedValueOnce(new Error('network failure'))
+        .mockResolvedValueOnce({
+          ...newObligationFixture,
+          replayed: false,
+        })
+
+      render(
+        <SimulationBoard
+          simulation={newObligationFixture}
+          onSimulationChange={vi.fn()}
+          onRefetch={vi.fn()}
+        />,
+      )
+
+      const button = screen.getByRole('button', {
+        name: 'Acknowledge and continue',
+      })
+      await user.click(button)
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'could not be acknowledged',
+      )
+      await user.click(button)
+
+      expect(mockedContinueSimulation).toHaveBeenCalledTimes(2)
+      expect(mockedContinueSimulation).toHaveBeenNthCalledWith(
+        2,
+        newObligationFixture.session.id,
+        'test-idempotency-key',
+      )
+    })
+
+    it('will not show the popup while the month is paused', () => {
+      render(
+        <SimulationBoard
+          simulation={{
+            ...newObligationFixture,
+            session: {
+              ...newObligationFixture.session,
+              status: 'PAUSED',
+            },
+            allowedActions: [],
+          }}
+          onSimulationChange={vi.fn()}
+          onRefetch={vi.fn()}
+        />,
+      )
+
+      expect(
+        screen.queryByRole('dialog', {
+          name: 'A new bill has arrived',
+        }),
+      ).not.toBeInTheDocument()
+    })
   })
 })

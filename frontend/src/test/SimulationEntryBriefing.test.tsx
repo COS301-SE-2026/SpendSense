@@ -110,7 +110,7 @@ describe("Simulation entry and briefing", () => {
     ).toBeInTheDocument();
   });
 
-  it("creates the briefing with the selected accessibility mode", async () => {
+  it("creates the briefing with easy mode selected", async () => {
     const user = userEvent.setup();
     vi.mocked(createSimulation).mockResolvedValue({
       ...briefingResponse,
@@ -120,7 +120,7 @@ describe("Simulation entry and briefing", () => {
     renderRoute("/simulation/briefing");
 
     await user.click(
-      screen.getByRole("checkbox", { name: /accessibility mode/i }),
+      screen.getByRole("checkbox", { name: /easy mode/i }),
     );
     await user.click(screen.getByRole("button", { name: /^continue$/i }));
 
