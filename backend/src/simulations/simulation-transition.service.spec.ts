@@ -2,16 +2,22 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { SimulationTransitionService } from './simulation-transition.service';
 
 type Transaction = {
+  $queryRaw: jest.Mock;
+  simulationObligationSchedule: { updateMany: jest.Mock };
   simulationSession: {
     findUniqueOrThrow: jest.Mock<Promise<unknown>, [unknown]>;
     update: jest.Mock<Promise<unknown>, [unknown]>;
     updateMany: jest.Mock<Promise<{ count: number }>, [SessionUpdateManyArgs]>;
   };
-  simulationObligation: { updateMany: jest.Mock<Promise<unknown>, [unknown]> };
+  simulationObligation: {
+    updateMany: jest.Mock;
+    create: jest.Mock<Promise<unknown>, [unknown]>;
+  };
   simulationEvent: { update: jest.Mock<Promise<unknown>, [unknown]> };
   simulationScoreEntry: {
     create: jest.Mock<Promise<unknown>, [ScoreEntryCreateArgs]>;
     createMany: jest.Mock<Promise<unknown>, [unknown]>;
+    findMany: jest.Mock<Promise<unknown[]>, [unknown]>;
   };
   userEvent: { create: jest.Mock<Promise<{ id: string }>, [unknown]> };
 };
@@ -31,6 +37,7 @@ const activeSession = (overrides: Record<string, unknown> = {}) => ({
   id: 'simulation-1',
   userId: 'user-1',
   status: 'ACTIVE',
+  presentationHold: 'NONE',
   currentDay: 0,
   daysInMonth: 30,
   timedMode: false,
@@ -41,6 +48,7 @@ const activeSession = (overrides: Record<string, unknown> = {}) => ({
   savingsRetentionMultiplier: '1.20',
   score: '40.00',
   obligations: [],
+  obligationSchedules: [],
   events: [],
   ...overrides,
 });
@@ -56,6 +64,10 @@ describe('SimulationTransitionService', () => {
 
   beforeEach(() => {
     transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'simulation-1' }]),
+      simulationObligationSchedule: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
       simulationSession: {
         findUniqueOrThrow: jest.fn<Promise<unknown>, [unknown]>(),
         update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
@@ -64,9 +76,10 @@ describe('SimulationTransitionService', () => {
           .mockResolvedValue({ count: 1 }),
       },
       simulationObligation: {
-        updateMany: jest
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        create: jest
           .fn<Promise<unknown>, [unknown]>()
-          .mockResolvedValue({}),
+          .mockResolvedValue({ id: 'introduced-1' }),
       },
       simulationEvent: {
         update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
@@ -78,6 +91,9 @@ describe('SimulationTransitionService', () => {
         createMany: jest
           .fn<Promise<unknown>, [unknown]>()
           .mockResolvedValue({}),
+        findMany: jest
+          .fn<Promise<unknown[]>, [unknown]>()
+          .mockResolvedValue([]),
       },
       userEvent: {
         create: jest
@@ -103,7 +119,7 @@ describe('SimulationTransitionService', () => {
     );
   });
 
-  it('advances an accessibility session one day and stops for due obligations', async () => {
+  it('advances an accessibility session through a payable due day', async () => {
     transaction.simulationSession.findUniqueOrThrow
       .mockResolvedValueOnce(activeSession())
       .mockResolvedValueOnce(
@@ -115,7 +131,7 @@ describe('SimulationTransitionService', () => {
 
     await expect(service.advanceOneDay('simulation-1')).resolves.toEqual({
       currentDay: 1,
-      stoppedFor: 'PAYMENT',
+      stoppedFor: 'NONE',
     });
     expect(transaction.simulationObligation.updateMany).toHaveBeenCalledTimes(
       1,
@@ -176,20 +192,37 @@ describe('SimulationTransitionService', () => {
       currentDay: 0,
       stoppedFor: 'EVENT_RESULT',
     });
-    expect(transaction.simulationEvent.update).toHaveBeenCalledTimes(1);
+    const expiryUpdate = transaction.simulationEvent.update.mock
+      .calls[0][0] as {
+      data: { resolutionSnapshot: Record<string, unknown> };
+    };
+    expect(expiryUpdate.data.resolutionSnapshot).toMatchObject({
+      feeChargedNow: '150.00',
+    });
     expect(transaction.simulationScoreEntry.create).toHaveBeenCalledTimes(1);
   });
 
-  it('records one fixed missed-obligation deduction for each skipped obligation', async () => {
+  it('does not materialize a legacy scheduled bill due after the month', async () => {
     transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
       activeSession({
-        currentDay: 5,
-        obligations: [
+        currentDay: 10,
+        obligationSchedules: [
           {
-            id: 'obligation-1',
-            name: 'Rent',
-            dueDay: 4,
-            status: 'PAYABLE',
+            id: 'schedule-1',
+            triggerDay: 8,
+            status: 'SCHEDULED',
+            obligationSnapshot: {
+              templateCode: 'LATER_BILL',
+              name: 'Later bill',
+              category: 'Debt',
+              amountDue: '300.00',
+              dueDay: 34,
+              basePoints: '10.00',
+              savingsPointsFactor: '0.80',
+              importance: 'STANDARD',
+              importanceWeight: '1.00',
+              baseMissPenalty: '20.00',
+            },
           },
         ],
       }),
@@ -197,14 +230,289 @@ describe('SimulationTransitionService', () => {
 
     await expect(
       service.resolveDueTransitions('simulation-1'),
-    ).resolves.toEqual({ currentDay: 5, stoppedFor: 'NONE' });
-    expect(transaction.simulationScoreEntry.createMany).toHaveBeenCalledWith({
-      data: [
-        expect.objectContaining({
-          sourceId: 'obligation-1',
-          pointsDelta: -20,
+    ).resolves.toEqual({ currentDay: 10, stoppedFor: 'NONE' });
+    expect(
+      transaction.simulationObligationSchedule.updateMany,
+    ).not.toHaveBeenCalled();
+    expect(transaction.simulationObligation.create).not.toHaveBeenCalled();
+    expect(transaction.simulationSession.update).not.toHaveBeenCalled();
+  });
+
+  it('scores a missed obligation once from its saved amount and importance', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+      activeSession({
+        currentDay: 5,
+        obligations: [
+          {
+            id: 'obligation-1',
+            name: 'Rent',
+            amountDue: '1500.00',
+            dueDay: 4,
+            status: 'PAYABLE',
+            consequenceSnapshot: {
+              baseMissPenalty: '20.00',
+              importance: 'CRITICAL',
+              importanceWeight: '2.00',
+              amountReference: '1000.00',
+              minimumCostFactor: '0.50',
+              maximumCostFactor: '1.50',
+            },
+          },
+        ],
+      }),
+    );
+    await expect(
+      service.resolveDueTransitions('simulation-1'),
+    ).resolves.toEqual({
+      currentDay: 5,
+      stoppedFor: 'NONE',
+    });
+    expect(
+      transaction.simulationScoreEntry.create.mock.calls[0][0].data,
+    ).toMatchObject({
+      sourceType: 'OBLIGATION_MISSED',
+      sourceId: 'obligation-1',
+      pointsDelta: '-60.00',
+      calculationData: {
+        amountDue: '1500.00',
+        importanceWeight: '2.00',
+        costFactor: '1.50',
+        penalty: '60.00',
+      },
+    });
+    transaction.simulationObligation.updateMany.mockResolvedValue({ count: 0 });
+    await service.resolveDueTransitions('simulation-1');
+    expect(transaction.simulationScoreEntry.create).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])(
+    'keeps an unpaid bill payable throughout its due day (timed=%s)',
+    async (timedMode) => {
+      transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+        activeSession({
+          currentDay: 4,
+          timedMode,
+          nextDayAt: timedMode ? new Date(Date.now() + 15_000) : null,
+          obligations: [
+            {
+              id: 'bill-1',
+              name: 'Rent',
+              amountDue: '1500.00',
+              dueDay: 4,
+              status: 'PAYABLE',
+              consequenceSnapshot: {},
+            },
+          ],
         }),
-      ],
+      );
+      await expect(
+        service.resolveDueTransitions('simulation-1'),
+      ).resolves.toEqual({
+        currentDay: 4,
+        stoppedFor: 'NONE',
+      });
+      expect(
+        transaction.simulationObligation.updateMany,
+      ).not.toHaveBeenCalled();
+      expect(transaction.simulationScoreEntry.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['manual', 'timed'])(
+    '%s mode keeps the due day open and misses on the next boundary',
+    async (mode) => {
+      const timedMode = mode === 'timed';
+      const obligation = {
+        id: 'bill-1',
+        name: 'Unaffordable bill',
+        amountDue: '9000.00',
+        dueDay: 1,
+        status: 'PAYABLE',
+        consequenceSnapshot: {},
+      };
+      transaction.simulationSession.findUniqueOrThrow
+        .mockResolvedValueOnce(
+          activeSession({
+            currentDay: 1,
+            timedMode,
+            nextDayAt: timedMode ? new Date(0) : null,
+            obligations: [obligation],
+          }),
+        )
+        .mockResolvedValueOnce(
+          activeSession({
+            currentDay: 2,
+            timedMode,
+            nextDayAt: timedMode ? new Date(Date.now() + 15_000) : null,
+            obligations: [obligation],
+          }),
+        )
+        .mockResolvedValue(
+          activeSession({
+            currentDay: 2,
+            timedMode,
+            obligations: [{ ...obligation, status: 'MISSED' }],
+          }),
+        );
+      const result = timedMode
+        ? await service.resolveDueTransitions('simulation-1')
+        : await service.advanceOneDay('simulation-1');
+      expect(result).toEqual({ currentDay: 2, stoppedFor: 'NONE' });
+      expect(
+        transaction.simulationScoreEntry.create.mock.calls[0][0].data,
+      ).toMatchObject({
+        sourceType: 'OBLIGATION_MISSED',
+        simulatedDay: 2,
+        pointsDelta: '-20.00',
+      });
+    },
+  );
+
+  it('restarts a timed clock left stopped at an old payable-bill boundary', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+      activeSession({
+        timedMode: true,
+        currentDay: 4,
+        nextDayAt: null,
+        obligations: [
+          {
+            id: 'bill-1',
+            name: 'Rent',
+            amountDue: '1500.00',
+            dueDay: 4,
+            status: 'PAYABLE',
+            consequenceSnapshot: {},
+          },
+        ],
+      }),
+    );
+    await expect(
+      service.resolveDueTransitions('simulation-1'),
+    ).resolves.toEqual({
+      currentDay: 4,
+      stoppedFor: 'NONE',
+    });
+    const update = transaction.simulationSession.update.mock.calls[0][0] as {
+      data: { nextDayAt: Date };
+    };
+    expect(update.data.nextDayAt).toBeInstanceOf(Date);
+    expect(transaction.simulationScoreEntry.create).not.toHaveBeenCalled();
+  });
+
+  it('materializes a saved random bill once and exposes it on the trigger day', async () => {
+    const schedule = {
+      id: 'schedule-1',
+      triggerDay: 3,
+      status: 'SCHEDULED',
+      obligationSnapshot: {
+        templateCode: 'SURPRISE_BILL',
+        name: 'Surprise bill',
+        category: 'Other',
+        amountDue: '250.00',
+        dueDay: 8,
+        basePoints: '12.00',
+        savingsPointsFactor: '0.80',
+        importance: 'STANDARD',
+        importanceWeight: '1.00',
+        baseMissPenalty: '20.00',
+        amountReference: '1000.00',
+        minimumCostFactor: '0.50',
+        maximumCostFactor: '1.50',
+      },
+    };
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+      activeSession({ currentDay: 3, obligationSchedules: [schedule] }),
+    );
+    await expect(
+      service.resolveDueTransitions('simulation-1'),
+    ).resolves.toMatchObject({ stoppedFor: 'NEW_OBLIGATION' });
+    expect(
+      transaction.simulationSession.update.mock.calls[0][0].data,
+    ).toMatchObject({ presentationHold: 'NEW_OBLIGATION', nextDayAt: null });
+    expect(
+      transaction.simulationObligation.create.mock.calls[0][0],
+    ).toMatchObject({
+      data: {
+        introducedByScheduleId: 'schedule-1',
+        templateCode: 'SURPRISE_BILL',
+        amountDue: '250.00',
+        dueDay: 8,
+        status: 'SCHEDULED',
+      },
+    });
+    transaction.simulationObligationSchedule.updateMany.mockResolvedValue({
+      count: 0,
+    });
+    await service.resolveDueTransitions('simulation-1');
+    expect(transaction.simulationObligation.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('scores an in-month missed installment with its own ledger source', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+      activeSession({
+        currentDay: 13,
+        obligations: [
+          {
+            id: 'installment-1',
+            name: 'Repair plan',
+            amountDue: '500.00',
+            dueDay: 12,
+            status: 'PAYABLE',
+            consequenceSnapshot: { kind: 'INSTALLMENT' },
+          },
+        ],
+      }),
+    );
+    await service.resolveDueTransitions('simulation-1');
+    expect(
+      transaction.simulationScoreEntry.create.mock.calls[0][0].data,
+    ).toMatchObject({
+      sourceType: 'INSTALLMENT_MISSED',
+      simulatedDay: 13,
+      pointsDelta: '-20.00',
+    });
+  });
+
+  it('ignores obligations due after the month without a miss, debit, or score effect', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+      activeSession({
+        currentDay: 30,
+        currentBalance: '1000.00',
+        savingsBalance: '1000.00',
+        obligations: [
+          {
+            id: 'installment-1',
+            name: 'Repair plan',
+            amountDue: '500.00',
+            dueDay: 35,
+            status: 'SCHEDULED',
+            consequenceSnapshot: { kind: 'INSTALLMENT' },
+          },
+        ],
+      }),
+    );
+    transaction.simulationScoreEntry.findMany.mockResolvedValue([
+      { sourceType: 'EVENT_DECISION', pointsDelta: '40.00' },
+    ]);
+    await service.advanceOneDay('simulation-1');
+    expect(transaction.simulationObligation.updateMany).not.toHaveBeenCalled();
+    expect(transaction.simulationScoreEntry.create).toHaveBeenCalledTimes(1);
+    expect(
+      transaction.simulationScoreEntry.create.mock.calls[0][0].data.sourceType,
+    ).toBe('FINAL_BUDGET_BONUS');
+    const completion =
+      transaction.simulationSession.updateMany.mock.calls[0][0].data;
+    expect(completion).not.toHaveProperty('currentBalance');
+    expect(completion).not.toHaveProperty('savingsBalance');
+    expect(completion).toMatchObject({
+      score: '51.00',
+      completionSnapshot: {
+        currentBalance: '1000.00',
+        savingsBalance: '1000.00',
+        budgetBonus: '11.00',
+        finalScore: '51.00',
+        obligations: { total: 0, paid: 0, missed: 0, unresolved: 0 },
+      },
     });
   });
 
@@ -214,18 +522,48 @@ describe('SimulationTransitionService', () => {
         currentDay: 30,
         currentBalance: '1000.00',
         savingsBalance: '1000.00',
+        score: '75.00',
         obligations: [
-          { status: 'PAID' },
-          { status: 'MISSED' },
-          { status: 'SCHEDULED' },
+          { status: 'PAID', dueDay: 3 },
+          { status: 'MISSED', dueDay: 10 },
+          {
+            id: 'day-30-bill',
+            introducedByEventId: 'event-1',
+            name: 'Final bill',
+            amountDue: '400.00',
+            status: 'PAYABLE',
+            dueDay: 30,
+            consequenceSnapshot: {
+              kind: 'INSTALLMENT',
+              importance: 'HIGH',
+              baseMissPenalty: '20.00',
+              importanceWeight: '1.00',
+              amountReference: '1000.00',
+              minimumCostFactor: '0.50',
+              maximumCostFactor: '1.50',
+            },
+          },
         ],
         events: [
-          { status: 'RESOLVED' },
-          { status: 'EXPIRED' },
+          { status: 'RESOLVED', resolutionSnapshot: { feeOrDebt: '5.00' } },
+          {
+            status: 'EXPIRED',
+            resolutionSnapshot: {
+              outcome: 'TIMED_OUT',
+              option: { feeOrDebt: '7.00' },
+              feeChargedNow: '7.00',
+            },
+          },
           { status: 'SCHEDULED' },
         ],
       }),
     );
+    transaction.simulationScoreEntry.findMany.mockResolvedValue([
+      { sourceType: 'OBLIGATION_PAYMENT', pointsDelta: '50.00' },
+      { sourceType: 'EVENT_DECISION', pointsDelta: '40.00' },
+      { sourceType: 'OBLIGATION_MISSED', pointsDelta: '-15.00' },
+      { sourceType: 'INSTALLMENT_MISSED', pointsDelta: '-10.00' },
+    ]);
 
     await expect(service.advanceOneDay('simulation-1')).resolves.toEqual({
       currentDay: 30,
@@ -239,17 +577,41 @@ describe('SimulationTransitionService', () => {
     expect(update.data).toMatchObject({
       status: 'COMPLETED',
       nextDayAt: null,
-      score: '51.00',
+      score: '76.00',
     });
     expect(update.data.completionSnapshot).toMatchObject({
       budgetBonus: '11.00',
-      finalScore: '51.00',
-      obligations: { total: 3, paid: 1, missed: 1, unresolved: 1 },
+      finalScore: '76.00',
+      obligations: { total: 3, paid: 1, missed: 2, unresolved: 0 },
       events: { total: 3, resolved: 1, expired: 1, unresolved: 1 },
+      version: 'v3',
+      remainingBudgetPercentage: '0.3333',
+      weightedRemainingPercentage: '0.3667',
+      installments: { missedCount: 1, missedAmount: '400.00' },
+      upfrontFees: { count: 2, amount: '12.00' },
+      inMonthEventBills: { count: 1, amount: '400.00' },
+      scoreBySource: {
+        OBLIGATION_PAYMENT: '50.00',
+        EVENT_DECISION: '40.00',
+        OBLIGATION_MISSED: '-15.00',
+        INSTALLMENT_MISSED: '-10.00',
+        FINAL_BUDGET_BONUS: '11.00',
+      },
+      importanceOutcomes: {
+        STANDARD: { total: 2, paid: 1, missed: 1, unresolved: 0 },
+        HIGH: { total: 1, paid: 0, missed: 1, unresolved: 0 },
+      },
     });
-    const scoreEntry = transaction.simulationScoreEntry.create.mock.calls[0][0];
-    expect(scoreEntry.data.sourceType).toBe('FINAL_BUDGET_BONUS');
-    expect(scoreEntry.data.pointsDelta).toBe('11.00');
+    const missedEntry =
+      transaction.simulationScoreEntry.create.mock.calls[0][0];
+    expect(missedEntry.data).toMatchObject({
+      sourceType: 'INSTALLMENT_MISSED',
+      sourceId: 'day-30-bill',
+      pointsDelta: '-10.00',
+    });
+    const bonusEntry = transaction.simulationScoreEntry.create.mock.calls[1][0];
+    expect(bonusEntry.data.sourceType).toBe('FINAL_BUDGET_BONUS');
+    expect(bonusEntry.data.pointsDelta).toBe('11.00');
     expect(rewardService.grantXp).toHaveBeenCalledWith(transaction, {
       userId: 'user-1',
       amount: 15,
@@ -262,6 +624,49 @@ describe('SimulationTransitionService', () => {
       transaction,
     );
   });
+
+  it.each([false, true])(
+    'writes reconciled v3 results and once-only rewards when a %s-mode run reaches day 30',
+    async (timedMode) => {
+      transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+        activeSession({
+          currentDay: 30,
+          timedMode,
+          nextDayAt: timedMode ? new Date(0) : null,
+          currentBalance: '1000.00',
+          savingsBalance: '1000.00',
+          score: '40.00',
+        }),
+      );
+      transaction.simulationScoreEntry.findMany.mockResolvedValue([
+        { sourceType: 'EVENT_DECISION', pointsDelta: '40.00' },
+      ]);
+
+      const result = timedMode
+        ? await service.resolveDueTransitions('simulation-1')
+        : await service.advanceOneDay('simulation-1');
+
+      expect(result).toEqual({ currentDay: 30, stoppedFor: 'SUMMARY' });
+      const snapshot =
+        transaction.simulationSession.updateMany.mock.calls[0][0].data
+          .completionSnapshot;
+      const bySource = (snapshot as { scoreBySource: Record<string, string> })
+        .scoreBySource;
+      const ledgerTotal = Object.values(bySource).reduce(
+        (sum, points) => sum + Math.round(Number(points) * 100),
+        0,
+      );
+      expect(ledgerTotal).toBe(
+        Math.round(
+          Number((snapshot as { finalScore: string }).finalScore) * 100,
+        ),
+      );
+      expect(rewardService.grantXp).toHaveBeenCalledTimes(1);
+      expect(badgeEngineService.evaluateSimulationBadges).toHaveBeenCalledTimes(
+        1,
+      );
+    },
+  );
 
   it('does not settle completion rewards again after the guard is claimed', async () => {
     transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(

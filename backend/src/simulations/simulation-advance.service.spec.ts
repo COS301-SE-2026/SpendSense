@@ -153,7 +153,7 @@ describe('SimulationsService advanceSession', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('rejects timed sessions and unresolved payment/event holds before mutation', async () => {
+  it('rejects timed sessions and unresolved event holds before mutation', async () => {
     prisma.simulationSession.findFirst.mockResolvedValue(
       advanceableSession({ timedMode: true }),
     );
@@ -162,7 +162,7 @@ describe('SimulationsService advanceSession', () => {
     ).rejects.toThrow(new ConflictException('TIMED_MODE_ACTIVE'));
 
     prisma.simulationSession.findFirst.mockResolvedValue(
-      advanceableSession({ obligations: [{ id: 'obligation-1' }] }),
+      advanceableSession({ presentationHold: 'EVENT_REVEAL' }),
     );
     await expect(
       service.advanceSession('user-1', sessionId, idempotencyKey),

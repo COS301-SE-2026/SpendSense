@@ -1,3 +1,5 @@
+export type ObligationImportance = 'CRITICAL' | 'HIGH' | 'STANDARD' | 'LOW';
+
 export type CatalogueObligation = {
   code: string;
   name: string;
@@ -6,6 +8,9 @@ export type CatalogueObligation = {
   dueDay: number;
   basePoints: MoneyInput;
   savingsPointsFactor?: MoneyInput;
+  importance: ObligationImportance;
+  importanceWeight: MoneyInput;
+  baseMissPenalty: MoneyInput;
   selectionWeight: number;
   isActive: boolean;
   eligibleForEventIntroduction: boolean;
@@ -28,6 +33,7 @@ type EventOption = {
   feeOrDebt: string;
   scoreDelta: string;
   explanation: string;
+  installmentSchedule?: SessionObligationSnapshot[];
   introducedObligationTemplateCode?: string;
   introducedObligation?: SessionObligationSnapshot;
 };
@@ -47,6 +53,12 @@ export type SessionObligationSnapshot = {
   dueDay: number;
   basePoints: string;
   savingsPointsFactor: string;
+  importance: ObligationImportance;
+  importanceWeight: string;
+  baseMissPenalty: string;
+  amountReference: string;
+  minimumCostFactor: string;
+  maximumCostFactor: string;
 };
 
 export type SimulationAllocationOption = {
@@ -68,6 +80,12 @@ export type SimulationScenario = {
     increment: string;
   };
   obligations: SessionObligationSnapshot[];
+  obligationSchedules: Array<{
+    scheduleKey: string;
+    templateCode: string;
+    triggerDay: number;
+    obligationSnapshot: SessionObligationSnapshot;
+  }>;
   events: Array<{
     templateCode: string;
     triggerDay: number;
@@ -84,9 +102,15 @@ export type SimulationScenarioBuilderInput = {
 const STARTING_BUDGET_MIN_CENTS = 400_000;
 const STARTING_BUDGET_MAX_CENTS = 700_000;
 const STARTING_BUDGET_STEP_CENTS = 50_000;
-const INITIAL_OBLIGATION_MINIMUM = 5;
-const INITIAL_OBLIGATION_MAXIMUM = 7;
+const INITIAL_OBLIGATION_COUNT = 5;
 const INITIAL_OBLIGATION_CAP_PERCENT = 70;
+const FUTURE_OBLIGATION_SCHEDULE_MINIMUM = 1;
+const FUTURE_OBLIGATION_SCHEDULE_MAXIMUM = 2;
+const FUTURE_OBLIGATION_TRIGGER_MINIMUM = 3;
+const FUTURE_OBLIGATION_TRIGGER_MAXIMUM = 24;
+const OBLIGATION_AMOUNT_REFERENCE = '1000.00';
+const MINIMUM_COST_FACTOR = '0.50';
+const MAXIMUM_COST_FACTOR = '1.50';
 const EVENT_MINIMUM = 2;
 const EVENT_MAXIMUM = 4;
 const CUSTOM_ALLOCATION_STEP_CENTS = 5_000;
@@ -96,13 +120,16 @@ export function buildSimulationScenario(
   input: SimulationScenarioBuilderInput,
 ): SimulationScenario {
   const random = input.random ?? Math.random;
-  const activeObligations = input.obligations.filter((item) => item.isActive);
-  const initialCandidates = activeObligations.filter(
-    (item) => !item.eligibleForEventIntroduction,
+  const activeObligations = input.obligations.filter(
+    (item) =>
+      item.isActive &&
+      Number.isInteger(item.dueDay) &&
+      item.dueDay >= 1 &&
+      item.dueDay <= 30,
   );
   const activeEvents = input.events.filter((item) => item.isActive);
 
-  if (initialCandidates.length < INITIAL_OBLIGATION_MINIMUM) {
+  if (activeObligations.length < INITIAL_OBLIGATION_COUNT) {
     throw new Error('Not enough active initial obligation templates.');
   }
   if (activeEvents.length < EVENT_MINIMUM) {
@@ -113,15 +140,36 @@ export function buildSimulationScenario(
   const initialObligationCapCents = Math.floor(
     (startingBudgetCents * INITIAL_OBLIGATION_CAP_PERCENT) / 100,
   );
-  const requestedObligationCount = randomInteger(
-    INITIAL_OBLIGATION_MINIMUM,
-    Math.min(INITIAL_OBLIGATION_MAXIMUM, initialCandidates.length),
+  const selectedObligations = selectObligationsWithinBudget(
+    activeObligations,
+    INITIAL_OBLIGATION_COUNT,
+    initialObligationCapCents,
     random,
   );
-  const selectedObligations = selectObligationsWithinBudget(
-    initialCandidates,
-    requestedObligationCount,
-    initialObligationCapCents,
+  const initialCodes = new Set(selectedObligations.map((item) => item.code));
+  const futureCandidates = activeObligations.filter(
+    (item) =>
+      item.eligibleForEventIntroduction &&
+      !initialCodes.has(item.code) &&
+      item.dueDay > FUTURE_OBLIGATION_TRIGGER_MAXIMUM,
+  );
+  if (futureCandidates.length < FUTURE_OBLIGATION_SCHEDULE_MINIMUM) {
+    throw new Error(
+      'Not enough eligible obligation templates for future introductions.',
+    );
+  }
+  const futureScheduleCount = randomInteger(
+    FUTURE_OBLIGATION_SCHEDULE_MINIMUM,
+    Math.min(FUTURE_OBLIGATION_SCHEDULE_MAXIMUM, futureCandidates.length),
+    random,
+  );
+  const futureTemplates = selectWeightedDistinct(
+    futureCandidates,
+    futureScheduleCount,
+    random,
+  );
+  const futureTriggerDays = selectFutureTriggerDays(
+    futureScheduleCount,
     random,
   );
   const eventCount = randomInteger(
@@ -139,7 +187,7 @@ export function buildSimulationScenario(
   );
 
   return {
-    scenarioVersion: 'catalogue-v1',
+    scenarioVersion: 'catalogue-v4',
     startingBudget: centsToMoney(startingBudgetCents),
     initialObligationBudgetCap: centsToMoney(initialObligationCapCents),
     allocationOptions: buildAllocationOptions(startingBudgetCents),
@@ -150,10 +198,20 @@ export function buildSimulationScenario(
       increment: centsToMoney(CUSTOM_ALLOCATION_STEP_CENTS),
     },
     obligations: selectedObligations.map(toObligationSnapshot),
+    obligationSchedules: futureTemplates.map((template, index) => ({
+      scheduleKey: `random-obligation-${index + 1}`,
+      templateCode: template.code,
+      triggerDay: futureTriggerDays[index],
+      obligationSnapshot: toObligationSnapshot(template),
+    })),
     events: selectedEvents.map((item) => ({
       templateCode: item.code,
       triggerDay: item.triggerDay,
-      eventSnapshot: expandEventSnapshot(item.eventSnapshot, templatesByCode),
+      eventSnapshot: expandEventSnapshot(
+        item.eventSnapshot,
+        templatesByCode,
+        item.triggerDay,
+      ),
     })),
   };
 }
@@ -187,54 +245,84 @@ function buildAllocationOptions(
   });
 }
 
+function selectFutureTriggerDays(
+  count: number,
+  random: () => number,
+): number[] {
+  const availableDays = Array.from(
+    {
+      length:
+        FUTURE_OBLIGATION_TRIGGER_MAXIMUM -
+        FUTURE_OBLIGATION_TRIGGER_MINIMUM +
+        1,
+    },
+    (_, index) => FUTURE_OBLIGATION_TRIGGER_MINIMUM + index,
+  );
+  return selectWeightedDistinct(
+    availableDays.map((day) => ({ day, selectionWeight: 1 })),
+    count,
+    random,
+  ).map(({ day }) => day);
+}
+
 function selectObligationsWithinBudget(
   candidates: CatalogueObligation[],
   requestedCount: number,
   capCents: number,
   random: () => number,
 ): CatalogueObligation[] {
-  for (
-    let count = requestedCount;
-    count >= INITIAL_OBLIGATION_MINIMUM;
-    count -= 1
-  ) {
-    const selected: CatalogueObligation[] = [];
-    let remaining = [...candidates];
-    let totalCents = 0;
+  const affordableSpreadSets: Array<{
+    obligations: CatalogueObligation[];
+    selectionWeight: number;
+  }> = [];
+  const selected: CatalogueObligation[] = [];
 
-    while (selected.length < count) {
-      const slotsAfterSelection = count - selected.length - 1;
-      const viable = remaining.filter((candidate) => {
-        const candidateCost = moneyToCents(candidate.amountDue);
-        const remainingCheapestCost = remaining
-          .filter((item) => item.code !== candidate.code)
-          .map((item) => moneyToCents(item.amountDue))
-          .sort((left, right) => left - right)
-          .slice(0, slotsAfterSelection)
-          .reduce((sum, amount) => sum + amount, 0);
-        return totalCents + candidateCost + remainingCheapestCost <= capCents;
-      });
-
-      if (viable.length === 0) {
-        break;
+  function collectSets(startIndex: number, totalCents: number): void {
+    if (selected.length === requestedCount) {
+      if (totalCents <= capCents && hasDueDaySpread(selected)) {
+        affordableSpreadSets.push({
+          obligations: [...selected],
+          selectionWeight: selected.reduce(
+            (weight, obligation) => weight * obligation.selectionWeight,
+            1,
+          ),
+        });
       }
-
-      const chosen = selectWeightedDistinct(viable, 1, random)[0];
-      if (!chosen) {
-        break;
-      }
-      selected.push(chosen);
-      totalCents += moneyToCents(chosen.amountDue);
-      remaining = remaining.filter((item) => item.code !== chosen.code);
+      return;
     }
 
-    if (selected.length === count) {
-      return selected;
+    const remainingSlots = requestedCount - selected.length;
+    for (
+      let index = startIndex;
+      index <= candidates.length - remainingSlots;
+      index += 1
+    ) {
+      const candidate = candidates[index];
+      const nextTotal = totalCents + moneyToCents(candidate.amountDue);
+      if (nextTotal > capCents) {
+        continue;
+      }
+      selected.push(candidate);
+      collectSets(index + 1, nextTotal);
+      selected.pop();
     }
   }
 
-  throw new Error(
-    'Active obligation templates cannot provide five affordable initial obligations.',
+  collectSets(0, 0);
+  if (affordableSpreadSets.length === 0) {
+    throw new Error(
+      'Active obligation templates cannot provide five affordable obligations spread across the month.',
+    );
+  }
+  return selectWeightedDistinct(affordableSpreadSets, 1, random)[0].obligations;
+}
+
+function hasDueDaySpread(obligations: CatalogueObligation[]): boolean {
+  const dueDays = obligations.map((item) => item.dueDay);
+  return (
+    dueDays.some((day) => day >= 1 && day <= 10) &&
+    dueDays.some((day) => day >= 11 && day <= 20) &&
+    dueDays.some((day) => day >= 21 && day <= 30)
   );
 }
 
@@ -281,33 +369,54 @@ function selectWeightedDistinct<T extends { selectionWeight: number }>(
 function expandEventSnapshot(
   snapshot: unknown,
   templatesByCode: Map<string, CatalogueObligation>,
+  triggerDay: number,
 ): EventSnapshot {
   const parsed = parseEventSnapshot(snapshot);
   return {
     ...parsed,
     options: parsed.options.map((option) =>
-      expandEventOption(option, templatesByCode),
+      expandEventOption(option, templatesByCode, triggerDay),
     ),
-    expiryOutcome: expandEventOption(parsed.expiryOutcome, templatesByCode),
+    expiryOutcome: expandEventOption(
+      parsed.expiryOutcome,
+      templatesByCode,
+      triggerDay,
+    ),
   };
 }
 
 function expandEventOption(
   option: EventOption,
   templatesByCode: Map<string, CatalogueObligation>,
+  triggerDay: number,
 ): EventOption {
+  const inMonthInstallments = option.installmentSchedule?.filter(
+    (installment) =>
+      installment.dueDay > triggerDay && installment.dueDay <= 30,
+  );
+  const normalizedOption = {
+    ...option,
+    ...(option.installmentSchedule && {
+      installmentSchedule: inMonthInstallments,
+    }),
+  };
   if (!option.introducedObligationTemplateCode) {
-    return { ...option };
+    return normalizedOption;
   }
 
   const template = templatesByCode.get(option.introducedObligationTemplateCode);
-  if (!template || !template.eligibleForEventIntroduction) {
+  if (
+    !template ||
+    !template.eligibleForEventIntroduction ||
+    template.dueDay <= triggerDay ||
+    template.dueDay > 30
+  ) {
     throw new Error(
       `Event option references an unavailable obligation template: ${option.introducedObligationTemplateCode}.`,
     );
   }
   return {
-    ...option,
+    ...normalizedOption,
     introducedObligation: toObligationSnapshot(template),
   };
 }
@@ -336,9 +445,62 @@ function parseEventOption(value: unknown): EventOption {
     feeOrDebt: requiredMoney(record.feeOrDebt, 'event fee or debt'),
     scoreDelta: requiredMoney(record.scoreDelta, 'event score delta'),
     explanation: requiredString(record.explanation, 'event explanation'),
+    ...(record.installmentSchedule !== undefined && {
+      installmentSchedule: requiredArray(
+        record.installmentSchedule,
+        'event installment schedule',
+      ).map((item) => parseInstallmentSnapshot(item)),
+    }),
     ...(introducedObligationTemplateCode && {
       introducedObligationTemplateCode,
     }),
+  };
+}
+
+function parseInstallmentSnapshot(value: unknown): SessionObligationSnapshot {
+  const record = asRecord(value, 'installment snapshot');
+  const importance = record.importance;
+  if (
+    importance !== 'CRITICAL' &&
+    importance !== 'HIGH' &&
+    importance !== 'STANDARD' &&
+    importance !== 'LOW'
+  ) {
+    throw new Error('Invalid installment importance.');
+  }
+  const dueDay = record.dueDay;
+  if (typeof dueDay !== 'number' || !Number.isInteger(dueDay) || dueDay < 1) {
+    throw new Error('Invalid installment due day.');
+  }
+  return {
+    templateCode: requiredString(
+      record.templateCode,
+      'installment template code',
+    ),
+    name: requiredString(record.name, 'installment name'),
+    category: requiredString(record.category, 'installment category'),
+    amountDue: requiredMoney(record.amountDue, 'installment amount'),
+    dueDay,
+    basePoints: requiredMoney(record.basePoints, 'installment base points'),
+    savingsPointsFactor: requiredMoney(
+      record.savingsPointsFactor,
+      'installment savings factor',
+    ),
+    importance,
+    importanceWeight: requiredMoney(
+      record.importanceWeight,
+      'installment importance weight',
+    ),
+    baseMissPenalty: requiredMoney(
+      record.baseMissPenalty,
+      'installment base miss penalty',
+    ),
+    amountReference:
+      optionalMoney(record.amountReference) ?? OBLIGATION_AMOUNT_REFERENCE,
+    minimumCostFactor:
+      optionalMoney(record.minimumCostFactor) ?? MINIMUM_COST_FACTOR,
+    maximumCostFactor:
+      optionalMoney(record.maximumCostFactor) ?? MAXIMUM_COST_FACTOR,
   };
 }
 
@@ -353,6 +515,12 @@ function toObligationSnapshot(
     dueDay: template.dueDay,
     basePoints: centsToMoney(moneyToCents(template.basePoints)),
     savingsPointsFactor: Number(template.savingsPointsFactor ?? 0.8).toFixed(2),
+    importance: template.importance,
+    importanceWeight: centsToMoney(moneyToCents(template.importanceWeight)),
+    baseMissPenalty: centsToMoney(moneyToCents(template.baseMissPenalty)),
+    amountReference: OBLIGATION_AMOUNT_REFERENCE,
+    minimumCostFactor: MINIMUM_COST_FACTOR,
+    maximumCostFactor: MAXIMUM_COST_FACTOR,
   };
 }
 
@@ -386,6 +554,12 @@ function requiredMoney(value: unknown, label: string): string {
     throw new Error(`Invalid ${label}.`);
   }
   return centsToMoney(moneyToCents(value));
+}
+
+function optionalMoney(value: unknown): string | undefined {
+  return typeof value === 'string' && Number.isFinite(Number(value))
+    ? centsToMoney(moneyToCents(value))
+    : undefined;
 }
 
 function moneyToCents(value: MoneyInput): number {
