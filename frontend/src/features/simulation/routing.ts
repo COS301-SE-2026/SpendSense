@@ -60,9 +60,9 @@ export function pathForSimulationState(
     case 'briefing':
       return `/simulation/setup/${sessionId}`
 
-    // The new-obligation popup is shown over the board.
     case 'board':
     case 'new-obligation':
+    case 'event-reveal':
     case 'paused':
       return `/simulation/session/${sessionId}/board`
 
@@ -72,9 +72,6 @@ export function pathForSimulationState(
       }
 
       return `/simulation/session/${sessionId}/board`
-
-    case 'event-reveal':
-      return `/simulation/session/${sessionId}/event`
 
     case 'event-result':
       return `/simulation/session/${sessionId}/event-result`

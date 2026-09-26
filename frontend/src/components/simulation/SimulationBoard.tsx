@@ -8,6 +8,7 @@ import { RecentScoreActivity } from './RecentScoreActivity'
 import { SimulationHeader } from './SimulationHeader'
 import { UpcomingObligations } from './UpcomingObligations'
 import { NewObligationPopup } from './NewObligationPopup'
+import { EventRevealPopup } from './EventRevealPopup'
 import { PauseOverlay } from './PauseOverlay'
 import { usePauseControls } from '@/hooks/usePauseControls'
 import { ExitConfirmation } from './ExitConfirmation'
@@ -23,6 +24,7 @@ interface SimulationBoardProps {
   onLeave: () => void
   onDiscarded: () => void
   onOpenObligation?:(obligationId:string)=>void
+  onCompareEventChoices?: () => void
 }
 
 export function SimulationBoard({
@@ -32,6 +34,7 @@ export function SimulationBoard({
   onLeave,
   onDiscarded,
   onOpenObligation,
+  onCompareEventChoices,
 }: SimulationBoardProps) {
   const [advancing, setAdvancing] = React.useState(false)
   const [advanceError, setAdvanceError] =
@@ -54,6 +57,12 @@ export function SimulationBoard({
     simulation.session.status === 'ACTIVE' &&
     simulation.session.pending.type === 'NEW_OBLIGATION'
       ? simulation.newObligation
+      : null
+
+  const revealedEvent =
+    simulation.session.status === 'ACTIVE' &&
+    simulation.session.pending.type === 'EVENT_REVEAL'
+      ? simulation.currentEvent
       : null
 
   const [acknowledging, setAcknowledging] = React.useState(false)
@@ -99,6 +108,12 @@ export function SimulationBoard({
 
   useRefetchAtDeadline(
     shouldPoll ? simulation.session.nextDayAt : null,
+    onRefetch,
+  )
+
+
+  useRefetchAtDeadline(
+    revealedEvent?.decisionExpiresAt ?? null,
     onRefetch,
   )
 
@@ -205,6 +220,14 @@ export function SimulationBoard({
           simulation={simulation}
           onOpenObligation={onOpenObligation}
         />
+        {revealedEvent && onCompareEventChoices && (
+          <EventRevealPopup
+            event={revealedEvent}
+            onCompareChoices={onCompareEventChoices}
+            pausing={pausing}
+            onPause={() => void pause()}
+          />
+        )}
         {newObligation && (
           <NewObligationPopup
             obligation={newObligation}
