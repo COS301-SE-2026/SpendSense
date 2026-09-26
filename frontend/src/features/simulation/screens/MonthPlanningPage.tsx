@@ -12,6 +12,20 @@ import { formatSimulationMoney } from "../presentation";
 import { pathForSimulationState } from "../routing";
 import type { SetupRequest, SimulationDetail } from "../types";
 
+const monthOverviewInfo = (
+  <ul className="list-disc space-y-2 pl-5">
+    <li>
+      Review how your starting budget is split between Current and Savings.
+    </li>
+    <li>Each obligation shows its amount and due day for the simulated month.</li>
+    <li>
+      This is only a preview. No payments are made and your score does not
+      change here.
+    </li>
+    <li>Choose Start month when you are ready to begin.</li>
+  </ul>
+);
+
 interface PlanningLocationState {
   setupRequest?: SetupRequest;
 }
@@ -105,7 +119,11 @@ export default function MonthPlanningPage() {
 
   if (!setupRequest || loading) {
     return (
-      <SimulationPageShell title="Your month at a glance">
+      <SimulationPageShell
+        title="Month overview"
+        infoTitle="About your month"
+        infoContent={monthOverviewInfo}
+      >
         <LoadingCard label="Loading your month plan" />
       </SimulationPageShell>
     );
@@ -113,7 +131,11 @@ export default function MonthPlanningPage() {
 
   if(!detail||!sessionId){
     return (
-      <SimulationPageShell title="Your month at a glance">
+      <SimulationPageShell
+        title="Month overview"
+        infoTitle="About your month"
+        infoContent={monthOverviewInfo}
+      >
         <ErrorCard
           message={error ?? "Unable to load your fictional plan."}
           onRetry={() => void loadDetail()}
@@ -137,9 +159,11 @@ export default function MonthPlanningPage() {
 
   return (
     <SimulationPageShell
-      title="Your month at a glance"
+      title="Month overview"
       onBack={() => navigate(`/simulation/setup/${sessionId}`)}
       progress={2}
+      infoTitle="About your month"
+      infoContent={monthOverviewInfo}
     >
       <section className="space-y-5">
         <div className="text-center">
