@@ -136,7 +136,15 @@ Track what you owe and when it is due. See exactly how your payment behaviour wo
 
 <details>
 <summary> <b> Demo 4</b> </summary>
-Watch this space !
+
+* [Software Requirements Specification (SRS)](./docs/Demo4/SRS.md)
+* [Software Architecture Specification (SAS)](./docs/Demo4/SAS.md)
+* [Updated Brand Style Guide](https://cos301-se-2026.github.io/SpendSense/)
+* [Coding Standards Document](./docs/Demo4/Coding-Standards-Document.md)
+* [User Manual Document](./docs/Demo4/User-Manual-Document.md)
+* [Testing Policy Document](./docs/Demo4/Testing-Policy-Document.md)
+* [Demo 4 Video] 
+
 </details>
 
 ---
@@ -163,11 +171,8 @@ Watch this space !
 - A mascot that reacts to your financial health in real time
 - Cosmetics shop to personalise your mascot with earned coins
 
-**Intelligence**
-
-- AI-driven spending insights and anomaly detection
-- Predictive cash flow forecasting
-- Receipt OCR: photograph a till slip to auto-fill expenses
+**OCR Intelligence**
+- Receipt OCR: photograph or upload a till slip to auto-fill expenses
 
 **Social**
 

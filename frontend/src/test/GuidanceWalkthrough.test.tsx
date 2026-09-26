@@ -121,6 +121,56 @@ describe('GuidanceWalkthrough',()=>{
         expect(screen.getByRole('button',{name:'Back'})).toBeDisabled()
     })
 
+    it('jumps straight to any step within a feature',async()=>{
+        const api=createFakeGuidanceApi()
+        renderWithGuidance(<Shell/>,{api})
+
+        await userEvent.click(await screen.findByRole('button',{name:'Take the tour'}))
+        const stops=WALKTHROUGH_STEPS[0].stops
+        const last=stops[stops.length-1]
+
+        await userEvent.click(screen.getByRole('button',{name:`Go to step ${stops.length}: ${last.title}`}))
+
+        expect(await screen.findByText(last.title)).toBeInTheDocument()
+        expect(screen.getByRole('button',{name:`Go to step ${stops.length}: ${last.title}`}))
+            .toHaveAttribute('aria-current','step')
+        expect(path()).toHaveTextContent('/domains/dashboard')
+    })
+
+    it('skips the rest of a feature to the start of the next one',async()=>{
+        const api=createFakeGuidanceApi()
+        renderWithGuidance(<Shell/>,{api})
+
+        await userEvent.click(await screen.findByRole('button',{name:'Take the tour'}))
+        await userEvent.click(screen.getByRole('button',{name:'Next'}))
+        await userEvent.click(screen.getByRole('button',{name:`Skip ${WALKTHROUGH_STEPS[0].screen}`}))
+
+        const dialog=await screen.findByRole('dialog')
+        expect(dialog).toHaveTextContent(WALKTHROUGH_STEPS[1].stops[0].title)
+        expect(dialog).toHaveTextContent('step 2 of 5')
+        expect(path()).toHaveTextContent(new RegExp(`^${WALKTHROUGH_STEPS[1].route}$`))
+        await waitFor(()=>expect(api.calls).toContainEqual({
+            walkthrough:{status:'IN_PROGRESS',currentStep:1},
+        }))
+    })
+
+    it('finishes the tour when the last feature is skipped',async()=>{
+        const api=createFakeGuidanceApi({
+            state:makeGuidanceState({walkthrough:{status:'IN_PROGRESS',currentStep:4}}),
+        })
+        const last=WALKTHROUGH_STEPS[WALKTHROUGH_STEPS.length-1]
+        renderWithGuidance(<Shell/>,{api,route:last.route})
+
+        await userEvent.click(await screen.findByRole('button',{name:'Resume the tour'}))
+        await userEvent.click(await screen.findByRole('button',{name:`Skip ${last.screen}`}))
+
+        await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
+        await waitFor(()=>expect(api.calls).toContainEqual({
+            walkthrough:{status:'COMPLETED',currentStep:4},
+        }))
+        expect(path()).toHaveTextContent('/domains/dashboard')
+    })
+
     it('resumes on the saved step page, wherever the user starts from',async()=>{
         const api=createFakeGuidanceApi({
             state:makeGuidanceState({walkthrough:{status:'IN_PROGRESS',currentStep:3}}),
@@ -214,7 +264,7 @@ describe('GuidanceWalkthrough',()=>{
         renderWithGuidance(<Shell/>,{api,route:'/quiz'})
 
         await userEvent.click(await screen.findByRole('button',{name:'Resume the tour'}))
-        await userEvent.click(await screen.findByRole('button',{name:'Skip'}))
+        await userEvent.click(await screen.findByRole('button',{name:'End tour'}))
 
         await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
         expect(path()).toHaveTextContent(/^\/quiz$/)

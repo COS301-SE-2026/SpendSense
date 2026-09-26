@@ -7,6 +7,7 @@ import { continueSimulation, paySimulationObligation } from '@/features/simulati
 import { createIdempotencyKey } from '@/features/simulation/idempotency'
 import { PaymentResult } from '@/components/simulation/PaymentResult'
 import { ResultAcknowledgement } from '@/components/simulation/ResultAcknowledgement'
+import { canPaySimulationObligation } from '@/features/simulation/presentation'
 import { pathForSimulationState } from '@/features/simulation/routing'
 import type { PaymentSimulationResponse } from '@/features/simulation/types'
 
@@ -110,11 +111,7 @@ export default function SimulationObligationDetailPage() {
       return
     }
 
-    const canPay =
-      simulation.allowedActions.includes(
-        'PAY_OBLIGATION',
-      ) &&
-      obligation.status === 'PAYABLE'
+    const canPay = canPaySimulationObligation(simulation, obligation)
 
     if (!canPay) {
       return

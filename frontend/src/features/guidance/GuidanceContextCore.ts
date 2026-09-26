@@ -46,6 +46,8 @@ export interface GuidanceContextValue{
     goToWalkthroughStep:(step:number)=>void
     nextWalkthroughStop:()=>void
     previousWalkthroughStop:()=>void
+    goToWalkthroughStop:(stop:number)=>void
+    skipWalkthroughFeature:()=>void
     suspendWalkthrough:()=>void
     skipWalkthrough:()=>void
     completeWalkthrough:()=>void

@@ -2,14 +2,17 @@ import { apiDataFetch } from "@/lib/api";
 import type {
   ActiveSimulationResponse,
   BriefingResponse,
+  DiscardSimulationResponse,
   EventSimulationResponse,
+  InsufficientSimulationFundsErrorBody,
   PaymentSimulationResponse,
   SetupRequest,
+  SetupSimulationResponse,
   SimulationActionResponse,
+  SimulationApiErrorBody,
   SimulationDetail,
   SimulationStatusAction,
-  DiscardSimulationResponse,
-  SimulationStatusResponse
+  SimulationStatusResponse,
 } from "./types";
 
 // apiDataFetch already prefixes paths with VITE_API_URL, which is configured as
@@ -22,12 +25,16 @@ function mutationHeaders(idempotencyKey: string) {
   };
 }
 
-export function createSimulation(timedMode: boolean, idempotencyKey: string) {
-  return apiDataFetch<BriefingResponse>(BASE, {
+function postAction<T>(path: string, idempotencyKey: string, body: object = {}) {
+  return apiDataFetch<T>(path, {
     method: "POST",
     headers: mutationHeaders(idempotencyKey),
-    body: JSON.stringify({ timedMode }),
+    body: JSON.stringify(body),
   });
+}
+
+export function createSimulation(timedMode: boolean, idempotencyKey: string) {
+  return postAction<BriefingResponse>(BASE, idempotencyKey, { timedMode });
 }
 
 export function getActiveSimulation() {
@@ -43,21 +50,17 @@ export function setupSimulation(
   setup: SetupRequest,
   idempotencyKey: string,
 ) {
-  return apiDataFetch(`${BASE}/${sessionId}/setup`, {
-    method: "POST",
-    headers: mutationHeaders(idempotencyKey),
-    body: JSON.stringify(setup),
-  });
+  return postAction<SetupSimulationResponse>(
+    `${BASE}/${sessionId}/setup`,
+    idempotencyKey,
+    setup,
+  );
 }
 
 export function advanceSimulation(sessionId: string, idempotencyKey: string) {
-  return apiDataFetch<SimulationActionResponse>(
+  return postAction<SimulationActionResponse>(
     `${BASE}/${sessionId}/advance`,
-    {
-      method: "POST",
-      headers: mutationHeaders(idempotencyKey),
-      body: JSON.stringify({}),
-    },
+    idempotencyKey,
   );
 }
 
@@ -66,13 +69,9 @@ export function paySimulationObligation(
   obligationId: string,
   idempotencyKey: string,
 ) {
-  return apiDataFetch<PaymentSimulationResponse>(
+  return postAction<PaymentSimulationResponse>(
     `${BASE}/${sessionId}/obligations/${obligationId}/pay`,
-    {
-      method: "POST",
-      headers: mutationHeaders(idempotencyKey),
-      body: JSON.stringify({}),
-    },
+    idempotencyKey,
   );
 }
 
@@ -82,24 +81,17 @@ export function resolveSimulationEvent(
   optionId: string,
   idempotencyKey: string,
 ) {
-  return apiDataFetch<EventSimulationResponse>(
+  return postAction<EventSimulationResponse>(
     `${BASE}/${sessionId}/events/${eventId}/resolve`,
-    {
-      method: "POST",
-      headers: mutationHeaders(idempotencyKey),
-      body: JSON.stringify({ optionId }),
-    },
+    idempotencyKey,
+    { optionId },
   );
 }
 
 export function continueSimulation(sessionId: string, idempotencyKey: string) {
-  return apiDataFetch<SimulationActionResponse>(
+  return postAction<SimulationActionResponse>(
     `${BASE}/${sessionId}/continue`,
-    {
-      method: "POST",
-      headers: mutationHeaders(idempotencyKey),
-      body: JSON.stringify({}),
-    },
+    idempotencyKey,
   );
 }
 
@@ -125,4 +117,61 @@ export function updateSimulationStatus(
     headers: mutationHeaders(idempotencyKey),
     body: JSON.stringify({ action }),
   });
+}
+
+export type SimulationErrorCode =
+  | "ACTIVE_SESSION_EXISTS"
+  | "IDEMPOTENCY_KEY_REUSED"
+  | "SIMULATION_NOT_FOUND"
+  | "SIMULATION_EXPIRED"
+  | "SETUP_ALREADY_CONFIRMED"
+  | "TIMED_MODE_ACTIVE"
+  | "SIMULATION_ACTION_PENDING"
+  | "INSUFFICIENT_SIMULATION_FUNDS"
+  | "EVENT_DECISION_EXPIRED"
+  | "SIMULATION_EVENT_OPTION_UNAFFORDABLE"
+  | "SIMULATION_CONTINUE_NOT_ALLOWED"
+  | "SIMULATION_DISCARD_NOT_ALLOWED";
+
+export interface SimulationRequestError extends Error {
+  statusCode?: number;
+  error?: Partial<SimulationApiErrorBody> & Record<string, unknown>;
+}
+
+function errorBody(error: unknown) {
+  if (typeof error !== "object" || error === null) return undefined;
+  return (error as SimulationRequestError).error;
+}
+
+export function simulationErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null) return undefined;
+  return (error as SimulationRequestError).statusCode;
+}
+
+export function simulationErrorCode(error: unknown): string | undefined {
+  const message = errorBody(error)?.message;
+  return typeof message === "string" ? message : undefined;
+}
+
+export function isSimulationError(
+  error: unknown,
+  code: SimulationErrorCode,
+): boolean {
+  return simulationErrorCode(error) === code;
+}
+
+export function insufficientFundsDetails(
+  error: unknown,
+): InsufficientSimulationFundsErrorBody | null {
+  const body = errorBody(error);
+  if (
+    !body ||
+    body.message !== "INSUFFICIENT_SIMULATION_FUNDS" ||
+    typeof body.currentBalance !== "string" ||
+    typeof body.savingsBalance !== "string" ||
+    typeof body.remainingAmount !== "string"
+  ) {
+    return null;
+  }
+  return body as unknown as InsufficientSimulationFundsErrorBody;
 }

@@ -106,7 +106,7 @@ function GuideDock({payableCount,storage,className}:Readonly<MascotGuideDockProp
                     manual={openedManually}
                     variant="bubble"
                     showAvatar={false}
-                    className="mr-3"
+                    className="relative z-10 mr-3"
                 />
             )}
 
@@ -119,7 +119,7 @@ function GuideDock({payableCount,storage,className}:Readonly<MascotGuideDockProp
                     setTabVisible(true)
                     setBubbleOpen(false)
                 }}
-                className="w-36 overflow-hidden rounded-l-3xl focus-visible:outline-2 focus-visible:outline-offset-2"
+                className="w-36 [clip-path:inset(-50%_0_0_-50%_round_0_0_0_1.5rem)] focus-visible:outline-2 focus-visible:outline-offset-2"
             >
                 <div className="translate-x-2 translate-y-4 rotate-[-45deg]">
                     <GuidanceMascot className="size-80 -scale-x-100"/>

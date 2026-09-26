@@ -187,11 +187,6 @@ const faqs: {question: string; answer: string}[]=[
 		question: "Do wagers cost real money?",
 		answer:"No. Wagers are staked in coins you earned inside SpendSense, so the only thing at risk is your mascot's next accessory.",
 	},
-
-	{
-		question: "I found a bug or need more help, who do I contact?",
-		answer:"Reach the team through the contact details on the SpendSense GIthub repository (COS301-SE-2026/SpendSense). In-app support is planned for future release.",
-	},
 ]
 
 

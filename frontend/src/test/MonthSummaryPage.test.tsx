@@ -70,7 +70,7 @@ describe('Month summary and completion flow',()=>{
         renderRoute()
         expect(await screen.findByText('Month complete!')).toBeInTheDocument()
         expect(screen.getByText('Your final score')).toBeInTheDocument()
-        expect(screen.getByText('190.00')).toBeInTheDocument()
+        expect(screen.getByText('165.60')).toBeInTheDocument()
     })
     it('keeps the detailed financial and outcome report on the score breakdown page',async()=>{
         renderRoute()

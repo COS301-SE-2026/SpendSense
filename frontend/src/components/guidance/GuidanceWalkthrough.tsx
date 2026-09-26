@@ -1,4 +1,4 @@
-import {X} from 'lucide-react'
+import {ChevronsRight,X} from 'lucide-react'
 import {useEffect,useRef} from 'react'
 import {GuidanceMascot} from './GuidanceMascot'
 import {TourSpotlight} from './TourSpotlight'
@@ -27,6 +27,8 @@ function WalkthroughPanel({className}:Readonly<{className?:string}>){
         walkthroughStop,
         nextWalkthroughStop,
         previousWalkthroughStop,
+        goToWalkthroughStop,
+        skipWalkthroughFeature,
         skipWalkthrough,
     }=useGuidance()
 
@@ -65,7 +67,6 @@ function WalkthroughPanel({className}:Readonly<{className?:string}>){
 
     const isLastStop=currentStep>=WALKTHROUGH_MAX_STEP&&stopIndex===step.stops.length-1
     const isFirstStop=currentStep===0&&stopIndex===0
-    // keep the panel off whatever is being highlighted
     const panelAtTop=rect!==null&&rect.top+rect.height/2>window.innerHeight/2
 
     return(
@@ -78,14 +79,13 @@ function WalkthroughPanel({className}:Readonly<{className?:string}>){
                 aria-labelledby="walkthrough-heading"
                 tabIndex={-1}
                 className={cn(
-                    'fixed inset-x-4 z-40 m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border-2 border-[#091828] bg-white p-4 shadow-[3px_4px_0_#091828]',
+                    'fixed inset-x-4 z-[56] m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border-2 border-[#091828] bg-white p-4 shadow-[3px_4px_0_#091828]',
                     'dark:border-[#2d3449] dark:bg-[#131b2e] dark:shadow-none',
                     panelAtTop? 'top-4' : 'bottom-20',
                     className,
                 )}
             >
                 <div className="flex items-start gap-3">
-                    {/* the mascot guides every step, not just the first */}
                     <GuidanceMascot className="size-12"/>
                     <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-[#6B6375] dark:text-[#a0aec0]">
@@ -112,13 +112,51 @@ function WalkthroughPanel({className}:Readonly<{className?:string}>){
                     </button>
                 </div>
 
-                <div className="mt-4 flex items-center gap-2">
+                <div className="mt-3 flex items-center gap-2">
+                    {step.stops.length>1 && (
+                        <div role="group" aria-label={`${step.screen} steps`} className="flex items-center">
+                            {step.stops.map((entry,index)=>(
+                                <button
+                                    key={entry.title}
+                                    type="button"
+                                    onClick={()=>goToWalkthroughStop(index)}
+                                    aria-label={`Go to step ${index+1}: ${entry.title}`}
+                                    aria-current={index===stopIndex? 'step' : undefined}
+                                    className="group flex size-6 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-1"
+                                >
+                                    <span
+                                        aria-hidden="true"
+                                        className={cn(
+                                            'rounded-full transition-all',
+                                            index===stopIndex
+                                                ? 'h-2 w-4 bg-[#AC2A5D] dark:bg-[#ff6b9d]'
+                                                : 'size-2 bg-[#E3D5DA] group-hover:bg-[#FFB1C8] dark:bg-[#2d3449] dark:group-hover:bg-[#5a2d44]',
+                                        )}
+                                    />
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <span className="flex-1"/>
+
+                    <button
+                        type="button"
+                        onClick={skipWalkthroughFeature}
+                        className="flex items-center gap-0.5 rounded-full px-2 py-1 text-xs font-bold text-[#AC2A5D] hover:bg-[#FFF4F7] focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-[#ff6b9d] dark:hover:bg-[#2d1b2e]"
+                    >
+                        Skip {step.screen}
+                        <ChevronsRight aria-hidden="true" className="size-3.5"/>
+                    </button>
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 border-t border-[#E8E4F4] pt-3 dark:border-[#2d3449]">
                     <button
                         type="button"
                         onClick={skipWalkthrough}
                         className="rounded-full px-3 py-1.5 text-xs font-bold text-[#6B6375] focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-[#a0aec0]"
                     >
-                        Skip
+                        End tour
                     </button>
 
                     <span className="flex-1"/>

@@ -33,8 +33,8 @@ export function SimulationPageShell({
                 aria-hidden="true"
               />
             </button>
-            <div className="flex flex-1 items-center justify-center">
-              <h1 className="whitespace-nowrap rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 text-base font-bold text-[#091828] shadow-[4px_4px_0_#091828] [transform:rotate(-3deg)] dark:border-[#060E20] dark:bg-[#FFB1C5] dark:shadow-[4px_4px_0_#FF6B9D] dark:text-[#091828]">
+            <div className="flex min-w-0 flex-1 items-center justify-center">
+              <h1 className="max-w-full truncate whitespace-nowrap rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 text-base font-bold text-[#091828] shadow-[4px_4px_0_#091828] [transform:rotate(-3deg)] dark:border-[#060E20] dark:bg-[#FFB1C5] dark:shadow-[4px_4px_0_#FF6B9D] dark:text-[#091828]">
                 {title}
               </h1>
             </div>
