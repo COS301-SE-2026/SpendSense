@@ -1,26 +1,26 @@
-import {useState, useCallback, useEffect} from 'react'
-import {getUpcomingOccurrences} from '@/features/payments/paymentsApi'
+import { useState, useCallback, useEffect } from 'react'
+import { getUpcomingOccurrences } from '@/features/payments/paymentsApi'
 
 
 //this endpoint will double wrap: response.data.data is array, response.data.meta is the pagination object
 // this will handle the extraction so CalendarPage wont have tp
 
-export interface CalendarOccurrence{
+export interface CalendarOccurrence {
     id: string
     dueDate: string
     amountDue: number
     currency: string
-    status: 'OVERDUE'|'PAID'|'PENDING'|'MISSED'|'PAID_LATE'|'CANCELLED'
+    status: 'OVERDUE' | 'PAID' | 'PENDING' | 'MISSED' | 'PAID_LATE' | 'CANCELLED'
     sequenceNumber: number
     daysUntilDue: number
-    riskLevel: 'LOW'|'MEDIUM'|'HIGH'|'CRITICAL'
-    obligation:{
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+    obligation: {
         id: string
-        name:string
+        name: string
         type: string
         priority: string
     }
-    reminders:{
+    reminders: {
         id: string
         scheduledFor: string
         status: string
@@ -28,36 +28,36 @@ export interface CalendarOccurrence{
     }[]
 }
 
-interface UseCalendarOccurrencesReturn{
+interface UseCalendarOccurrencesReturn {
     occurrences: CalendarOccurrence[]
     loading: boolean
-    error: string|null
+    error: string | null
     displayYear: number
     displayMonth: number
-    goToPreviousMonth: ()=>void
-    goToNextMonth: ()=>void
-    refetch: ()=>void
+    goToPreviousMonth: () => void
+    goToNextMonth: () => void
+    refetch: () => void
 }
 
 const CALENDAR_STATUSES = 'PENDING,OVERDUE,MISSED,PAID,PAID_LATE'
 
-function toDateKey(date: Date): string{
-    const month = String(date.getMonth() + 1).padStart(2,'0')
-    const day = String(date.getDate()).padStart(2,'0')
+function toDateKey(date: Date): string {
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
     return `${date.getFullYear()}-${month}-${day}`
 }
 
-export function getMonthBounds(year:number, month: number):{from:string, to:string}{
+export function getMonthBounds(year: number, month: number): { from: string, to: string } {
     const from = new Date(year, month, 1)
-    const to = new Date(year, month+1, 1)
+    const to = new Date(year, month + 1, 1)
 
-    return{
+    return {
         from: toDateKey(from),
         to: toDateKey(to),
     }
 }
 
-export function useCalendarOccurrences(): UseCalendarOccurrencesReturn{
+export function useCalendarOccurrences(): UseCalendarOccurrencesReturn {
     const now = new Date()
     const [displayYear, setDisplayYear] = useState(now.getFullYear())
     const [displayMonth, setDisplayMonth] = useState(now.getMonth())
@@ -65,68 +65,68 @@ export function useCalendarOccurrences(): UseCalendarOccurrencesReturn{
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    const fetchOccurrences = useCallback(async(year: number, month:number)=>{
+    const fetchOccurrences = useCallback(async (year: number, month: number) => {
         setLoading(true)
         setError(null)
 
-        try{
-            const {from,to} = getMonthBounds(year, month)
-            const response  = await getUpcomingOccurrences({
+        try {
+            const { from, to } = getMonthBounds(year, month)
+            const response = await getUpcomingOccurrences({
                 from,
                 to,
                 status: CALENDAR_STATUSES,
                 perPage: 100,
             })
 
-            const raw = response as {data:{data: CalendarOccurrence[]; meta: unknown}}
+            const raw = response as { data: { data: CalendarOccurrence[]; meta: unknown } }
             const items = raw?.data?.data ?? []
 
-            const normalised = items.map((o)=>({
+            const normalised = items.map((o) => ({
                 ...o,
                 amountDue: Number(o.amountDue),
             }))
 
             setOccurrences(normalised)
         }
-        catch(error){
-            setError(error instanceof Error ? error.message: 'Failed to load calendar data')
+        catch (error) {
+            setError(error instanceof Error ? error.message : 'Failed to load calendar data')
             setOccurrences([])
         }
-        finally{
+        finally {
             setLoading(false)
         }
     }, [])
 
-    useEffect(()=>{
+    useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         void fetchOccurrences(displayYear, displayMonth)
-    },[displayYear, displayMonth, fetchOccurrences])
-    
-    const goToPreviousMonth = ()=>{
-        setDisplayMonth((m)=>{
-            if(m === 0){
-                setDisplayYear((y)=> y - 1)
-                return 11
-            }
-            return m - 1
-        })
+    }, [displayYear, displayMonth, fetchOccurrences])
+
+    const goToPreviousMonth = () => {
+        if (displayMonth === 0) {
+            setDisplayMonth(11)
+            setDisplayYear(displayYear - 1)
+            return
+        }
+
+        setDisplayMonth(displayMonth - 1)
     }
 
-    const goToNextMonth = ()=>{
-        setDisplayMonth((m)=>{
-            if(m === 11){
-                setDisplayYear((y)=> y + 1)
-                return 0
-            }
-            return m + 1
-        })
+    const goToNextMonth = () => {
+        if (displayMonth === 11) {
+            setDisplayMonth(0)
+            setDisplayYear(displayYear + 1)
+            return
+        }
+
+        setDisplayMonth(displayMonth + 1)
     }
-    
-    const refetch = useCallback(()=>{
+
+    const refetch = useCallback(() => {
         void fetchOccurrences(displayYear, displayMonth)
-    },[fetchOccurrences, displayYear, displayMonth])
-    
-    return{
+    }, [fetchOccurrences, displayYear, displayMonth])
+
+    return {
         occurrences,
         loading,
         error,
