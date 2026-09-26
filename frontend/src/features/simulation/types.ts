@@ -1,8 +1,39 @@
 export type SimulationStatus = 'BRIEFING' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'ABANDONED' | 'EXPIRED'
 
-export type SimulationAllowedAction = 'SETUP' | 'PAY_OBLIGATION' | 'RESOLVE_EVENT' | 'CONTINUE' | 'ADVANCE_DAY'
+export type SimulationAllowedAction =
+  | 'SETUP'
+  | 'PAY_OBLIGATION'
+  | 'RESOLVE_EVENT'
+  | 'CONTINUE'
+  | 'ACKNOWLEDGE_NEW_OBLIGATION'
+  | 'ADVANCE_DAY'
 
-export type SimulationPendingType = 'NONE' | 'PAYMENT_RESULT' | 'EVENT_REVEAL' | 'EVENT_RESULT' | 'SUMMARY'
+export type SimulationPendingType =
+  | 'NONE'
+  | 'PAYMENT_RESULT'
+  | 'EVENT_REVEAL'
+  | 'EVENT_RESULT'
+  | 'NEW_OBLIGATION'
+  | 'SUMMARY'
+
+export type SimulationObligationStatus = 'SCHEDULED' | 'PAYABLE' | 'PAID' | 'MISSED'
+
+export type SimulationObligationImportance = 'CRITICAL' | 'HIGH' | 'STANDARD' | 'LOW'
+
+export type SimulationObligationOrigin =
+  | 'INITIAL'
+  | 'RANDOM_INTRODUCTION'
+  | 'EVENT_INTRODUCTION'
+  | 'INSTALLMENT'
+
+export type SimulationScoreSourceType =
+  | 'OBLIGATION_PAYMENT'
+  | 'OBLIGATION_MISSED'
+  | 'INSTALLMENT_MISSED'
+  | 'EVENT_DECISION'
+  | 'EVENT_EXPIRY'
+  | 'FEE_OR_DEBT'
+  | 'FINAL_BUDGET_BONUS'
 
 export interface SessionSummary {
   id: string
@@ -41,18 +72,31 @@ export interface CustomAllocation {
   increment: string
 }
 
-export interface SimulationObligation {
+interface ObligationBase {
   id: string
   templateCode: string
   name: string
   category: string
   amountDue: string
   dueDay: number
-  status: 'SCHEDULED' | 'PAYABLE' | 'PAID' | 'MISSED'
+  status: SimulationObligationStatus
+  importance: SimulationObligationImportance
+  importanceWeight: string
+  baseMissPenalty: string
+  origin: SimulationObligationOrigin
+}
+
+export interface SimulationObligation extends ObligationBase {
   paidAt: string | null
   currentUsed: string
   savingsUsed: string
   pointsAwarded: string
+}
+
+export interface SimulationInMonthBill {
+  name: string
+  amountDue: string
+  dueDay: number
 }
 
 export interface SimulationEventOption {
@@ -60,6 +104,12 @@ export interface SimulationEventOption {
   label: string
   immediateCost: string
   feeOrDebt: string
+  feeChargedNow: string
+  cashRequiredNow: string
+  affordable: boolean
+  shortfall: string
+  inMonthObligation: SimulationInMonthBill | null
+  installments: SimulationInMonthBill[]
 }
 
 export interface CurrentSimulationEvent {
@@ -71,9 +121,17 @@ export interface CurrentSimulationEvent {
   decisionExpiresAt: string | null
 }
 
+export interface SimulationNewObligation {
+  id: string
+  name: string
+  amountDue: string
+  dueDay: number
+  importance: SimulationObligationImportance
+}
+
 export interface SimulationScoreEntry {
   id: string
-  sourceType: string
+  sourceType: SimulationScoreSourceType
   sourceId: string | null
   simulatedDay: number
   pointsDelta: string
@@ -81,20 +139,70 @@ export interface SimulationScoreEntry {
   createdAt: string
 }
 
-export interface CompletionSummary {
-  version: string
+export interface SimulationLedgerEntry extends SimulationScoreEntry {
+  calculationData: Record<string, unknown> | null
+}
+
+export interface SimulationOutcomeCounts {
+  total: number
+  paid: number
+  missed: number
+  unresolved: number
+}
+
+export interface SimulationEventOutcomeCounts {
+  total: number
+  resolved: number
+  expired: number
+  unresolved: number
+}
+
+export interface SimulationAmountTotal {
+  count: number
+  amount: string
+}
+
+interface CompletionSummaryBase {
   completedAt: string
+  startingBudget: string
   currentBalance: string
   savingsBalance: string
   totalRemaining: string
   weightedRemaining: string
-  remainingPercentage: string
+  remainingBudgetPercentage: string
   savingsRetentionMultiplier: string
   budgetBonus: string
   finalScore: string
-  obligations: Record<string, number>
-  events: Record<string, number>
+  obligations: SimulationOutcomeCounts
+  events: SimulationEventOutcomeCounts
 }
+
+export interface CompletionSummaryV1 extends CompletionSummaryBase {
+  version: 'v1'
+}
+
+interface CompletionSummaryAggregates {
+  installments: {
+    missedCount: number
+    missedAmount: string
+  }
+  scoreBySource: Partial<Record<SimulationScoreSourceType, string>>
+  importanceOutcomes: Partial<Record<SimulationObligationImportance, SimulationOutcomeCounts>>
+}
+
+export interface CompletionSummaryV2 extends CompletionSummaryBase, CompletionSummaryAggregates {
+  version: 'v2'
+  feesAndDebt: SimulationAmountTotal
+}
+
+export interface CompletionSummaryV3 extends CompletionSummaryBase, CompletionSummaryAggregates {
+  version: 'v3'
+  weightedRemainingPercentage: string
+  upfrontFees: SimulationAmountTotal
+  inMonthEventBills: SimulationAmountTotal
+}
+
+export type CompletionSummary = CompletionSummaryV1 | CompletionSummaryV2 | CompletionSummaryV3
 
 export interface SimulationDetail {
   session: SimulationSession
@@ -106,17 +214,13 @@ export interface SimulationDetail {
   obligations: SimulationObligation[]
   currentEvent: CurrentSimulationEvent | null
   recentScoreEntries: SimulationScoreEntry[]
+  newObligation: SimulationNewObligation | null
   completion: CompletionSummary | null
+  scoreLedger?: SimulationLedgerEntry[]
   allowedActions: SimulationAllowedAction[]
 }
 
-export interface BriefingObligation {
-  id: string
-  name: string
-  category: string
-  amountDue: string
-  dueDay: number
-}
+export type BriefingObligation = ObligationBase
 
 export interface BriefingResponse extends SessionSummary {
   briefing: {
@@ -131,6 +235,12 @@ export interface BriefingResponse extends SessionSummary {
 export interface ActiveSimulationResponse {
   active: SessionSummary | null
   latestCompleted: SessionSummary | null
+}
+
+export interface SetupSimulationResponse {
+  session: SimulationSession
+  allocation: AllocationOption
+  replayed: boolean
 }
 
 export interface PaymentResult {
@@ -152,11 +262,15 @@ export interface EventResolutionResult {
   explanation: string
   immediateCost: string
   feeOrDebt: string
+  feeChargedNow: string
+  cashRequiredNow: string
+  inMonthObligation: SimulationInMonthBill | null
   currentUsed: string
   savingsUsed: string
   uncoveredAmount: string
   pointsAwarded: string
   introducedObligationId: string | null
+  installmentsCreated: SimulationInMonthBill[]
 }
 
 export interface EventSimulationResponse extends SimulationDetail {
@@ -168,10 +282,7 @@ export interface SimulationActionResponse extends SimulationDetail {
   replayed: boolean
 }
 
-export interface SimulationStatusResponse
-  extends SimulationDetail {
-  replayed: boolean
-}
+export type SimulationStatusResponse = SimulationActionResponse
 
 export interface DiscardSimulationResponse {
   session: {
@@ -190,3 +301,16 @@ export type SimulationStatusAction =
   | 'pause'
   | 'resume'
   | 'discard'
+
+export interface SimulationApiErrorBody {
+  statusCode: number
+  message: string
+  timestamp?: string
+  path?: string
+}
+
+export interface InsufficientSimulationFundsErrorBody extends SimulationApiErrorBody {
+  currentBalance: string
+  savingsBalance: string
+  remainingAmount: string
+}

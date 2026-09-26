@@ -32,25 +32,61 @@ describe('SimulationHeader', () => {
 
     expect(
       screen.getByRole('heading', {
-        name: 'Day 8 of 30',
+        name: 'Simulated Month',
       }),
     ).toBeInTheDocument()
 
     expect(
-      screen.getByText('R 6 000,00'),
-    ).toBeInTheDocument()
+      screen.getByText('Current').parentElement,
+    ).toHaveTextContent(/R\s3\s400$/)
 
     expect(
-      screen.getByText('R 3 400,00'),
-    ).toBeInTheDocument()
+      screen.getByText('Savings').parentElement,
+    ).toHaveTextContent(/R\s1\s800$/)
 
     expect(
-      screen.getByText('R 1 800,00'),
-    ).toBeInTheDocument()
+      screen.getByText('points').parentElement,
+    ).toHaveTextContent('50')
+  })
+
+  it('will show Advance day only when manual advance is allowed', () => {
+    const onAdvance = vi.fn()
+    const accessibilitySimulation = {
+      ...activeBoardFixture,
+      session: {
+        ...activeBoardFixture.session,
+        timedMode: false,
+        nextDayAt: null,
+      },
+    }
+
+    const { rerender } = render(
+      <SimulationHeader
+        simulation={accessibilitySimulation}
+        canAdvance
+        onAdvance={onAdvance}
+      />,
+    )
 
     expect(
-      screen.getByText('50.00'),
+      screen.getByRole('button', {
+        name: 'Advance day',
+      }),
     ).toBeInTheDocument()
+
+    rerender(
+      <SimulationHeader
+        simulation={accessibilitySimulation}
+        canAdvance={false}
+        onAdvance={onAdvance}
+      />,
+    )
+
+    expect(
+      screen.queryByRole('button', {
+        name: 'Advance day',
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it('will show the timed countdown when in timed mode', () => {

@@ -19,8 +19,6 @@ function routeFromDetail(detail:SimulationDetail,sessionId:string):string{
     switch(routeForSimulationState(detail)){
         case 'briefing':
             return `/simulation/setup/${sessionId}`
-        case 'event-reveal':
-            return `${base}/event`
         case 'event-result':
             return `${base}/event-result`
         case 'payment-result':

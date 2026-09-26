@@ -4,22 +4,30 @@ import { CircleAlert, Landmark, PiggyBank, Sparkles } from "lucide-react";
 import { ErrorCard, LoadingCard } from "@/components/common/AsyncStates";
 
 import { SimulationPageShell } from "@/features/simulation/components/SimulationPageShell";
-import { formatSimulationMoney } from "@/features/simulation/presentation";
+import {
+  formatSimulationMoney,
+  formatSimulationPercentage,
+} from "@/features/simulation/presentation";
 import type {
   CompletionSummary,
+  SimulationEventOutcomeCounts,
+  SimulationOutcomeCounts,
   SimulationScoreEntry,
 } from "@/features/simulation/types";
 import { useSimulation } from "@/hooks/useSimulation";
 
 const obligationOutcomeLabels: Record<string, string> = {
-  paidOnTime: "Paid on time",
-  paidLate: "Paid late",
+  total: "Total",
+  paid: "Paid",
   missed: "Missed",
+  unresolved: "Unresolved",
 };
 
 const eventOutcomeLabels: Record<string, string> = {
+  total: "Total",
   resolved: "Resolved",
   expired: "Timed out",
+  unresolved: "Unresolved",
 };
 
 function formatScore(value: string): string {
@@ -51,7 +59,7 @@ function OutcomeList({
   labels,
 }: Readonly<{
   title: string;
-  outcomes: Record<string, number>;
+  outcomes: SimulationOutcomeCounts | SimulationEventOutcomeCounts;
   labels: Record<string, string>;
 }>) {
   return (
@@ -230,7 +238,7 @@ function BudgetResult({
                 {formatSimulationMoney(completion.totalRemaining)}
               </dd>
               <span className="text-[11px] font-semibold text-[#168A78] dark:text-[#7DE0D0]">
-                {formatScore(completion.remainingPercentage)}% remaining
+                {formatSimulationPercentage(completion.remainingBudgetPercentage)} remaining
               </span>
             </div>
             <div className="rounded-xl bg-[#FFF1C8] px-3 py-2.5 dark:bg-[#40351B]">

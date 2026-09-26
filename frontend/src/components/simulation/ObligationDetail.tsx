@@ -6,7 +6,7 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { SimulationPageShell } from './SimulationPageShell'
-import { formatSimulationMoney } from '@/features/simulation/presentation'
+import { canPaySimulationObligation, formatSimulationMoney } from '@/features/simulation/presentation'
 import type { SimulationDetail, SimulationObligation } from '@/features/simulation/types'
 
 interface ObligationDetailPageProps {
@@ -32,9 +32,7 @@ export function ObligationDetailPage({
   paymentError = null,
   insufficientFunds = null,
 }: ObligationDetailPageProps) {
-  const canPay =
-    simulation.allowedActions.includes('PAY_OBLIGATION') &&
-    obligation.status === 'PAYABLE'
+  const canPay = canPaySimulationObligation(simulation, obligation)
 
   return (
     <SimulationPageShell>

@@ -95,13 +95,45 @@ describe('Surprise event reveal and decision',()=>{
         expect(screen.getByText('Delay the repair')).toBeInTheDocument()
         expect(screen.getByText('Borrow to cover the repair')).toBeInTheDocument()
         expect(screen.queryByText('30.00 points')).not.toBeInTheDocument()
-        expect(screen.getByRole('button',{name:/confirm decision/i})).toBeDisabled()
+        expect(screen.getByRole('button',{name:/confirm choice/i})).toBeDisabled()
+    })
+    it('steps through the options with the arrow buttons',async()=>{
+        renderRoute('/simulation/session/sim_fixture_1/event/decision')
+        const previous=await screen.findByRole('button',{name:'Previous option'})
+        const next=screen.getByRole('button',{name:'Next option'})
+        expect(screen.getByText('Option 1 of 3')).toBeInTheDocument()
+        expect(previous).toBeDisabled()
+        fireEvent.click(next)
+        fireEvent.click(next)
+        expect(screen.getByText('Option 3 of 3')).toBeInTheDocument()
+        expect(next).toBeDisabled()
+        fireEvent.click(previous)
+        expect(screen.getByText('Option 2 of 3')).toBeInTheDocument()
+        expect(screen.getByRole('button',{name:/confirm choice/i})).toBeDisabled()
+    })
+    it('explains each option from the server amounts and blocks unaffordable choices',async()=>{
+        mockedGetSimulation.mockResolvedValue({
+            ...futureEvent,
+            currentEvent:{
+                ...futureEvent.currentEvent,
+                options:futureEvent.currentEvent.options.map(option=>option.id==='pay_now'
+                    ?{...option,affordable:false,shortfall:'150.00'}
+                    :option)
+            }
+        })
+        renderRoute('/simulation/session/sim_fixture_1/event/decision')
+        const payNow=await screen.findByRole('radio',{name:/pay for the repair now/i})
+        expect(payNow).toBeDisabled()
+        expect(screen.getByRole('radio',{name:/pay for the repair now/i}).closest('label')).toHaveTextContent(/R\s150 short/)
+        expect(screen.getByRole('radio',{name:/borrow to cover the repair/i}).closest('label')).toHaveTextContent(/R\s50 today \(R\s50 fee\).*One R\s600 bill due Day 25/)
+        fireEvent.click(payNow)
+        expect(screen.getByRole('button',{name:/confirm choice/i})).toBeDisabled()
     })
     it('uses the server event deadline in timed mode',async()=>{
         renderRoute('/simulation/session/sim_fixture_1/event/decision')
         await screen.findByText('Unexpected repair')
         await waitFor(()=>{
-            expect(screen.getByLabelText('Time remaining')).toHaveTextContent(/^1:\d{2}$|^2:00$/)
+            expect(screen.getByLabelText('Time remaining')).toHaveTextContent(/^01:\d{2}$|^02:00$/)
         })
     })
     it('does not display a countdown in accessibility mode',async()=>{
@@ -124,7 +156,7 @@ describe('Surprise event reveal and decision',()=>{
         mockedResolveEvent.mockResolvedValue(resultResponse)
         renderRoute('/simulation/session/sim_fixture_1/event/decision')
         fireEvent.click(await screen.findByRole('radio',{name:/pay for the repair now/i}))
-        fireEvent.click(screen.getByRole('button',{name:/confirm decision/i}))
+        fireEvent.click(screen.getByRole('button',{name:/confirm choice/i}))
         await waitFor(()=>{
             expect(mockedResolveEvent).toHaveBeenCalledWith(
                 'sim_fixture_1',
@@ -139,7 +171,7 @@ describe('Surprise event reveal and decision',()=>{
         mockedResolveEvent.mockImplementation(()=>new Promise(()=>undefined))
         renderRoute('/simulation/session/sim_fixture_1/event/decision')
         fireEvent.click(await screen.findByRole('radio',{name:/pay for the repair now/i}))
-        const confirm=screen.getByRole('button',{name:/confirm decision/i})
+        const confirm=screen.getByRole('button',{name:/confirm choice/i})
         fireEvent.click(confirm)
         fireEvent.click(confirm)
         expect(mockedResolveEvent).toHaveBeenCalledTimes(1)
@@ -150,9 +182,9 @@ describe('Surprise event reveal and decision',()=>{
             .mockResolvedValueOnce(resultResponse)
         renderRoute('/simulation/session/sim_fixture_1/event/decision')
         fireEvent.click(await screen.findByRole('radio',{name:/pay for the repair now/i}))
-        fireEvent.click(screen.getByRole('button',{name:/confirm decision/i}))
+        fireEvent.click(screen.getByRole('button',{name:/confirm choice/i}))
         expect(await screen.findByRole('alert')).toHaveTextContent('Network unavailable')
-        fireEvent.click(screen.getByRole('button',{name:/confirm decision/i}))
+        fireEvent.click(screen.getByRole('button',{name:/confirm choice/i}))
         await screen.findByText('Event result handoff')
         expect(mockedResolveEvent).toHaveBeenCalledTimes(2)
         expect(mockedResolveEvent.mock.calls[0][3]).toBe(mockedResolveEvent.mock.calls[1][3])
@@ -161,10 +193,10 @@ describe('Surprise event reveal and decision',()=>{
         mockedResolveEvent.mockRejectedValue(new Error('Network unavailable'))
         renderRoute('/simulation/session/sim_fixture_1/event/decision')
         fireEvent.click(await screen.findByRole('radio',{name:/pay for the repair now/i}))
-        fireEvent.click(screen.getByRole('button',{name:/confirm decision/i}))
+        fireEvent.click(screen.getByRole('button',{name:/confirm choice/i}))
         await screen.findByRole('alert')
         fireEvent.click(screen.getByRole('radio',{name:/delay the repair/i}))
-        fireEvent.click(screen.getByRole('button',{name:/confirm decision/i}))
+        fireEvent.click(screen.getByRole('button',{name:/confirm choice/i}))
         await waitFor(()=>{
             expect(mockedResolveEvent).toHaveBeenCalledTimes(2)
         })
@@ -177,7 +209,7 @@ describe('Surprise event reveal and decision',()=>{
             .mockResolvedValueOnce(eventResultFixture)
         renderRoute('/simulation/session/sim_fixture_1/event/decision')
         fireEvent.click(await screen.findByRole('radio',{name:/pay for the repair now/i}))
-        fireEvent.click(screen.getByRole('button',{name:/confirm decision/i}))
+        fireEvent.click(screen.getByRole('button',{name:/confirm choice/i}))
         expect(await screen.findByText('Event result handoff')).toBeInTheDocument()
         expect(mockedGetSimulation).toHaveBeenCalledTimes(2)
         expect(mockedResolveEvent).toHaveBeenCalledTimes(1)

@@ -59,6 +59,10 @@ export const activeBoardFixture:SimulationDetail={
             amountDue:'800.00',
             dueDay:5,
             status:'PAID',
+            importance:'HIGH',
+            importanceWeight:'1.50',
+            baseMissPenalty:'20.00',
+            origin:'INITIAL',
             paidAt:'2026-09-21T11:59:00.000Z',
             currentUsed:'800.00',
             savingsUsed:'0.00',
@@ -71,6 +75,10 @@ export const activeBoardFixture:SimulationDetail={
             amountDue:'600.00',
             dueDay:14,
             status:'SCHEDULED',
+            importance:'STANDARD',
+            importanceWeight:'1.00',
+            baseMissPenalty:'20.00',
+            origin:'INITIAL',
             paidAt:null,
             currentUsed:'0.00',
             savingsUsed:'0.00',
@@ -89,8 +97,9 @@ export const activeBoardFixture:SimulationDetail={
             createdAt:'2026-09-21T11:59:00.000Z'
         }
     ],
+    newObligation:null,
     completion:null,
-    allowedActions:[]
+    allowedActions:['PAY_OBLIGATION']
 }
 
 export const paymentResultFixture:SimulationDetail={
@@ -153,17 +162,39 @@ export const eventRevealFixture:SimulationDetail={
                 id:'pay_now',
                 label:'Pay for the repair now',
                 immediateCost:'600.00',
-                feeOrDebt:'0.00'
+                feeOrDebt:'0.00',
+                feeChargedNow:'0.00',
+                cashRequiredNow:'600.00',
+                affordable:true,
+                shortfall:'0.00',
+                inMonthObligation:null,
+                installments:[]
             },{
                 id:'delay_repair',
                 label:'Delay the repair',
                 immediateCost:'0.00',
-                feeOrDebt:'100.00'
+                feeOrDebt:'100.00',
+                feeChargedNow:'100.00',
+                cashRequiredNow:'100.00',
+                affordable:true,
+                shortfall:'0.00',
+                inMonthObligation:null,
+                installments:[]
             },{
                 id:'borrow',
                 label:'Borrow to cover the repair',
                 immediateCost:'0.00',
-                feeOrDebt:'650.00'
+                feeOrDebt:'50.00',
+                feeChargedNow:'50.00',
+                cashRequiredNow:'50.00',
+                affordable:true,
+                shortfall:'0.00',
+                inMonthObligation:{
+                    name:'Repair loan repayment',
+                    amountDue:'600.00',
+                    dueDay:25
+                },
+                installments:[]
             }
         ],
         decisionExpiresAt:'2026-09-21T12:02:30.000Z'
@@ -200,6 +231,47 @@ export const eventResultFixture:SimulationDetail={
     allowedActions:['CONTINUE']
 }
 
+export const newObligationFixture:SimulationDetail={
+    ...activeBoardFixture,
+    session:{
+        ...activeBoardFixture.session,
+        currentDay:11,
+        nextDayAt:null,
+        pending:{
+            type:'NEW_OBLIGATION',
+            id:'ob_fixture_3'
+        }
+    },
+    obligations:[
+        ...activeBoardFixture.obligations,
+        {
+            id:'ob_fixture_3',
+            templateCode:'DEVICE_LICENCE',
+            name:'Device licence renewal',
+            category:'Subscriptions',
+            amountDue:'360.00',
+            dueDay:27,
+            status:'SCHEDULED',
+            importance:'LOW',
+            importanceWeight:'0.75',
+            baseMissPenalty:'20.00',
+            origin:'RANDOM_INTRODUCTION',
+            paidAt:null,
+            currentUsed:'0.00',
+            savingsUsed:'0.00',
+            pointsAwarded:'0.00'
+        }
+    ],
+    newObligation:{
+        id:'ob_fixture_3',
+        name:'Device licence renewal',
+        amountDue:'360.00',
+        dueDay:27,
+        importance:'LOW'
+    },
+    allowedActions:['ACKNOWLEDGE_NEW_OBLIGATION']
+}
+
 export const pausedFixture:SimulationDetail={
     ...activeBoardFixture,
     session:{
@@ -223,7 +295,7 @@ export const completedFixture:SimulationDetail={
         nextDayAt:null,
         currentBalance:'1200.00',
         savingsBalance:'1600.00',
-        score:'190.00',
+        score:'165.60',
         completedAt:'2026-09-21T12:10:00.000Z',
         pending:{
             type:'SUMMARY',
@@ -232,26 +304,91 @@ export const completedFixture:SimulationDetail={
     },
     currentEvent:null,
     completion:{
-        version:'v1',
+        version:'v3',
         completedAt:'2026-09-21T12:10:00.000Z',
+        startingBudget:'6000.00',
         currentBalance:'1200.00',
         savingsBalance:'1600.00',
         totalRemaining:'2800.00',
         weightedRemaining:'3120.00',
-        remainingPercentage:'46.67',
+        remainingBudgetPercentage:'0.4667',
+        weightedRemainingPercentage:'0.5200',
         savingsRetentionMultiplier:'1.20',
-        budgetBonus:'40.00',
-        finalScore:'190.00',
+        budgetBonus:'15.60',
+        finalScore:'165.60',
         obligations:{
-            paidOnTime:2,
-            paidLate:0,
-            missed:0
+            total:2,
+            paid:2,
+            missed:0,
+            unresolved:0
         },
         events:{
+            total:1,
             resolved:1,
-            expired:0
+            expired:0,
+            unresolved:0
+        },
+        installments:{
+            missedCount:0,
+            missedAmount:'0.00'
+        },
+        upfrontFees:{
+            count:0,
+            amount:'0.00'
+        },
+        inMonthEventBills:{
+            count:0,
+            amount:'0.00'
+        },
+        scoreBySource:{
+            OBLIGATION_PAYMENT:'100.00',
+            EVENT_DECISION:'50.00',
+            FINAL_BUDGET_BONUS:'15.60'
+        },
+        importanceOutcomes:{
+            HIGH:{total:1,paid:1,missed:0,unresolved:0},
+            STANDARD:{total:1,paid:1,missed:0,unresolved:0}
         }
     },
+    scoreLedger:[
+        {
+            id:'score_fixture_1',
+            sourceType:'OBLIGATION_PAYMENT',
+            sourceId:'ob_fixture_1',
+            simulatedDay:5,
+            pointsDelta:'50.00',
+            reason:'On-time obligation payment',
+            calculationData:{timing:'EARLY'},
+            createdAt:'2026-09-21T11:59:00.000Z'
+        },{
+            id:'score_fixture_3',
+            sourceType:'EVENT_DECISION',
+            sourceId:'event_fixture_1',
+            simulatedDay:12,
+            pointsDelta:'50.00',
+            reason:'Unexpected repair decision',
+            calculationData:null,
+            createdAt:'2026-09-21T12:02:00.000Z'
+        },{
+            id:'score_fixture_2',
+            sourceType:'OBLIGATION_PAYMENT',
+            sourceId:'ob_fixture_2',
+            simulatedDay:14,
+            pointsDelta:'50.00',
+            reason:'On-time obligation payment',
+            calculationData:{timing:'ON_TIME'},
+            createdAt:'2026-09-21T12:03:00.000Z'
+        },{
+            id:'score_fixture_4',
+            sourceType:'FINAL_BUDGET_BONUS',
+            sourceId:null,
+            simulatedDay:30,
+            pointsDelta:'15.60',
+            reason:'Final budget bonus',
+            calculationData:null,
+            createdAt:'2026-09-21T12:10:00.000Z'
+        }
+    ],
     allowedActions:[]
 }
 
