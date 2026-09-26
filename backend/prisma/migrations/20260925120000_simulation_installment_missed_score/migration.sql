@@ -1,0 +1,1 @@
+ALTER TYPE "SimulationScoreSourceType" ADD VALUE 'INSTALLMENT_MISSED';

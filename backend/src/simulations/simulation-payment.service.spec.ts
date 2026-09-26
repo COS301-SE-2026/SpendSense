@@ -14,6 +14,7 @@ const payableSession = (overrides: Record<string, unknown> = {}) => ({
   id: sessionId,
   status: 'ACTIVE',
   currentDay: 3,
+  daysInMonth: 30,
   currentBalance: '1000.00',
   savingsBalance: '1000.00',
   presentationHold: 'NONE',
@@ -22,10 +23,16 @@ const payableSession = (overrides: Record<string, unknown> = {}) => ({
       id: obligationId,
       name: 'Rent',
       amountDue: '1200.00',
+      dueDay: 3,
       status: 'PAYABLE',
       consequenceSnapshot: {
         basePoints: '60.00',
         savingsPointsFactor: '0.80',
+        importance: 'CRITICAL',
+        importanceWeight: '2.50',
+        amountReference: '1000.00',
+        minimumCostFactor: '0.50',
+        maximumCostFactor: '1.50',
       },
     },
   ],
@@ -38,7 +45,7 @@ const refreshedSession = () => ({
   daysInMonth: 30,
   nextDayAt: null,
   startingBudget: '6000.00',
-  score: '48.00',
+  score: '144.00',
   createdAt,
   updatedAt: createdAt,
   completedAt: null,
@@ -64,7 +71,7 @@ const refreshedSession = () => ({
       paidAt: createdAt,
       currentUsed: '1000.00',
       savingsUsed: '200.00',
-      pointsAwarded: '48.00',
+      pointsAwarded: '144.00',
     },
   ],
   events: [],
@@ -74,7 +81,7 @@ const refreshedSession = () => ({
       sourceType: 'OBLIGATION_PAYMENT',
       sourceId: obligationId,
       simulatedDay: 3,
-      pointsDelta: '48.00',
+      pointsDelta: '144.00',
       reason: 'Paid using Savings: Rent',
       createdAt,
     },
@@ -168,6 +175,29 @@ describe('SimulationsService payObligation', () => {
     );
   });
 
+  it('does not allow payment of an obligation due outside this month', async () => {
+    transaction.simulationSession.findUniqueOrThrow
+      .mockReset()
+      .mockResolvedValue(
+        payableSession({
+          obligations: [
+            {
+              ...payableSession().obligations[0],
+              dueDay: 35,
+              consequenceSnapshot: { kind: 'INSTALLMENT' },
+            },
+          ],
+        }),
+      );
+    await expect(
+      service.payObligation('user-1', sessionId, obligationId, idempotencyKey),
+    ).rejects.toThrow(
+      new ConflictException('SIMULATION_OBLIGATION_NOT_PAYABLE'),
+    );
+    expect(transaction.simulationObligation.update).not.toHaveBeenCalled();
+    expect(transaction.simulationScoreEntry.create).not.toHaveBeenCalled();
+  });
+
   it('pays the full fictional amount Current-first, then Savings, and records one result', async () => {
     const result = await service.payObligation(
       'user-1',
@@ -181,9 +211,20 @@ describe('SimulationsService payObligation', () => {
     ).toHaveBeenCalledTimes(1);
     expect(result.payment).toEqual({
       obligationId,
+      timing: 'ON_TIME',
+      amountDue: '1200.00',
       currentUsed: '1000.00',
       savingsUsed: '200.00',
-      pointsAwarded: '48.00',
+      basePoints: '60.00',
+      savingsPointsFactor: '0.80',
+      amountReference: '1000.00',
+      costFactor: '1.20',
+      importance: 'CRITICAL',
+      importanceWeight: '2.50',
+      effectiveWeight: '3.00',
+      accountFactor: '0.80',
+      scoringVersion: 'WEIGHTED_V1',
+      pointsAwarded: '144.00',
     });
     expect(result.session.pending).toEqual({
       type: 'PAYMENT_RESULT',
@@ -194,11 +235,187 @@ describe('SimulationsService payObligation', () => {
     expect(obligationUpdate.where.id).toBe(obligationId);
     expect(obligationUpdate.data.status).toBe('PAID');
     expect(transaction.simulationScoreEntry.create).toHaveBeenCalledTimes(1);
+    expect(
+      transaction.simulationScoreEntry.create.mock.calls[0]?.[0],
+    ).toMatchObject({
+      data: {
+        pointsDelta: '144.00',
+        calculationData: {
+          timing: 'ON_TIME',
+          amountReference: '1000.00',
+          costFactor: '1.20',
+          importance: 'CRITICAL',
+          importanceWeight: '2.50',
+          effectiveWeight: '3.00',
+          accountFactor: '0.80',
+          scoringVersion: 'WEIGHTED_V1',
+        },
+      },
+    });
     const action = transaction.simulationAction.create.mock.calls[0][0];
     expect(action.data.actionType).toBe(SimulationActionType.PAY_OBLIGATION);
     expect(action.data.responseSnapshot).toEqual(
       expect.objectContaining({ replayed: false }),
     );
+  });
+
+  it('allows an early full payment and identifies it without an extra bonus', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValueOnce(
+      payableSession({
+        currentDay: 2,
+        obligations: [
+          {
+            id: obligationId,
+            name: 'Rent',
+            amountDue: '1200.00',
+            dueDay: 9,
+            status: 'SCHEDULED',
+            consequenceSnapshot: {
+              basePoints: '60.00',
+              savingsPointsFactor: '0.80',
+              importance: 'CRITICAL',
+              importanceWeight: '2.50',
+              amountReference: '1000.00',
+              minimumCostFactor: '0.50',
+              maximumCostFactor: '1.50',
+            },
+          },
+        ],
+      }),
+    );
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValueOnce(
+      refreshedSession(),
+    );
+
+    const result = await service.payObligation(
+      'user-1',
+      sessionId,
+      obligationId,
+      idempotencyKey,
+    );
+
+    expect(result.payment.timing).toBe('EARLY');
+    expect(result.payment.pointsAwarded).toBe('144.00');
+    expect(
+      transaction.simulationObligation.update.mock.calls[0]?.[0].data.status,
+    ).toBe('PAID');
+    expect(
+      transaction.simulationScoreEntry.create.mock.calls[0]?.[0],
+    ).toMatchObject({
+      data: { reason: 'Paid early: Rent' },
+    });
+  });
+
+  it('pays an in-month installment early through the normal full-payment path', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow
+      .mockResolvedValueOnce(
+        payableSession({
+          currentDay: 8,
+          obligations: [
+            {
+              id: obligationId,
+              name: 'Repair installment',
+              amountDue: '265.00',
+              dueDay: 12,
+              status: 'SCHEDULED',
+              consequenceSnapshot: {
+                kind: 'INSTALLMENT',
+                basePoints: '15.00',
+                savingsPointsFactor: '0.80',
+                importance: 'HIGH',
+                importanceWeight: '1.50',
+                baseMissPenalty: '20.00',
+                amountReference: '1000.00',
+                minimumCostFactor: '0.50',
+                maximumCostFactor: '1.50',
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(refreshedSession());
+    const result = await service.payObligation(
+      'user-1',
+      sessionId,
+      obligationId,
+      idempotencyKey,
+    );
+    expect(result.payment).toMatchObject({
+      timing: 'EARLY',
+      amountDue: '265.00',
+    });
+    expect(
+      transaction.simulationObligation.update.mock.calls[0][0].data.status,
+    ).toBe('PAID');
+    const installmentPaymentEntry = transaction.simulationScoreEntry.create.mock
+      .calls[0]?.[0] as { data: { sourceType: string } };
+    expect(installmentPaymentEntry.data.sourceType).toBe('OBLIGATION_PAYMENT');
+  });
+
+  it('keeps the legacy score formula for obligations from older snapshots', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValueOnce(
+      payableSession({
+        obligations: [
+          {
+            id: obligationId,
+            name: 'Rent',
+            amountDue: '1200.00',
+            dueDay: 3,
+            status: 'PAYABLE',
+            consequenceSnapshot: {
+              basePoints: '60.00',
+              savingsPointsFactor: '0.80',
+            },
+          },
+        ],
+      }),
+    );
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValueOnce(
+      refreshedSession(),
+    );
+
+    const result = await service.payObligation(
+      'user-1',
+      sessionId,
+      obligationId,
+      idempotencyKey,
+    );
+
+    expect(result.payment.scoringVersion).toBe('LEGACY');
+    expect(result.payment.pointsAwarded).toBe('48.00');
+  });
+
+  it('rejects a scheduled obligation after its due day', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+      payableSession({
+        currentDay: 4,
+        obligations: [
+          {
+            id: obligationId,
+            name: 'Rent',
+            amountDue: '1200.00',
+            dueDay: 3,
+            status: 'SCHEDULED',
+            consequenceSnapshot: {
+              basePoints: '60.00',
+              savingsPointsFactor: '0.80',
+            },
+          },
+        ],
+      }),
+    );
+
+    await expect(
+      service.payObligation('user-1', sessionId, obligationId, idempotencyKey),
+    ).rejects.toThrow(
+      new ConflictException('SIMULATION_OBLIGATION_NOT_PAYABLE'),
+    );
+    expect(transaction.simulationObligation.update).not.toHaveBeenCalled();
+    expect(transaction.simulationScoreEntry.create).not.toHaveBeenCalled();
   });
 
   it('rejects insufficient fictional funds without a payment, score entry, or action', async () => {

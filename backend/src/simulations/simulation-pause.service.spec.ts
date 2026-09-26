@@ -23,7 +23,7 @@ const pauseableSession = (overrides: Record<string, unknown> = {}) => ({
 
 const refreshedSession = (overrides: Record<string, unknown> = {}) => ({
   id: sessionId,
-  ...simulationStatusSession(now,'PAUSED',null,overrides),
+  ...simulationStatusSession(now, 'PAUSED', null, overrides),
 });
 
 type UpdateManyArgs = {
@@ -127,6 +127,33 @@ describe('SimulationsService pauseSession', () => {
     );
     expect(transaction.simulationEvent.update).not.toHaveBeenCalled();
     expect(transaction.simulationAction.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('pauses while keeping a new-obligation popup open with no running clock', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow
+      .mockResolvedValueOnce(
+        pauseableSession({
+          nextDayAt: null,
+          presentationHold: 'NEW_OBLIGATION',
+        }),
+      )
+      .mockResolvedValueOnce(
+        refreshedSession({ presentationHold: 'NEW_OBLIGATION' }),
+      );
+    await service.pauseSession(
+      'user-1',
+      sessionId,
+      { action: 'pause' },
+      idempotencyKey,
+    );
+    expect(
+      transaction.simulationSession.updateMany.mock.calls[0][0].data,
+    ).toMatchObject({
+      status: 'PAUSED',
+      pausedDecisionSeconds: null,
+      nextDayAt: null,
+    });
   });
 
   it('pauses a revealed timed event and clears its live decision deadline', async () => {

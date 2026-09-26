@@ -36,8 +36,20 @@ type SessionCreateArgs = {
     startingBudget: string;
     currentBalance: string;
     savingsBalance: string;
-    scenarioSnapshot: { obligations: unknown[]; events: unknown[] };
+    scenarioSnapshot: {
+      obligations: unknown[];
+      obligationSchedules: unknown[];
+      events: unknown[];
+    };
     obligations: { create: Array<{ templateCode: string }> };
+    obligationSchedules: {
+      create: Array<{
+        scheduleKey: string;
+        templateCode: string;
+        triggerDay: number;
+        obligationSnapshot: unknown;
+      }>;
+    };
     events: { create: Array<{ templateCode: string }> };
   };
 };
@@ -152,6 +164,9 @@ describe('SimulationsService', () => {
     simulationSession: {
       findFirst: jest.Mock<Promise<unknown>, [unknown]>;
     };
+    simulationScoreEntry: {
+      findMany: jest.Mock<Promise<unknown[]>, [unknown]>;
+    };
     simulationObligationTemplate: {
       findMany: jest.Mock<Promise<CatalogueObligation[]>, [unknown]>;
     };
@@ -175,6 +190,11 @@ describe('SimulationsService', () => {
         findFirst: jest
           .fn<Promise<unknown>, [unknown]>()
           .mockResolvedValue(null),
+      },
+      simulationScoreEntry: {
+        findMany: jest
+          .fn<Promise<unknown[]>, [unknown]>()
+          .mockResolvedValue([]),
       },
       simulationObligationTemplate: {
         findMany: jest
@@ -211,18 +231,33 @@ describe('SimulationsService', () => {
     expect(result.briefing.allocationOptions[0].id).toBe(
       'current_80_savings_20',
     );
-    expect(result.briefing.obligations.length).toBeGreaterThanOrEqual(5);
+    expect(result.briefing.obligations).toHaveLength(5);
+    expect(result.briefing).not.toHaveProperty('obligationSchedules');
+    expect(result).not.toHaveProperty('scenarioSnapshot');
 
     const sessionCreate = transaction.simulationSession.create.mock.calls[0][0];
     expect(Array.isArray(sessionCreate.data.scenarioSnapshot.obligations)).toBe(
       true,
     );
+    expect(
+      Array.isArray(sessionCreate.data.scenarioSnapshot.obligationSchedules),
+    ).toBe(true);
     expect(Array.isArray(sessionCreate.data.scenarioSnapshot.events)).toBe(
       true,
     );
-    expect(sessionCreate.data.obligations.create).toHaveLength(
-      result.briefing.obligations.length,
+    expect(sessionCreate.data.obligations.create).toHaveLength(5);
+    expect(
+      sessionCreate.data.obligationSchedules.create.length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      sessionCreate.data.obligationSchedules.create.length,
+    ).toBeLessThanOrEqual(2);
+    expect(sessionCreate.data.obligationSchedules.create).toEqual(
+      sessionCreate.data.scenarioSnapshot.obligationSchedules,
     );
+    for (const schedule of sessionCreate.data.obligationSchedules.create) {
+      expect(JSON.stringify(result)).not.toContain(schedule.templateCode);
+    }
     expect(sessionCreate.data.events.create).toHaveLength(
       result.briefing.surpriseEventCount,
     );
@@ -380,6 +415,233 @@ describe('SimulationsService', () => {
     expect(prisma.simulationSession.findFirst).toHaveBeenCalledTimes(2);
   });
 
+  it('restores an unacknowledged new-obligation popup on refresh', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000013';
+    prisma.simulationSession.findFirst.mockResolvedValue({
+      id: sessionId,
+      status: 'ACTIVE',
+      timedMode: true,
+      currentDay: 7,
+      daysInMonth: 30,
+      nextDayAt: null,
+      startingBudget: '5000.00',
+      currentBalance: '3000.00',
+      savingsBalance: '2000.00',
+      score: '0.00',
+      createdAt,
+      updatedAt: createdAt,
+      completedAt: null,
+      presentationHold: 'NEW_OBLIGATION',
+      scenarioSnapshot: {
+        allocationOptions: [],
+        customAllocation: {
+          enabled: true,
+          minCurrentAmount: '0.00',
+          maxCurrentAmount: '5000.00',
+          increment: '50.00',
+        },
+      },
+      completionSnapshot: null,
+      obligations: [],
+      events: [],
+      scoreEntries: [],
+      obligationSchedules: [
+        {
+          id: 'schedule-1',
+          materializedObligation: {
+            id: 'bill-1',
+            name: 'New bill',
+            amountDue: '250.00',
+            dueDay: 12,
+            consequenceSnapshot: { importance: 'HIGH' },
+          },
+        },
+      ],
+    });
+    const result = await service.getSession('user-1', sessionId);
+    expect(result.session.pending).toEqual({
+      type: 'NEW_OBLIGATION',
+      id: 'bill-1',
+    });
+    expect(result.newObligation).toEqual({
+      id: 'bill-1',
+      name: 'New bill',
+      amountDue: '250.00',
+      dueDay: 12,
+      importance: 'HIGH',
+    });
+    expect(result.allowedActions).toEqual(['ACKNOWLEDGE_NEW_OBLIGATION']);
+  });
+
+  it('returns a validated v2 completion and the full score ledger only on completed reads', async () => {
+    const completionSnapshot = {
+      version: 'v2',
+      completedAt: createdAt.toISOString(),
+      startingBudget: '5000.00',
+      currentBalance: '900.00',
+      savingsBalance: '1100.00',
+      totalRemaining: '2000.00',
+      weightedRemaining: '2220.00',
+      remainingBudgetPercentage: '0.4440',
+      savingsRetentionMultiplier: '1.20',
+      budgetBonus: '13.32',
+      finalScore: '311.25',
+      obligations: { total: 2, paid: 1, missed: 1, unresolved: 0 },
+      events: { total: 1, resolved: 1, expired: 0, unresolved: 0 },
+      installments: { missedCount: 1, missedAmount: '400.00' },
+      feesAndDebt: { count: 1, amount: '80.00' },
+      scoreBySource: {
+        OBLIGATION_PAID: '250.00',
+        INSTALLMENT_MISSED: '-10.00',
+        EVENT_DECISION: '57.93',
+        FINAL_BUDGET_BONUS: '13.32',
+      },
+      importanceOutcomes: {
+        HIGH: { total: 1, paid: 0, missed: 1, unresolved: 0 },
+        STANDARD: { total: 1, paid: 1, missed: 0, unresolved: 0 },
+      },
+    };
+    prisma.simulationSession.findFirst.mockResolvedValue({
+      id: '00000000-0000-4000-8000-000000000011',
+      status: 'COMPLETED',
+      timedMode: false,
+      currentDay: 30,
+      daysInMonth: 30,
+      nextDayAt: null,
+      startingBudget: '5000.00',
+      currentBalance: '900.00',
+      savingsBalance: '1100.00',
+      score: '297.93',
+      createdAt,
+      updatedAt: createdAt,
+      completedAt: createdAt,
+      presentationHold: 'SUMMARY',
+      scenarioSnapshot: {
+        allocationOptions: [],
+        customAllocation: {
+          enabled: true,
+          minCurrentAmount: '0.00',
+          maxCurrentAmount: '5000.00',
+          increment: '50.00',
+        },
+      },
+      completionSnapshot,
+      obligations: [],
+      events: [],
+      obligationSchedules: [],
+      scoreEntries: [],
+    });
+    prisma.simulationScoreEntry.findMany.mockResolvedValue([
+      {
+        id: 'ledger-1',
+        sourceType: 'OBLIGATION_PAID',
+        sourceId: 'bill-1',
+        simulatedDay: 2,
+        pointsDelta: '250.00',
+        reason: 'Paid on time',
+        calculationData: { timing: 'EARLY', importance: 'STANDARD' },
+        createdAt,
+      },
+      {
+        id: 'ledger-2',
+        sourceType: 'FINAL_BUDGET_BONUS',
+        sourceId: null,
+        simulatedDay: 30,
+        pointsDelta: '13.32',
+        reason: 'Final budget efficiency bonus',
+        calculationData: { remainingBudgetPercentage: '0.4440' },
+        createdAt,
+      },
+    ]);
+
+    const result = await service.getSession(
+      'user-1',
+      '00000000-0000-4000-8000-000000000011',
+    );
+
+    expect(result.completion).toMatchObject({
+      version: 'v2',
+      installments: { missedCount: 1, missedAmount: '400.00' },
+      feesAndDebt: { count: 1, amount: '80.00' },
+      scoreBySource: { FINAL_BUDGET_BONUS: '13.32' },
+      importanceOutcomes: {
+        HIGH: { total: 1, missed: 1 },
+        STANDARD: { total: 1, paid: 1 },
+      },
+    });
+    expect(result.scoreLedger).toEqual([
+      expect.objectContaining({
+        id: 'ledger-1',
+        pointsDelta: '250.00',
+        calculationData: { timing: 'EARLY', importance: 'STANDARD' },
+        createdAt: createdAt.toISOString(),
+      }),
+      expect.objectContaining({ id: 'ledger-2', pointsDelta: '13.32' }),
+    ]);
+    expect(prisma.simulationScoreEntry.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads v3 percentages and fee/bill totals without changing their meanings', () => {
+    const v3 = {
+      version: 'v3',
+      completedAt: createdAt.toISOString(),
+      startingBudget: '5000.00',
+      currentBalance: '900.00',
+      savingsBalance: '1100.00',
+      totalRemaining: '2000.00',
+      weightedRemaining: '2220.00',
+      remainingBudgetPercentage: '0.4000',
+      weightedRemainingPercentage: '0.4440',
+      savingsRetentionMultiplier: '1.20',
+      budgetBonus: '13.32',
+      finalScore: '13.32',
+      obligations: { total: 0, paid: 0, missed: 0, unresolved: 0 },
+      events: { total: 0, resolved: 0, expired: 0, unresolved: 0 },
+      installments: { missedCount: 0, missedAmount: '0.00' },
+      upfrontFees: { count: 1, amount: '80.00' },
+      inMonthEventBills: { count: 1, amount: '400.00' },
+      scoreBySource: { FINAL_BUDGET_BONUS: '13.32' },
+      importanceOutcomes: {},
+    };
+    expect(
+      (
+        service as unknown as { readCompletionSummary(value: unknown): unknown }
+      ).readCompletionSummary(v3),
+    ).toMatchObject({
+      version: 'v3',
+      remainingBudgetPercentage: '0.4000',
+      weightedRemainingPercentage: '0.4440',
+      upfrontFees: { count: 1, amount: '80.00' },
+      inMonthEventBills: { count: 1, amount: '400.00' },
+    });
+  });
+
+  it('keeps legacy v1 completion snapshots readable', () => {
+    const legacy = {
+      version: 'v1',
+      completedAt: '2026-09-13T12:00:00.000Z',
+      startingBudget: '5000.00',
+      currentBalance: '900.00',
+      savingsBalance: '1100.00',
+      totalRemaining: '2000.00',
+      weightedRemaining: '2220.00',
+      remainingBudgetPercentage: '0.4440',
+      savingsRetentionMultiplier: '1.20',
+      budgetBonus: '13.32',
+      finalScore: '311.25',
+      obligations: { total: 5, paid: 3, missed: 2, unresolved: 0 },
+      events: { total: 3, resolved: 2, expired: 1, unresolved: 0 },
+    };
+    expect(
+      (
+        service as unknown as { readCompletionSummary(value: unknown): unknown }
+      ).readCompletionSummary(legacy),
+    ).toMatchObject({
+      version: 'v1',
+      finalScore: '311.25',
+    });
+  });
+
   it('returns null summaries when the player has no resumable or completed simulation', async () => {
     await expect(service.getActiveSession('user-1')).resolves.toEqual({
       active: null,
@@ -420,6 +682,12 @@ describe('SimulationsService', () => {
           increment: '50.00',
         },
         events: [{ title: 'Future event that must stay hidden' }],
+        obligationSchedules: [
+          {
+            templateCode: 'SIM_OBL_SECRET_FUTURE_BILL',
+            triggerDay: 12,
+          },
+        ],
       },
       obligations: [
         {
@@ -429,11 +697,29 @@ describe('SimulationsService', () => {
           category: 'Housing',
           amountDue: '1800.00',
           dueDay: 3,
+          introducedByEventId: null,
+          introducedByScheduleId: null,
           status: 'PAID',
           paidAt: new Date('2026-09-14T12:00:00.000Z'),
           currentUsed: '1800.00',
           savingsUsed: '0.00',
           pointsAwarded: '60.00',
+        },
+        {
+          id: 'out-of-month-installment',
+          templateCode: 'SIM_OBL_FUTURE_REPAYMENT',
+          name: 'Future repayment',
+          category: 'Debt',
+          amountDue: '265.00',
+          dueDay: 34,
+          introducedByEventId: null,
+          introducedByScheduleId: null,
+          status: 'SCHEDULED',
+          paidAt: null,
+          currentUsed: '0.00',
+          savingsUsed: '0.00',
+          pointsAwarded: '0.00',
+          consequenceSnapshot: { kind: 'INSTALLMENT' },
         },
       ],
       events: [
@@ -451,6 +737,11 @@ describe('SimulationsService', () => {
                 immediateCost: '600.00',
                 feeOrDebt: '0.00',
                 scoreDelta: '12.00',
+                introducedObligation: {
+                  name: 'Medical payment plan',
+                  amountDue: '450.00',
+                  dueDay: 26,
+                },
               },
             ],
           },
@@ -480,8 +771,14 @@ describe('SimulationsService', () => {
     expect(result.allocation.options).toHaveLength(1);
     expect(result.allocation.selected).toBeNull();
     expect(result.obligations[0]).toEqual(
-      expect.objectContaining({ id: 'obligation-1', pointsAwarded: '60.00' }),
+      expect.objectContaining({
+        id: 'obligation-1',
+        pointsAwarded: '60.00',
+        origin: 'INITIAL',
+      }),
     );
+    expect(result.obligations).toHaveLength(1);
+    expect(JSON.stringify(result)).not.toContain('out-of-month-installment');
     expect(result.currentEvent).toEqual({
       id: 'event-1',
       triggerDay: 7,
@@ -493,6 +790,16 @@ describe('SimulationsService', () => {
           label: 'Pay now',
           immediateCost: '600.00',
           feeOrDebt: '0.00',
+          feeChargedNow: '0.00',
+          inMonthObligation: {
+            name: 'Medical payment plan',
+            amountDue: '450.00',
+            dueDay: 26,
+          },
+          installments: [],
+          cashRequiredNow: '600.00',
+          affordable: true,
+          shortfall: '0.00',
         },
       ],
       decisionExpiresAt: '2026-09-14T12:00:30.000Z',
@@ -501,6 +808,7 @@ describe('SimulationsService', () => {
     expect(JSON.stringify(result)).not.toContain(
       'Future event that must stay hidden',
     );
+    expect(JSON.stringify(result)).not.toContain('SIM_OBL_SECRET_FUTURE_BILL');
     expect(result.allowedActions).toEqual(['RESOLVE_EVENT']);
   });
 
