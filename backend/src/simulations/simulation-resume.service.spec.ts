@@ -25,7 +25,7 @@ const refreshedSession = (overrides: Record<string, unknown> = {}) => ({
   ...simulationStatusSession(
     now,
     'ACTIVE',
-    new Date(now.getTime()+14_000),
+    new Date(now.getTime() + 14_000),
     overrides,
   ),
 });
