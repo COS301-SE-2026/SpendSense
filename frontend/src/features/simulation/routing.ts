@@ -1,6 +1,6 @@
 import type { SimulationDetail } from './types'
 
-export type SimulationRoute = 'briefing' | 'board' | 'payment-result' | 'event-reveal' | 'event-result' | 'paused' | 'summary' | 'recovery' | 'entry'
+export type SimulationRoute = 'briefing' | 'board' | 'new-obligation' | 'payment-result' | 'event-reveal' | 'event-result' | 'paused' | 'summary' | 'recovery' | 'entry'
 
 export function routeForSimulationState(
   detail: SimulationDetail,
@@ -29,6 +29,9 @@ export function routeForSimulationState(
 
   if (status === 'ACTIVE') {
     switch (pending.type) {
+      case 'NEW_OBLIGATION':
+        return 'new-obligation'
+
       case 'PAYMENT_RESULT':
         return 'payment-result'
 
@@ -57,7 +60,9 @@ export function pathForSimulationState(
     case 'briefing':
       return `/simulation/setup/${sessionId}`
 
+    // The new-obligation popup is shown over the board.
     case 'board':
+    case 'new-obligation':
     case 'paused':
       return `/simulation/session/${sessionId}/board`
 
