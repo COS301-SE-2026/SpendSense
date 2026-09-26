@@ -17,6 +17,7 @@ import logo from "../components/SpendSenseLogoLight.svg";
 import { LongButton } from "../components/common/LongButton";
 import { CustomInput } from "../components/common/CustomInput";
 import { checkDisplayName, getMe } from "../features/users/usersApi";
+import { Eye, EyeOff } from "lucide-react";
 
 //validation rules
 const registrationSchema=z.object({
@@ -57,6 +58,8 @@ export default function RegisterPage(){
 	const navigate=useNavigate();
 	const [error,setError]=useState<string|null>(null);
 	const [isLoading,setIsLoading]=useState(false);
+	const [showPassword,setShowPassword]=useState(false);
+	const [showConfirmPassword,setShowConfirmPassword]=useState(false);
 	const {register,handleSubmit,formState:{errors}}=useForm<registrationFormData>({
 		resolver:zodResolver(registrationSchema),
 	});
@@ -123,28 +126,50 @@ export default function RegisterPage(){
 					</div>
 					<div className="space-y-3">
 						<label htmlFor="password" className="text-xs font-semibold text-[#091828]">Password</label>
-						<CustomInput
-						id="password"
-							{...register("password")}
-							variant="regLog"
-							type="password"
-							placeholder="SuperSecretPassword"
-							className="w-full"
-						/>
+						<div className="relative">
+							<CustomInput
+								id="password"
+								{...register("password")}
+								variant="regLog"
+								type={showPassword ? "text" : "password"}
+								placeholder="SuperSecretPassword"
+								className="w-full pr-14"
+							/>
+							<button
+								type="button"
+								onClick={() => setShowPassword((visible) => !visible)}
+								aria-label={showPassword ? "Hide password" : "Show password"}
+								aria-pressed={showPassword}
+								className="absolute inset-y-0 right-4 flex items-center text-[#667085] hover:text-[#091828] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AC2A5D]"
+							>
+								{showPassword ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+							</button>
+						</div>
 						<p className="text-xs text-[#667085]">Use at least 8 characters with an uppercase letter, lowercase letter, number, and special character.</p>
 						{errors.password && (<p className="text-xs text-red-600">{errors.password.message}</p>)}
 					</div>
 					{/* confirm pass->confimPassowrd */}
 					<div className="space-y-3">
 						<label htmlFor="confirmPassword" className="text-xs font-semibold text-[#091828]">Confirm password</label>
-						<CustomInput
-							id="confirmPassword"
-							{...register("confirmPassword")}
-							variant="regLog"
-							type="password"
-							placeholder="SuperSecretPassword"
-							className="w-full"
-						/>
+						<div className="relative">
+							<CustomInput
+								id="confirmPassword"
+								{...register("confirmPassword")}
+								variant="regLog"
+								type={showConfirmPassword ? "text" : "password"}
+								placeholder="SuperSecretPassword"
+								className="w-full pr-14"
+							/>
+							<button
+								type="button"
+								onClick={() => setShowConfirmPassword((visible) => !visible)}
+								aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+								aria-pressed={showConfirmPassword}
+								className="absolute inset-y-0 right-4 flex items-center text-[#667085] hover:text-[#091828] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AC2A5D]"
+							>
+								{showConfirmPassword ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+							</button>
+						</div>
 						{errors.confirmPassword && (<p className="text-xs text-red-600">{errors.confirmPassword.message}</p>)}
 					</div>
 					{error && <p className="text-xs text-red-600">{error}</p>}
