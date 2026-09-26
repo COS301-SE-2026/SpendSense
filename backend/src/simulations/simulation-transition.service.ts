@@ -325,13 +325,15 @@ export class SimulationTransitionService {
     );
 
     let materializedObligation = false;
-    for (const schedule of session.obligationSchedules.filter(
-      (candidate) =>
+    for (const schedule of session.obligationSchedules.filter((candidate) => {
+      const dueDay = this.record(candidate.obligationSnapshot)?.dueDay;
+      return (
         candidate.status === SimulationObligationScheduleStatus.SCHEDULED &&
         candidate.triggerDay <= session.currentDay &&
-        (this.record(candidate.obligationSnapshot)?.dueDay ?? 31) <=
-          session.daysInMonth,
-    )) {
+        typeof dueDay === 'number' &&
+        dueDay <= session.daysInMonth
+      );
+    })) {
       const snapshot = this.record(schedule.obligationSnapshot);
       if (!snapshot) {
         throw new Error('Simulation obligation schedule has no snapshot');

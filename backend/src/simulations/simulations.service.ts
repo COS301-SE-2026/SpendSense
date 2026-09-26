@@ -487,6 +487,7 @@ const eventResolutionSessionSelect = {
     select: {
       id: true,
       status: true,
+      triggerDay: true,
       eventSnapshot: true,
       decisionExpiresAt: true,
     },
@@ -2901,6 +2902,8 @@ export class SimulationsService {
       obligations: Array<{
         id: string;
         templateCode: string;
+        introducedByEventId: string | null;
+        introducedByScheduleId: string | null;
         name: string;
         category: string;
         amountDue: unknown;
