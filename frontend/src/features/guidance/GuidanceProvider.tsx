@@ -267,6 +267,21 @@ export function GuidanceProvider({
         goToWalkthroughStep(step-1)
     },[walkthroughStop,goToWalkthroughStep])
 
+    const goToWalkthroughStop=React.useCallback((stop:number)=>{
+        const count=walkthroughStopCount(stateRef.current.walkthrough.currentStep)
+        setWalkthroughStop(Math.min(Math.max(Math.trunc(stop),0),count-1))
+    },[])
+
+    const skipWalkthroughFeature=React.useCallback(()=>{
+        const step=stateRef.current.walkthrough.currentStep
+        if(step>=WALKTHROUGH_MAX_STEP){
+            completeWalkthrough()
+            return
+        }
+        setWalkthroughStop(0)
+        goToWalkthroughStep(step+1)
+    },[goToWalkthroughStep,completeWalkthrough])
+
     const suspendWalkthrough=React.useCallback(()=>setWalkthroughVisible(false),[])
 
     const syncWalkthroughToRoute=React.useCallback((route:string)=>{
@@ -349,6 +364,8 @@ export function GuidanceProvider({
         goToWalkthroughStep,
         nextWalkthroughStop,
         previousWalkthroughStop,
+        goToWalkthroughStop,
+        skipWalkthroughFeature,
         suspendWalkthrough,
         skipWalkthrough,
         completeWalkthrough,
@@ -380,6 +397,8 @@ export function GuidanceProvider({
         goToWalkthroughStep,
         nextWalkthroughStop,
         previousWalkthroughStop,
+        goToWalkthroughStop,
+        skipWalkthroughFeature,
         suspendWalkthrough,
         skipWalkthrough,
         completeWalkthrough,
