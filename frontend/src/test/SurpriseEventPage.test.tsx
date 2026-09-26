@@ -97,6 +97,32 @@ describe('Surprise event reveal and decision',()=>{
         expect(screen.queryByText('30.00 points')).not.toBeInTheDocument()
         expect(screen.getByRole('button',{name:/confirm choice/i})).toBeDisabled()
     })
+    it('shows the compact choice heading and keeps the event details in the info dialog',async()=>{
+        renderRoute('/simulation/session/sim_fixture_1/event/decision')
+        expect(await screen.findByRole('heading',{name:'Event choice',level:1})).toBeInTheDocument()
+        expect(screen.getByRole('heading',{name:'Unexpected repair',level:2})).toBeInTheDocument()
+        expect(screen.queryByText(futureEvent.currentEvent.context)).not.toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button',{name:'About this event'}))
+        expect(screen.getByRole('dialog')).toHaveTextContent(futureEvent.currentEvent.context)
+        expect(screen.queryByRole('button',{name:'Previous option'})).not.toBeInTheDocument()
+        expect(screen.queryByRole('button',{name:'Next option'})).not.toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button',{name:'Close information'}))
+        expect(screen.getByRole('button',{name:'Previous option'})).toBeInTheDocument()
+        expect(screen.getByRole('button',{name:'Next option'})).toBeInTheDocument()
+    })
+    it('randomizes the server option order for display',async()=>{
+        const randomSpy=vi.spyOn(Math,'random').mockReturnValue(0)
+        try{
+            renderRoute('/simulation/session/sim_fixture_1/event/decision')
+            const radios=await screen.findAllByRole('radio')
+            const displayedIds=radios.map(radio=>(radio as HTMLInputElement).value)
+            const serverIds=futureEvent.currentEvent.options.map(option=>option.id)
+            expect(displayedIds).not.toEqual(serverIds)
+            expect([...displayedIds].sort()).toEqual([...serverIds].sort())
+        }finally{
+            randomSpy.mockRestore()
+        }
+    })
     it('steps through the options with the arrow buttons',async()=>{
         renderRoute('/simulation/session/sim_fixture_1/event/decision')
         const previous=await screen.findByRole('button',{name:'Previous option'})

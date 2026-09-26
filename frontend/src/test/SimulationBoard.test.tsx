@@ -528,6 +528,63 @@ describe('SimulationBoard', () => {
     )
   })
 
+  it('will keep day thirty visible when the final timeline rows are taller than the viewport', () => {
+    const makeRect = (top: number, height = 50) =>
+      ({
+        x: 0,
+        y: top,
+        top,
+        right: 320,
+        bottom: top + height,
+        left: 0,
+        width: 320,
+        height,
+        toJSON: () => ({}),
+      }) as DOMRect
+    const previousScrollTo = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollTo')
+    const scrollTo = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
+      configurable: true,
+      value: scrollTo,
+    })
+    const geometrySpy = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.getAttribute('aria-label') === 'Days in the simulated month') {
+          return makeRect(100, 320)
+        }
+        if (this.tagName === 'LI') {
+          const day = Number(this.textContent?.match(/Day (\d+)/)?.[1] ?? 1)
+          return makeRect(100 + (day - 1) * 75)
+        }
+        return makeRect(0)
+      })
+
+    try {
+      render(
+        <SimulationBoard
+          simulation={{
+            ...activeBoardFixture,
+            session: { ...activeBoardFixture.session, currentDay: 30 },
+          }}
+          onSimulationChange={vi.fn()}
+          onRefetch={vi.fn()}
+        />,
+      )
+
+      expect(screen.getByLabelText('Days in the simulated month'))
+        .toHaveAttribute('aria-label', 'Days in the simulated month')
+      expect(scrollTo).toHaveBeenCalledWith({ top: 1921, behavior: 'smooth' })
+    } finally {
+      geometrySpy.mockRestore()
+      if (previousScrollTo) {
+        Object.defineProperty(HTMLElement.prototype, 'scrollTo', previousScrollTo)
+      } else {
+        delete (HTMLElement.prototype as HTMLElement & { scrollTo?: unknown }).scrollTo
+      }
+    }
+  })
+
   it('will smoothly recenter the active day after the agenda has been idle for two seconds', () => {
     vi.useFakeTimers()
     const makeRect = (top: number, height = 40) =>

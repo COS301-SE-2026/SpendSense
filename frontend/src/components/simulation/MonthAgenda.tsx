@@ -101,12 +101,19 @@ export function MonthAgenda({
     const activeIndex = Math.min(currentDayValueRef.current - 1, rows.length - 1)
     const firstIndex = Math.max(0, Math.min(activeIndex - 2, rows.length - 5))
     const targetRow = rows[firstIndex]
+    const activeRow = rows[activeIndex]
     const scrollerRect = scroller.getBoundingClientRect()
     const rowRect = targetRow.getBoundingClientRect()
-    const top = Math.max(
+    const activeRect = activeRow.getBoundingClientRect()
+    const baseTop = Math.max(
       0,
       scroller.scrollTop + rowRect.top - scrollerRect.top - 16,
     )
+    const scrollShift = baseTop - scroller.scrollTop
+    const viewportHeight = scroller.clientHeight || scrollerRect.height
+    const viewportBottom = scrollerRect.top + viewportHeight - 16
+    const activeBottomAtTarget = activeRect.bottom - scrollShift
+    const top = baseTop + Math.max(0, activeBottomAtTarget - viewportBottom)
 
     if (typeof scroller.scrollTo === 'function') {
       scroller.scrollTo({

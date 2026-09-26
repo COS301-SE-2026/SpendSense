@@ -95,6 +95,7 @@ function EventScreenContent({screen}:Readonly<{screen:EventScreen}>){
     const {sessionId}=useParams<{sessionId:string}>()
     const {data,loading,error,refetch,setSimulation}=useSimulation(sessionId)
     const [selectedOptionId,setSelectedOptionId]=useState<string|null>(null)
+    const [infoOpen,setInfoOpen]=useState(false)
     const [submitting,setSubmitting]=useState(false)
     const [decisionError,setDecisionError]=useState<string|null>(null)
     const [checkingDeadline,setCheckingDeadline]=useState(false)
@@ -241,8 +242,20 @@ function EventScreenContent({screen}:Readonly<{screen:EventScreen}>){
     const showCountdown=data.session.timedMode&&event.decisionExpiresAt
     return(
         <SimulationPageShell
-            title={screen==='reveal'?'Something unexpected!':'What do you want to do?'}
+            title={screen==='reveal'?'Something unexpected!':'Event choice'}
             onBack={()=>navigate(screen==='decision'?boardPath:'/simulation')}
+            infoTitle="About this event"
+            infoButtonLabel="About this event"
+            onInfoOpenChange={setInfoOpen}
+            infoContent={(
+                <div className="space-y-3">
+                    <p className="font-bold text-[#AC2A5D] dark:text-[#FFB1C5]">
+                        Surprise event · Day {event.triggerDay} of {data.session.daysInMonth}
+                    </p>
+                    <p>{event.context}</p>
+                    <p>Choose an option to decide how your simulation responds. Your real finances are not affected.</p>
+                </div>
+            )}
         >
             <section className="space-y-6">
                 <div className="-mt-6 flex items-start justify-between gap-3">
@@ -251,14 +264,16 @@ function EventScreenContent({screen}:Readonly<{screen:EventScreen}>){
                     </h2>
                     {showCountdown&&<EventCountdown deadline={event.decisionExpiresAt}/>}
                 </div>
-                <div className="rounded-[22px] border-2 border-[#091828] bg-[#FFEAF1] p-5 shadow-[5px_6px_0_#091828] dark:border-[#060E20] dark:bg-[#2D1B2E] dark:shadow-[5px_6px_0_#060E20]">
-                    <p className="text-xs font-extrabold uppercase tracking-wide text-[#AC2A5D] dark:text-[#FFB1C5]">
-                        Surprise event · Day {event.triggerDay} of {data.session.daysInMonth}
-                    </p>
-                    <p className="mt-2 text-sm leading-relaxed text-[#50485E] dark:text-[#D9DDE7]">
-                        {event.context}
-                    </p>
-                </div>
+                {screen==='reveal'&&(
+                    <div className="rounded-[22px] border-2 border-[#091828] bg-[#FFEAF1] p-5 shadow-[5px_6px_0_#091828] dark:border-[#060E20] dark:bg-[#2D1B2E] dark:shadow-[5px_6px_0_#060E20]">
+                        <p className="text-xs font-extrabold uppercase tracking-wide text-[#AC2A5D] dark:text-[#FFB1C5]">
+                            Surprise event · Day {event.triggerDay} of {data.session.daysInMonth}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-[#50485E] dark:text-[#D9DDE7]">
+                            {event.context}
+                        </p>
+                    </div>
+                )}
                 {screen==='reveal'?(
                     <>
                         <p className="text-center text-sm text-[#6B6375] dark:text-[#A0AEC0]">
@@ -279,6 +294,7 @@ function EventScreenContent({screen}:Readonly<{screen:EventScreen}>){
                             selectedOptionId={selectedOptionId}
                             onSelect={selectOption}
                             disabled={submitting||checkingDeadline}
+                            hideNavigation={infoOpen}
                         />
                         {decisionError&&(
                             <p role="alert" className="rounded-xl bg-[#FCE0E8] p-3 text-sm font-semibold text-[#AC2A5D]">
