@@ -581,6 +581,41 @@ describe('SimulationsService', () => {
     expect(prisma.simulationScoreEntry.findMany).toHaveBeenCalledTimes(1);
   });
 
+  it('reads v3 percentages and fee/bill totals without changing their meanings', () => {
+    const v3 = {
+      version: 'v3',
+      completedAt: createdAt.toISOString(),
+      startingBudget: '5000.00',
+      currentBalance: '900.00',
+      savingsBalance: '1100.00',
+      totalRemaining: '2000.00',
+      weightedRemaining: '2220.00',
+      remainingBudgetPercentage: '0.4000',
+      weightedRemainingPercentage: '0.4440',
+      savingsRetentionMultiplier: '1.20',
+      budgetBonus: '13.32',
+      finalScore: '13.32',
+      obligations: { total: 0, paid: 0, missed: 0, unresolved: 0 },
+      events: { total: 0, resolved: 0, expired: 0, unresolved: 0 },
+      installments: { missedCount: 0, missedAmount: '0.00' },
+      upfrontFees: { count: 1, amount: '80.00' },
+      inMonthEventBills: { count: 1, amount: '400.00' },
+      scoreBySource: { FINAL_BUDGET_BONUS: '13.32' },
+      importanceOutcomes: {},
+    };
+    expect(
+      (
+        service as unknown as { readCompletionSummary(value: unknown): unknown }
+      ).readCompletionSummary(v3),
+    ).toMatchObject({
+      version: 'v3',
+      remainingBudgetPercentage: '0.4000',
+      weightedRemainingPercentage: '0.4440',
+      upfrontFees: { count: 1, amount: '80.00' },
+      inMonthEventBills: { count: 1, amount: '400.00' },
+    });
+  });
+
   it('keeps legacy v1 completion snapshots readable', () => {
     const legacy = {
       version: 'v1',
@@ -662,6 +697,8 @@ describe('SimulationsService', () => {
           category: 'Housing',
           amountDue: '1800.00',
           dueDay: 3,
+          introducedByEventId: null,
+          introducedByScheduleId: null,
           status: 'PAID',
           paidAt: new Date('2026-09-14T12:00:00.000Z'),
           currentUsed: '1800.00',
@@ -675,6 +712,8 @@ describe('SimulationsService', () => {
           category: 'Debt',
           amountDue: '265.00',
           dueDay: 34,
+          introducedByEventId: null,
+          introducedByScheduleId: null,
           status: 'SCHEDULED',
           paidAt: null,
           currentUsed: '0.00',
@@ -732,7 +771,11 @@ describe('SimulationsService', () => {
     expect(result.allocation.options).toHaveLength(1);
     expect(result.allocation.selected).toBeNull();
     expect(result.obligations[0]).toEqual(
-      expect.objectContaining({ id: 'obligation-1', pointsAwarded: '60.00' }),
+      expect.objectContaining({
+        id: 'obligation-1',
+        pointsAwarded: '60.00',
+        origin: 'INITIAL',
+      }),
     );
     expect(result.obligations).toHaveLength(1);
     expect(JSON.stringify(result)).not.toContain('out-of-month-installment');

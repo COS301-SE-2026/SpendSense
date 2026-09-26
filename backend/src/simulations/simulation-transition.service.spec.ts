@@ -192,7 +192,13 @@ describe('SimulationTransitionService', () => {
       currentDay: 0,
       stoppedFor: 'EVENT_RESULT',
     });
-    expect(transaction.simulationEvent.update).toHaveBeenCalledTimes(1);
+    const expiryUpdate = transaction.simulationEvent.update.mock
+      .calls[0][0] as {
+      data: { resolutionSnapshot: Record<string, unknown> };
+    };
+    expect(expiryUpdate.data.resolutionSnapshot).toMatchObject({
+      feeChargedNow: '150.00',
+    });
     expect(transaction.simulationScoreEntry.create).toHaveBeenCalledTimes(1);
   });
 
@@ -485,6 +491,9 @@ describe('SimulationTransitionService', () => {
         ],
       }),
     );
+    transaction.simulationScoreEntry.findMany.mockResolvedValue([
+      { sourceType: 'EVENT_DECISION', pointsDelta: '40.00' },
+    ]);
     await service.advanceOneDay('simulation-1');
     expect(transaction.simulationObligation.updateMany).not.toHaveBeenCalled();
     expect(transaction.simulationScoreEntry.create).toHaveBeenCalledTimes(1);
@@ -513,12 +522,13 @@ describe('SimulationTransitionService', () => {
         currentDay: 30,
         currentBalance: '1000.00',
         savingsBalance: '1000.00',
-        score: '65.00',
+        score: '75.00',
         obligations: [
           { status: 'PAID', dueDay: 3 },
           { status: 'MISSED', dueDay: 10 },
           {
             id: 'day-30-bill',
+            introducedByEventId: 'event-1',
             name: 'Final bill',
             amountDue: '400.00',
             status: 'PAYABLE',
@@ -536,7 +546,14 @@ describe('SimulationTransitionService', () => {
         ],
         events: [
           { status: 'RESOLVED', resolutionSnapshot: { feeOrDebt: '5.00' } },
-          { status: 'EXPIRED', resolutionSnapshot: null },
+          {
+            status: 'EXPIRED',
+            resolutionSnapshot: {
+              outcome: 'TIMED_OUT',
+              option: { feeOrDebt: '7.00' },
+              feeChargedNow: '7.00',
+            },
+          },
           { status: 'SCHEDULED' },
         ],
       }),
@@ -545,7 +562,7 @@ describe('SimulationTransitionService', () => {
       { sourceType: 'OBLIGATION_PAYMENT', pointsDelta: '50.00' },
       { sourceType: 'EVENT_DECISION', pointsDelta: '40.00' },
       { sourceType: 'OBLIGATION_MISSED', pointsDelta: '-15.00' },
-      { sourceType: 'INSTALLMENT_MISSED', pointsDelta: '-20.00' },
+      { sourceType: 'INSTALLMENT_MISSED', pointsDelta: '-10.00' },
     ]);
 
     await expect(service.advanceOneDay('simulation-1')).resolves.toEqual({
@@ -560,21 +577,24 @@ describe('SimulationTransitionService', () => {
     expect(update.data).toMatchObject({
       status: 'COMPLETED',
       nextDayAt: null,
-      score: '66.00',
+      score: '76.00',
     });
     expect(update.data.completionSnapshot).toMatchObject({
       budgetBonus: '11.00',
-      finalScore: '66.00',
+      finalScore: '76.00',
       obligations: { total: 3, paid: 1, missed: 2, unresolved: 0 },
       events: { total: 3, resolved: 1, expired: 1, unresolved: 1 },
-      version: 'v2',
+      version: 'v3',
+      remainingBudgetPercentage: '0.3333',
+      weightedRemainingPercentage: '0.3667',
       installments: { missedCount: 1, missedAmount: '400.00' },
-      feesAndDebt: { count: 1, amount: '5.00' },
+      upfrontFees: { count: 2, amount: '12.00' },
+      inMonthEventBills: { count: 1, amount: '400.00' },
       scoreBySource: {
         OBLIGATION_PAYMENT: '50.00',
         EVENT_DECISION: '40.00',
         OBLIGATION_MISSED: '-15.00',
-        INSTALLMENT_MISSED: '-20.00',
+        INSTALLMENT_MISSED: '-10.00',
         FINAL_BUDGET_BONUS: '11.00',
       },
       importanceOutcomes: {
@@ -606,7 +626,7 @@ describe('SimulationTransitionService', () => {
   });
 
   it.each([false, true])(
-    'writes reconciled v2 results and once-only rewards when a %s-mode run reaches day 30',
+    'writes reconciled v3 results and once-only rewards when a %s-mode run reaches day 30',
     async (timedMode) => {
       transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
         activeSession({

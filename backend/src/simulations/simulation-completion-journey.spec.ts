@@ -52,16 +52,6 @@ const journeyLedger = [
     calculationData: { amountDue: '300.00', importance: 'STANDARD' },
     createdAt: new Date(createdAt.getTime() + 3),
   },
-  {
-    id: 'installment-miss',
-    sourceType: 'INSTALLMENT_MISSED',
-    sourceId: 'repair-installment',
-    simulatedDay: 30,
-    pointsDelta: '-10.00',
-    reason: 'Missed installment: Repair installment',
-    calculationData: { amountDue: '400.00', importance: 'HIGH' },
-    createdAt: new Date(createdAt.getTime() + 4),
-  },
 ];
 
 describe.each([false, true])(
@@ -170,13 +160,26 @@ describe.each([false, true])(
       const completedLedger = [
         ...journeyLedger,
         {
+          id: 'installment-miss',
+          sourceType: 'INSTALLMENT_MISSED',
+          sourceId: 'repair-installment',
+          simulatedDay: 30,
+          pointsDelta: '-10.00',
+          reason: 'Missed installment: Repair installment',
+          calculationData: { amountDue: '400.00', importance: 'HIGH' },
+          createdAt: new Date(createdAt.getTime() + 4),
+        },
+        {
           id: 'budget-bonus',
           sourceType: 'FINAL_BUDGET_BONUS',
           sourceId: null,
           simulatedDay: 30,
           pointsDelta: '11.00',
           reason: 'Final budget efficiency bonus',
-          calculationData: { remainingBudgetPercentage: '0.3667' },
+          calculationData: {
+            remainingBudgetPercentage: '0.3333',
+            weightedRemainingPercentage: '0.3667',
+          },
           createdAt: completedAt,
         },
       ];
@@ -203,7 +206,12 @@ describe.each([false, true])(
         simulationScoreEntry: {
           create: jest.fn().mockResolvedValue({}),
           createMany: jest.fn(),
-          findMany: jest.fn().mockResolvedValue(recentAndCompletionLedger),
+          findMany: jest
+            .fn()
+            .mockResolvedValue([
+              ...recentAndCompletionLedger,
+              { sourceType: 'INSTALLMENT_MISSED', pointsDelta: '-10.00' },
+            ]),
         },
         userEvent: {
           create: jest.fn().mockResolvedValue({ id: 'completion-event' }),
@@ -274,11 +282,14 @@ describe.each([false, true])(
       const detail = await simulations.getSession('user-1', sessionId);
 
       expect(detail.completion).toMatchObject({
-        version: 'v2',
+        version: 'v3',
+        remainingBudgetPercentage: '0.3333',
+        weightedRemainingPercentage: '0.3667',
         obligations: { total: 4, paid: 2, missed: 2, unresolved: 0 },
         events: { total: 1, resolved: 1, expired: 0, unresolved: 0 },
         installments: { missedCount: 1, missedAmount: '400.00' },
-        feesAndDebt: { count: 1, amount: '60.00' },
+        upfrontFees: { count: 1, amount: '60.00' },
+        inMonthEventBills: { count: 1, amount: '400.00' },
         scoreBySource: {
           OBLIGATION_PAYMENT: '75.00',
           EVENT_DECISION: '30.00',

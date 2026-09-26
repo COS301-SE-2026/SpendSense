@@ -61,6 +61,8 @@ const simulationDetailSelect = {
     select: {
       id: true,
       templateCode: true,
+      introducedByEventId: true,
+      introducedByScheduleId: true,
       name: true,
       category: true,
       amountDue: true,
@@ -153,6 +155,11 @@ type BriefingResponse = {
       importance: string;
       importanceWeight: string;
       baseMissPenalty: string;
+      origin:
+        | 'INITIAL'
+        | 'RANDOM_INTRODUCTION'
+        | 'EVENT_INTRODUCTION'
+        | 'INSTALLMENT';
       status: string;
     }>;
     surpriseEventCount: number;
@@ -214,6 +221,11 @@ type SimulationDetailResponse = {
     importance: string;
     importanceWeight: string;
     baseMissPenalty: string;
+    origin:
+      | 'INITIAL'
+      | 'RANDOM_INTRODUCTION'
+      | 'EVENT_INTRODUCTION'
+      | 'INSTALLMENT';
     status: string;
     paidAt: string | null;
     currentUsed: string;
@@ -259,7 +271,7 @@ type SimulationDetailResponse = {
 };
 
 type CompletionSummary = {
-  version: 'v1' | 'v2';
+  version: 'v1' | 'v2' | 'v3';
   completedAt: string;
   startingBudget: string;
   currentBalance: string;
@@ -267,6 +279,7 @@ type CompletionSummary = {
   totalRemaining: string;
   weightedRemaining: string;
   remainingBudgetPercentage: string;
+  weightedRemainingPercentage?: string;
   savingsRetentionMultiplier: string;
   budgetBonus: string;
   finalScore: string;
@@ -284,6 +297,8 @@ type CompletionSummary = {
   };
   installments?: { missedCount: number; missedAmount: string };
   feesAndDebt?: { count: number; amount: string };
+  upfrontFees?: { count: number; amount: string };
+  inMonthEventBills?: { count: number; amount: string };
   scoreBySource?: Record<string, string>;
   importanceOutcomes?: Record<
     string,
@@ -1140,6 +1155,18 @@ export class SimulationsService {
               optionId: option.id,
               immediateCost: option.immediateCost,
               feeOrDebt: option.feeOrDebt,
+              feeChargedNow: option.feeOrDebt,
+              cashRequiredNow: this.centsToMoney(
+                (this.moneyToCents(option.immediateCost) ?? 0) +
+                  (this.moneyToCents(option.feeOrDebt) ?? 0),
+              ),
+              inMonthObligation: option.introducedObligation
+                ? {
+                    name: option.introducedObligation.name,
+                    amountDue: option.introducedObligation.amountDue,
+                    dueDay: option.introducedObligation.dueDay,
+                  }
+                : null,
               currentUsed: effect.currentUsed,
               savingsUsed: effect.savingsUsed,
               uncoveredAmount: effect.uncoveredAmount,
@@ -2273,6 +2300,8 @@ export class SimulationsService {
       obligations: Array<{
         id: string;
         templateCode: string;
+        introducedByEventId: string | null;
+        introducedByScheduleId: string | null;
         name: string;
         category: string;
         amountDue: unknown;
@@ -2378,6 +2407,7 @@ export class SimulationsService {
           amountDue: this.money(obligation.amountDue),
           dueDay: obligation.dueDay,
           ...this.readObligationScoring(obligation.consequenceSnapshot),
+          origin: this.obligationOrigin(obligation),
           status: obligation.status,
           paidAt: obligation.paidAt?.toISOString() ?? null,
           currentUsed: this.money(obligation.currentUsed),
@@ -2908,12 +2938,26 @@ export class SimulationsService {
           amountDue: this.money(obligation.amountDue),
           dueDay: obligation.dueDay,
           ...this.readObligationScoring(obligation.consequenceSnapshot),
+          origin: this.obligationOrigin(obligation),
           status: obligation.status,
         })),
         surpriseEventCount: session.events.length,
       },
       replayed,
     };
+  }
+
+  private obligationOrigin(obligation: {
+    introducedByEventId: string | null;
+    introducedByScheduleId: string | null;
+    consequenceSnapshot: unknown;
+  }): 'INITIAL' | 'RANDOM_INTRODUCTION' | 'EVENT_INTRODUCTION' | 'INSTALLMENT' {
+    if (this.record(obligation.consequenceSnapshot)?.kind === 'INSTALLMENT') {
+      return 'INSTALLMENT';
+    }
+    if (obligation.introducedByScheduleId) return 'RANDOM_INTRODUCTION';
+    if (obligation.introducedByEventId) return 'EVENT_INTRODUCTION';
+    return 'INITIAL';
   }
 
   private readObligationScoring(snapshot: unknown): {
@@ -3202,12 +3246,14 @@ export class SimulationsService {
       'budgetBonus',
     ].every((key) => this.normalizedMoney(summary?.[key]) !== null);
     if (
-      (summary?.version !== 'v1' && summary?.version !== 'v2') ||
+      (summary?.version !== 'v1' &&
+        summary?.version !== 'v2' &&
+        summary?.version !== 'v3') ||
       !completedAt ||
       !this.normalizedMoney(summary.savingsRetentionMultiplier) ||
       !this.normalizedSignedMoney(summary.finalScore) ||
       typeof summary.remainingBudgetPercentage !== 'string' ||
-      !/^0(?:\.\d{4})?|1\.0000$/.test(summary.remainingBudgetPercentage) ||
+      !/^(?:0(?:\.\d{4})?|1\.0000)$/.test(summary.remainingBudgetPercentage) ||
       !requiredMoney ||
       obligationTotal === null ||
       obligationPaid === null ||
@@ -3250,7 +3296,10 @@ export class SimulationsService {
     if (summary.version === 'v1') return { ...baseSummary, version: 'v1' };
 
     const installments = this.record(summary.installments);
-    const feesAndDebt = this.record(summary.feesAndDebt);
+    const feeSummary = this.record(
+      summary.version === 'v3' ? summary.upfrontFees : summary.feesAndDebt,
+    );
+    const eventBills = this.record(summary.inMonthEventBills);
     const scoreBySource = this.readSignedMoneyRecord(summary.scoreBySource);
     const importanceOutcomes = this.readImportanceOutcomes(
       summary.importanceOutcomes,
@@ -3261,13 +3310,25 @@ export class SimulationsService {
     const missedInstallmentAmount = this.normalizedMoney(
       installments?.missedAmount,
     );
-    const feeCount = this.nonNegativeInteger(feesAndDebt?.count);
-    const feeAmount = this.normalizedMoney(feesAndDebt?.amount);
+    const feeCount = this.nonNegativeInteger(feeSummary?.count);
+    const feeAmount = this.normalizedMoney(feeSummary?.amount);
+    const weightedRemainingPercentage =
+      summary.version === 'v3' &&
+      typeof summary.weightedRemainingPercentage === 'string' &&
+      /^(?:0(?:\.\d{4})?|1\.0000)$/.test(summary.weightedRemainingPercentage)
+        ? summary.weightedRemainingPercentage
+        : null;
+    const eventBillCount = this.nonNegativeInteger(eventBills?.count);
+    const eventBillAmount = this.normalizedMoney(eventBills?.amount);
     if (
       missedInstallmentCount === null ||
       !missedInstallmentAmount ||
       feeCount === null ||
       !feeAmount ||
+      (summary.version === 'v3' &&
+        (weightedRemainingPercentage === null ||
+          eventBillCount === null ||
+          !eventBillAmount)) ||
       !scoreBySource ||
       !importanceOutcomes
     ) {
@@ -3296,14 +3357,29 @@ export class SimulationsService {
     ) {
       return null;
     }
+    if (summary.version === 'v2') {
+      return {
+        ...baseSummary,
+        version: 'v2',
+        installments: {
+          missedCount: missedInstallmentCount,
+          missedAmount: missedInstallmentAmount,
+        },
+        feesAndDebt: { count: feeCount, amount: feeAmount },
+        scoreBySource,
+        importanceOutcomes,
+      };
+    }
     return {
       ...baseSummary,
-      version: 'v2',
+      version: 'v3',
+      weightedRemainingPercentage: weightedRemainingPercentage!,
       installments: {
         missedCount: missedInstallmentCount,
         missedAmount: missedInstallmentAmount,
       },
-      feesAndDebt: { count: feeCount, amount: feeAmount },
+      upfrontFees: { count: feeCount, amount: feeAmount },
+      inMonthEventBills: { count: eventBillCount!, amount: eventBillAmount! },
       scoreBySource,
       importanceOutcomes,
     };

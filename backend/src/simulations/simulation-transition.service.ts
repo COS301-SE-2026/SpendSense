@@ -124,6 +124,7 @@ export class SimulationTransitionService {
             resolutionSnapshot: this.expirySnapshot(
               revealed.eventSnapshot,
               debit.uncoveredAmount,
+              debit.feeChargedNow,
             ) as Prisma.InputJsonValue,
           },
         });
@@ -171,6 +172,11 @@ export class SimulationTransitionService {
                 outcomeId: expiryOutcome.id,
                 immediateCost: expiryOutcome.immediateCost,
                 feeOrDebt: expiryOutcome.feeOrDebt,
+                feeChargedNow: debit.feeChargedNow,
+                cashRequiredNow: this.moneyFromCents(
+                  (this.cents(expiryOutcome.immediateCost) ?? 0) +
+                    (this.cents(expiryOutcome.feeOrDebt) ?? 0),
+                ),
                 uncoveredAmount: debit.uncoveredAmount,
               },
             },
@@ -543,6 +549,7 @@ export class SimulationTransitionService {
   private expirySnapshot(
     eventSnapshot: unknown,
     uncoveredAmount: string,
+    feeChargedNow: string,
   ): Record<string, unknown> {
     if (
       typeof eventSnapshot === 'object' &&
@@ -552,10 +559,11 @@ export class SimulationTransitionService {
       return {
         outcome: 'TIMED_OUT',
         option: eventSnapshot.expiryOutcome,
+        feeChargedNow,
         uncoveredAmount,
       };
     }
-    return { outcome: 'TIMED_OUT', uncoveredAmount };
+    return { outcome: 'TIMED_OUT', feeChargedNow, uncoveredAmount };
   }
 
   private async finalizeSession(
@@ -645,6 +653,7 @@ export class SimulationTransitionService {
           totalRemaining: summary.totalRemaining,
           weightedRemaining: summary.weightedRemaining,
           remainingBudgetPercentage: summary.remainingBudgetPercentage,
+          weightedRemainingPercentage: summary.weightedRemainingPercentage,
           savingsRetentionMultiplier: summary.savingsRetentionMultiplier,
           bonusCeiling: this.moneyFromCents(FINAL_BUDGET_BONUS_CEILING_CENTS),
         },
@@ -704,6 +713,8 @@ export class SimulationTransitionService {
       obligations: Array<{
         status: SimulationObligationStatus;
         amountDue: unknown;
+        dueDay: number;
+        introducedByEventId: string | null;
         consequenceSnapshot: unknown;
       }>;
       events: Array<{
@@ -717,7 +728,7 @@ export class SimulationTransitionService {
     },
     completedAt: Date,
   ): {
-    version: 'v2';
+    version: 'v3';
     completedAt: string;
     startingBudget: string;
     currentBalance: string;
@@ -725,6 +736,7 @@ export class SimulationTransitionService {
     totalRemaining: string;
     weightedRemaining: string;
     remainingBudgetPercentage: string;
+    weightedRemainingPercentage: string;
     savingsRetentionMultiplier: string;
     budgetBonus: string;
     finalScore: string;
@@ -741,7 +753,8 @@ export class SimulationTransitionService {
       unresolved: number;
     };
     installments: { missedCount: number; missedAmount: string };
-    feesAndDebt: { count: number; amount: string };
+    upfrontFees: { count: number; amount: string };
+    inMonthEventBills: { count: number; amount: string };
     scoreBySource: Record<string, string>;
     importanceOutcomes: Record<
       string,
@@ -772,12 +785,16 @@ export class SimulationTransitionService {
     const remainingBudgetPercentage =
       startingBudgetCents === 0
         ? 0
+        : Math.max(0, Math.min(1, totalRemainingCents / startingBudgetCents));
+    const weightedRemainingPercentage =
+      startingBudgetCents === 0
+        ? 0
         : Math.max(
             0,
             Math.min(1, weightedRemainingCents / startingBudgetCents),
           );
     const budgetBonusCents = Math.round(
-      FINAL_BUDGET_BONUS_CEILING_CENTS * remainingBudgetPercentage,
+      FINAL_BUDGET_BONUS_CEILING_CENTS * weightedRemainingPercentage,
     );
     const count = <T>(items: T[], predicate: (item: T) => boolean): number =>
       items.filter(predicate).length;
@@ -788,9 +805,28 @@ export class SimulationTransitionService {
         (scoreBySourceCents[entry.sourceType] ?? 0) +
         this.requiredSignedCents(entry.pointsDelta, 'score entry');
     }
+    const persistedLedgerTotalCents = Object.values(scoreBySourceCents).reduce(
+      (total, points) => total + points,
+      0,
+    );
+    if (persistedLedgerTotalCents !== scoreCents) {
+      throw new Error(
+        'Simulation completion ledger does not reconcile to score',
+      );
+    }
     scoreBySourceCents[SimulationScoreSourceType.FINAL_BUDGET_BONUS] =
       (scoreBySourceCents[SimulationScoreSourceType.FINAL_BUDGET_BONUS] ?? 0) +
       budgetBonusCents;
+    const finalScoreCents = scoreCents + budgetBonusCents;
+    const finalSourceTotalCents = Object.values(scoreBySourceCents).reduce(
+      (total, points) => total + points,
+      0,
+    );
+    if (finalSourceTotalCents !== finalScoreCents) {
+      throw new Error(
+        'Simulation completion sources do not reconcile to final score',
+      );
+    }
 
     const importanceOutcomes: Record<
       string,
@@ -827,22 +863,41 @@ export class SimulationTransitionService {
       }
     }
 
-    let feeOrDebtCount = 0;
-    let feeOrDebtCents = 0;
+    let upfrontFeeCount = 0;
+    let upfrontFeeCents = 0;
     for (const event of session.events) {
+      if (
+        event.status !== SimulationEventStatus.RESOLVED &&
+        event.status !== SimulationEventStatus.EXPIRED
+      ) {
+        continue;
+      }
       const resolution = this.record(event.resolutionSnapshot);
+      const option = this.record(resolution?.option);
       const amount = this.requiredCents(
-        resolution?.feeOrDebt ?? '0.00',
-        'event fee or debt',
+        resolution?.feeChargedNow ??
+          resolution?.feeOrDebt ??
+          option?.feeChargedNow ??
+          option?.feeOrDebt ??
+          '0.00',
+        'event fee charged now',
       );
       if (amount > 0) {
-        feeOrDebtCount += 1;
-        feeOrDebtCents += amount;
+        upfrontFeeCount += 1;
+        upfrontFeeCents += amount;
       }
     }
+    const inMonthEventBills = session.obligations.filter((obligation) =>
+      Boolean(obligation.introducedByEventId),
+    );
+    const inMonthEventBillCents = inMonthEventBills.reduce(
+      (total, obligation) =>
+        total + this.requiredCents(obligation.amountDue, 'event bill amount'),
+      0,
+    );
 
     return {
-      version: 'v2',
+      version: 'v3',
       completedAt: completedAt.toISOString(),
       startingBudget: this.moneyFromCents(startingBudgetCents),
       currentBalance: this.moneyFromCents(currentBalanceCents),
@@ -850,9 +905,10 @@ export class SimulationTransitionService {
       totalRemaining: this.moneyFromCents(totalRemainingCents),
       weightedRemaining: this.moneyFromCents(weightedRemainingCents),
       remainingBudgetPercentage: remainingBudgetPercentage.toFixed(4),
+      weightedRemainingPercentage: weightedRemainingPercentage.toFixed(4),
       savingsRetentionMultiplier: this.moneyFromCents(multiplierCents),
       budgetBonus: this.moneyFromCents(budgetBonusCents),
-      finalScore: this.moneyFromCents(scoreCents + budgetBonusCents),
+      finalScore: this.moneyFromCents(finalScoreCents),
       obligations: {
         total: session.obligations.length,
         paid: count(
@@ -891,9 +947,13 @@ export class SimulationTransitionService {
         missedCount: missedInstallmentCount,
         missedAmount: this.moneyFromCents(missedInstallmentCents),
       },
-      feesAndDebt: {
-        count: feeOrDebtCount,
-        amount: this.moneyFromCents(feeOrDebtCents),
+      upfrontFees: {
+        count: upfrontFeeCount,
+        amount: this.moneyFromCents(upfrontFeeCents),
+      },
+      inMonthEventBills: {
+        count: inMonthEventBills.length,
+        amount: this.moneyFromCents(inMonthEventBillCents),
       },
       scoreBySource: Object.fromEntries(
         Object.entries(scoreBySourceCents).map(([key, cents]) => [
@@ -1000,18 +1060,27 @@ export class SimulationTransitionService {
     currentBalance: string;
     savingsBalance: string;
     uncoveredAmount: string;
+    feeChargedNow: string;
   } {
     const currentCents = this.cents(currentBalance) ?? 0;
     const savingsCents = this.cents(savingsBalance) ?? 0;
-    const totalCost =
-      (this.cents(immediateCost) ?? 0) + (this.cents(feeOrDebt) ?? 0);
+    const immediateCostCents = this.cents(immediateCost) ?? 0;
+    const feeOrDebtCents = this.cents(feeOrDebt) ?? 0;
+    const totalCost = immediateCostCents + feeOrDebtCents;
     const currentUsed = Math.min(currentCents, totalCost);
     const remaining = totalCost - currentUsed;
     const savingsUsed = Math.min(savingsCents, remaining);
+    const uncoveredAmount = remaining - savingsUsed;
+    const amountCollected = totalCost - uncoveredAmount;
+    const feeChargedNow = Math.min(
+      feeOrDebtCents,
+      Math.max(0, amountCollected - immediateCostCents),
+    );
     return {
       currentBalance: this.moneyFromCents(currentCents - currentUsed),
       savingsBalance: this.moneyFromCents(savingsCents - savingsUsed),
-      uncoveredAmount: this.moneyFromCents(remaining - savingsUsed),
+      uncoveredAmount: this.moneyFromCents(uncoveredAmount),
+      feeChargedNow: this.moneyFromCents(feeChargedNow),
     };
   }
 
