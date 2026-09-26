@@ -26,7 +26,6 @@ export function MascotPeek(props:Readonly<MascotPeekProps>){
 
 function Peek({surface,facts,side='right',onRetry,onContinue,manual,durationMs=PEEK_DURATION_MS,className}:Readonly<MascotPeekProps>){
     const fromLeft=side==='left'
-    // a new surface, set of facts or duration starts a fresh peek
     const peekKey=`${surface}|${JSON.stringify(facts)}|${durationMs}`
     const [expiredKey,setExpiredKey]=useState<string|null>(null)
 
@@ -55,11 +54,10 @@ function Peek({surface,facts,side='right',onRetry,onContinue,manual,durationMs=P
                 variant="bubble"
                 bubbleTail={side}
                 showAvatar={false}
-                className={cn('pointer-events-auto',fromLeft? 'ml-3' : 'mr-3')}
+                className={cn('pointer-events-auto relative z-10',fromLeft? 'ml-3' : 'mr-3')}
             />
 
-            {/* the left side is the right side mirrored, so the mascot is cut off at the screen edge */}
-            <div className={cn('h-52 w-36 overflow-hidden rounded-l-3xl',fromLeft&&'-scale-x-100')}>
+            <div className={cn('h-52 w-36 [clip-path:inset(-50%_0_0_-50%_round_0_0_0_1.5rem)]',fromLeft&&'-scale-x-100')}>
                 <div className="translate-x-2 translate-y-4 rotate-[-45deg]">
                     <GuidanceMascot className="size-80 -scale-x-100"/>
                 </div>
