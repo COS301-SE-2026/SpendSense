@@ -164,6 +164,9 @@ describe('SimulationsService', () => {
     simulationSession: {
       findFirst: jest.Mock<Promise<unknown>, [unknown]>;
     };
+    simulationScoreEntry: {
+      findMany: jest.Mock<Promise<unknown[]>, [unknown]>;
+    };
     simulationObligationTemplate: {
       findMany: jest.Mock<Promise<CatalogueObligation[]>, [unknown]>;
     };
@@ -187,6 +190,11 @@ describe('SimulationsService', () => {
         findFirst: jest
           .fn<Promise<unknown>, [unknown]>()
           .mockResolvedValue(null),
+      },
+      simulationScoreEntry: {
+        findMany: jest
+          .fn<Promise<unknown[]>, [unknown]>()
+          .mockResolvedValue([]),
       },
       simulationObligationTemplate: {
         findMany: jest
@@ -463,6 +471,114 @@ describe('SimulationsService', () => {
       importance: 'HIGH',
     });
     expect(result.allowedActions).toEqual(['ACKNOWLEDGE_NEW_OBLIGATION']);
+  });
+
+  it('returns a validated v2 completion and the full score ledger only on completed reads', async () => {
+    const completionSnapshot = {
+      version: 'v2',
+      completedAt: createdAt.toISOString(),
+      startingBudget: '5000.00',
+      currentBalance: '900.00',
+      savingsBalance: '1100.00',
+      totalRemaining: '2000.00',
+      weightedRemaining: '2220.00',
+      remainingBudgetPercentage: '0.4440',
+      savingsRetentionMultiplier: '1.20',
+      budgetBonus: '13.32',
+      finalScore: '311.25',
+      obligations: { total: 2, paid: 1, missed: 1, unresolved: 0 },
+      events: { total: 1, resolved: 1, expired: 0, unresolved: 0 },
+      installments: { missedCount: 1, missedAmount: '400.00' },
+      feesAndDebt: { count: 1, amount: '80.00' },
+      scoreBySource: {
+        OBLIGATION_PAID: '250.00',
+        INSTALLMENT_MISSED: '-10.00',
+        EVENT_DECISION: '57.93',
+        FINAL_BUDGET_BONUS: '13.32',
+      },
+      importanceOutcomes: {
+        HIGH: { total: 1, paid: 0, missed: 1, unresolved: 0 },
+        STANDARD: { total: 1, paid: 1, missed: 0, unresolved: 0 },
+      },
+    };
+    prisma.simulationSession.findFirst.mockResolvedValue({
+      id: '00000000-0000-4000-8000-000000000011',
+      status: 'COMPLETED',
+      timedMode: false,
+      currentDay: 30,
+      daysInMonth: 30,
+      nextDayAt: null,
+      startingBudget: '5000.00',
+      currentBalance: '900.00',
+      savingsBalance: '1100.00',
+      score: '297.93',
+      createdAt,
+      updatedAt: createdAt,
+      completedAt: createdAt,
+      presentationHold: 'SUMMARY',
+      scenarioSnapshot: {
+        allocationOptions: [],
+        customAllocation: {
+          enabled: true,
+          minCurrentAmount: '0.00',
+          maxCurrentAmount: '5000.00',
+          increment: '50.00',
+        },
+      },
+      completionSnapshot,
+      obligations: [],
+      events: [],
+      obligationSchedules: [],
+      scoreEntries: [],
+    });
+    prisma.simulationScoreEntry.findMany.mockResolvedValue([
+      {
+        id: 'ledger-1',
+        sourceType: 'OBLIGATION_PAID',
+        sourceId: 'bill-1',
+        simulatedDay: 2,
+        pointsDelta: '250.00',
+        reason: 'Paid on time',
+        calculationData: { timing: 'EARLY', importance: 'STANDARD' },
+        createdAt,
+      },
+      {
+        id: 'ledger-2',
+        sourceType: 'FINAL_BUDGET_BONUS',
+        sourceId: null,
+        simulatedDay: 30,
+        pointsDelta: '13.32',
+        reason: 'Final budget efficiency bonus',
+        calculationData: { remainingBudgetPercentage: '0.4440' },
+        createdAt,
+      },
+    ]);
+
+    const result = await service.getSession(
+      'user-1',
+      '00000000-0000-4000-8000-000000000011',
+    );
+
+    expect(result.completion).toMatchObject({
+      version: 'v2',
+      installments: { missedCount: 1, missedAmount: '400.00' },
+      feesAndDebt: { count: 1, amount: '80.00' },
+      scoreBySource: { FINAL_BUDGET_BONUS: '13.32' },
+      importanceOutcomes: {
+        HIGH: { total: 1, missed: 1 },
+        STANDARD: { total: 1, paid: 1 },
+      },
+    });
+    expect(result.scoreLedger).toEqual([
+      expect.objectContaining({
+        id: 'ledger-1',
+        pointsDelta: '250.00',
+        calculationData: { timing: 'EARLY', importance: 'STANDARD' },
+        createdAt: createdAt.toISOString(),
+      }),
+      expect.objectContaining({ id: 'ledger-2', pointsDelta: '13.32' }),
+    ]);
+    expect(prisma.simulationScoreEntry.findMany).toHaveBeenCalledTimes(1);
   });
 
   it('keeps legacy v1 completion snapshots readable', () => {

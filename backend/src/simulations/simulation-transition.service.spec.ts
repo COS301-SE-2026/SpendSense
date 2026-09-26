@@ -17,6 +17,7 @@ type Transaction = {
   simulationScoreEntry: {
     create: jest.Mock<Promise<unknown>, [ScoreEntryCreateArgs]>;
     createMany: jest.Mock<Promise<unknown>, [unknown]>;
+    findMany: jest.Mock<Promise<unknown[]>, [unknown]>;
   };
   userEvent: { create: jest.Mock<Promise<{ id: string }>, [unknown]> };
 };
@@ -90,6 +91,9 @@ describe('SimulationTransitionService', () => {
         createMany: jest
           .fn<Promise<unknown>, [unknown]>()
           .mockResolvedValue({}),
+        findMany: jest
+          .fn<Promise<unknown[]>, [unknown]>()
+          .mockResolvedValue([]),
       },
       userEvent: {
         create: jest
@@ -473,6 +477,7 @@ describe('SimulationTransitionService', () => {
         currentDay: 30,
         currentBalance: '1000.00',
         savingsBalance: '1000.00',
+        score: '65.00',
         obligations: [
           { status: 'PAID', dueDay: 3 },
           { status: 'MISSED', dueDay: 10 },
@@ -483,6 +488,8 @@ describe('SimulationTransitionService', () => {
             status: 'PAYABLE',
             dueDay: 30,
             consequenceSnapshot: {
+              kind: 'INSTALLMENT',
+              importance: 'HIGH',
               baseMissPenalty: '20.00',
               importanceWeight: '1.00',
               amountReference: '1000.00',
@@ -492,12 +499,18 @@ describe('SimulationTransitionService', () => {
           },
         ],
         events: [
-          { status: 'RESOLVED' },
-          { status: 'EXPIRED' },
+          { status: 'RESOLVED', resolutionSnapshot: { feeOrDebt: '5.00' } },
+          { status: 'EXPIRED', resolutionSnapshot: null },
           { status: 'SCHEDULED' },
         ],
       }),
     );
+    transaction.simulationScoreEntry.findMany.mockResolvedValue([
+      { sourceType: 'OBLIGATION_PAYMENT', pointsDelta: '50.00' },
+      { sourceType: 'EVENT_DECISION', pointsDelta: '40.00' },
+      { sourceType: 'OBLIGATION_MISSED', pointsDelta: '-15.00' },
+      { sourceType: 'INSTALLMENT_MISSED', pointsDelta: '-20.00' },
+    ]);
 
     await expect(service.advanceOneDay('simulation-1')).resolves.toEqual({
       currentDay: 30,
@@ -511,18 +524,32 @@ describe('SimulationTransitionService', () => {
     expect(update.data).toMatchObject({
       status: 'COMPLETED',
       nextDayAt: null,
-      score: '41.00',
+      score: '66.00',
     });
     expect(update.data.completionSnapshot).toMatchObject({
       budgetBonus: '11.00',
-      finalScore: '41.00',
+      finalScore: '66.00',
       obligations: { total: 3, paid: 1, missed: 2, unresolved: 0 },
       events: { total: 3, resolved: 1, expired: 1, unresolved: 1 },
+      version: 'v2',
+      installments: { missedCount: 1, missedAmount: '400.00' },
+      feesAndDebt: { count: 1, amount: '5.00' },
+      scoreBySource: {
+        OBLIGATION_PAYMENT: '50.00',
+        EVENT_DECISION: '40.00',
+        OBLIGATION_MISSED: '-15.00',
+        INSTALLMENT_MISSED: '-20.00',
+        FINAL_BUDGET_BONUS: '11.00',
+      },
+      importanceOutcomes: {
+        STANDARD: { total: 2, paid: 1, missed: 1, unresolved: 0 },
+        HIGH: { total: 1, paid: 0, missed: 1, unresolved: 0 },
+      },
     });
     const missedEntry =
       transaction.simulationScoreEntry.create.mock.calls[0][0];
     expect(missedEntry.data).toMatchObject({
-      sourceType: 'OBLIGATION_MISSED',
+      sourceType: 'INSTALLMENT_MISSED',
       sourceId: 'day-30-bill',
       pointsDelta: '-10.00',
     });
@@ -541,6 +568,49 @@ describe('SimulationTransitionService', () => {
       transaction,
     );
   });
+
+  it.each([false, true])(
+    'writes reconciled v2 results and once-only rewards when a %s-mode run reaches day 30',
+    async (timedMode) => {
+      transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(
+        activeSession({
+          currentDay: 30,
+          timedMode,
+          nextDayAt: timedMode ? new Date(0) : null,
+          currentBalance: '1000.00',
+          savingsBalance: '1000.00',
+          score: '40.00',
+        }),
+      );
+      transaction.simulationScoreEntry.findMany.mockResolvedValue([
+        { sourceType: 'EVENT_DECISION', pointsDelta: '40.00' },
+      ]);
+
+      const result = timedMode
+        ? await service.resolveDueTransitions('simulation-1')
+        : await service.advanceOneDay('simulation-1');
+
+      expect(result).toEqual({ currentDay: 30, stoppedFor: 'SUMMARY' });
+      const snapshot =
+        transaction.simulationSession.updateMany.mock.calls[0][0].data
+          .completionSnapshot;
+      const bySource = (snapshot as { scoreBySource: Record<string, string> })
+        .scoreBySource;
+      const ledgerTotal = Object.values(bySource).reduce(
+        (sum, points) => sum + Math.round(Number(points) * 100),
+        0,
+      );
+      expect(ledgerTotal).toBe(
+        Math.round(
+          Number((snapshot as { finalScore: string }).finalScore) * 100,
+        ),
+      );
+      expect(rewardService.grantXp).toHaveBeenCalledTimes(1);
+      expect(badgeEngineService.evaluateSimulationBadges).toHaveBeenCalledTimes(
+        1,
+      );
+    },
+  );
 
   it('does not settle completion rewards again after the guard is claimed', async () => {
     transaction.simulationSession.findUniqueOrThrow.mockResolvedValue(

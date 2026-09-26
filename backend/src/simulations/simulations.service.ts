@@ -244,10 +244,20 @@ type SimulationDetailResponse = {
     importance: string;
   } | null;
   allowedActions: string[];
+  scoreLedger?: Array<{
+    id: string;
+    sourceType: string;
+    sourceId: string | null;
+    simulatedDay: number;
+    pointsDelta: string;
+    reason: string;
+    calculationData: Prisma.JsonValue;
+    createdAt: string;
+  }>;
 };
 
 type CompletionSummary = {
-  version: 'v1';
+  version: 'v1' | 'v2';
   completedAt: string;
   startingBudget: string;
   currentBalance: string;
@@ -270,6 +280,13 @@ type CompletionSummary = {
     expired: number;
     unresolved: number;
   };
+  installments?: { missedCount: number; missedAmount: string };
+  feesAndDebt?: { count: number; amount: string };
+  scoreBySource?: Record<string, string>;
+  importanceOutcomes?: Record<
+    string,
+    { total: number; paid: number; missed: number; unresolved: number }
+  >;
 };
 
 type ReadableScenarioSnapshot = {
@@ -692,7 +709,28 @@ export class SimulationsService {
       }
     }
 
-    return this.toSimulationDetailResponse(session);
+    const scoreLedger =
+      session.status === SimulationSessionStatus.COMPLETED
+        ? await this.prisma.simulationScoreEntry.findMany({
+            where: { sessionId },
+            orderBy: [
+              { simulatedDay: 'asc' },
+              { createdAt: 'asc' },
+              { id: 'asc' },
+            ],
+            select: {
+              id: true,
+              sourceType: true,
+              sourceId: true,
+              simulatedDay: true,
+              pointsDelta: true,
+              reason: true,
+              calculationData: true,
+              createdAt: true,
+            },
+          })
+        : null;
+    return this.toSimulationDetailResponse(session, scoreLedger);
   }
 
   async advanceSession(
@@ -2233,6 +2271,16 @@ export class SimulationsService {
       updatedAt: Date;
       completedAt: Date | null;
     },
+    scoreLedger: Array<{
+      id: string;
+      sourceType: string;
+      sourceId: string | null;
+      simulatedDay: number;
+      pointsDelta: unknown;
+      reason: string;
+      calculationData: Prisma.JsonValue;
+      createdAt: Date;
+    }> | null = null,
   ): SimulationDetailResponse {
     const scenario = this.readScenarioSnapshot(session.scenarioSnapshot);
     const currentEvent = session.events[0]
@@ -2312,6 +2360,13 @@ export class SimulationsService {
       completion: this.readCompletionSummary(session.completionSnapshot),
       newObligation,
       allowedActions: this.allowedActions(session),
+      ...(scoreLedger && {
+        scoreLedger: scoreLedger.map((entry) => ({
+          ...entry,
+          pointsDelta: this.money(entry.pointsDelta),
+          createdAt: entry.createdAt.toISOString(),
+        })),
+      }),
     };
   }
 
@@ -3084,7 +3139,7 @@ export class SimulationsService {
       'budgetBonus',
     ].every((key) => this.normalizedMoney(summary?.[key]) !== null);
     if (
-      summary?.version !== 'v1' ||
+      (summary?.version !== 'v1' && summary?.version !== 'v2') ||
       !completedAt ||
       !this.normalizedMoney(summary.savingsRetentionMultiplier) ||
       !this.normalizedSignedMoney(summary.finalScore) ||
@@ -3102,7 +3157,7 @@ export class SimulationsService {
     ) {
       return null;
     }
-    return {
+    const baseSummary = {
       version: summary.version,
       completedAt,
       startingBudget: this.normalizedMoney(summary.startingBudget)!,
@@ -3129,6 +3184,111 @@ export class SimulationsService {
         unresolved: eventUnresolved,
       },
     };
+    if (summary.version === 'v1') return { ...baseSummary, version: 'v1' };
+
+    const installments = this.record(summary.installments);
+    const feesAndDebt = this.record(summary.feesAndDebt);
+    const scoreBySource = this.readSignedMoneyRecord(summary.scoreBySource);
+    const importanceOutcomes = this.readImportanceOutcomes(
+      summary.importanceOutcomes,
+    );
+    const missedInstallmentCount = this.nonNegativeInteger(
+      installments?.missedCount,
+    );
+    const missedInstallmentAmount = this.normalizedMoney(
+      installments?.missedAmount,
+    );
+    const feeCount = this.nonNegativeInteger(feesAndDebt?.count);
+    const feeAmount = this.normalizedMoney(feesAndDebt?.amount);
+    if (
+      missedInstallmentCount === null ||
+      !missedInstallmentAmount ||
+      feeCount === null ||
+      !feeAmount ||
+      !scoreBySource ||
+      !importanceOutcomes
+    ) {
+      return null;
+    }
+    const sourceTotalCents = Object.values(scoreBySource).reduce(
+      (sum, amount) => sum + (this.signedMoneyToCents(amount) ?? 0),
+      0,
+    );
+    const importanceTotals = Object.values(importanceOutcomes).reduce(
+      (totals, outcome) => ({
+        total: totals.total + outcome.total,
+        paid: totals.paid + outcome.paid,
+        missed: totals.missed + outcome.missed,
+        unresolved: totals.unresolved + outcome.unresolved,
+      }),
+      { total: 0, paid: 0, missed: 0, unresolved: 0 },
+    );
+    if (
+      sourceTotalCents !== this.signedMoneyToCents(baseSummary.finalScore) ||
+      importanceTotals.total !== obligationTotal ||
+      importanceTotals.paid !== obligationPaid ||
+      importanceTotals.missed !== obligationMissed ||
+      importanceTotals.unresolved !== obligationUnresolved ||
+      missedInstallmentCount > obligationMissed
+    ) {
+      return null;
+    }
+    return {
+      ...baseSummary,
+      version: 'v2',
+      installments: {
+        missedCount: missedInstallmentCount,
+        missedAmount: missedInstallmentAmount,
+      },
+      feesAndDebt: { count: feeCount, amount: feeAmount },
+      scoreBySource,
+      importanceOutcomes,
+    };
+  }
+
+  private readSignedMoneyRecord(value: unknown): Record<string, string> | null {
+    const record = this.record(value);
+    if (!record) return null;
+    const entries = Object.entries(record);
+    const result: Record<string, string> = {};
+    for (const [key, amount] of entries) {
+      const normalized = this.normalizedSignedMoney(amount);
+      if (!normalized) return null;
+      result[key] = normalized;
+    }
+    return result;
+  }
+
+  private readImportanceOutcomes(
+    value: unknown,
+  ): Record<
+    string,
+    { total: number; paid: number; missed: number; unresolved: number }
+  > | null {
+    const record = this.record(value);
+    if (!record) return null;
+    const outcomes: Record<
+      string,
+      { total: number; paid: number; missed: number; unresolved: number }
+    > = {};
+    for (const [importance, rawOutcome] of Object.entries(record)) {
+      const outcome = this.record(rawOutcome);
+      const total = this.nonNegativeInteger(outcome?.total);
+      const paid = this.nonNegativeInteger(outcome?.paid);
+      const missed = this.nonNegativeInteger(outcome?.missed);
+      const unresolved = this.nonNegativeInteger(outcome?.unresolved);
+      if (
+        total === null ||
+        paid === null ||
+        missed === null ||
+        unresolved === null ||
+        total !== paid + missed + unresolved
+      ) {
+        return null;
+      }
+      outcomes[importance] = { total, paid, missed, unresolved };
+    }
+    return outcomes;
   }
 
   private toSimulationSummary(session: {
@@ -3191,6 +3351,16 @@ export class SimulationsService {
     return typeof value === 'number' && Number.isInteger(value) && value >= 0
       ? value
       : null;
+  }
+
+  private signedMoneyToCents(value: unknown): number | null {
+    if (typeof value !== 'string' || !/^-?\d+\.\d{2}$/.test(value)) {
+      return null;
+    }
+    const negative = value.startsWith('-');
+    const unsigned = negative ? value.slice(1) : value;
+    const cents = this.moneyToCents(unsigned);
+    return cents === null ? null : negative ? -cents : cents;
   }
 
   private normalizedSignedMoney(value: unknown): string | null {

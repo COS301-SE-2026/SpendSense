@@ -588,12 +588,17 @@ export class SimulationTransitionService {
       unpaid,
     );
     const missedIds = new Set(unpaid.map((obligation) => obligation.id));
+    const scoreEntries = await tx.simulationScoreEntry.findMany({
+      where: { sessionId },
+      select: { sourceType: true, pointsDelta: true },
+    });
     const summary = this.completionSummary(
       {
         ...session,
         score: this.moneyFromCents(
           this.requiredSignedCents(session.score, 'score') + missedPenalty,
         ),
+        scoreEntries,
         obligations: monthObligations.map((obligation) =>
           missedIds.has(obligation.id)
             ? { ...obligation, status: SimulationObligationStatus.MISSED }
@@ -693,12 +698,20 @@ export class SimulationTransitionService {
       obligations: Array<{
         status: SimulationObligationStatus;
         amountDue: unknown;
+        consequenceSnapshot: unknown;
       }>;
-      events: Array<{ status: SimulationEventStatus }>;
+      events: Array<{
+        status: SimulationEventStatus;
+        resolutionSnapshot: unknown;
+      }>;
+      scoreEntries: Array<{
+        sourceType: SimulationScoreSourceType;
+        pointsDelta: unknown;
+      }>;
     },
     completedAt: Date,
   ): {
-    version: 'v1';
+    version: 'v2';
     completedAt: string;
     startingBudget: string;
     currentBalance: string;
@@ -721,6 +734,13 @@ export class SimulationTransitionService {
       expired: number;
       unresolved: number;
     };
+    installments: { missedCount: number; missedAmount: string };
+    feesAndDebt: { count: number; amount: string };
+    scoreBySource: Record<string, string>;
+    importanceOutcomes: Record<
+      string,
+      { total: number; paid: number; missed: number; unresolved: number }
+    >;
   } {
     const startingBudgetCents = this.requiredCents(
       session.startingBudget,
@@ -756,8 +776,67 @@ export class SimulationTransitionService {
     const count = <T>(items: T[], predicate: (item: T) => boolean): number =>
       items.filter(predicate).length;
 
+    const scoreBySourceCents: Record<string, number> = {};
+    for (const entry of session.scoreEntries) {
+      scoreBySourceCents[entry.sourceType] =
+        (scoreBySourceCents[entry.sourceType] ?? 0) +
+        this.requiredSignedCents(entry.pointsDelta, 'score entry');
+    }
+    scoreBySourceCents[SimulationScoreSourceType.FINAL_BUDGET_BONUS] =
+      (scoreBySourceCents[SimulationScoreSourceType.FINAL_BUDGET_BONUS] ?? 0) +
+      budgetBonusCents;
+
+    const importanceOutcomes: Record<
+      string,
+      { total: number; paid: number; missed: number; unresolved: number }
+    > = {};
+    let missedInstallmentCount = 0;
+    let missedInstallmentCents = 0;
+    for (const obligation of session.obligations) {
+      const snapshot = this.record(obligation.consequenceSnapshot);
+      const importance = this.string(snapshot?.importance) ?? 'STANDARD';
+      importanceOutcomes[importance] ??= {
+        total: 0,
+        paid: 0,
+        missed: 0,
+        unresolved: 0,
+      };
+      importanceOutcomes[importance].total += 1;
+      if (obligation.status === SimulationObligationStatus.PAID) {
+        importanceOutcomes[importance].paid += 1;
+      } else if (obligation.status === SimulationObligationStatus.MISSED) {
+        importanceOutcomes[importance].missed += 1;
+      } else {
+        importanceOutcomes[importance].unresolved += 1;
+      }
+      if (
+        snapshot?.kind === 'INSTALLMENT' &&
+        obligation.status === SimulationObligationStatus.MISSED
+      ) {
+        missedInstallmentCount += 1;
+        missedInstallmentCents += this.requiredCents(
+          obligation.amountDue,
+          'installment amount',
+        );
+      }
+    }
+
+    let feeOrDebtCount = 0;
+    let feeOrDebtCents = 0;
+    for (const event of session.events) {
+      const resolution = this.record(event.resolutionSnapshot);
+      const amount = this.requiredCents(
+        resolution?.feeOrDebt ?? '0.00',
+        'event fee or debt',
+      );
+      if (amount > 0) {
+        feeOrDebtCount += 1;
+        feeOrDebtCents += amount;
+      }
+    }
+
     return {
-      version: 'v1',
+      version: 'v2',
       completedAt: completedAt.toISOString(),
       startingBudget: this.moneyFromCents(startingBudgetCents),
       currentBalance: this.moneyFromCents(currentBalanceCents),
@@ -802,6 +881,21 @@ export class SimulationTransitionService {
             item.status === SimulationEventStatus.REVEALED,
         ),
       },
+      installments: {
+        missedCount: missedInstallmentCount,
+        missedAmount: this.moneyFromCents(missedInstallmentCents),
+      },
+      feesAndDebt: {
+        count: feeOrDebtCount,
+        amount: this.moneyFromCents(feeOrDebtCents),
+      },
+      scoreBySource: Object.fromEntries(
+        Object.entries(scoreBySourceCents).map(([key, cents]) => [
+          key,
+          this.moneyFromCents(cents),
+        ]),
+      ),
+      importanceOutcomes,
     };
   }
 
