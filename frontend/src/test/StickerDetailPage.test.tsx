@@ -55,7 +55,7 @@ describe('StickerDetailPage', ()=>{
 
 	it('renders not found when accessed without router state', ()=>{
 		renderWithoutState()
-		expect(screen.getByText(/sticker not found/i)).toBeInTheDocument()
+		expect(screen.getByText(/badge not found/i)).toBeInTheDocument()
 	})
 
 	it('renders back to album button on the not found screen', ()=>{

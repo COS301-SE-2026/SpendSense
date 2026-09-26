@@ -111,7 +111,7 @@ describe('StickerAlbumPage integration', ()=>{
 		await waitFor(()=>expect(screen.getByText('Quest Reward')).toBeInTheDocument())
 		fireEvent.click(screen.getByText('Back to Album'))
 		await waitFor(()=>{
-			expect(screen.getByText('Sticker Album')).toBeInTheDocument()
+			expect(screen.getByText('Badge Album')).toBeInTheDocument()
 		})
 	})
 
@@ -120,7 +120,7 @@ describe('StickerAlbumPage integration', ()=>{
 		const lockedBtns = screen.getAllByRole('button', {name: /locked/i})
 		fireEvent.click(lockedBtns[0])
 		// should still be on the album
-		expect(screen.getByText('Sticker Album')).toBeInTheDocument()
+		expect(screen.getByText('Badge Album')).toBeInTheDocument()
 		expect(screen.queryByText('Quest Reward')).not.toBeInTheDocument()
 	})
 
@@ -184,6 +184,6 @@ describe('StickerAlbumPage integration', ()=>{
 				</Routes>
 			</MemoryRouter>
 		)
-		expect(screen.getByText(/sticker not found/i)).toBeInTheDocument()
+		expect(screen.getByText(/badge not found/i)).toBeInTheDocument()
 	})
 })
