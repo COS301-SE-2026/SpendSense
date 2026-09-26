@@ -1,103 +1,54 @@
-import { Check, CircleAlert, Clock3 } from 'lucide-react'
+import { ReceiptText } from 'lucide-react'
+import { formatCompactMoney } from '../../features/simulation/presentation'
 import type { SimulationObligation } from '../../features/simulation/types'
 
 interface ObligationRowProps {
   obligation: SimulationObligation
-  canPay: boolean
+  currentDay: number
+  payable: boolean
   onOpen?: (obligationId: string) => void
-}
-
-function formatMoney(value: string): string {
-  return `R ${Number(value).toLocaleString('en-ZA', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-}
-
-function statusLabel(
-  status: SimulationObligation['status'],
-): string {
-  switch (status) {
-    case 'PAYABLE':
-      return 'Due now'
-    case 'PAID':
-      return 'Paid'
-    case 'MISSED':
-      return 'Missed'
-    case 'SCHEDULED':
-    default:
-      return 'Upcoming'
-  }
-}
-function statusClasses(
-  status: SimulationObligation['status'],
-): string {
-  switch (status) {
-    case 'PAYABLE':
-      return 'bg-[#FFD9E6] text-[#AC2A5D]'
-    case 'PAID':
-      return 'bg-[#E6F7F2] text-[#187A6C]'
-    case 'MISSED':
-      return 'bg-[#FFF1C8] text-[#7A5710]'
-    case 'SCHEDULED':
-    default:
-      return 'bg-[#EFEBFF] text-[#55459A]'
-  }
 }
 
 export function ObligationRow({
   obligation,
-  canPay,
+  currentDay,
+  payable,
   onOpen,
 }: ObligationRowProps) {
-  const payable =
-    obligation.status === 'PAYABLE' &&
-    canPay
+  const dueToday = obligation.dueDay === currentDay
 
   return (
-    <article className="flex flex-col gap-3 border-b border-[#D8E8E2] py-4 last:border-b-0 sm:flex-row sm:items-center">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-[#EFEBFF] text-[#091828]">
-          {obligation.status === 'PAID' ? (
-            <Check className="size-5" />
-          ) : obligation.status === 'MISSED' ? (
-            <CircleAlert className="size-5"/>
-          ) : (
-            <Clock3 className="size-5"/>
-          )}
-        </div>
-        <div className="min-w-0">
-          <h3 className="truncate font-bold text-[#091828] dark:text-white">
-            {obligation.name}
-          </h3>
-          <p className="mt-1 text-sm text-[#6B6375] dark:text-[#A0AEC0]">
-            {formatMoney(obligation.amountDue)}
-            {' · '}
-            Day {obligation.dueDay}
-          </p>
-          <p className="mt-1 text-xs text-[#6B6375] dark:text-[#A0AEC0]">
-            {obligation.category}
-          </p>
-        </div>
+    <li className="flex items-center gap-3 rounded-2xl border border-[#D8E8E2] bg-white px-3 py-3 dark:border-[#2D3449] dark:bg-[#131B2E]">
+      <div className="grid size-10 shrink-0 place-items-center rounded-full bg-[#EFEBFF] text-[#091828] dark:bg-[#282141] dark:text-[#C9B9FF]">
+        <ReceiptText className="size-5" aria-hidden="true"/>
       </div>
-      <div className="flex items-center justify-between gap-3 sm:justify-end">
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-bold ${statusClasses(
-            obligation.status,
-          )}`}
-        >
-          {statusLabel(obligation.status)}
-        </span>
-        {payable && (
-          <button
-            type="button"
-            onClick={() => onOpen?.(obligation.id)}
-            className="rounded-full border-2 border-[#091828] bg-[#FF6B9D] px-4 py-2 text-sm font-black text-[#091828] shadow-[3px_3px_0_#091828]"
+      <div className="min-w-0 flex-1">
+        <h3 className="truncate font-bold text-[#091828] dark:text-white">
+          {obligation.name}
+        </h3>
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#6B6375] dark:text-[#A0AEC0]">
+          <span>{formatCompactMoney(obligation.amountDue)}</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-black ${
+              dueToday
+                ? 'bg-[#FFD9E6] text-[#AC2A5D]'
+                : 'bg-[#E6F7F2] text-[#187A6C] dark:bg-[#183B39] dark:text-[#8FE0D2]'
+            }`}
           >
-            Pay
-          </button>
-        )}
+            {dueToday ? 'Due today' : `Due day ${obligation.dueDay}`}
+          </span>
+        </p>
       </div>
-    </article>
+      {payable && (
+        <button
+          type="button"
+          onClick={() => onOpen?.(obligation.id)}
+          aria-label={`Pay ${obligation.name}`}
+          className="shrink-0 rounded-full border-2 border-[#091828] bg-[#FF6B9D] px-4 py-2 text-sm font-black text-[#091828] shadow-[3px_3px_0_#091828] transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none dark:border-[#060E20]"
+        >
+          Pay
+        </button>
+      )}
+    </li>
   )
 }
