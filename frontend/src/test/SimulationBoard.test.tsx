@@ -9,7 +9,7 @@ import {
   vi,
 } from 'vitest'
 import { SimulationBoard } from '@/components/simulation/SimulationBoard'
-import { activeBoardFixture, newObligationFixture } from '@/features/simulation/fixtures/SimulationDetail'
+import { activeBoardFixture, eventRevealFixture, newObligationFixture } from '@/features/simulation/fixtures/SimulationDetail'
 import { advanceSimulation, continueSimulation } from '@/features/simulation/api'
 import type { SimulationActionResponse } from '@/features/simulation/types'
 
@@ -557,6 +557,60 @@ describe('SimulationBoard', () => {
       expect(
         screen.queryByRole('dialog', {
           name: 'A new bill has arrived',
+        }),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  describe('event reveal popup', () => {
+    it('will show the revealed event over the board and hand off to the choices', async () => {
+      const user = userEvent.setup()
+      const onCompareEventChoices = vi.fn()
+
+      render(
+        <SimulationBoard
+          simulation={eventRevealFixture}
+          onSimulationChange={vi.fn()}
+          onRefetch={vi.fn()}
+          onCompareEventChoices={onCompareEventChoices}
+        />,
+      )
+
+      const dialog = screen.getByRole('dialog', {
+        name: 'Unexpected repair',
+      })
+      expect(dialog).toHaveTextContent('Surprise event · Day 12')
+      expect(dialog).toHaveTextContent(
+        eventRevealFixture.currentEvent!.context,
+      )
+
+      await user.click(
+        screen.getByRole('button', {
+          name: 'Compare choices',
+        }),
+      )
+      expect(onCompareEventChoices).toHaveBeenCalledTimes(1)
+    })
+
+    it('will not show the event popup while the month is paused', () => {
+      render(
+        <SimulationBoard
+          simulation={{
+            ...eventRevealFixture,
+            session: {
+              ...eventRevealFixture.session,
+              status: 'PAUSED',
+            },
+          }}
+          onSimulationChange={vi.fn()}
+          onRefetch={vi.fn()}
+          onCompareEventChoices={vi.fn()}
+        />,
+      )
+
+      expect(
+        screen.queryByRole('dialog', {
+          name: 'Unexpected repair',
         }),
       ).not.toBeInTheDocument()
     })
