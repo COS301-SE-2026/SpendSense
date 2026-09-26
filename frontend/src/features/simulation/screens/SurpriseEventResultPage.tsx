@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react'
-import {Check,Clock3,Coins,Wallet} from 'lucide-react'
+import {Check,Clock3} from 'lucide-react'
 import {useLocation,useNavigate,useParams} from 'react-router-dom'
 import {ErrorCard,LoadingCard} from '@/components/common/AsyncStates'
 import {LongButton} from '@/components/common/LongButton'
@@ -8,7 +8,7 @@ import {ResultAcknowledgement} from '@/components/simulation/ResultAcknowledgeme
 import {continueSimulation} from '../api'
 import {SimulationPageShell} from '../components/SimulationPageShell'
 import {createIdempotencyKey} from '../idempotency'
-import {formatSimulationMoney} from '../presentation'
+import {formatCompactMoney,formatPoints} from '../presentation'
 import {pathForSimulationState,routeForSimulationState} from '../routing'
 import type {EventResolutionResult,SimulationDetail} from '../types'
 
@@ -20,12 +20,37 @@ function getErrorMessage(error:unknown):string{
     return error instanceof Error?error.message:'Unable to continue the simulation.'
 }
 
-function formatPoints(points:string):string{
+function formatSignedPoints(points:string):string{
     const amount=Number(points)
     if(!Number.isFinite(amount)){
         return points
     }
-    return `${amount>0?'+':''}${points} points`
+    return `${amount>0?'+':''}${formatPoints(points)}`
+}
+
+function describeCashToday(result:EventResolutionResult):string{
+    const parts:string[]=[]
+    const cost=Number(result.immediateCost)>0
+    const fee=Number(result.feeChargedNow)>0
+    if(cost&&fee){
+        parts.push(`${formatCompactMoney(result.immediateCost)} + ${formatCompactMoney(result.feeChargedNow)} fee charged once`)
+    }else if(cost){
+        parts.push(`${formatCompactMoney(result.immediateCost)} paid now`)
+    }else if(fee){
+        parts.push(`${formatCompactMoney(result.feeChargedNow)} fee charged once`)
+    }else{
+        parts.push('Nothing to pay today')
+    }
+    if(Number(result.savingsUsed)>0){
+        parts.push(`${formatCompactMoney(result.savingsUsed)} from Savings`)
+    }
+    if(Number(result.uncoveredAmount)>0){
+        parts.push(`${formatCompactMoney(result.uncoveredAmount)} could not be covered`)
+    }
+    if(result.inMonthObligation){
+        parts.push(`${formatCompactMoney(result.inMonthObligation.amountDue)} bill due Day ${result.inMonthObligation.dueDay}`)
+    }
+    return parts.join(' · ')
 }
 
 export function SurpriseEventResultPage(){
@@ -125,36 +150,74 @@ export function SurpriseEventResultPage(){
     const introducedObligation=eventResult?.introducedObligationId
         ?data.obligations.find(obligation=>obligation.id===eventResult.introducedObligationId)
         :null
+    const paidToday=eventResult
+        ?((Math.round(Number(eventResult.currentUsed)*100)+Math.round(Number(eventResult.savingsUsed)*100))/100).toFixed(2)
+        :null
     return(
         <SimulationPageShell title="Event result" onBack={()=>{}}>
             <section className="space-y-6">
                 <div className="text-center">
-                    <div className="mx-auto grid size-20 place-items-center rounded-[22px] border-2 border-[#091828] bg-[#FF6B9D] shadow-[5px_5px_0_#091828] dark:border-[#060E20] dark:bg-[#FFB1C5] dark:shadow-[5px_5px_0_#060E20]">
+                    <div className={`mx-auto grid size-24 place-items-center rounded-full border-2 border-[#091828] shadow-[5px_6px_0_#091828] dark:border-[#060E20] dark:shadow-[5px_6px_0_#060E20] ${expired?'bg-[#FFE09A]':'bg-[#6CCABB]'}`}>
                         {expired
-                            ?<Clock3 className="size-10 text-[#091828]" aria-hidden="true"/>
-                            :<Check className="size-10 text-[#091828]" aria-hidden="true"/>
+                            ?<Clock3 className="size-12 text-[#091828]" strokeWidth={2.5} aria-hidden="true"/>
+                            :<Check className="size-12 text-[#091828]" strokeWidth={3} aria-hidden="true"/>
                         }
                     </div>
-                    <p className="mt-5 text-sm font-extrabold text-[#AC2A5D] dark:text-[#FFB1C5]">
-                        Day {data.session.currentDay} of {data.session.daysInMonth}
+                    <p className="mt-5 text-sm font-black uppercase tracking-[0.12em] text-[#AC2A5D] dark:text-[#FFB1C5]">
+                        {expired?'Time ran out':'Decision complete'}
                     </p>
-                    <h2 className="mt-2 text-3xl font-black tracking-tight">
-                        {expired?'Time ran out':'Decision applied!'}
-                    </h2>
-                    <p className="mt-2 text-sm text-[#6B6375] dark:text-[#A0AEC0]">
-                        {expired
-                            ?'Your simulated month has recorded the event outcome.'
-                            :'Your simulated month has been updated.'}
-                    </p>
-                </div>
-                {eventResult&&(
-                    <div className="rounded-[22px] border-2 border-[#091828] bg-gradient-to-br from-[#FFF0F6] via-[#FFE1EC] to-[#F2EAFF] p-5 shadow-[5px_6px_0_#091828] dark:border-[#060E20] dark:from-[#2D1B2E] dark:via-[#241D35] dark:to-[#1E243B] dark:shadow-[5px_6px_0_#060E20]">
-                        <p className="text-xs font-extrabold uppercase tracking-wide text-[#AC2A5D] dark:text-[#FFB1C5]">
-                            Your choice
+                    {eventResult?(
+                        <>
+                            <h2 className="mt-2 text-3xl font-black leading-tight tracking-tight">
+                                {eventResult.label}
+                            </h2>
+                            <p className="mt-2 text-sm leading-relaxed text-[#6B6375] dark:text-[#A0AEC0]">
+                                {eventResult.explanation}
+                            </p>
+                        </>
+                    ):(
+                        <p className="mt-2 text-sm text-[#6B6375] dark:text-[#A0AEC0]">
+                            Day {data.session.currentDay} of {data.session.daysInMonth}
                         </p>
-                        <h3 className="mt-2 text-xl font-black">{eventResult.label}</h3>
-                        <p className="mt-3 text-sm leading-relaxed text-[#50485E] dark:text-[#D9DDE7]">
-                            {eventResult.explanation}
+                    )}
+                </div>
+                {eventResult&&paidToday&&(
+                    <>
+                        <div className="flex items-center gap-4 rounded-[22px] border-2 border-[#091828] bg-[#FFC6DA] p-5 shadow-[5px_6px_0_#091828] [transform:rotate(-1.5deg)] dark:border-[#060E20] dark:bg-[#4E2438] dark:shadow-[5px_6px_0_#060E20]">
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-lg font-black">Cash today</h3>
+                                <p className="mt-1 text-xs leading-relaxed text-[#50485E] dark:text-[#D9DDE7]">
+                                    {describeCashToday(eventResult)}
+                                </p>
+                            </div>
+                            <p className="shrink-0 text-2xl font-black">
+                                {formatCompactMoney(paidToday)} today
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-4 rounded-[22px] border-2 border-[#091828] bg-[#FFE09A] p-5 shadow-[5px_6px_0_#091828] [transform:rotate(1deg)] dark:border-[#060E20] dark:bg-[#4A3C17] dark:shadow-[5px_6px_0_#060E20]">
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-lg font-black">Points earned</h3>
+                                <p className="mt-1 text-xs text-[#50485E] dark:text-[#D9DDE7]">
+                                    Each choice has its own points, shown once you decide.
+                                </p>
+                            </div>
+                            <p className="shrink-0 text-3xl font-black">
+                                {formatSignedPoints(eventResult.pointsAwarded)}
+                            </p>
+                        </div>
+                    </>
+                )}
+                {introducedObligation&&(
+                    <div className="flex items-center gap-4 rounded-[22px] border-2 border-[#091828] bg-[#BDE7DC] p-5 shadow-[4px_5px_0_#091828] dark:border-[#060E20] dark:bg-[#1D4A43] dark:shadow-[4px_5px_0_#060E20]">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-black uppercase tracking-wide text-[#087D6A] dark:text-[#8FE0D2]">
+                                New obligation
+                            </p>
+                            <h3 className="mt-1 text-lg font-black">{introducedObligation.name}</h3>
+                            <p className="text-sm">Due on day {introducedObligation.dueDay}</p>
+                        </div>
+                        <p className="shrink-0 text-xl font-black">
+                            {formatCompactMoney(introducedObligation.amountDue)}
                         </p>
                     </div>
                 )}
@@ -167,70 +230,20 @@ export function SurpriseEventResultPage(){
                         showContinue={false}
                     />
                 )}
-                {eventResult&&(
-                    <div className="rounded-[22px] border-2 border-[#091828] bg-white p-5 shadow-[4px_5px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[4px_5px_0_#060E20]">
-                        <h3 className="mb-4 text-lg font-black">What changed?</h3>
-                        <dl className="space-y-3 text-sm">
-                            <div className="flex justify-between gap-4">
-                                <dt className="text-[#6B6375] dark:text-[#A0AEC0]">Immediate cost</dt>
-                                <dd className="font-extrabold">{formatSimulationMoney(eventResult.immediateCost)}</dd>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                                <dt className="text-[#6B6375] dark:text-[#A0AEC0]">Fee or debt</dt>
-                                <dd className="font-extrabold">{formatSimulationMoney(eventResult.feeOrDebt)}</dd>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                                <dt className="text-[#6B6375] dark:text-[#A0AEC0]">Paid from Current</dt>
-                                <dd className="font-extrabold">{formatSimulationMoney(eventResult.currentUsed)}</dd>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                                <dt className="text-[#6B6375] dark:text-[#A0AEC0]">Paid from Savings</dt>
-                                <dd className="font-extrabold">{formatSimulationMoney(eventResult.savingsUsed)}</dd>
-                            </div>
-                            <div className="flex justify-between gap-4">
-                                <dt className="text-[#6B6375] dark:text-[#A0AEC0]">Uncovered amount</dt>
-                                <dd className="font-extrabold">{formatSimulationMoney(eventResult.uncoveredAmount)}</dd>
-                            </div>
-                        </dl>
-                        <div className="mt-4 rounded-xl bg-[#FFF1C8] px-4 py-3 text-center font-black text-[#59430D] dark:bg-[#3D351B] dark:text-[#FFE4A3]">
-                            {formatPoints(eventResult.pointsAwarded)}
-                        </div>
+                <dl
+                    aria-label="Your updated balances"
+                    className="divide-y divide-[#DCEBE7] rounded-[22px] border-2 border-[#CFE6DF] bg-white px-5 dark:divide-[#2D3449] dark:border-[#2D3449] dark:bg-[#131B2E]"
+                >
+                    <div className="flex items-center justify-between gap-3 py-4">
+                        <dt>Current</dt>
+                        <dd className="font-black">{formatCompactMoney(data.session.currentBalance)}</dd>
                     </div>
-                )}
-                <div className="rounded-[22px] border-2 border-[#091828] bg-white p-5 shadow-[4px_5px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[4px_5px_0_#060E20]">
-                    <div className="mb-4 flex items-center gap-2">
-                        <Wallet className="size-5 text-[#AC2A5D]" aria-hidden="true"/>
-                        <h3 className="text-lg font-black">Your updated balances</h3>
+                    <div className="flex items-center justify-between gap-3 py-4">
+                        <dt>Savings</dt>
+                        <dd className="font-black">{formatCompactMoney(data.session.savingsBalance)}</dd>
                     </div>
-                    <dl className="space-y-3">
-                        <div className="flex items-center justify-between gap-3">
-                            <dt className="text-sm text-[#6B6375] dark:text-[#A0AEC0]">Current</dt>
-                            <dd className="font-black">{formatSimulationMoney(data.session.currentBalance)}</dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                            <dt className="text-sm text-[#6B6375] dark:text-[#A0AEC0]">Savings</dt>
-                            <dd className="font-black">{formatSimulationMoney(data.session.savingsBalance)}</dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-3 border-t border-[#DCEBE7] pt-3 dark:border-[#2D3449]">
-                            <dt className="text-sm font-extrabold">Current score</dt>
-                            <dd className="font-black">{formatPoints(data.session.score)}</dd>
-                        </div>
-                    </dl>
-                </div>
-                {introducedObligation&&(
-                    <div className="rounded-[22px] border-2 border-[#091828] bg-[#FFF1C8] p-5 shadow-[4px_5px_0_#091828] dark:border-[#060E20] dark:bg-[#3D351B] dark:shadow-[4px_5px_0_#060E20]">
-                        <div className="flex items-center gap-2">
-                            <Coins className="size-5" aria-hidden="true"/>
-                            <h3 className="text-lg font-black">New obligation</h3>
-                        </div>
-                        <p className="mt-3 font-extrabold">{introducedObligation.name}</p>
-                        <p className="mt-1 text-sm">
-                            {formatSimulationMoney(introducedObligation.amountDue)}
-                        </p>
-                        <p className="mt-1 text-sm">Due on day {introducedObligation.dueDay}</p>
-                    </div>
-                )}
-                {eventEntries.length>0&&(
+                </dl>
+                {!eventResult&&eventEntries.length>0&&(
                     <div className="rounded-[22px] border-2 border-[#091828] bg-white p-5 shadow-[4px_5px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[4px_5px_0_#060E20]">
                         <h3 className="mb-4 text-lg font-black">Recent event activity</h3>
                         <div className="space-y-3">
@@ -240,7 +253,7 @@ export function SurpriseEventResultPage(){
                                         {entry.reason}
                                     </p>
                                     <span className="shrink-0 font-extrabold">
-                                        {formatPoints(entry.pointsDelta)}
+                                        {formatSignedPoints(entry.pointsDelta)}
                                     </span>
                                 </div>
                             ))}
@@ -253,13 +266,13 @@ export function SurpriseEventResultPage(){
                     </p>
                 )}
                 <LongButton
-                    LongVariant="primaryPink"
+                    LongVariant="primaryDark"
+                    LongSize="lg"
+                    showArrow={false}
                     disabled={submitting||!data.allowedActions.includes('CONTINUE')}
                     onClick={()=>void continueGame()}
                 >
-                    {submitting
-                        ?'Returning to game…'
-                        :<>Back to game</>}
+                    {submitting?'Returning to game…':'Back to game'}
                 </LongButton>
             </section>
         </SimulationPageShell>

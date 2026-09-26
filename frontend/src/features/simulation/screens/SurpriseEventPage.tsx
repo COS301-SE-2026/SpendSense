@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState} from 'react'
-import {AlertTriangle,Check,Clock3,Coins,Pause,Sparkles} from 'lucide-react'
+import {Pause} from 'lucide-react'
 import {useNavigate,useParams} from 'react-router-dom'
 import {ErrorCard,LoadingCard} from '@/components/common/AsyncStates'
 import {LongButton} from '@/components/common/LongButton'
@@ -9,7 +9,7 @@ import {useRefetchAtDeadline} from '../hooks/useRefetchAtDeadline'
 import {resolveSimulationEvent} from '../api'
 import {SimulationPageShell} from '../components/SimulationPageShell'
 import {createIdempotencyKey} from '../idempotency'
-import {formatSimulationMoney} from '../presentation'
+import {EventOptionHand} from '@/components/simulation/EventOptionHand'
 import {pathForSimulationState,routeForSimulationState} from '../routing'
 import type {SimulationDetail} from '../types'
 
@@ -62,9 +62,8 @@ function EventCountdown({deadline}:Readonly<{deadline:string|null}>){
     const minutes=Math.floor(remaining/60)
     const seconds=String(remaining%60).padStart(2,'0')
     return(
-        <div className="flex items-center justify-center gap-2 rounded-full border-2 border-[#091828] bg-[#FFF1C8] px-4 py-2 text-sm font-black text-[#59430D] dark:border-[#060E20] dark:bg-[#3D351B] dark:text-[#FFE4A3]">
-            <Clock3 className="size-4" aria-hidden="true"/>
-            <span aria-label="Time remaining">{now===0?'--:--':`${minutes}:${seconds}`}</span>
+        <div className="shrink-0 rounded-2xl bg-[#FF6B9D] px-4 py-2 text-lg font-black tabular-nums text-[#091828] dark:bg-[#FFB1C5]">
+            <span aria-label="Time remaining">{now===0?'--:--':`${String(minutes).padStart(2,'0')}:${seconds}`}</span>
         </div>
     )
 }
@@ -81,7 +80,7 @@ function EventPauseButton({simulation,onSimulationChange,disabled}:Readonly<{
                 type="button"
                 disabled={disabled||pausing||simulation.session.status!=='ACTIVE'}
                 onClick={()=>void pause()}
-                className="flex items-center gap-2 rounded-full border-2 border-[#091828] bg-white px-4 py-2 text-sm font-extrabold text-[#091828] shadow-[2px_2px_0_#091828] disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#2D3449] dark:bg-[#131B2E] dark:text-white"
+                className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold text-[#6B6375] underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-[#A0AEC0]"
             >
                 <Pause className="size-4" aria-hidden="true"/>
                 {pausing?'Pausing…':'Pause month'}
@@ -238,105 +237,49 @@ function EventScreenContent({screen}:Readonly<{screen:EventScreen}>){
     }
 
     const decisionPath=`${getSessionPath(sessionId)}/event/decision`
-    const revealPath=`${getSessionPath(sessionId)}/event`
+    const boardPath=`${getSessionPath(sessionId)}/board`
+    const showCountdown=data.session.timedMode&&event.decisionExpiresAt
     return(
         <SimulationPageShell
-            title="Surprise event"
-            onBack={()=>screen==='decision'?navigate(revealPath):navigate('/simulation')}
+            title={screen==='reveal'?'Something unexpected!':'What do you want to do?'}
+            onBack={()=>navigate(screen==='decision'?boardPath:'/simulation')}
         >
             <section className="space-y-6">
-                <div className="text-center">
-                    <div className="mx-auto grid size-20 place-items-center rounded-[22px] border-2 border-[#091828] bg-[#FF6B9D] shadow-[5px_5px_0_#091828] dark:border-[#060E20] dark:bg-[#FFB1C5] dark:shadow-[5px_5px_0_#060E20]">
-                        {screen==='reveal'
-                            ?<Sparkles className="size-10 text-[#091828]" aria-hidden="true"/>
-                            :<AlertTriangle className="size-10 text-[#091828]" aria-hidden="true"/>
-                        }
-                    </div>
-                    <p className="mt-5 text-sm font-extrabold text-[#AC2A5D] dark:text-[#FFB1C5]">
-                        Day {event.triggerDay} of {data.session.daysInMonth}
-                    </p>
-                    <h2 className="mt-2 text-3xl font-black tracking-tight">
-                        {screen==='reveal'?'Something unexpected!':'What will you do?'}
+                <div className="-mt-6 flex items-start justify-between gap-3">
+                    <h2 className="text-3xl font-black leading-tight tracking-tight">
+                        {event.title}
                     </h2>
-                    <p className="mt-2 text-sm text-[#6B6375] dark:text-[#A0AEC0]">
-                        This is a fictional scenario. Your real finances are not affected.
-                    </p>
+                    {showCountdown&&<EventCountdown deadline={event.decisionExpiresAt}/>}
                 </div>
-                <EventPauseButton
-                    simulation={data}
-                    onSimulationChange={setSimulation}
-                    disabled={submitting||checkingDeadline}
-                />
-                {data.session.timedMode&&event.decisionExpiresAt&&(
-                    <div className="flex justify-center">
-                        <EventCountdown deadline={event.decisionExpiresAt}/>
-                    </div>
-                )}
-                <div className="rounded-[22px] border-2 border-[#091828] bg-gradient-to-br from-[#FFF0F6] via-[#FFE1EC] to-[#F2EAFF] p-5 shadow-[5px_6px_0_#091828] dark:border-[#060E20] dark:from-[#2D1B2E] dark:via-[#241D35] dark:to-[#1E243B] dark:shadow-[5px_6px_0_#060E20]">
-                    <div className="mb-4 flex items-center gap-2">
-                        <span className="grid size-9 place-items-center rounded-full bg-[#FF6B9D] text-[#091828]">
-                            <Sparkles className="size-5" aria-hidden="true"/>
-                        </span>
-                        <span className="text-xs font-extrabold uppercase tracking-wide text-[#AC2A5D] dark:text-[#FFB1C5]">
-                            Surprise event
-                        </span>
-                    </div>
-                    <h3 className="text-2xl font-black">{event.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed text-[#50485E] dark:text-[#D9DDE7]">
+                <div className="rounded-[22px] border-2 border-[#091828] bg-[#FFEAF1] p-5 shadow-[5px_6px_0_#091828] dark:border-[#060E20] dark:bg-[#2D1B2E] dark:shadow-[5px_6px_0_#060E20]">
+                    <p className="text-xs font-extrabold uppercase tracking-wide text-[#AC2A5D] dark:text-[#FFB1C5]">
+                        Surprise event · Day {event.triggerDay} of {data.session.daysInMonth}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-[#50485E] dark:text-[#D9DDE7]">
                         {event.context}
                     </p>
                 </div>
                 {screen==='reveal'?(
-                    <LongButton
-                        LongVariant="primaryPink"
-                        onClick={()=>navigate(decisionPath)}
-                    >
-                        See my options
-                    </LongButton>
+                    <>
+                        <p className="text-center text-sm text-[#6B6375] dark:text-[#A0AEC0]">
+                            This is a fictional scenario. Your real finances are not affected.
+                        </p>
+                        <LongButton
+                            LongVariant="primaryDark"
+                            LongSize="lg"
+                            onClick={()=>navigate(decisionPath)}
+                        >
+                            See my options
+                        </LongButton>
+                    </>
                 ):(
                     <>
-                        <fieldset className="space-y-3" disabled={submitting||checkingDeadline}>
-                            <legend className="mb-4 text-lg font-black">
-                                Choose how to respond
-                            </legend>
-                            {event.options.map(option=>{
-                                const selected=selectedOptionId===option.id
-                                return(
-                                    <label
-                                        key={option.id}
-                                        className={`block cursor-pointer rounded-[18px] border-2 p-4 transition ${selected?'border-[#091828] bg-[#FFD8E6] shadow-[4px_4px_0_#091828] dark:border-[#FFB1C5] dark:bg-[#49243B] dark:shadow-[4px_4px_0_#060E20]':'border-[#091828] bg-white shadow-[3px_3px_0_#091828] dark:border-[#2D3449] dark:bg-[#131B2E] dark:shadow-[3px_3px_0_#060E20]'}`}
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <input
-                                                type="radio"
-                                                name="event-option"
-                                                value={option.id}
-                                                checked={selected}
-                                                onChange={()=>selectOption(option.id)}
-                                                className="mt-1 size-4 accent-[#AC2A5D]"
-                                            />
-                                            <span className="min-w-0 flex-1">
-                                                <strong className="block text-sm font-extrabold">
-                                                    {option.label}
-                                                </strong>
-                                                <span className="mt-2 block text-xs text-[#6B6375] dark:text-[#A0AEC0]">
-                                                    Immediate cost: {formatSimulationMoney(option.immediateCost)}
-                                                </span>
-                                                <span className="mt-1 flex items-center gap-1 text-xs text-[#6B6375] dark:text-[#A0AEC0]">
-                                                    <Coins className="size-3" aria-hidden="true"/>
-                                                    Fee or debt: {formatSimulationMoney(option.feeOrDebt)}
-                                                </span>
-                                            </span>
-                                            {selected&&(
-                                                <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#AC2A5D] text-white">
-                                                    <Check className="size-4" aria-hidden="true"/>
-                                                </span>
-                                            )}
-                                        </div>
-                                    </label>
-                                )
-                            })}
-                        </fieldset>
+                        <EventOptionHand
+                            options={event.options}
+                            selectedOptionId={selectedOptionId}
+                            onSelect={selectOption}
+                            disabled={submitting||checkingDeadline}
+                        />
                         {decisionError&&(
                             <p role="alert" className="rounded-xl bg-[#FCE0E8] p-3 text-sm font-semibold text-[#AC2A5D]">
                                 {decisionError}
@@ -348,14 +291,22 @@ function EventScreenContent({screen}:Readonly<{screen:EventScreen}>){
                             </p>
                         )}
                         <LongButton
-                            LongVariant="primaryPink"
+                            LongVariant="primaryDark"
+                            LongSize="lg"
+                            showArrow={false}
                             disabled={!selectedOptionId||submitting||checkingDeadline}
                             onClick={()=>void confirmDecision()}
+                            className="disabled:bg-[#8E989C] disabled:text-white disabled:opacity-100"
                         >
-                            {submitting?'Confirming decision…':checkingDeadline?'Checking event…':'Confirm decision'}
+                            {submitting?'Confirming choice…':checkingDeadline?'Checking event…':'Confirm choice'}
                         </LongButton>
                     </>
                 )}
+                <EventPauseButton
+                    simulation={data}
+                    onSimulationChange={setSimulation}
+                    disabled={submitting||checkingDeadline}
+                />
             </section>
         </SimulationPageShell>
     )
