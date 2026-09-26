@@ -1,11 +1,13 @@
 import * as React from 'react'
 import { useSimulationPolling } from '@/hooks/useSimulationPolling'
-import { advanceSimulation } from '../../features/simulation/api'
+import { advanceSimulation, continueSimulation } from '../../features/simulation/api'
 import { createIdempotencyKey } from '../../features/simulation/idempotency'
 import { useRefetchAtDeadline } from '../../features/simulation/hooks/useRefetchAtDeadline'
 import { MonthAgenda } from './MonthAgenda'
 import { RecentScoreActivity } from './RecentScoreActivity'
 import { SimulationHeader } from './SimulationHeader'
+import { UpcomingObligations } from './UpcomingObligations'
+import { NewObligationPopup } from './NewObligationPopup'
 import { PauseOverlay } from './PauseOverlay'
 import { usePauseControls } from '@/hooks/usePauseControls'
 import { ExitConfirmation } from './ExitConfirmation'
@@ -42,14 +44,23 @@ export function SimulationBoard({
     simulation.session.status === 'ACTIVE' &&
     simulation.session.timedMode
 
-  const canPay =
-    simulation.allowedActions.includes('PAY_OBLIGATION')
-
   const canAdvance =
     !simulation.session.timedMode &&
     simulation.allowedActions.includes('ADVANCE_DAY')
 
   const advancingRef = React.useRef(false)
+
+  const newObligation =
+    simulation.session.status === 'ACTIVE' &&
+    simulation.session.pending.type === 'NEW_OBLIGATION'
+      ? simulation.newObligation
+      : null
+
+  const [acknowledging, setAcknowledging] = React.useState(false)
+  const [acknowledgeError, setAcknowledgeError] =
+    React.useState<string | null>(null)
+  const acknowledgeKeyRef = React.useRef<string | null>(null)
+  const acknowledgingRef = React.useRef(false)
   
   const [showExit, setShowExit] = React.useState(false)
 
@@ -91,6 +102,40 @@ export function SimulationBoard({
     onRefetch,
   )
 
+  const handleAcknowledgeNewObligation = async () => {
+    if (
+      !simulation.allowedActions.includes('ACKNOWLEDGE_NEW_OBLIGATION') ||
+      acknowledgingRef.current
+    ) {
+      return
+    }
+
+    acknowledgingRef.current = true
+    const idempotencyKey =
+      acknowledgeKeyRef.current ?? createIdempotencyKey()
+    acknowledgeKeyRef.current = idempotencyKey
+
+    setAcknowledging(true)
+    setAcknowledgeError(null)
+
+    try {
+      const updatedSimulation = await continueSimulation(
+        simulation.session.id,
+        idempotencyKey,
+      )
+
+      acknowledgeKeyRef.current = null
+      onSimulationChange(updatedSimulation)
+    } catch {
+      setAcknowledgeError(
+        'The new obligation could not be acknowledged. Please try again.',
+      )
+    } finally {
+      acknowledgingRef.current = false
+      setAcknowledging(false)
+    }
+  }
+
   const handleAdvance = async () => {
     if (!canAdvance || advancingRef.current) {
       return
@@ -126,8 +171,8 @@ export function SimulationBoard({
   }
 
   return (
-    <main className="min-h-screen bg-[#F4FBF7] px-4 py-6 dark:bg-[#0b1326]">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+    <main className="min-h-screen bg-[#F4FBF7] px-5 pb-12 pt-6 dark:bg-[#0b1326]">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4">
         <SimulationHeader
           simulation={simulation}
           onPause={() => void pause()}
@@ -136,48 +181,39 @@ export function SimulationBoard({
             setShowExit(true)
           }}
           pausing={pausing}
+          canAdvance={canAdvance}
+          advancing={advancing}
+          onAdvance={() => void handleAdvance()}
         />
+        {advanceError && (
+          <p
+            role="alert"
+            className="rounded-2xl bg-[#FFD9E1] px-4 py-3 text-sm font-semibold text-[#AC2A5D]"
+          >
+            {advanceError}
+          </p>
+        )}
         <MonthAgenda
           currentDay={simulation.session.currentDay}
           daysInMonth={simulation.session.daysInMonth}
           obligations={simulation.obligations}
-          canPay={canPay}
-          onOpenObligation={onOpenObligation}
         />
         <RecentScoreActivity
           entries={simulation.recentScoreEntries}
         />
-        {canAdvance && (
-          <section className="rounded-3xl border-2 border-[#091828] bg-white p-4 shadow-[4px_5px_0_#091828] dark:bg-[#111c31]">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="font-black text-[#091828] dark:text-white">
-                  Ready for the next day?
-                </h2>
-                <p className="mt-1 text-sm text-[#6B6375] dark:text-[#A0AEC0]">
-                  Advance when you are ready to continue the simulation.
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={advancing}
-                onClick={() => void handleAdvance()}
-                className="rounded-full border-2 border-[#091828] bg-[#FF6B9D] px-5 py-2.5 text-sm font-black text-[#091828] shadow-[3px_3px_0_#091828] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {advancing
-                  ? 'Advancing...'
-                  : 'Advance day'}
-              </button>
-            </div>
-            {advanceError && (
-              <p
-                role="alert"
-                className="mt-3 text-sm font-semibold text-[#AC2A5D]"
-              >
-                {advanceError}
-              </p>
-            )}
-          </section>
+        <UpcomingObligations
+          simulation={simulation}
+          onOpenObligation={onOpenObligation}
+        />
+        {newObligation && (
+          <NewObligationPopup
+            obligation={newObligation}
+            acknowledging={acknowledging}
+            acknowledgeError={acknowledgeError}
+            onAcknowledge={() => void handleAcknowledgeNewObligation()}
+            pausing={pausing}
+            onPause={() => void pause()}
+          />
         )}
         {simulation.session.status === 'PAUSED' && (
           <PauseOverlay
