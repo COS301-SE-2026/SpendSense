@@ -313,7 +313,7 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                 >
                     <div className="flex items-center gap-3">
                         <SlideIcon tone="yellow"> <Images className="size-5" /> </SlideIcon>
-                        <p className="flex-1 text-[11px] font-black uppercase tracking-[0.12em]"> Stickers</p>
+                        <p className="flex-1 text-[11px] font-black uppercase tracking-[0.12em]"> Badges </p>
                         {hasStickerCounts && stickersCollected !== undefined && (
                             <span className="whitespace-nowrap text-[10px] font-semibold text-[#6B6375] dark:text-[#a0aec0]">
                                 {stickersCollected} collected! {stickersRemaining} to go
@@ -323,11 +323,11 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                     </div>
 
                     <div className="mt-3 flex items-baseline justify-between gap-3">
-                        <h3 className="text-lg font-extrabold">Sticker album</h3>
+                        <h3 className="text-lg font-extrabold">Badge album</h3>
                     </div>
 
                     <p className="mt-3 text-xs leading-relaxed text-[#6B6375] dark:text-[#a0aec0]">
-                        Open your album to see the stickers you have earned.
+                        Open your album to see the badges you have earned.
                     </p>
 
                     <StickerPreview />
