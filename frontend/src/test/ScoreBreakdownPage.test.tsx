@@ -51,7 +51,7 @@ describe("ScoreBreakdownPage", () => {
 
     renderRoute();
 
-    expect(await screen.findByText("190")).toBeInTheDocument();
+    expect(await screen.findByText(/^165[,.]6$/)).toBeInTheDocument();
     expect(screen.getByText("Starting budget").parentElement).toHaveTextContent(
       /6\s000,00/,
     );
@@ -65,8 +65,8 @@ describe("ScoreBreakdownPage", () => {
       screen.getByText("Budget remaining").parentElement,
     ).toHaveTextContent(/2\s800,00/);
     expect(screen.getByText(/46[,.]67% remaining/)).toBeInTheDocument();
-    expect(screen.getByText("+40 points")).toBeInTheDocument();
-    expect(screen.getByText("Paid on time")).toBeInTheDocument();
+    expect(screen.getByText(/^\+15[,.]6 points$/)).toBeInTheDocument();
+    expect(screen.getByText("Paid")).toBeInTheDocument();
     expect(screen.getByText("Resolved")).toBeInTheDocument();
   });
 
