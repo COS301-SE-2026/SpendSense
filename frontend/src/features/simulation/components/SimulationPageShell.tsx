@@ -9,7 +9,9 @@ export function SimulationPageShell({
   progress,
   progressVariant = "bars",
   infoTitle = "About this simulation",
+  infoButtonLabel = "About Simulated Month",
   infoContent = "This simulation uses fictional money and situations. It never affects your real finances.",
+  onInfoOpenChange,
 }: Readonly<{
   children: ReactNode;
   title?: string;
@@ -17,7 +19,9 @@ export function SimulationPageShell({
   progress?: number;
   progressVariant?: "bars" | "dots";
   infoTitle?: string;
+  infoButtonLabel?: string;
   infoContent?: ReactNode;
+  onInfoOpenChange?: (open: boolean) => void;
 }>) {
   const navigate = useNavigate();
   const [showInfo, setShowInfo] = useState(false);
@@ -45,9 +49,12 @@ export function SimulationPageShell({
             </div>
             <button
               type="button"
-              aria-label="About Simulated Month"
+              aria-label={infoButtonLabel}
               aria-haspopup="dialog"
-              onClick={() => setShowInfo(true)}
+              onClick={() => {
+                setShowInfo(true);
+                onInfoOpenChange?.(true);
+              }}
               className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#FFF1C8] shadow-[4px_4px_0_#091828] dark:border-[#060E20] dark:bg-[#3D351B] dark:shadow-[4px_4px_0_#060E20]"
             >
               <Info className="size-5" aria-hidden="true" />
@@ -89,7 +96,10 @@ export function SimulationPageShell({
               <button
                 type="button"
                 aria-label="Close information"
-                onClick={() => setShowInfo(false)}
+                onClick={() => {
+                  setShowInfo(false);
+                  onInfoOpenChange?.(false);
+                }}
                 className="grid size-9 shrink-0 place-items-center rounded-full border-2 border-[#091828] bg-[#FFF1C8] dark:border-[#060E20]"
               >
                 <X className="size-4" aria-hidden="true" />

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Ban, CalendarClock, ChevronLeft, ChevronRight, Wallet } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -10,6 +10,7 @@ interface EventOptionHandProps {
   selectedOptionId: string | null
   onSelect: (optionId: string) => void
   disabled?: boolean
+  hideNavigation?: boolean
 }
 
 const cardColours = [
@@ -18,6 +19,17 @@ const cardColours = [
   'bg-[#D8CCFF] dark:bg-[#352B5C]',
   'bg-[#FFD1E0] dark:bg-[#4E2438]',
 ]
+
+function shuffleOptions(options: SimulationEventOption[]): SimulationEventOption[] {
+  const shuffled = [...options]
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    const current = shuffled[index]
+    shuffled[index] = shuffled[swapIndex]
+    shuffled[swapIndex] = current
+  }
+  return shuffled
+}
 
 function hasAmount(value: string): boolean {
   return Number(value) > 0
@@ -84,12 +96,14 @@ export function EventOptionHand({
   selectedOptionId,
   onSelect,
   disabled = false,
+  hideNavigation = false,
 }: EventOptionHandProps) {
-  const selectedIndex = options.findIndex((option) => option.id === selectedOptionId)
+  const displayOptions = useMemo(() => shuffleOptions(options), [options])
+  const selectedIndex = displayOptions.findIndex((option) => option.id === selectedOptionId)
   const [activeIndex, setActiveIndex] = useState(() =>
     selectedIndex >= 0 ? selectedIndex : 0,
   )
-  const active = Math.min(activeIndex, Math.max(0, options.length - 1))
+  const active = Math.min(activeIndex, Math.max(0, displayOptions.length - 1))
   const arrowClasses =
     'absolute top-1/2 z-[60] grid size-11 -translate-y-1/2 place-items-center rounded-full border-2 border-[#091828] bg-white text-[#091828] shadow-[3px_3px_0_#091828] transition active:translate-x-[2px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-40 dark:border-[#060E20] dark:bg-[#1C263C] dark:text-white dark:shadow-[3px_3px_0_#060E20]'
 
@@ -97,7 +111,7 @@ export function EventOptionHand({
     <fieldset disabled={disabled} className="-mx-5 min-w-0 overflow-hidden px-5">
       <legend className="sr-only">Choose how to respond</legend>
       <div className="relative mx-auto h-[23rem] w-full max-w-sm">
-        {options.map((option, index) => {
+        {displayOptions.map((option, index) => {
           const selected = selectedOptionId === option.id
           const Icon = optionIcon(option)
           const unavailable = !option.affordable
@@ -160,7 +174,7 @@ export function EventOptionHand({
             </label>
           )
         })}
-        {options.length > 1 && (
+        {!hideNavigation && displayOptions.length > 1 && (
           <>
             <button
               type="button"
@@ -174,7 +188,7 @@ export function EventOptionHand({
             <button
               type="button"
               aria-label="Next option"
-              disabled={active === options.length - 1}
+              disabled={active === displayOptions.length - 1}
               onClick={() => setActiveIndex(active + 1)}
               className={`${arrowClasses} right-0`}
             >
@@ -183,12 +197,12 @@ export function EventOptionHand({
           </>
         )}
       </div>
-      {options.length > 1 && (
+      {displayOptions.length > 1 && (
         <p
           aria-live="polite"
           className="mt-1 text-center text-xs font-bold text-[#6B6375] dark:text-[#A0AEC0]"
         >
-          Option {active + 1} of {options.length}
+          Option {active + 1} of {displayOptions.length}
         </p>
       )}
     </fieldset>
