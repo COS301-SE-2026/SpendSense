@@ -27,6 +27,7 @@ export default function SimulationBoardPage() {
 
     if (
       route !== 'board' &&
+      route !== 'new-obligation' &&
       route !== 'paused'
     ) {
       navigate(

@@ -1,4 +1,4 @@
-import { TrendingDown, TrendingUp } from 'lucide-react'
+import { formatPoints } from '../../features/simulation/presentation'
 import type { SimulationScoreEntry } from '../../features/simulation/types'
 
 interface RecentScoreActivityProps {
@@ -8,72 +8,37 @@ interface RecentScoreActivityProps {
 export function RecentScoreActivity({
   entries,
 }: RecentScoreActivityProps) {
-  const recentEntries = entries.slice(0, 4)
+  const latest = entries[0]
+  const delta = latest ? Number(latest.pointsDelta) : 0
+  const positive = delta >= 0
 
   return (
-    <section className="rounded-3xl border-2 border-[#091828] bg-white p-4 shadow-[4px_5px_0_#091828] dark:bg-[#111c31]">
-      <div>
-        <p className="text-xs font-black uppercase tracking-wide text-[#AC2A5D]">
-          Score
+    <section
+      aria-label="Recent score"
+      className="flex items-center justify-between gap-3 rounded-2xl bg-[#E6F2EE] px-4 py-3 dark:bg-[#183B39]"
+    >
+      <h2 className="shrink-0 text-sm font-black text-[#091828] dark:text-white">
+        Recent score
+      </h2>
+      {latest ? (
+        <p
+          className={`min-w-0 text-right text-sm font-black ${
+            positive
+              ? 'text-[#187A6C] dark:text-[#8FE0D2]'
+              : 'text-[#AC2A5D] dark:text-[#FFB1C5]'
+          }`}
+        >
+          <span>
+            {positive ? '+' : ''}
+            {formatPoints(latest.pointsDelta)}
+          </span>{' '}
+          <span>{latest.reason}</span>
         </p>
-        <h2 className="mt-1 text-2xl font-black text-[#091828] dark:text-white">
-          Recent activity
-        </h2>
-      </div>
-      <div className="mt-4">
-        {recentEntries.length === 0 ? (
-          <div className="rounded-2xl bg-[#F4FBF7] px-4 py-6 text-center dark:bg-[#1C263C]">
-            <p className="text-sm font-semibold text-[#6B6375] dark:text-[#A0AEC0]">
-              No score activity yet.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col">
-            {recentEntries.map((entry) => {
-              const delta = Number(entry.pointsDelta)
-              const positive = delta >= 0
-              return (
-                <div
-                  key={entry.id}
-                  className="flex items-center gap-3 border-b border-[#D8E8E2] py-3 last:border-b-0"
-                >
-                  <div
-                    className={`grid size-9 shrink-0 place-items-center rounded-full ${
-                      positive
-                        ? 'bg-[#E6F7F2] text-[#187A6C]'
-                        : 'bg-[#FFD9E6] text-[#AC2A5D]'
-                    }`}
-                  >
-                    {positive ? (
-                      <TrendingUp className="size-4"/>
-                    ) : (
-                      <TrendingDown className="size-4"/>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-[#091828] dark:text-white">
-                      {entry.reason}
-                    </p>
-                    <p className="mt-1 text-xs text-[#6B6375] dark:text-[#A0AEC0]">
-                      Day {entry.simulatedDay}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-sm font-black ${
-                      positive
-                        ? 'text-[#187A6C]'
-                        : 'text-[#AC2A5D]'
-                    }`}
-                  >
-                    {positive ? '+' : ''}
-                    {entry.pointsDelta}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+      ) : (
+        <p className="text-sm text-[#6B6375] dark:text-[#A0AEC0]">
+          No score activity yet.
+        </p>
+      )}
     </section>
   )
 }

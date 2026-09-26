@@ -113,7 +113,7 @@ export default function SimulationBriefingPage() {
               type="checkbox"
               checked={!timedMode}
               onChange={(event) => setTimedMode(!event.target.checked)}
-              aria-label="Accessibility mode"
+              aria-label="Easy mode"
             />
             <span
               aria-hidden="true"
@@ -124,7 +124,7 @@ export default function SimulationBriefingPage() {
               ) : null}
             </span>
             <span>
-              <strong className="block text-sm">Accessibility mode</strong>
+              <strong className="block text-sm">Easy mode</strong>
               <small className="text-xs text-[#6B6375] dark:text-[#A0AEC0]">
                 Disable timers and use manual Advance day.
               </small>
