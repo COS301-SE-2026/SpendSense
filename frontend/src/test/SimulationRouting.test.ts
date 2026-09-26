@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   activeBoardFixture,
+  eventRevealFixture,
   newObligationFixture,
 } from '@/features/simulation/fixtures/SimulationDetail'
 import {
@@ -18,5 +19,12 @@ describe('simulation routing', () => {
 
   it('routes an unheld active session to the board', () => {
     expect(routeForSimulationState(activeBoardFixture)).toBe('board')
+  })
+
+  it('routes a revealed event to the board popup', () => {
+    expect(routeForSimulationState(eventRevealFixture)).toBe('event-reveal')
+    expect(pathForSimulationState(eventRevealFixture)).toBe(
+      `/simulation/session/${eventRevealFixture.session.id}/board`,
+    )
   })
 })
