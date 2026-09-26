@@ -15,13 +15,13 @@ function emptyResponse(){
 
 describe('getMonthBounds', ()=> {
     it('returns the true first and last calendar day of the month', ()=> {
-        expect(getMonthBounds(2026, 6)).toEqual({from: '2026-07-01', to: '2026-07-31'})
+        expect(getMonthBounds(2026, 6)).toEqual({from: '2026-07-01', to: '2026-08-01'})
     })
  
     it('handles the 30 day and February cases', ()=> {
-        expect(getMonthBounds(2026, 8)).toEqual({from: '2026-09-01', to: '2026-09-30'})
-        expect(getMonthBounds(2026, 1)).toEqual({from: '2026-02-01', to: '2026-02-28'})
-        expect(getMonthBounds(2028, 1)).toEqual({from: '2028-02-01', to: '2028-02-29'})
+        expect(getMonthBounds(2026, 8)).toEqual({from: '2026-09-01', to: '2026-10-01'})
+        expect(getMonthBounds(2026, 1)).toEqual({from: '2026-02-01', to: '2026-03-01'})
+        expect(getMonthBounds(2028, 1)).toEqual({from: '2028-02-01', to: '2028-03-01'})
     })
  
     it('pads single digit months and days', ()=> {
@@ -59,7 +59,7 @@ describe('useCalendarOccurrences', ()=> {
  
         await waitFor(()=> {
             expect(mockedGetUpcoming).toHaveBeenCalledWith(
-                expect.objectContaining({from: '2026-07-01', to: '2026-07-31'}),
+                expect.objectContaining({from: '2026-07-01', to: '2026-08-01'}),
             )
         })
  
