@@ -213,13 +213,17 @@ export function SimulationBoard({
           daysInMonth={simulation.session.daysInMonth}
           obligations={simulation.obligations}
         />
-        <RecentScoreActivity
-          entries={simulation.recentScoreEntries}
-        />
-        <UpcomingObligations
-          simulation={simulation}
-          onOpenObligation={onOpenObligation}
-        />
+        {simulation.session.currentDay > 0 && (
+          <>
+            <RecentScoreActivity
+              entries={simulation.recentScoreEntries}
+            />
+            <UpcomingObligations
+              simulation={simulation}
+              onOpenObligation={onOpenObligation}
+            />
+          </>
+        )}
         {revealedEvent && onCompareEventChoices && (
           <EventRevealPopup
             event={revealedEvent}

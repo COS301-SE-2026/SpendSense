@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   beforeEach,
@@ -411,6 +411,179 @@ describe('SimulationBoard', () => {
     expect(
       screen.getByText('No obligations remain this month.'),
     ).toBeInTheDocument()
+  })
+
+  it('will position day one at the top before the month starts and highlight it in place', () => {
+    const simulation = {
+      ...activeBoardFixture,
+      session: {
+        ...activeBoardFixture.session,
+        currentDay: 0,
+      },
+      obligations: [
+        ...activeBoardFixture.obligations,
+        {
+          ...activeBoardFixture.obligations[1],
+          id: 'ob_day_one',
+          name: 'Rent',
+          dueDay: 1,
+        },
+      ],
+    }
+    const boardProps = {
+      onSimulationChange: vi.fn(),
+      onRefetch: vi.fn(),
+    }
+    const makeRect = (top: number, height = 40) =>
+      ({
+        x: 0,
+        y: top,
+        top,
+        right: 320,
+        bottom: top + height,
+        left: 0,
+        width: 320,
+        height,
+        toJSON: () => ({}),
+      }) as DOMRect
+
+    const geometrySpy = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.getAttribute('aria-label') === 'Days in the simulated month') {
+          return makeRect(100, 320)
+        }
+        if (this.tagName === 'LI' && this.textContent?.includes('Day 1')) {
+          return makeRect(230)
+        }
+        return makeRect(0)
+      })
+
+    const { rerender } = render(
+      <SimulationBoard simulation={simulation} {...boardProps} />,
+    )
+
+    const agenda = screen.getByLabelText('Days in the simulated month')
+    const dayItems = () =>
+      Array.from(agenda.querySelectorAll<HTMLElement>(':scope > div > ol > li'))
+    const dayOne = () => dayItems()[0]
+
+    expect(dayOne()).toHaveTextContent('Day 1')
+    expect(dayOne()).toHaveTextContent('Rent')
+    expect(agenda.scrollTop).toBe(114)
+    expect(dayOne()).not.toHaveAttribute('aria-current')
+    expect(dayOne()?.querySelector('span[aria-hidden="true"]')).toHaveClass(
+      'bg-white',
+    )
+    expect(dayItems().at(-1)).toHaveTextContent('Day 30')
+    expect(screen.getByText('Today (0)')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('region', { name: 'Recent score' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('region', { name: 'Upcoming obligations' }),
+    ).not.toBeInTheDocument()
+    geometrySpy.mockRestore()
+
+    rerender(
+      <SimulationBoard
+        simulation={{
+          ...simulation,
+          session: { ...simulation.session, currentDay: 1 },
+        }}
+        {...boardProps}
+      />,
+    )
+
+    expect(dayOne()).toHaveTextContent('Day 1')
+    expect(dayOne()).toHaveAttribute('aria-current', 'date')
+    expect(agenda.scrollTop).toBe(114)
+    expect(dayOne()?.querySelector('span[aria-hidden="true"]')).toHaveClass(
+      'bg-[#FF6B9D]',
+    )
+    expect(screen.getByText('Today (1)')).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', { name: 'Recent score' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('region', { name: 'Upcoming obligations' }),
+    ).toBeInTheDocument()
+
+    const scrollTo = vi.fn()
+    Object.defineProperty(agenda, 'scrollTo', {
+      configurable: true,
+      value: scrollTo,
+    })
+    rerender(
+      <SimulationBoard
+        simulation={{
+          ...simulation,
+          session: { ...simulation.session, currentDay: 2 },
+        }}
+        {...boardProps}
+      />,
+    )
+    expect(scrollTo).toHaveBeenCalledWith(
+      expect.objectContaining({ behavior: 'smooth' }),
+    )
+  })
+
+  it('will smoothly recenter the active day after the agenda has been idle for two seconds', () => {
+    vi.useFakeTimers()
+    const makeRect = (top: number, height = 40) =>
+      ({
+        x: 0,
+        y: top,
+        top,
+        right: 320,
+        bottom: top + height,
+        left: 0,
+        width: 320,
+        height,
+        toJSON: () => ({}),
+      }) as DOMRect
+    const geometrySpy = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.getAttribute('aria-label') === 'Days in the simulated month') {
+          return makeRect(100, 320)
+        }
+        if (this.tagName === 'LI') {
+          const day = Number(this.textContent?.match(/Day (\d+)/)?.[1] ?? 1)
+          return makeRect(100 + (day - 1) * 80)
+        }
+        return makeRect(0)
+      })
+
+    try {
+      render(
+        <SimulationBoard
+          simulation={activeBoardFixture}
+          onSimulationChange={vi.fn()}
+          onRefetch={vi.fn()}
+        />,
+      )
+      const agenda = screen.getByLabelText('Days in the simulated month')
+      const scrollTo = vi.fn()
+      Object.defineProperty(agenda, 'scrollTo', {
+        configurable: true,
+        value: scrollTo,
+      })
+      agenda.scrollTop = 1000
+      fireEvent.scroll(agenda)
+
+      act(() => vi.advanceTimersByTime(1999))
+      expect(scrollTo).not.toHaveBeenCalled()
+
+      act(() => vi.advanceTimersByTime(1))
+      expect(scrollTo).toHaveBeenCalledWith({
+        top: 1384,
+        behavior: 'smooth',
+      })
+    } finally {
+      geometrySpy.mockRestore()
+      vi.useRealTimers()
+    }
   })
 
   it('will mark the current day in the agenda', () => {

@@ -38,10 +38,6 @@ export function UpcomingObligations({
           {upcoming.length} {upcoming.length === 1 ? 'item' : 'items'}
         </span>
       </div>
-      <p className="mt-1 text-xs text-[#6B6375] dark:text-[#A0AEC0]">
-        Pay in full any time up to the due day. Paying early clears the bill but leaves less cash for surprises.
-      </p>
-
       {upcoming.length === 0 ? (
         <p className="mt-3 rounded-2xl bg-[#F4FBF7] px-4 py-5 text-center text-sm font-semibold text-[#6B6375] dark:bg-[#1C263C] dark:text-[#A0AEC0]">
           No obligations remain this month.

@@ -54,8 +54,10 @@ export function MonthAgenda({
   obligations,
 }: MonthAgendaProps) {
   const scrollerRef = React.useRef<HTMLDivElement>(null)
-  const currentDayRef = React.useRef<HTMLLIElement>(null)
-  const hasCentredRef = React.useRef(false)
+  const recenterTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wasDayZeroPositionedRef = React.useRef(false)
+  const currentDayValueRef = React.useRef(currentDay)
+  currentDayValueRef.current = currentDay
 
   const obligationsByDay = React.useMemo(() => {
     const byDay = new Map<number, SimulationObligation[]>()
@@ -68,29 +70,76 @@ export function MonthAgenda({
 
   const todayCount = obligationsByDay.get(currentDay)?.length ?? 0
 
-  React.useLayoutEffect(() => {
-    const scroller = scrollerRef.current
-    const day = currentDayRef.current
-    if (!scroller || !day) return
 
+  const days = Array.from({ length: daysInMonth }, (_, index) => index + 1)
+
+  const positionTimeline = React.useCallback((smooth: boolean) => {
+    const scroller = scrollerRef.current
+    if (!scroller) return
+
+    if (currentDayValueRef.current === 0) {
+      const firstDay = scroller.querySelector<HTMLElement>('ol > li')
+      if (!firstDay) return
+      const scrollerRect = scroller.getBoundingClientRect()
+      const firstDayRect = firstDay.getBoundingClientRect()
+      scroller.scrollTop = Math.max(
+        0,
+        scroller.scrollTop + firstDayRect.top - scrollerRect.top - 16,
+      )
+      wasDayZeroPositionedRef.current = true
+      return
+    }
+
+    if (currentDayValueRef.current === 1 && wasDayZeroPositionedRef.current) {
+      wasDayZeroPositionedRef.current = false
+      return
+    }
+
+    const rows = Array.from(scroller.querySelectorAll<HTMLElement>('ol > li'))
+    if (rows.length === 0) return
+
+    const activeIndex = Math.min(currentDayValueRef.current - 1, rows.length - 1)
+    const firstIndex = Math.max(0, Math.min(activeIndex - 2, rows.length - 5))
+    const targetRow = rows[firstIndex]
     const scrollerRect = scroller.getBoundingClientRect()
-    const dayRect = day.getBoundingClientRect()
-    const top =
-      scroller.scrollTop +
-      (dayRect.top - scrollerRect.top) -
-      scroller.clientHeight / 2 +
-      dayRect.height / 2
-    const smooth = hasCentredRef.current && !prefersReducedMotion()
-    hasCentredRef.current = true
+    const rowRect = targetRow.getBoundingClientRect()
+    const top = Math.max(
+      0,
+      scroller.scrollTop + rowRect.top - scrollerRect.top - 16,
+    )
 
     if (typeof scroller.scrollTo === 'function') {
-      scroller.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' })
+      scroller.scrollTo({
+        top,
+        behavior: smooth && !prefersReducedMotion() ? 'smooth' : 'auto',
+      })
     } else {
       scroller.scrollTop = top
     }
-  }, [currentDay])
+  }, [])
 
-  const days = Array.from({ length: daysInMonth }, (_, index) => index + 1)
+  const scheduleRecenter = React.useCallback(() => {
+    if (currentDayValueRef.current === 0) return
+    if (recenterTimerRef.current !== null) {
+      clearTimeout(recenterTimerRef.current)
+    }
+    recenterTimerRef.current = setTimeout(() => {
+      recenterTimerRef.current = null
+      positionTimeline(true)
+    }, 2000)
+  }, [positionTimeline])
+
+  React.useLayoutEffect(() => {
+    if (recenterTimerRef.current !== null) {
+      clearTimeout(recenterTimerRef.current)
+      recenterTimerRef.current = null
+    }
+    positionTimeline(currentDay > 0)
+  }, [currentDay, daysInMonth, positionTimeline])
+
+  React.useEffect(() => () => {
+    if (recenterTimerRef.current !== null) clearTimeout(recenterTimerRef.current)
+  }, [])
 
   return (
     <section aria-labelledby="month-agenda-title">
@@ -117,6 +166,10 @@ export function MonthAgenda({
           tabIndex={0}
           aria-label="Days in the simulated month"
           className="relative h-80 overflow-y-auto overscroll-contain rounded-[20px] px-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B9D]"
+          onScroll={scheduleRecenter}
+          onWheel={scheduleRecenter}
+          onTouchStart={scheduleRecenter}
+          onTouchMove={scheduleRecenter}
         >
           <div className="relative py-[8.5rem]">
           <span
@@ -132,7 +185,6 @@ export function MonthAgenda({
               return (
                 <li
                   key={day}
-                  ref={isToday ? currentDayRef : undefined}
                   aria-current={isToday ? 'date' : undefined}
                   className="relative py-1.5 pl-8"
                 >
