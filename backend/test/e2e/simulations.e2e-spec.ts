@@ -302,6 +302,23 @@ describe('Simulations E2E', () => {
       let detail: SimulationData;
       let event: SimulationEvent | undefined;
       for (let day = 0; day < 30; day++) {
+        const current = await api
+          .get(`/api/v1/simulations/${session.id}`)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+        detail = data(current);
+        if (detail.currentEvent) {
+          event = detail.currentEvent;
+          break;
+        }
+        if (detail.session.pending.type !== 'NONE') {
+          await api
+            .post(`/api/v1/simulations/${session.id}/continue`)
+            .set('Authorization', `Bearer ${token}`)
+            .set('Idempotency-Key', randomUUID())
+            .expect(201);
+          continue;
+        }
         const advanced = await api
           .post(`/api/v1/simulations/${session.id}/advance`)
           .set('Authorization', `Bearer ${token}`)
@@ -312,7 +329,7 @@ describe('Simulations E2E', () => {
           event = detail.currentEvent;
           break;
         }
-        if (detail.session.pending.type === 'NEW_OBLIGATION') {
+        if (detail.session.pending.type !== 'NONE') {
           await api
             .post(`/api/v1/simulations/${session.id}/continue`)
             .set('Authorization', `Bearer ${token}`)
