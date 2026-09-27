@@ -97,3 +97,29 @@ export async function confirmReceiptPayment(
         body:JSON.stringify(body),
     })
 }
+
+export type CreateReceiptObligationBody={
+    name:string
+    categoryId:string
+    type:'CUSTOM'
+    priority:'LOW'
+    amount:number
+    currency:string
+    frequency:'ONCE'
+    acknowledged:true
+}
+
+export async function createReceiptObligation(
+    scanId:string,
+    body:CreateReceiptObligationBody,
+    idempotencyKey:string,
+){
+    return apiDataFetch<ReceiptConfirmationResult>(
+        `/receipts/scans/${encodeURIComponent(scanId)}/create-obligation`,
+        {
+            method:'POST',
+            headers:{'Idempotency-Key':idempotencyKey},
+            body:JSON.stringify(body),
+        },
+    )
+}

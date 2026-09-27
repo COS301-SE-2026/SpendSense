@@ -1,4 +1,5 @@
 import {useRef,useState} from 'react'
+import {LongButton} from '@/components/common/LongButton'
 import {CheckCircle2,Info,RefreshCw,ShieldCheck,TriangleAlert} from 'lucide-react'
 import {confirmReceiptPayment,type ReceiptConfirmationBody,type ReceiptConfirmationResult} from '../../features/receipts/receiptsApi'
 import {getReceiptOccurrenceBalance,type ReceiptOccurrence} from '../../features/receipts/receiptOccurrencesApi'
@@ -132,7 +133,7 @@ function ReceiptConfirmationResult({result}:Readonly<{result:ReceiptConfirmation
     )
 
     return(
-        <section className={`rounded-3xl border-2 border-[#091828] p-6 shadow-[5px_5px_0_#091828] dark:border-white dark:shadow-[5px_5px_0_#FFFFFF] ${settled?'bg-[#E8E4F4] dark:bg-[#302A43]':'bg-[#DCEFE8] dark:bg-[#0f4f42]'}`}>
+        <section className={`rounded-3xl border-2 border-[#091828] p-6 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:shadow-[4px_4px_0_#060e20] ${settled?'bg-[#E8E4F4] dark:bg-[#302A43]':'bg-[#DCEFE8] dark:bg-[#0f4f42]'}`}>
             <CheckCircle2 className={`size-12 ${settled?'text-[#5B4D8B] dark:text-[#c5b3f0]':'text-[#10775F] dark:text-[#5eead4]'}`}/>
             <h2 className="mt-4 text-2xl font-black">
                 {settled?'Payment complete!':'Partially paid'}
@@ -351,7 +352,7 @@ export default function ReceiptConfirmationPanel({
     if(result)return <ReceiptConfirmationResult result={result}/>
 
     return(
-        <section className="rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[5px_5px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[5px_5px_0_#060e20] sm:p-6">
+        <section className="rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20] sm:p-6">
             <div className="flex items-start gap-3">
                 <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#DCEFE8] dark:bg-[#0f4f42]">
                     <ShieldCheck className="size-6 text-[#10775F] dark:text-[#5eead4]"/>
@@ -425,15 +426,17 @@ export default function ReceiptConfirmationPanel({
                     <span>{error}</span>
                 </div>
             )}
-            <button
+            <LongButton
                 type="button"
+                LongVariant="primaryPinkBorder"
+                showArrow={false}
                 onClick={handleConfirm}
                 disabled={!canConfirm||processing}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#091828] px-5 py-4 text-sm font-extrabold text-white transition disabled:cursor-not-allowed disabled:opacity-40 dark:bg-[#FF6B9D] dark:text-[#650030]"
+                className="mt-6 disabled:cursor-not-allowed disabled:opacity-40"
             >
                 {processing&&<RefreshCw className="size-4 animate-spin"/>}
                 {processing?'Confirming payment...':'Confirm payment'}
-            </button>
+            </LongButton>
             <p className="mt-3 text-center text-xs text-[#6b6375] dark:text-[#a0aec0]">
                 Your payment is only recorded after you press Confirm payment.
             </p>

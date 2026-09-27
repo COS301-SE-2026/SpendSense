@@ -115,7 +115,7 @@ describe('ReceiptScanPage',()=>{
                 <ReceiptScanPage/>
             </MemoryRouter>
         )
-        fireEvent.click(screen.getByRole('button',{name:'Go back'}))
+        fireEvent.click(screen.getByRole('button',{name:'Back'}))
         expect(navigate).toHaveBeenCalledWith(-1)
     })
     it('submits the selected image to the scan API and opens review',async()=>{
