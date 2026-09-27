@@ -57,7 +57,10 @@ export function MonthAgenda({
   const recenterTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const wasDayZeroPositionedRef = React.useRef(false)
   const currentDayValueRef = React.useRef(currentDay)
-  currentDayValueRef.current = currentDay
+
+  React.useLayoutEffect(() => {
+    currentDayValueRef.current = currentDay
+  }, [currentDay])
 
   const obligationsByDay = React.useMemo(() => {
     const byDay = new Map<number, SimulationObligation[]>()
