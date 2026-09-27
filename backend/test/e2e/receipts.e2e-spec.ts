@@ -94,9 +94,6 @@ function getStoredReceiptScan(
   });
 }
 describe('Receipts E2E', () => {
-
-
-
   it('Testing the service ability to record a partial payment for an existing obligation', async () => {
     const e2e = await createApiE2eFixture();
 
@@ -169,9 +166,9 @@ describe('Receipts E2E', () => {
         409,
       );
 
-      const errorBody = response.body.message as ErrorApiResponse;
+      const errorBody = response.body as ErrorApiResponse;
 
-      expect(errorBody).toBe('Receipt scan has already been consumed.');
+      expect(errorBody.message).toBe('Receipt scan has already been consumed.');
     } finally {
       await e2e.close();
     }
