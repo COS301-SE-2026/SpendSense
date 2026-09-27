@@ -381,6 +381,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
         const user=userEvent.setup();
         render(<PaymentForm/>);
         await selectOccurrence(user,"Electricity");
+        await waitFor(()=>expect(screen.getByLabelText(/amount paid/i)).toHaveValue("300"));
         await user.clear(screen.getByLabelText(/amount paid/i));
         await user.type(screen.getByLabelText(/amount paid/i),"100");
         await user.click(screen.getByRole("button",{name:/log payment/i}));
@@ -399,6 +400,7 @@ describe("PaymentForm (ObligationForm) Component",()=>{
         const user=userEvent.setup();
         render(<PaymentForm/>);
         await selectOccurrence(user,"Netflix");
+        await waitFor(()=>expect(screen.getByLabelText(/amount paid/i)).toHaveValue("199"));
         await user.click(screen.getByRole("button",{name:/log payment/i}));
         expect(await screen.findByRole("alert")).toHaveTextContent("could not be safely retried");
         await waitFor(()=>expect(screen.getByRole("button",{name:/log payment/i})).toBeDisabled());
