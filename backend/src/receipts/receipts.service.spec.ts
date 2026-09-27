@@ -2,8 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ReceiptsService } from './receipts.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentContributionsService } from '../payments/payment-contributions.service';
+import { ObligationsService } from '../obligations/obligations.service';
+
 const mockPaymentContributionsService = {
   createContribution: jest.fn(),
+};
+
+const obligationsService = {
+  createWithTransaction: jest.fn(),
 };
 
 describe('ReceiptsService', () => {
@@ -12,6 +18,8 @@ describe('ReceiptsService', () => {
   const mockPrismaService = {};
 
   beforeEach(async () => {
+
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReceiptsService,
@@ -22,6 +30,10 @@ describe('ReceiptsService', () => {
         {
           provide: PaymentContributionsService,
           useValue: mockPaymentContributionsService,
+        },
+        {
+          provide: ObligationsService,
+          useValue: obligationsService,
         },
       ],
     }).compile();

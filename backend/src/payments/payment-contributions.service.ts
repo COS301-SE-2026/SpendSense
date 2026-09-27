@@ -123,7 +123,6 @@ export class PaymentContributionsService {
   ): Promise<CreateContributionResult> {
     const amount = new Prisma.Decimal(input.amount);
 
-    // contribution must be positive.
     if (amount.lessThanOrEqualTo(0)) {
       throw new BadRequestException(
         'Payment contribution must be greater than zero.',
@@ -133,192 +132,9 @@ export class PaymentContributionsService {
     const payloadHash = this.createPayloadHash(input);
 
     try {
-      return this.prisma.$transaction(async (tx) => {
-        // purpose of raw SQL: Lock this PaymentOccurrence row until this transaction finishes
-        await tx.$queryRaw`
-                SELECT "id"
-                FROM "PaymentOccurrence"
-                WHERE "id" = ${input.occurrenceId}
-                AND "userId" = ${input.userId}
-                AND "deletedAt" IS NULL
-                FOR UPDATE
-            `;
-
-        // 1. Fetch occurances
-        const occurrence = await tx.paymentOccurrence.findFirst({
-          where: {
-            id: input.occurrenceId,
-            userId: input.userId,
-            deletedAt: null,
-          },
-          include: {
-            obligation: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        });
-        if (!occurrence) {
-          throw new NotFoundException('Payment occurrence not found.');
-        }
-
-        // check idempodency BEFORE checking the occurance.status
-        const replay = await this.getIdempotentReplay(tx, input, payloadHash);
-        if (replay) {
-          return replay;
-        }
-        await this.validateReceiptScanForContribution(tx, input);
-
-        // 1.2 chekc the status of the occurances
-        const terminalStatuses: PaymentOccurrenceStatus[] = [
-          PaymentOccurrenceStatus.PAID,
-          PaymentOccurrenceStatus.PAID_LATE,
-          PaymentOccurrenceStatus.MISSED,
-          PaymentOccurrenceStatus.CANCELLED,
-        ];
-        if (terminalStatuses.includes(occurrence.status)) {
-          throw new BadRequestException(
-            'Payment occurrence cannot receive another contribution.',
-          );
-        }
-        if (input.currency !== occurrence.currency) {
-          throw new BadRequestException(
-            'Payment currency does not match occurrence currency.',
-          );
-        }
-
-        const remainingBefore = occurrence.amountDue.minus(
-          occurrence.amountPaid,
-        );
-
-        if (remainingBefore.lessThan(0)) {
-          throw new BadRequestException(
-            'Payment occurrence has an invalid balance.',
-          );
-        }
-        if (amount.greaterThan(remainingBefore)) {
-          throw new BadRequestException(
-            `Payment amount exceeds remaining balance of ${remainingBefore.toFixed(2)}.`,
-          );
-        }
-
-        // 2. All occurance.status checks pass - now create a paymetnContribution
-        const newAmountPaid = occurrence.amountPaid.plus(amount);
-        const remainingAfter = occurrence.amountDue.minus(newAmountPaid);
-        const settlesOccurrence = remainingAfter.equals(0);
-
-        const contribution = await tx.paymentContribution.create({
-          data: {
-            userId: input.userId,
-
-            occurrenceId: occurrence.id,
-            obligationId: occurrence.obligationId,
-
-            amount,
-            currency: occurrence.currency,
-            paidDate: input.paidDate,
-
-            source: input.source,
-
-            receiptScanId: input.receiptScanId ?? null,
-            notes: input.notes ?? null,
-
-            idempotencyKey: input.idempotencyKey,
-            requestPayloadHash: payloadHash,
-          },
-        });
-
-        //  2.1 for the the payment contribution is not settlig the occurance in full
-        // CASE: PARTIALL_PAD ================================================================
-        if (!settlesOccurrence) {
-          const updatedOccurrence = await tx.paymentOccurrence.update({
-            where: {
-              id: occurrence.id,
-            },
-            data: {
-              amountPaid: newAmountPaid,
-              status: PaymentOccurrenceStatus.PARTIALLY_PAID,
-              paidAt: null, // paidAt means FINAL settlement only
-            },
-          });
-
-          await this.consumeReceiptScan(tx, input);
-
-          return {
-            ...this.buildContributionResponse(
-              contribution,
-              updatedOccurrence,
-              occurrence.obligation.name,
-              remainingAfter.toFixed(2),
-            ),
-
-            settlement: null,
-            scoreImpact: null,
-            rewards: null,
-            paymentImpact: null,
-          };
-        }
-
-        //  2.2 for the the payment contribution IS settlig the occurance in full
-        // CASE: PAID VS PAID_LATE ? ================================================================
-        const isLate =
-          occurrence.overdueAt !== null ||
-          occurrence.status === PaymentOccurrenceStatus.OVERDUE ||
-          input.paidDate.getTime() > occurrence.dueDate.getTime();
-        const finalStatus = isLate
-          ? PaymentOccurrenceStatus.PAID_LATE
-          : PaymentOccurrenceStatus.PAID;
-        const daysLate = isLate
-          ? Math.max(
-              0,
-              Math.ceil(
-                (input.paidDate.getTime() - occurrence.dueDate.getTime()) /
-                  (1000 * 60 * 60 * 24),
-              ),
-            )
-          : 0;
-
-        const updatedOccurrence = await tx.paymentOccurrence.update({
-          where: {
-            id: occurrence.id,
-          },
-
-          data: {
-            amountPaid: newAmountPaid,
-            status: finalStatus,
-            paidAt: input.paidDate,
-          },
-        });
-
-        const settlementEffects = await this.runSettlementEffects(tx, {
-          userId: input.userId,
-          occurrenceId: occurrence.id,
-          obligationId: occurrence.obligationId,
-          obligationName: occurrence.obligation.name,
-          contributionId: contribution.id,
-          isLate,
-          daysLate,
-        });
-
-        await this.consumeReceiptScan(tx, input);
-
-        return {
-          ...this.buildContributionResponse(
-            contribution,
-            updatedOccurrence,
-            occurrence.obligation.name,
-            remainingAfter.toFixed(2),
-          ),
-
-          settlement: {
-            isLate,
-            daysLate,
-          },
-
-          ...settlementEffects,
-        };
-      });
+      return await this.prisma.$transaction((tx) =>
+        this.createContributionWithTransaction(tx, input, payloadHash),
+      );
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -329,14 +145,277 @@ export class PaymentContributionsService {
           input,
           payloadHash,
         );
-
         if (replay) {
           return replay;
         }
       }
-
       throw error;
     }
+  }
+
+  async createContributionWithTransaction(
+    tx: Prisma.TransactionClient,
+    input: CreateContributionInput,
+    payloadHash?: string,
+  ): Promise<CreateContributionResult> {
+    const amount = new Prisma.Decimal(input.amount);
+    const resolvedPayloadHash = payloadHash ?? this.createPayloadHash(input);
+
+    // purpose of raw SQL: Lock this PaymentOccurrence row until this transaction finishes
+    await tx.$queryRaw`
+                SELECT "id"
+                FROM "PaymentOccurrence"
+                WHERE "id" = ${input.occurrenceId}
+                AND "userId" = ${input.userId}
+                AND "deletedAt" IS NULL
+                FOR UPDATE
+            `;
+
+    // 1. Fetch occurances
+    const occurrence = await tx.paymentOccurrence.findFirst({
+      where: {
+        id: input.occurrenceId,
+        userId: input.userId,
+        deletedAt: null,
+      },
+      include: {
+        obligation: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+    if (!occurrence) {
+      throw new NotFoundException('Payment occurrence not found.');
+    }
+
+    // check idempodency BEFORE checking the occurance.status
+    const replay = await this.getIdempotentReplay(
+      tx,
+      input,
+      resolvedPayloadHash,
+    );
+    if (replay) {
+      return replay;
+    }
+    await this.validateReceiptScanForContribution(tx, input);
+
+    // 1.2 chekc the status of the occurances
+    const terminalStatuses: PaymentOccurrenceStatus[] = [
+      PaymentOccurrenceStatus.PAID,
+      PaymentOccurrenceStatus.PAID_LATE,
+      PaymentOccurrenceStatus.MISSED,
+      PaymentOccurrenceStatus.CANCELLED,
+    ];
+    if (terminalStatuses.includes(occurrence.status)) {
+      throw new BadRequestException(
+        'Payment occurrence cannot receive another contribution.',
+      );
+    }
+    if (input.currency !== occurrence.currency) {
+      throw new BadRequestException(
+        'Payment currency does not match occurrence currency.',
+      );
+    }
+
+    const remainingBefore = occurrence.amountDue.minus(occurrence.amountPaid);
+
+    if (remainingBefore.lessThan(0)) {
+      throw new BadRequestException(
+        'Payment occurrence has an invalid balance.',
+      );
+    }
+    if (amount.greaterThan(remainingBefore)) {
+      throw new BadRequestException(
+        `Payment amount exceeds remaining balance of ${remainingBefore.toFixed(2)}.`,
+      );
+    }
+
+    // 2. All occurance.status checks pass - now create a paymetnContribution
+    const newAmountPaid = occurrence.amountPaid.plus(amount);
+    const remainingAfter = occurrence.amountDue.minus(newAmountPaid);
+    const settlesOccurrence = remainingAfter.equals(0);
+
+    const contribution = await tx.paymentContribution.create({
+      data: {
+        userId: input.userId,
+
+        occurrenceId: occurrence.id,
+        obligationId: occurrence.obligationId,
+
+        amount,
+        currency: occurrence.currency,
+        paidDate: input.paidDate,
+
+        source: input.source,
+
+        receiptScanId: input.receiptScanId ?? null,
+        notes: input.notes ?? null,
+
+        idempotencyKey: input.idempotencyKey,
+        requestPayloadHash: resolvedPayloadHash,
+      },
+    });
+
+    //  2.1 for the the payment contribution is not settlig the occurance in full
+    // CASE: PARTIALL_PAD ================================================================
+    if (!settlesOccurrence) {
+      const updatedOccurrence = await tx.paymentOccurrence.update({
+        where: {
+          id: occurrence.id,
+        },
+        data: {
+          amountPaid: newAmountPaid,
+          status: PaymentOccurrenceStatus.PARTIALLY_PAID,
+          paidAt: null, // paidAt means FINAL settlement only
+        },
+      });
+
+      await this.consumeReceiptScan(tx, input);
+
+      return {
+        ...this.buildContributionResponse(
+          contribution,
+          updatedOccurrence,
+          occurrence.obligation.name,
+          remainingAfter.toFixed(2),
+        ),
+
+        settlement: null,
+        scoreImpact: null,
+        rewards: null,
+        paymentImpact: null,
+      };
+    }
+
+    //  2.2 for the the payment contribution IS settlig the occurance in full
+    // CASE: PAID VS PAID_LATE ? ================================================================
+    const paidDateOnly = input.paidDate.toISOString().slice(0, 10);
+    const dueDateOnly = occurrence.dueDate.toISOString().slice(0, 10);
+
+    const isLate = paidDateOnly > dueDateOnly;
+
+    const finalStatus = isLate
+      ? PaymentOccurrenceStatus.PAID_LATE
+      : PaymentOccurrenceStatus.PAID;
+
+    const paidDay = new Date(`${paidDateOnly}T00:00:00.000Z`);
+    const dueDay = new Date(`${dueDateOnly}T00:00:00.000Z`);
+
+    const daysLate = isLate
+      ? Math.round(
+          (paidDay.getTime() - dueDay.getTime()) / (1000 * 60 * 60 * 24),
+        )
+      : 0;
+
+    const updatedOccurrence = await tx.paymentOccurrence.update({
+      where: {
+        id: occurrence.id,
+      },
+      data: {
+        amountPaid: newAmountPaid,
+        status: finalStatus,
+        paidAt: input.paidDate,
+      },
+    });
+
+    const settlementEffects = await this.runSettlementEffects(tx, {
+      userId: input.userId,
+      occurrenceId: occurrence.id,
+      obligationId: occurrence.obligationId,
+      obligationName: occurrence.obligation.name,
+      contributionId: contribution.id,
+      isLate,
+      daysLate,
+    });
+
+    await this.consumeReceiptScan(tx, input);
+
+    return {
+      ...this.buildContributionResponse(
+        contribution,
+        updatedOccurrence,
+        occurrence.obligation.name,
+        remainingAfter.toFixed(2),
+      ),
+
+      settlement: {
+        isLate,
+        daysLate,
+      },
+
+      ...settlementEffects,
+    };
+  }
+
+  async getReceiptCreationReplay(
+    userId: string,
+    idempotencyKey: string,
+    receiptScanId: string,
+  ): Promise<CreateContributionResult | null> {
+    const existing = await this.prisma.paymentContribution.findUnique({
+      where: {
+        userId_idempotencyKey: {
+          userId,
+          idempotencyKey,
+        },
+      },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    if (
+      existing.source !== PaymentContributionSource.RECEIPT_SCAN ||
+      existing.receiptScanId !== receiptScanId
+    ) {
+      throw new ConflictException(
+        'Idempotency key has already been used for another payment request.',
+      );
+    }
+
+    const occurrence = await this.prisma.paymentOccurrence.findUnique({
+      where: {
+        id: existing.occurrenceId,
+      },
+      include: {
+        obligation: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!occurrence) {
+      throw new ConflictException(
+        'Existing payment contribution references an invalid occurrence.',
+      );
+    }
+
+    return {
+      ...this.buildContributionResponse(
+        existing,
+        occurrence,
+        occurrence.obligation.name,
+        occurrence.amountDue.minus(occurrence.amountPaid).toFixed(2),
+      ),
+
+      replayed: true,
+      settlement: null,
+      scoreImpact: null,
+      rewards: null,
+      paymentImpact: null,
+    };
+  }
+
+  private isPaidLate(paidDate: Date, dueDate: Date): boolean {
+    const paidDateOnly = paidDate.toISOString().slice(0, 10);
+    const dueDateOnly = dueDate.toISOString().slice(0, 10);
+
+    return paidDateOnly > dueDateOnly;
   }
 
   private buildContributionResponse(
