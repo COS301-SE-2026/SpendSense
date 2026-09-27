@@ -13,6 +13,24 @@ import sunglasses from "@/assets/mascot/hat-sunglasses.svg"
 import crown from "@/assets/mascot/hat-crown.svg"
 import hoodie from "@/assets/mascot/accessory-hoodie.svg"
 import hoodieStore from "@/assets/mascot/accessory-hoodie-store.svg"
+import angelWings from "@/assets/mascot/accessory-angel-wings.svg"
+import angelWingsShop from "@/assets/mascot/accessory-angel-wings-shop.svg"
+import overalls from "@/assets/mascot/accessory-overalls.svg"
+import overallsShop from "@/assets/mascot/accessory-overalls-shop.svg"
+import ribbon from "@/assets/mascot/accessory-ribbon.svg"
+import scarf from "@/assets/mascot/accessory-scarf.svg"
+import tie from "@/assets/mascot/accessory-tie.svg"
+import tutu from "@/assets/mascot/accessory-tutu.svg"
+import tutuShop from "@/assets/mascot/accessory-tutu-shop.svg"
+import varsityJacket from "@/assets/mascot/accessory-varsity-jacket.svg"
+import varsityJacketShop from "@/assets/mascot/accessory-varsity-jacket-shop.svg"
+import astronautHelmet from "@/assets/mascot/hat-astronaut-helmet.svg"
+import bunnyEars from "@/assets/mascot/hat-bunny-ears.svg"
+import frogHat from "@/assets/mascot/hat-frog.svg"
+import halo from "@/assets/mascot/hat-halo.svg"
+import haloShop from "@/assets/mascot/hat-halo-shop.svg"
+import sweatBand from "@/assets/mascot/hat-sweat-band.svg"
+import vikingHelmet from "@/assets/mascot/hat-viking-helmet.svg"
 
 //ART REGISTRY: placeholder until the hand drawn mascot and cosmetics land.
 //only file that needs to change when the artwork arrives
@@ -45,10 +63,28 @@ export const COSMETIC_ART: Record<string, string> = {
     sunglasses: sunglasses,
     crown: crown,
     hoodie: hoodie,
+    ribbon: ribbon,
+    tie: tie,
+    scarf: scarf,
+    sweat_band: sweatBand,
+    bunny_ears: bunnyEars,
+    frog_hat: frogHat,
+    overalls: overalls,
+    tutu: tutu,
+    viking_helmet: vikingHelmet,
+    varsity_jacket: varsityJacket,
+    halo: halo,
+    angel_wings: angelWings,
+    astronaut_helmet: astronautHelmet,
 }
 
 export const COSMETIC_STORE_ART: Record<string, string> = {
     hoodie: hoodieStore,
+    angel_wings: angelWingsShop,
+    overalls: overallsShop,
+    tutu: tutuShop,
+    varsity_jacket: varsityJacketShop,
+    halo: haloShop,
 }
 
 export const SLOT_LAYER_ORDER: Record<CosmeticSlot, number> = {
