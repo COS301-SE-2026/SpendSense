@@ -9,7 +9,17 @@ if (isE2eMode && import.meta.env.PROD && !isE2eBuild) {
 
 export type E2eSession = {
   access_token: string;
+  user: { id: string };
 };
+
+function subjectOf(token: string): string {
+  try {
+    const payload = token.split('.')[1].replaceAll('-', '+').replaceAll('_', '/');
+    return (JSON.parse(atob(payload)) as { sub?: string }).sub ?? '';
+  } catch {
+    return '';
+  }
+}
 
 export function getE2eSession(): E2eSession | null {
   if (!isE2eMode) {
@@ -17,7 +27,9 @@ export function getE2eSession(): E2eSession | null {
   }
 
   const token = getToken();
-  return token ? { access_token: token } : null;
+  return token
+    ? { access_token: token, user: { id: subjectOf(token) } }
+    : null;
 }
 
 export function clearE2eSession(): void {

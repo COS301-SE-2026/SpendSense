@@ -1,0 +1,1154 @@
+import { Injectable } from '@nestjs/common';
+import {
+  Prisma,
+  SimulationEventStatus,
+  SimulationObligationStatus,
+  SimulationObligationScheduleStatus,
+  SimulationPresentationHold,
+  SimulationScoreSourceType,
+  SimulationSessionStatus,
+} from '@prisma/client';
+import { BadgeEngineService } from '../gamification/badge-engine.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { RewardService } from '../rewards/reward.service';
+
+const DAY_DURATION_MS = 15_000;
+const EVENT_DECISION_DURATION_MS = 30_000;
+const FINAL_BUDGET_BONUS_CEILING_CENTS = 3_000;
+export const SIMULATION_COMPLETION_XP = 15;
+
+export type SimulationTransitionResult = {
+  currentDay: number;
+  stoppedFor:
+    | 'NONE'
+    | 'PAYMENT'
+    | 'EVENT'
+    | 'EVENT_RESULT'
+    | 'NEW_OBLIGATION'
+    | 'SUMMARY';
+};
+
+@Injectable()
+export class SimulationTransitionService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rewardService: RewardService,
+    private readonly badgeEngineService: BadgeEngineService,
+  ) {}
+
+  async resolveDueTransitions(
+    sessionId: string,
+  ): Promise<SimulationTransitionResult> {
+    return this.prisma.$transaction((tx) =>
+      this.resolveInTransaction(tx, sessionId, false),
+    );
+  }
+
+  async advanceOneDay(sessionId: string): Promise<SimulationTransitionResult> {
+    return this.prisma.$transaction((tx) =>
+      this.advanceOneDayInTransaction(tx, sessionId),
+    );
+  }
+
+  /**
+   * Allows a state-changing route to include the day transition and its
+   * idempotency action snapshot in one database transaction.
+   */
+  async advanceOneDayInTransaction(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+  ): Promise<SimulationTransitionResult> {
+    return this.resolveInTransaction(tx, sessionId, true);
+  }
+
+  /** Allows another simulation action to settle timed state atomically first. */
+  async resolveDueTransitionsInTransaction(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+  ): Promise<SimulationTransitionResult> {
+    return this.resolveInTransaction(tx, sessionId, false);
+  }
+
+  private async resolveInTransaction(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+    manuallyAdvance: boolean,
+  ): Promise<SimulationTransitionResult> {
+    await tx.$queryRaw`SELECT id FROM "SimulationSession" WHERE id = ${sessionId} FOR UPDATE`;
+    const session = await tx.simulationSession.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: {
+        obligationSchedules: true,
+        obligations: { orderBy: [{ dueDay: 'asc' }, { createdAt: 'asc' }] },
+        events: { orderBy: [{ triggerDay: 'asc' }, { createdAt: 'asc' }] },
+      },
+    });
+    if (session.status === SimulationSessionStatus.COMPLETED) {
+      await this.settleCompletionRewards(tx, session.id, session.userId);
+      return this.result(session.currentDay, 'SUMMARY');
+    }
+    if (session.status !== SimulationSessionStatus.ACTIVE) {
+      return this.result(session.currentDay, 'NONE');
+    }
+    if (
+      session.presentationHold === SimulationPresentationHold.NEW_OBLIGATION
+    ) {
+      return this.result(session.currentDay, 'NONE');
+    }
+
+    const now = new Date();
+    const revealed = session.events.find(
+      (event) => event.status === SimulationEventStatus.REVEALED,
+    );
+    if (revealed) {
+      if (
+        session.timedMode &&
+        revealed.decisionExpiresAt &&
+        revealed.decisionExpiresAt <= now
+      ) {
+        const expiryOutcome = this.expiryOutcome(
+          revealed.eventSnapshot,
+          session.currentDay,
+        );
+        const debit = this.debitBalances(
+          session.currentBalance,
+          session.savingsBalance,
+          expiryOutcome?.immediateCost,
+          expiryOutcome?.feeOrDebt,
+        );
+        await tx.simulationEvent.update({
+          where: { id: revealed.id },
+          data: {
+            status: SimulationEventStatus.EXPIRED,
+            resolvedAt: now,
+            resolutionSnapshot: this.expirySnapshot(
+              revealed.eventSnapshot,
+              debit.uncoveredAmount,
+              debit.feeChargedNow,
+            ) as Prisma.InputJsonValue,
+          },
+        });
+        if (expiryOutcome?.introducedObligation) {
+          await tx.simulationObligation.create({
+            data: {
+              sessionId,
+              introducedByEventId: revealed.id,
+              templateCode: expiryOutcome.introducedObligation.templateCode,
+              name: expiryOutcome.introducedObligation.name,
+              category: expiryOutcome.introducedObligation.category,
+              amountDue: expiryOutcome.introducedObligation.amountDue,
+              dueDay: expiryOutcome.introducedObligation.dueDay,
+              consequenceSnapshot: {
+                basePoints: expiryOutcome.introducedObligation.basePoints,
+                savingsPointsFactor:
+                  expiryOutcome.introducedObligation.savingsPointsFactor,
+                importance: expiryOutcome.introducedObligation.importance,
+                importanceWeight:
+                  expiryOutcome.introducedObligation.importanceWeight,
+                baseMissPenalty:
+                  expiryOutcome.introducedObligation.baseMissPenalty,
+                ...(expiryOutcome.introducedObligation.amountReference && {
+                  amountReference:
+                    expiryOutcome.introducedObligation.amountReference,
+                  minimumCostFactor:
+                    expiryOutcome.introducedObligation.minimumCostFactor,
+                  maximumCostFactor:
+                    expiryOutcome.introducedObligation.maximumCostFactor,
+                }),
+              },
+            },
+          });
+        }
+        if (expiryOutcome) {
+          await tx.simulationScoreEntry.create({
+            data: {
+              sessionId,
+              sourceType: SimulationScoreSourceType.EVENT_EXPIRY,
+              sourceId: revealed.id,
+              simulatedDay: session.currentDay,
+              pointsDelta: expiryOutcome.scoreDelta,
+              reason: 'Surprise event decision timed out',
+              calculationData: {
+                outcomeId: expiryOutcome.id,
+                immediateCost: expiryOutcome.immediateCost,
+                feeOrDebt: expiryOutcome.feeOrDebt,
+                feeChargedNow: debit.feeChargedNow,
+                cashRequiredNow: this.moneyFromCents(
+                  (this.cents(expiryOutcome.immediateCost) ?? 0) +
+                    (this.cents(expiryOutcome.feeOrDebt) ?? 0),
+                ),
+                uncoveredAmount: debit.uncoveredAmount,
+              },
+            },
+          });
+        }
+        await tx.simulationSession.update({
+          where: { id: sessionId },
+          data: {
+            currentBalance: debit.currentBalance,
+            savingsBalance: debit.savingsBalance,
+            ...(expiryOutcome && {
+              score: { increment: expiryOutcome.scoreDelta },
+            }),
+            nextDayAt: null,
+            presentationHold: SimulationPresentationHold.EVENT_RESULT,
+          },
+        });
+        return this.result(session.currentDay, 'EVENT_RESULT');
+      }
+      return this.result(session.currentDay, 'EVENT');
+    }
+
+    const initialStop = await this.stopForCurrentDay(tx, session, now);
+    if (initialStop !== 'NONE') {
+      return this.result(session.currentDay, initialStop);
+    }
+
+    // Sessions stopped at an old payable-bill boundary had no running timer.
+    if (
+      session.timedMode &&
+      !session.nextDayAt &&
+      session.presentationHold === SimulationPresentationHold.NONE
+    ) {
+      await tx.simulationSession.update({
+        where: { id: sessionId },
+        data: { nextDayAt: new Date(now.getTime() + DAY_DURATION_MS) },
+      });
+      return this.result(session.currentDay, 'NONE');
+    }
+
+    if (manuallyAdvance) {
+      if (session.timedMode) {
+        return this.result(session.currentDay, 'NONE');
+      }
+      return this.advanceBoundary(tx, session, now);
+    }
+    if (!session.timedMode || !session.nextDayAt || session.nextDayAt > now) {
+      return this.result(session.currentDay, 'NONE');
+    }
+
+    let current = session;
+    while (current.nextDayAt && current.nextDayAt <= now) {
+      const transition = await this.advanceBoundary(tx, current, now);
+      if (transition.stoppedFor !== 'NONE') {
+        return transition;
+      }
+      current = await tx.simulationSession.findUniqueOrThrow({
+        where: { id: sessionId },
+        include: {
+          obligationSchedules: true,
+          obligations: { orderBy: [{ dueDay: 'asc' }, { createdAt: 'asc' }] },
+          events: { orderBy: [{ triggerDay: 'asc' }, { createdAt: 'asc' }] },
+        },
+      });
+    }
+    return this.result(current.currentDay, 'NONE');
+  }
+
+  private async advanceBoundary(
+    tx: Prisma.TransactionClient,
+    session: {
+      id: string;
+      currentDay: number;
+      daysInMonth: number;
+      timedMode: boolean;
+      nextDayAt: Date | null;
+    },
+    now: Date,
+  ): Promise<SimulationTransitionResult> {
+    if (session.currentDay >= session.daysInMonth) {
+      return this.finalizeSession(tx, session.id, now);
+    }
+
+    const nextDay = session.currentDay + 1;
+    await tx.simulationSession.update({
+      where: { id: session.id },
+      data: {
+        currentDay: nextDay,
+        nextDayAt: session.timedMode
+          ? new Date((session.nextDayAt ?? now).getTime() + DAY_DURATION_MS)
+          : null,
+      },
+    });
+
+    const refreshed = await tx.simulationSession.findUniqueOrThrow({
+      where: { id: session.id },
+      include: {
+        obligationSchedules: true,
+        obligations: { orderBy: [{ dueDay: 'asc' }, { createdAt: 'asc' }] },
+        events: { orderBy: [{ triggerDay: 'asc' }, { createdAt: 'asc' }] },
+      },
+    });
+    const stoppedFor = await this.stopForCurrentDay(tx, refreshed, now);
+    return this.result(nextDay, stoppedFor);
+  }
+
+  private async stopForCurrentDay(
+    tx: Prisma.TransactionClient,
+    session: {
+      id: string;
+      currentDay: number;
+      daysInMonth: number;
+      timedMode: boolean;
+      currentBalance: unknown;
+      savingsBalance: unknown;
+      obligations: Array<{
+        id: string;
+        name: string;
+        amountDue: unknown;
+        dueDay: number;
+        status: SimulationObligationStatus;
+        consequenceSnapshot: unknown;
+        introducedByEventId: string | null;
+      }>;
+      obligationSchedules: Array<{
+        id: string;
+        triggerDay: number;
+        status: SimulationObligationScheduleStatus;
+        obligationSnapshot: unknown;
+      }>;
+      events: Array<{
+        id: string;
+        triggerDay: number;
+        status: SimulationEventStatus;
+      }>;
+    },
+    now: Date,
+  ): Promise<SimulationTransitionResult['stoppedFor']> {
+    await this.scoreMissedObligations(
+      tx,
+      session.id,
+      session.currentDay,
+      session.obligations.filter(
+        (obligation) => obligation.dueDay < session.currentDay,
+      ),
+    );
+
+    let materializedObligation = false;
+    for (const schedule of session.obligationSchedules.filter((candidate) => {
+      const dueDay = this.record(candidate.obligationSnapshot)?.dueDay;
+      return (
+        candidate.status === SimulationObligationScheduleStatus.SCHEDULED &&
+        candidate.triggerDay <= session.currentDay &&
+        typeof dueDay === 'number' &&
+        dueDay <= session.daysInMonth
+      );
+    })) {
+      const snapshot = this.record(schedule.obligationSnapshot);
+      if (!snapshot) {
+        throw new Error('Simulation obligation schedule has no snapshot');
+      }
+      const claimed = await tx.simulationObligationSchedule.updateMany({
+        where: {
+          id: schedule.id,
+          status: SimulationObligationScheduleStatus.SCHEDULED,
+        },
+        data: {
+          status: SimulationObligationScheduleStatus.MATERIALIZED,
+          materializedAt: now,
+        },
+      });
+      if (claimed.count === 0) continue;
+      await tx.simulationObligation.create({
+        data: {
+          sessionId: session.id,
+          introducedByScheduleId: schedule.id,
+          templateCode: this.requiredString(snapshot.templateCode),
+          name: this.requiredString(snapshot.name),
+          category: this.requiredString(snapshot.category),
+          amountDue: this.requiredMoney(snapshot.amountDue),
+          dueDay: this.requiredDay(snapshot.dueDay),
+          status:
+            this.requiredDay(snapshot.dueDay) <= session.currentDay
+              ? SimulationObligationStatus.PAYABLE
+              : SimulationObligationStatus.SCHEDULED,
+          consequenceSnapshot: {
+            basePoints: this.requiredMoney(snapshot.basePoints),
+            savingsPointsFactor: this.requiredMoney(
+              snapshot.savingsPointsFactor,
+            ),
+            importance: this.requiredString(snapshot.importance),
+            importanceWeight: this.requiredMoney(snapshot.importanceWeight),
+            baseMissPenalty: this.requiredMoney(snapshot.baseMissPenalty),
+            amountReference: this.requiredMoney(snapshot.amountReference),
+            minimumCostFactor: this.requiredMoney(snapshot.minimumCostFactor),
+            maximumCostFactor: this.requiredMoney(snapshot.maximumCostFactor),
+          },
+        },
+      });
+      materializedObligation = true;
+    }
+
+    if (materializedObligation) {
+      await tx.simulationSession.update({
+        where: { id: session.id },
+        data: {
+          nextDayAt: null,
+          presentationHold: SimulationPresentationHold.NEW_OBLIGATION,
+        },
+      });
+      return 'NEW_OBLIGATION';
+    }
+
+    const dueIds = session.obligations
+      .filter(
+        (obligation) =>
+          obligation.dueDay <= session.currentDay &&
+          obligation.status === SimulationObligationStatus.SCHEDULED,
+      )
+      .map((obligation) => obligation.id);
+    if (dueIds.length > 0) {
+      await tx.simulationObligation.updateMany({
+        where: {
+          id: { in: dueIds },
+          status: SimulationObligationStatus.SCHEDULED,
+        },
+        data: { status: SimulationObligationStatus.PAYABLE },
+      });
+    }
+
+    const event = session.events.find(
+      (candidate) =>
+        candidate.triggerDay <= session.currentDay &&
+        candidate.status === SimulationEventStatus.SCHEDULED,
+    );
+    if (event) {
+      await tx.simulationEvent.update({
+        where: { id: event.id },
+        data: {
+          status: SimulationEventStatus.REVEALED,
+          revealedAt: now,
+          decisionExpiresAt: session.timedMode
+            ? new Date(now.getTime() + EVENT_DECISION_DURATION_MS)
+            : null,
+        },
+      });
+      await tx.simulationSession.update({
+        where: { id: session.id },
+        data: {
+          nextDayAt: null,
+          presentationHold: SimulationPresentationHold.EVENT_REVEAL,
+        },
+      });
+      return 'EVENT';
+    }
+    return 'NONE';
+  }
+
+  private async scoreMissedObligations(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+    day: number,
+    obligations: Array<{
+      id: string;
+      name: string;
+      amountDue: unknown;
+      status: SimulationObligationStatus;
+      consequenceSnapshot: unknown;
+    }>,
+  ): Promise<number> {
+    let totalCents = 0;
+    for (const obligation of obligations) {
+      if (
+        obligation.status !== SimulationObligationStatus.SCHEDULED &&
+        obligation.status !== SimulationObligationStatus.PAYABLE
+      )
+        continue;
+      const claimed = await tx.simulationObligation.updateMany({
+        where: {
+          id: obligation.id,
+          status: {
+            in: [
+              SimulationObligationStatus.SCHEDULED,
+              SimulationObligationStatus.PAYABLE,
+            ],
+          },
+        },
+        data: { status: SimulationObligationStatus.MISSED },
+      });
+      if (claimed.count === 0) continue;
+      const snapshot = this.record(obligation.consequenceSnapshot);
+      const basePenalty = this.cents(snapshot?.baseMissPenalty) ?? 2000;
+      const importanceWeight = this.cents(snapshot?.importanceWeight) ?? 100;
+      const reference = this.cents(snapshot?.amountReference);
+      const minimum = this.cents(snapshot?.minimumCostFactor);
+      const maximum = this.cents(snapshot?.maximumCostFactor);
+      const amount = this.requiredCents(
+        obligation.amountDue,
+        'obligation amount',
+      );
+      const weighted =
+        reference !== null &&
+        reference > 0 &&
+        minimum !== null &&
+        maximum !== null &&
+        minimum <= maximum;
+      const costFactor = weighted
+        ? Math.max(
+            minimum,
+            Math.min(maximum, Math.round((amount * 100) / reference)),
+          )
+        : 100;
+      const effectiveWeight = weighted
+        ? Math.round((importanceWeight * costFactor) / 100)
+        : 100;
+      const penalty = Math.round((basePenalty * effectiveWeight) / 100);
+      totalCents -= penalty;
+      await tx.simulationScoreEntry.create({
+        data: {
+          sessionId,
+          sourceType:
+            snapshot?.kind === 'INSTALLMENT'
+              ? SimulationScoreSourceType.INSTALLMENT_MISSED
+              : SimulationScoreSourceType.OBLIGATION_MISSED,
+          sourceId: obligation.id,
+          simulatedDay: day,
+          pointsDelta: this.moneyFromCents(-penalty),
+          reason: `${snapshot?.kind === 'INSTALLMENT' ? 'Missed installment' : 'Missed obligation'}: ${obligation.name}`,
+          calculationData: {
+            scoringVersion: weighted ? 'WEIGHTED_V1' : 'LEGACY',
+            amountDue: this.moneyFromCents(amount),
+            baseMissPenalty: this.moneyFromCents(basePenalty),
+            importance: snapshot?.importance ?? 'STANDARD',
+            importanceWeight: this.moneyFromCents(importanceWeight),
+            amountReference:
+              reference === null ? null : this.moneyFromCents(reference),
+            costFactor: this.moneyFromCents(costFactor),
+            effectiveWeight: this.moneyFromCents(effectiveWeight),
+            penalty: this.moneyFromCents(penalty),
+          },
+        },
+      });
+    }
+    if (totalCents !== 0) {
+      await tx.simulationSession.update({
+        where: { id: sessionId },
+        data: { score: { increment: this.moneyFromCents(totalCents) } },
+      });
+    }
+    return totalCents;
+  }
+
+  private requiredString(value: unknown): string {
+    const result = this.string(value);
+    if (!result)
+      throw new Error('Simulation obligation schedule has invalid content');
+    return result;
+  }
+
+  private requiredMoney(value: unknown): string {
+    const cents = this.requiredCents(value, 'scheduled obligation amount');
+    return this.moneyFromCents(cents);
+  }
+
+  private requiredDay(value: unknown): number {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) {
+      throw new Error('Simulation obligation schedule has invalid due day');
+    }
+    return value;
+  }
+
+  private expirySnapshot(
+    eventSnapshot: unknown,
+    uncoveredAmount: string,
+    feeChargedNow: string,
+  ): Record<string, unknown> {
+    if (
+      typeof eventSnapshot === 'object' &&
+      eventSnapshot !== null &&
+      'expiryOutcome' in eventSnapshot
+    ) {
+      return {
+        outcome: 'TIMED_OUT',
+        option: eventSnapshot.expiryOutcome,
+        feeChargedNow,
+        uncoveredAmount,
+      };
+    }
+    return { outcome: 'TIMED_OUT', feeChargedNow, uncoveredAmount };
+  }
+
+  private async finalizeSession(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+    completedAt: Date,
+  ): Promise<SimulationTransitionResult> {
+    const session = await tx.simulationSession.findUniqueOrThrow({
+      where: { id: sessionId },
+      include: {
+        obligations: true,
+        events: true,
+      },
+    });
+    if (
+      session.status !== SimulationSessionStatus.ACTIVE ||
+      session.currentDay < session.daysInMonth
+    ) {
+      return this.result(session.currentDay, 'SUMMARY');
+    }
+
+    // Closing day 30 ends the final due-day grace period. Only obligations
+    // within this month can become missed or appear in its completion result.
+    const monthObligations = session.obligations.filter(
+      (obligation) => obligation.dueDay <= session.daysInMonth,
+    );
+    const unpaid = monthObligations.filter(
+      (obligation) =>
+        obligation.status === SimulationObligationStatus.SCHEDULED ||
+        obligation.status === SimulationObligationStatus.PAYABLE,
+    );
+    const missedPenalty = await this.scoreMissedObligations(
+      tx,
+      session.id,
+      session.currentDay,
+      unpaid,
+    );
+    const missedIds = new Set(unpaid.map((obligation) => obligation.id));
+    const scoreEntries = await tx.simulationScoreEntry.findMany({
+      where: { sessionId },
+      select: { sourceType: true, pointsDelta: true },
+    });
+    const summary = this.completionSummary(
+      {
+        ...session,
+        score: this.moneyFromCents(
+          this.requiredSignedCents(session.score, 'score') + missedPenalty,
+        ),
+        scoreEntries,
+        obligations: monthObligations.map((obligation) =>
+          missedIds.has(obligation.id)
+            ? { ...obligation, status: SimulationObligationStatus.MISSED }
+            : obligation,
+        ),
+      },
+      completedAt,
+    );
+    const update = await tx.simulationSession.updateMany({
+      where: {
+        id: sessionId,
+        status: SimulationSessionStatus.ACTIVE,
+        currentDay: { gte: session.daysInMonth },
+      },
+      data: {
+        status: SimulationSessionStatus.COMPLETED,
+        completedAt,
+        nextDayAt: null,
+        pausedAt: null,
+        pausedDecisionSeconds: null,
+        presentationHold: SimulationPresentationHold.SUMMARY,
+        score: summary.finalScore,
+        completionSnapshot: summary,
+      },
+    });
+    if (update.count === 0) {
+      return this.result(session.currentDay, 'SUMMARY');
+    }
+    await tx.simulationScoreEntry.create({
+      data: {
+        sessionId,
+        sourceType: SimulationScoreSourceType.FINAL_BUDGET_BONUS,
+        simulatedDay: session.currentDay,
+        pointsDelta: summary.budgetBonus,
+        reason: 'Final budget efficiency bonus',
+        calculationData: {
+          startingBudget: summary.startingBudget,
+          totalRemaining: summary.totalRemaining,
+          weightedRemaining: summary.weightedRemaining,
+          remainingBudgetPercentage: summary.remainingBudgetPercentage,
+          weightedRemainingPercentage: summary.weightedRemainingPercentage,
+          savingsRetentionMultiplier: summary.savingsRetentionMultiplier,
+          bonusCeiling: this.moneyFromCents(FINAL_BUDGET_BONUS_CEILING_CENTS),
+        },
+      },
+    });
+    await this.settleCompletionRewards(tx, sessionId, session.userId);
+    return this.result(session.currentDay, 'SUMMARY');
+  }
+
+  private async settleCompletionRewards(
+    tx: Prisma.TransactionClient,
+    sessionId: string,
+    userId: string,
+  ): Promise<void> {
+    const claimed = await tx.simulationSession.updateMany({
+      where: {
+        id: sessionId,
+        status: SimulationSessionStatus.COMPLETED,
+        completionRewardGrantedAt: null,
+      },
+      data: { completionRewardGrantedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      return;
+    }
+    const event = await tx.userEvent.create({
+      data: {
+        userId,
+        eventType: 'SIMULATION_COMPLETED',
+        sourceType: 'SIMULATION_SESSION',
+        sourceId: sessionId,
+        metadata: {
+          fictional: true,
+          xpAwarded: SIMULATION_COMPLETION_XP,
+          coinsAwarded: 0,
+        },
+      },
+    });
+    await this.rewardService.grantXp(tx, {
+      userId,
+      amount: SIMULATION_COMPLETION_XP,
+    });
+    await this.badgeEngineService.evaluateSimulationBadges(
+      { userId, sourceEventId: event.id },
+      tx,
+    );
+  }
+
+  private completionSummary(
+    session: {
+      currentDay: number;
+      startingBudget: unknown;
+      currentBalance: unknown;
+      savingsBalance: unknown;
+      savingsRetentionMultiplier: unknown;
+      score: unknown;
+      obligations: Array<{
+        status: SimulationObligationStatus;
+        amountDue: unknown;
+        dueDay: number;
+        introducedByEventId: string | null;
+        consequenceSnapshot: unknown;
+      }>;
+      events: Array<{
+        status: SimulationEventStatus;
+        resolutionSnapshot: unknown;
+      }>;
+      scoreEntries: Array<{
+        sourceType: SimulationScoreSourceType;
+        pointsDelta: unknown;
+      }>;
+    },
+    completedAt: Date,
+  ): {
+    version: 'v3';
+    completedAt: string;
+    startingBudget: string;
+    currentBalance: string;
+    savingsBalance: string;
+    totalRemaining: string;
+    weightedRemaining: string;
+    remainingBudgetPercentage: string;
+    weightedRemainingPercentage: string;
+    savingsRetentionMultiplier: string;
+    budgetBonus: string;
+    finalScore: string;
+    obligations: {
+      total: number;
+      paid: number;
+      missed: number;
+      unresolved: number;
+    };
+    events: {
+      total: number;
+      resolved: number;
+      expired: number;
+      unresolved: number;
+    };
+    installments: { missedCount: number; missedAmount: string };
+    upfrontFees: { count: number; amount: string };
+    inMonthEventBills: { count: number; amount: string };
+    scoreBySource: Record<string, string>;
+    importanceOutcomes: Record<
+      string,
+      { total: number; paid: number; missed: number; unresolved: number }
+    >;
+  } {
+    const startingBudgetCents = this.requiredCents(
+      session.startingBudget,
+      'starting budget',
+    );
+    const currentBalanceCents = this.requiredCents(
+      session.currentBalance,
+      'current balance',
+    );
+    const savingsBalanceCents = this.requiredCents(
+      session.savingsBalance,
+      'savings balance',
+    );
+    const scoreCents = this.requiredSignedCents(session.score, 'score');
+    const multiplierCents = this.requiredCents(
+      session.savingsRetentionMultiplier,
+      'savings retention multiplier',
+    );
+    const totalRemainingCents = currentBalanceCents + savingsBalanceCents;
+    const weightedRemainingCents =
+      currentBalanceCents +
+      Math.round((savingsBalanceCents * multiplierCents) / 100);
+    const remainingBudgetPercentage =
+      startingBudgetCents === 0
+        ? 0
+        : Math.max(0, Math.min(1, totalRemainingCents / startingBudgetCents));
+    const weightedRemainingPercentage =
+      startingBudgetCents === 0
+        ? 0
+        : Math.max(
+            0,
+            Math.min(1, weightedRemainingCents / startingBudgetCents),
+          );
+    const budgetBonusCents = Math.round(
+      FINAL_BUDGET_BONUS_CEILING_CENTS * weightedRemainingPercentage,
+    );
+    const count = <T>(items: T[], predicate: (item: T) => boolean): number =>
+      items.filter(predicate).length;
+
+    const scoreBySourceCents: Record<string, number> = {};
+    for (const entry of session.scoreEntries) {
+      scoreBySourceCents[entry.sourceType] =
+        (scoreBySourceCents[entry.sourceType] ?? 0) +
+        this.requiredSignedCents(entry.pointsDelta, 'score entry');
+    }
+    const persistedLedgerTotalCents = Object.values(scoreBySourceCents).reduce(
+      (total, points) => total + points,
+      0,
+    );
+    if (persistedLedgerTotalCents !== scoreCents) {
+      throw new Error(
+        'Simulation completion ledger does not reconcile to score',
+      );
+    }
+    scoreBySourceCents[SimulationScoreSourceType.FINAL_BUDGET_BONUS] =
+      (scoreBySourceCents[SimulationScoreSourceType.FINAL_BUDGET_BONUS] ?? 0) +
+      budgetBonusCents;
+    const finalScoreCents = scoreCents + budgetBonusCents;
+    const finalSourceTotalCents = Object.values(scoreBySourceCents).reduce(
+      (total, points) => total + points,
+      0,
+    );
+    if (finalSourceTotalCents !== finalScoreCents) {
+      throw new Error(
+        'Simulation completion sources do not reconcile to final score',
+      );
+    }
+
+    const importanceOutcomes: Record<
+      string,
+      { total: number; paid: number; missed: number; unresolved: number }
+    > = {};
+    let missedInstallmentCount = 0;
+    let missedInstallmentCents = 0;
+    for (const obligation of session.obligations) {
+      const snapshot = this.record(obligation.consequenceSnapshot);
+      const importance = this.string(snapshot?.importance) ?? 'STANDARD';
+      importanceOutcomes[importance] ??= {
+        total: 0,
+        paid: 0,
+        missed: 0,
+        unresolved: 0,
+      };
+      importanceOutcomes[importance].total += 1;
+      if (obligation.status === SimulationObligationStatus.PAID) {
+        importanceOutcomes[importance].paid += 1;
+      } else if (obligation.status === SimulationObligationStatus.MISSED) {
+        importanceOutcomes[importance].missed += 1;
+      } else {
+        importanceOutcomes[importance].unresolved += 1;
+      }
+      if (
+        snapshot?.kind === 'INSTALLMENT' &&
+        obligation.status === SimulationObligationStatus.MISSED
+      ) {
+        missedInstallmentCount += 1;
+        missedInstallmentCents += this.requiredCents(
+          obligation.amountDue,
+          'installment amount',
+        );
+      }
+    }
+
+    let upfrontFeeCount = 0;
+    let upfrontFeeCents = 0;
+    for (const event of session.events) {
+      if (
+        event.status !== SimulationEventStatus.RESOLVED &&
+        event.status !== SimulationEventStatus.EXPIRED
+      ) {
+        continue;
+      }
+      const resolution = this.record(event.resolutionSnapshot);
+      const option = this.record(resolution?.option);
+      const amount = this.requiredCents(
+        resolution?.feeChargedNow ??
+          resolution?.feeOrDebt ??
+          option?.feeChargedNow ??
+          option?.feeOrDebt ??
+          '0.00',
+        'event fee charged now',
+      );
+      if (amount > 0) {
+        upfrontFeeCount += 1;
+        upfrontFeeCents += amount;
+      }
+    }
+    const inMonthEventBills = session.obligations.filter((obligation) =>
+      Boolean(obligation.introducedByEventId),
+    );
+    const inMonthEventBillCents = inMonthEventBills.reduce(
+      (total, obligation) =>
+        total + this.requiredCents(obligation.amountDue, 'event bill amount'),
+      0,
+    );
+
+    return {
+      version: 'v3',
+      completedAt: completedAt.toISOString(),
+      startingBudget: this.moneyFromCents(startingBudgetCents),
+      currentBalance: this.moneyFromCents(currentBalanceCents),
+      savingsBalance: this.moneyFromCents(savingsBalanceCents),
+      totalRemaining: this.moneyFromCents(totalRemainingCents),
+      weightedRemaining: this.moneyFromCents(weightedRemainingCents),
+      remainingBudgetPercentage: remainingBudgetPercentage.toFixed(4),
+      weightedRemainingPercentage: weightedRemainingPercentage.toFixed(4),
+      savingsRetentionMultiplier: this.moneyFromCents(multiplierCents),
+      budgetBonus: this.moneyFromCents(budgetBonusCents),
+      finalScore: this.moneyFromCents(finalScoreCents),
+      obligations: {
+        total: session.obligations.length,
+        paid: count(
+          session.obligations,
+          (item) => item.status === SimulationObligationStatus.PAID,
+        ),
+        missed: count(
+          session.obligations,
+          (item) => item.status === SimulationObligationStatus.MISSED,
+        ),
+        unresolved: count(
+          session.obligations,
+          (item) =>
+            item.status === SimulationObligationStatus.SCHEDULED ||
+            item.status === SimulationObligationStatus.PAYABLE,
+        ),
+      },
+      events: {
+        total: session.events.length,
+        resolved: count(
+          session.events,
+          (item) => item.status === SimulationEventStatus.RESOLVED,
+        ),
+        expired: count(
+          session.events,
+          (item) => item.status === SimulationEventStatus.EXPIRED,
+        ),
+        unresolved: count(
+          session.events,
+          (item) =>
+            item.status === SimulationEventStatus.SCHEDULED ||
+            item.status === SimulationEventStatus.REVEALED,
+        ),
+      },
+      installments: {
+        missedCount: missedInstallmentCount,
+        missedAmount: this.moneyFromCents(missedInstallmentCents),
+      },
+      upfrontFees: {
+        count: upfrontFeeCount,
+        amount: this.moneyFromCents(upfrontFeeCents),
+      },
+      inMonthEventBills: {
+        count: inMonthEventBills.length,
+        amount: this.moneyFromCents(inMonthEventBillCents),
+      },
+      scoreBySource: Object.fromEntries(
+        Object.entries(scoreBySourceCents).map(([key, cents]) => [
+          key,
+          this.moneyFromCents(cents),
+        ]),
+      ),
+      importanceOutcomes,
+    };
+  }
+
+  private expiryOutcome(
+    eventSnapshot: unknown,
+    triggerDay: number,
+  ): {
+    id: string;
+    immediateCost: string;
+    feeOrDebt: string;
+    scoreDelta: string;
+    introducedObligation?: {
+      templateCode: string;
+      name: string;
+      category: string;
+      amountDue: string;
+      dueDay: number;
+      basePoints: string;
+      savingsPointsFactor: string;
+      importance: string;
+      importanceWeight: string;
+      baseMissPenalty: string;
+      amountReference?: string;
+      minimumCostFactor?: string;
+      maximumCostFactor?: string;
+    };
+  } | null {
+    const snapshot = this.record(eventSnapshot);
+    const outcome = this.record(snapshot?.expiryOutcome);
+    const id = this.string(outcome?.id);
+    const immediateCost = this.money(outcome?.immediateCost);
+    const feeOrDebt = this.money(outcome?.feeOrDebt);
+    const scoreDelta = this.signedMoney(outcome?.scoreDelta);
+    if (!id || !immediateCost || !feeOrDebt || !scoreDelta) {
+      return null;
+    }
+
+    const obligation = this.record(outcome?.introducedObligation);
+    const templateCode = this.string(obligation?.templateCode);
+    const name = this.string(obligation?.name);
+    const category = this.string(obligation?.category);
+    const amountDue = this.money(obligation?.amountDue);
+    const dueDay = obligation?.dueDay;
+    const basePoints = this.money(obligation?.basePoints);
+    const savingsPointsFactor = this.money(obligation?.savingsPointsFactor);
+    const rawImportance = this.string(obligation?.importance);
+    const importance =
+      rawImportance === 'CRITICAL' ||
+      rawImportance === 'HIGH' ||
+      rawImportance === 'STANDARD' ||
+      rawImportance === 'LOW'
+        ? rawImportance
+        : 'STANDARD';
+    const importanceWeight = this.money(obligation?.importanceWeight) ?? '1.00';
+    const baseMissPenalty = this.money(obligation?.baseMissPenalty) ?? '20.00';
+    const amountReference = this.money(obligation?.amountReference);
+    const minimumCostFactor = this.money(obligation?.minimumCostFactor);
+    const maximumCostFactor = this.money(obligation?.maximumCostFactor);
+    const introducedObligation =
+      templateCode &&
+      name &&
+      category &&
+      amountDue &&
+      typeof dueDay === 'number' &&
+      Number.isInteger(dueDay) &&
+      dueDay > triggerDay &&
+      dueDay <= 30 &&
+      basePoints &&
+      savingsPointsFactor
+        ? {
+            templateCode,
+            name,
+            category,
+            amountDue,
+            dueDay,
+            basePoints,
+            savingsPointsFactor,
+            importance,
+            importanceWeight,
+            baseMissPenalty,
+            ...(amountReference && minimumCostFactor && maximumCostFactor
+              ? { amountReference, minimumCostFactor, maximumCostFactor }
+              : {}),
+          }
+        : undefined;
+
+    return { id, immediateCost, feeOrDebt, scoreDelta, introducedObligation };
+  }
+
+  private debitBalances(
+    currentBalance: unknown,
+    savingsBalance: unknown,
+    immediateCost: string | undefined,
+    feeOrDebt: string | undefined,
+  ): {
+    currentBalance: string;
+    savingsBalance: string;
+    uncoveredAmount: string;
+    feeChargedNow: string;
+  } {
+    const currentCents = this.cents(currentBalance) ?? 0;
+    const savingsCents = this.cents(savingsBalance) ?? 0;
+    const immediateCostCents = this.cents(immediateCost) ?? 0;
+    const feeOrDebtCents = this.cents(feeOrDebt) ?? 0;
+    const totalCost = immediateCostCents + feeOrDebtCents;
+    const currentUsed = Math.min(currentCents, totalCost);
+    const remaining = totalCost - currentUsed;
+    const savingsUsed = Math.min(savingsCents, remaining);
+    const uncoveredAmount = remaining - savingsUsed;
+    const amountCollected = totalCost - uncoveredAmount;
+    const feeChargedNow = Math.min(
+      feeOrDebtCents,
+      Math.max(0, amountCollected - immediateCostCents),
+    );
+    return {
+      currentBalance: this.moneyFromCents(currentCents - currentUsed),
+      savingsBalance: this.moneyFromCents(savingsCents - savingsUsed),
+      uncoveredAmount: this.moneyFromCents(uncoveredAmount),
+      feeChargedNow: this.moneyFromCents(feeChargedNow),
+    };
+  }
+
+  private cents(value: unknown): number | null {
+    let candidate: string | null = null;
+    if (typeof value === 'string' || typeof value === 'number') {
+      candidate = String(value);
+    } else if (value instanceof Prisma.Decimal) {
+      candidate = value.toString();
+    }
+    if (!candidate || !/^-?\d+(?:\.\d{1,2})?$/.test(candidate)) {
+      return null;
+    }
+    const [whole, fraction = ''] = candidate.split('.');
+    const sign = whole.startsWith('-') ? -1 : 1;
+    return (
+      sign * (Math.abs(Number(whole)) * 100 + Number(fraction.padEnd(2, '0')))
+    );
+  }
+
+  private requiredCents(value: unknown, label: string): number {
+    const cents = this.cents(value);
+    if (cents === null || cents < 0) {
+      throw new Error(`Simulation completion has an invalid ${label}`);
+    }
+    return cents;
+  }
+
+  private requiredSignedCents(value: unknown, label: string): number {
+    const cents = this.cents(value);
+    if (cents === null) {
+      throw new Error(`Simulation completion has an invalid ${label}`);
+    }
+    return cents;
+  }
+
+  private money(value: unknown): string | null {
+    const cents = this.cents(value);
+    return cents === null || cents < 0 ? null : this.moneyFromCents(cents);
+  }
+
+  private signedMoney(value: unknown): string | null {
+    const cents = this.cents(value);
+    return cents === null ? null : this.moneyFromCents(cents);
+  }
+
+  private moneyFromCents(cents: number): string {
+    const sign = cents < 0 ? '-' : '';
+    const absolute = Math.abs(cents);
+    return `${sign}${Math.floor(absolute / 100)}.${String(absolute % 100).padStart(2, '0')}`;
+  }
+
+  private record(value: unknown): Record<string, unknown> | null {
+    return typeof value === 'object' && value !== null
+      ? (value as Record<string, unknown>)
+      : null;
+  }
+
+  private string(value: unknown): string | null {
+    return typeof value === 'string' && value.length > 0 ? value : null;
+  }
+
+  private result(
+    currentDay: number,
+    stoppedFor: SimulationTransitionResult['stoppedFor'],
+  ): SimulationTransitionResult {
+    return { currentDay, stoppedFor };
+  }
+}

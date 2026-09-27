@@ -42,8 +42,10 @@ function expectPrivacySafeFriend(friend: Record<string, unknown>) {
     'badgeCount',
     'currentPaymentStreak',
     'displayName',
+    'equippedCosmetics',
     'friendId',
     'friendshipId',
+    'mascotMood',
     'scoreTier',
   ]);
   expect(friend).not.toHaveProperty('email');

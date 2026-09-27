@@ -21,6 +21,6 @@ test('starts a daily quiz and submits an answer',async({
     await answerOptions.first().click();
     await page.getByRole('button',{name:'Submit Answer'}).click();
     await expect(page.getByRole('status')).toContainText(
-        /Correct!|Not quite/,
+        /Great thinking|Not quite/,
     );
 });

@@ -25,6 +25,16 @@ describe("LoginPage Component", () => {
         expect(await screen.findByText(/password must be at least 6 characters/i)).toBeInTheDocument();
         expect(authService.signIn).not.toHaveBeenCalled();
     });
+    it("should toggle password visibility without submitting the form", async () => {
+        render(<LoginPage />);
+        const password = screen.getByLabelText(/^password$/i);
+        expect(password).toHaveAttribute("type", "password");
+
+        fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+        expect(password).toHaveAttribute("type", "text");
+        expect(screen.getByRole("button", { name: "Hide password" })).toHaveAttribute("aria-pressed", "true");
+        expect(authService.signIn).not.toHaveBeenCalled();
+    });
     //supabase server error
     it("should display an error message if Supabase login fails", async () => {
         vi.spyOn(authService, "signIn").mockRejectedValueOnce(new Error("Invalid login credentials"));

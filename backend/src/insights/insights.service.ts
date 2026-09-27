@@ -172,11 +172,9 @@ export class InsightsService {
       const period =
         occurrence.dueDate >= currentStart ? currentPeriod : previousPeriod;
 
-      if (occurrence.payment?.paymentStatus === PaymentRecordStatus.ON_TIME) {
+      if (occurrence.status === PaymentOccurrenceStatus.PAID) {
         period.onTimePaymentCount += 1;
-      } else if (
-        occurrence.payment?.paymentStatus === PaymentRecordStatus.LATE
-      ) {
+      } else if (occurrence.status === PaymentOccurrenceStatus.PAID_LATE) {
         period.latePaymentCount += 1;
       } else if (occurrence.status === PaymentOccurrenceStatus.MISSED) {
         period.missedPaymentCount += 1;

@@ -54,7 +54,7 @@ export function MascotAvatar({
             {...props}
         >
             {baseArt ? (
-                <img src={baseArt} alt="" className="absolute insert-0 size-full object-contain"/>
+                <img src={baseArt} alt="" className="absolute inset-0 size-full object-contain"/>
 
             ): (
                 <MascotArtPlaceholder mood={mood} size={size}/>
@@ -68,7 +68,7 @@ export function MascotAvatar({
                         key={layer.code}
                         src={art}
                         alt=""
-                        className="absolute insert-0 size-full object-contain"
+                        className="absolute inset-0 size-full object-contain"
                         style={{zIndex: SLOT_LAYER_ORDER[layer.slot]}}
                     />
                 )

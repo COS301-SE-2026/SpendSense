@@ -82,7 +82,7 @@ describe('StickerAlbumPage', ()=>{
 
 	it('renders the Sticker Album heading', ()=>{
 		renderAlbum()
-		expect(screen.getByText('Sticker Album')).toBeInTheDocument()
+		expect(screen.getByText('Badge Album')).toBeInTheDocument()
 	})
 
 	it('renders the back button', ()=>{
@@ -106,7 +106,7 @@ describe('StickerAlbumPage', ()=>{
 
 	it('renders stickers found count from api data', ()=>{
 		renderAlbum()
-		expect(screen.getByText('Stickers Found')).toBeInTheDocument()
+		expect(screen.getByText('Badges Found')).toBeInTheDocument()
 	})
 
 	it('renders the completion percentage bar', ()=>{

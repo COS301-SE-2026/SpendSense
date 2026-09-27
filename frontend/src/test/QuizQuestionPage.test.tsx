@@ -1,14 +1,25 @@
 import React from "react"
 import {beforeEach,describe,expect,it,vi} from "vitest"
-import {fireEvent,render,screen,waitFor} from "@testing-library/react"
+import {act,fireEvent,render,screen,waitFor} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {MemoryRouter,Route,Routes} from "react-router-dom"
-import QuizQuestionPage from "../domains/QuizQuestionPage"
+import QuizQuestionPage,{FEEDBACK_PAUSE_CORRECT_MS} from "../domains/QuizQuestionPage"
+import {GuidanceProvider} from "../features/guidance/GuidanceProvider"
+import {createFakeGuidanceApi} from "./guidanceTestUtils"
 import {useQuizSession} from "../hooks/useQuizSession"
 import type {QuizQuestion,QuizSession,SubmitQuizAnswerResponse,} from "../features/quiz/quizTypes"
 
 vi.mock("@/hooks/useQuizSession",()=>({
     useQuizSession:vi.fn(),
+}))
+
+vi.mock("@/hooks/useGamificationProfile",()=>({
+    useGamificationProfile:()=>({
+        profile:{mascotMood:"HAPPY",equippedCosmetics:[]},
+        loading:false,
+        error:null,
+        refetch:vi.fn(),
+    }),
 }))
 
 const mockedUseQuizSession=vi.mocked(useQuizSession)
@@ -106,6 +117,7 @@ function mockHook(
 function renderPage(){
     return render(
         <MemoryRouter initialEntries={["/quiz/session/session-1"]}>
+            <GuidanceProvider api={createFakeGuidanceApi()} userId="user-1">
             <Routes>
                 <Route
                     path="/quiz/session/:sessionId"
@@ -124,6 +136,7 @@ function renderPage(){
                     element={<div>Quests screen</div>}
                 />
             </Routes>
+            </GuidanceProvider>
         </MemoryRouter>,
     )
 }
@@ -198,22 +211,32 @@ describe("QuizQuestionPage",()=>{
             selectedOptionKey:"A",
         })
     })
-    it("shows an inline toast and advances to the next question after a correct submission",async()=>{
-        const continueToNextQuestion=vi.fn()
-        mockHook({continueToNextQuestion})
-        const user=userEvent.setup()
-        renderPage()
-        await user.click(
-            screen.getByRole("button",{name:/paying obligations on time/i,})
-        )
-        await user.click(
-            screen.getByRole("button",{name:"Submit Answer",})
-        )
-        expect(await screen.findByText("Correct!")).toBeInTheDocument()
-        expect(screen.queryByText("Feedback screen")).not.toBeInTheDocument()
-        await waitFor(()=>{
+    it("lets the mascot explain a correct answer, then advances to the next question",async()=>{
+        vi.useFakeTimers({shouldAdvanceTime:true})
+        const user=userEvent.setup({advanceTimers:vi.advanceTimersByTime})
+        try{
+            const continueToNextQuestion=vi.fn()
+            mockHook({continueToNextQuestion})
+            renderPage()
+            await user.click(
+                screen.getByRole("button",{name:/paying obligations on time/i,})
+            )
+            await user.click(
+                screen.getByRole("button",{name:"Submit Answer",})
+            )
+            const card=await screen.findByTestId("guide-card")
+            expect(card).toHaveAttribute("data-guide-id","quiz.feedback.correct")
+            expect(card).toHaveTextContent(answerResponse.feedback.explanation)
+            expect(screen.queryByText("Feedback screen")).not.toBeInTheDocument()
+            expect(continueToNextQuestion).not.toHaveBeenCalled()
+
+            await act(async()=>{
+                vi.advanceTimersByTime(FEEDBACK_PAUSE_CORRECT_MS)
+            })
             expect(continueToNextQuestion).toHaveBeenCalledTimes(1)
-        },{timeout:2000})
+        }finally{
+            vi.useRealTimers()
+        }
     })
     it("navigates straight to the results screen when the submission finishes the quiz",async()=>{
         answerQuestion.mockResolvedValue({
@@ -233,8 +256,8 @@ describe("QuizQuestionPage",()=>{
         await user.click(
             screen.getByRole("button",{name:"Submit Answer",})
         )
-        expect(await screen.findByText("Results screen",{},{timeout:2000})).toBeInTheDocument()
-    })
+        expect(await screen.findByText("Results screen",{},{timeout:8000})).toBeInTheDocument()
+    },10000)
     it("does not navigate when answer submission fails",async()=>{
         const user=userEvent.setup()
         answerQuestion.mockResolvedValue(null)
@@ -262,7 +285,7 @@ describe("QuizQuestionPage",()=>{
         fireEvent.click(submitButton)
         expect(answerQuestion).toHaveBeenCalledTimes(1)
         resolveSubmission?.(answerResponse)
-        expect(await screen.findByText("Correct!")).toBeInTheDocument()
+        expect(await screen.findByTestId("guide-card")).toHaveAttribute("data-guide-id","quiz.feedback.correct")
     })
     it("disables answer options while an answer is submitting",()=>{
         mockHook({isSubmitting:true,})

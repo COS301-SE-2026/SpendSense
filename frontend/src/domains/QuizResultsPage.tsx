@@ -3,6 +3,7 @@ import {Link,useNavigate,useParams} from "react-router-dom"
 import {AlertTriangle,ArrowRight,PartyPopper,X,} from "lucide-react"
 import { XpPill } from "@/components/common/XpPill"
 import { StreakFlame } from "@/components/common/StreakFlame"
+import {MascotPeek} from "@/components/guidance/MascotPeek"
 import {useQuizSession} from "@/hooks/useQuizSession"
 import type {QuizTopic} from "@/features/quiz/quizTypes"
 
@@ -44,7 +45,7 @@ export default function QuizResultsPage(){
     const completionMessage=session.type==="TOPIC"&&session.topic?`You've finished the ${formatTopicName(session.topic)} quiz.`:"You've finished today's quiz."
     const hadRequeues=result.answeredAttempts>result.totalQuestions
     return(
-        <div className="min-h-screen bg-[#F4FBF7] pb-16 dark:bg-[#0b1326]">
+        <div className="min-h-screen bg-[#F4FBF7] pb-56 dark:bg-[#0b1326]">
             <div className="mx-auto w-full max-w-md px-5 pt-6">
                 <header className="flex items-center gap-3">
                     <Link
@@ -109,6 +110,16 @@ export default function QuizResultsPage(){
                         <p className="mt-2 text-sm font-bold text-[#AC2A5D] dark:text-[#ff6b9d]">Your streak went up! 🔥</p>
                     )}
                 </div>
+                <MascotPeek
+                    surface="quiz"
+                    side="right"
+                    facts={{
+                        dailyQuizJustCompleted:session.type==="DAILY",
+                        topicQuizJustCompleted:session.type==="TOPIC",
+                        coinsAwarded:result.reward.coins,
+                        xpAwarded:result.reward.xp,
+                    }}
+                />
                 <div className="mt-8 flex flex-col gap-3">
                     <Link
                         to="/quests"

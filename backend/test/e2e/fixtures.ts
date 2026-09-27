@@ -13,6 +13,7 @@ import { seedBadges } from '../../prisma/seed/badges';
 import { seedCategories } from '../../prisma/seed/categories';
 import { seedQuizzes } from '../../prisma/seed/quizzes';
 import { seedCosmetics } from '../../prisma/seed/cosmetics';
+import {seedSimulationCatalogue} from '../../prisma/seed/simulation-catalogue'
 
 async function resetAndSeed(prisma: PrismaClient): Promise<void> {
   await resetE2eDatabase(prisma);
@@ -20,6 +21,7 @@ async function resetAndSeed(prisma: PrismaClient): Promise<void> {
   await seedBadges(prisma);
   await seedQuizzes(prisma);
   await seedCosmetics(prisma);
+  await seedSimulationCatalogue(prisma)
 }
 
 export async function createApiE2eFixture() {

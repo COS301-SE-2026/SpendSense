@@ -5,6 +5,7 @@ import dashboardImg from "@/assets/landing/dashboard.png"
 import calendarImg from "@/assets/landing/calendar.png"
 import questsImg from "@/assets/landing/quests.png"
 import insightsImg from "@/assets/landing/insights.png"
+import mascotCelebrating from "@/assets/mascot/mascot-celebrating.svg"
 
 const container = "w-[min(1120px,calc(100%-48px))] mx-auto"
 const button =
@@ -65,8 +66,8 @@ export default function LandingPage(){
 
             <main id="main-content">
                 <section className="pt-[155px] pb-[82px] max-[640px]:pt-[119px] max-[640px]:pb-[70px]">
-                    <div className={`${container} grid grid-cols-[1fr_0.82fr] gap-24 items-center max-[850px]:grid-cols-1 max-[850px]:gap-[45px]`}>
-                        <div>
+                    <div className={`${container} grid grid-cols-[1fr_0.82fr] gap-24 items-start max-[850px]:grid-cols-1 max-[850px]:gap-[45px]`}>
+                        <div className="pt-[170px] max-[850px]:pt-0">
                             <span className="inline-block rounded-full text-[11px] font-extrabold tracking-[0.35px] px-[11px] py-[7px] bg-[#FFD8E6] text-[#AC2A5D]">
                                 For students trying to figure things out
                             </span>
@@ -82,17 +83,26 @@ export default function LandingPage(){
                             </div>
                         </div>
 
-                        <div className="relative justify-self-center">
-                            <div className="w-[282px] p-[9px] border-2 border-[#091828] rounded-[30px] bg-[#091828] shadow-[11px_12px_0_#FFD8E6] max-[640px]:w-[252px]">
-                                <img
-                                    src={dashboardImg}
-                                    alt="The SpendSense home dashboard showing credit score, quests, upcoming payments and spending information."
-                                    className="block w-full rounded-[20px]"
-                                />
+                        <div className="justify-self-center flex flex-col items-center">
+                            <img
+                                src={mascotCelebrating}
+                                alt="SpendSense mascot celebrating"
+                                className="block w-[340px] h-auto mb-[22px] max-[850px]:w-[290px] max-[640px]:w-[250px] max-[640px]:mb-[18px]"
+                            />
+
+                            <div className="relative">
+                                <div className="w-[282px] p-[9px] border-2 border-[#091828] rounded-[30px] bg-[#091828] shadow-[11px_12px_0_#FFD8E6] max-[640px]:w-[252px]">
+                                    <img
+                                        src={dashboardImg}
+                                        alt="The SpendSense home dashboard showing credit score, quests, upcoming payments and spending information."
+                                        className="block w-full rounded-[20px]"
+                                    />
+                                </div>
+
+                                <span className="absolute right-[-57px] bottom-9 px-[11px] py-2 border-[1.5px] border-[#091828] rounded-[9px] bg-[#FFDC8A] shadow-[3px_4px_0_#091828] text-[11px] font-extrabold -rotate-[4deg] max-[640px]:right-[-28px] max-[640px]:bottom-[25px]">
+                                    Your financial home
+                                </span>
                             </div>
-                            <span className="absolute right-[-57px] bottom-9 px-[11px] py-2 border-[1.5px] border-[#091828] rounded-[9px] bg-[#FFDC8A] shadow-[3px_4px_0_#091828] text-[11px] font-extrabold -rotate-[4deg] max-[640px]:right-[-28px] max-[640px]:bottom-[25px]">
-                                Your financial home
-                            </span>
                         </div>
                     </div>
                 </section>

@@ -4,6 +4,8 @@ import {
 	User,
 	BookOpen,
 	CalendarCheck,
+	Gamepad2,
+	ArrowRight,
 } from "lucide-react"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { Progress } from "@/components/ui/progress"
@@ -25,6 +27,8 @@ import { getCrditScore } from "@/features/credit-score/credit-scoreApi"
 import { StreakCarousel, type StreakPanel } from "@/components/dashboard/StreakCarousel"
 import { BottomNav } from "@/components/common/BottomNav"
 import { DashboardCarousel } from "@/components/dashboard/DashbordCarousel"
+import { MascotGuideDock } from "@/components/guidance/MascotGuideDock"
+import { GuidanceTourInvitation } from "@/components/guidance/GuidanceWalkthrough"
 
 export default function DashboardPage() {
 	const navigate = useNavigate()
@@ -100,7 +104,7 @@ export default function DashboardPage() {
 				<header className="flex items-start justify-between gap-3">
 					<div>
 						<h1 className="text-3xl font-extrabold leading-tight text-[#091828] dark:text-white">
-							Hey<br />{name}
+							Hey,<br />{name}
 						</h1>
 					</div>
 
@@ -117,6 +121,9 @@ export default function DashboardPage() {
 					</div>
 				</header>
 
+				<GuidanceTourInvitation className="mt-6" />
+
+				<div data-tour="dashboard.score">
 				<CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#131b2e] dark:shadow-lg dark:shadow-black/20">
 
 					<div className="flex justify-center">
@@ -138,6 +145,7 @@ export default function DashboardPage() {
 					</div>
 
 				</CustomCard>
+				</div>
 
 				<DashboardCarousel
 					stickersCollected={stickersCollected}
@@ -147,7 +155,7 @@ export default function DashboardPage() {
 				<CreditStatsSection creditScore={creditScore} />
 
 
-				<section aria-label="Experience progress" className="mt-5" >
+				<section aria-label="Experience progress" data-tour="dashboard.xp" className="mt-5" >
 
 					<div className="flex items-center justify-between text-xs font-semibold text-[#091828] dark:text-white">
 						<span>{xp.current.toLocaleString()} / {xp.next.toLocaleString()} XP</span>
@@ -168,8 +176,35 @@ export default function DashboardPage() {
 					</div>
 
 				</section>
-				<UpcomingPaymentsCard upcomingPayments={upcomingPayments} />
+
+				<div data-tour="dashboard.upcoming">
+					<UpcomingPaymentsCard upcomingPayments={upcomingPayments} />
+				</div>
+
+				<button
+					type="button"
+					onClick={() => navigate("/simulation")}
+					className="mt-5 flex w-full items-center gap-4 rounded-2xl border-2 border-[#091828] bg-[#FFD8E6] p-4 text-left shadow-[4px_4px_0_#091828] transition hover:bg-[#FFC3D8] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none dark:border-[#060e20] dark:bg-[#54213a] dark:shadow-[4px_4px_0_#060e20]"
+				>
+					<span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-[#AC2A5D] dark:bg-[#131B2E] dark:text-[#FFB1C5]">
+						<Gamepad2 className="size-6" aria-hidden="true" />
+					</span>
+					<span className="min-w-0 flex-1">
+						<span className="block font-extrabold text-[#091828] dark:text-white">
+							Try Simulated Month
+						</span>
+						<span className="mt-0.5 block text-xs text-[#6B6375] dark:text-[#DDBFC5]">
+							Practise a fictional 30-day budget.
+						</span>
+					</span>
+					<ArrowRight
+						className="size-5 shrink-0 text-[#AC2A5D] dark:text-[#FFB1C5]"
+						aria-hidden="true"
+					/>
+				</button>
 			</div>
+			<MascotGuideDock payableCount={dashboard ? upcomingPayments.length : undefined} />
+
 			<BottomNav active="home" />
 		</div>
 	)

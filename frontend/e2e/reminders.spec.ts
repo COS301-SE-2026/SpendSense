@@ -14,7 +14,7 @@ test('changing the reminder days pill saves and persists after a reload', async 
   await expect(sevenDaysButton).toBeVisible();
   await sevenDaysButton.click();
 
-  await expect(page.getByText('reminder settings saved')).toBeVisible();
+  await expect(page.getByText(/reminder settings saved/i)).toBeVisible();
   await expect(sevenDaysButton).toHaveAttribute('aria-pressed', 'true');
 
   await page.reload();
@@ -40,7 +40,7 @@ test('toggling in app notifications saves and persists after a reload', async ({
 
   await inAppSwitch.click();
 
-  await expect(page.getByText('reminder settings saved')).toBeVisible();
+  await expect(page.getByText(/reminder settings saved/i)).toBeVisible();
   await expect(inAppSwitch).toHaveAttribute('aria-checked', 'false');
 
   await page.reload();

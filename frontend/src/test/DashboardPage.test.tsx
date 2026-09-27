@@ -95,7 +95,7 @@ describe('DashboardPage', () => {
   it('renders the user greeting', async () => {
     await renderLoadedDashboard()
     const heading = screen.getByRole('heading', { level: 1 })
-    expect(heading).toHaveTextContent('Hey')
+    expect(heading).toHaveTextContent('Hey,')
     expect(heading).toHaveTextContent('Rachel')
   })
 
@@ -193,6 +193,13 @@ describe('DashboardPage', () => {
     await renderLoadedDashboard()
     expect(document.body.textContent).toMatch(/850\s*\/\s*1[\s,.]?200\s*XP/i)
     expect(screen.getByText('Next Level: 5')).toBeInTheDocument()
+  })
+
+  it('links the simulated month card to the simulation entry route', async () => {
+    await renderLoadedDashboard()
+
+    expect(screen.getByRole('link', { name: /open simulated month/i })).toHaveAttribute('href', '/simulation')
+    expect(screen.getByText('Your 30-day money challenge')).toBeInTheDocument()
   })
 
   it('renders the Coming Up section with a bill', async () => {

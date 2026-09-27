@@ -261,7 +261,7 @@ export default function StickerAlbumPage(){
                         className="rounded-full border-2 border-[#091828] bg-white px-7 py-2.5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#ffb1c5] dark:shadow-[4px_4px_0_#ff6b9d]"
                         style={{transform: "rotate(-3deg)"}}>
                             
-                        <span className="text-base font-bold text-[#091828] dark:text-[#091828]">Sticker Album</span>
+                        <span className="text-base font-bold text-[#091828] dark:text-[#091828]">Badge Album</span>
                     </div>
                 </div>                <button
                     type="button"
@@ -288,7 +288,7 @@ export default function StickerAlbumPage(){
                         <p className="text-5xl font-black text-[#091828] leading-none dark:text-[#ffffff]">
                             {loading ? '-' : earnedCount} / {loading ? '-' : total}
                         </p>
-                        <p className="text-2xl font-bold text-[#091828] mt-1 dark:text-[#ffffff]">Stickers Found</p>
+                        <p className="text-2xl font-bold text-[#091828] mt-1 dark:text-[#ffffff]">Badges Found</p>
                     </div>
                     <div className="space-y-1 px-2">
                         <div className="h-2.5 w-full rounded-full bg-[#D9EDE7] overflow-hidden dark:bg-[#1c263c]">

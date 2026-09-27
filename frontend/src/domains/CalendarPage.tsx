@@ -12,6 +12,8 @@ import {
 import { CustomCard } from "@/components/ui/CustomCard"
 import { cn } from "@/lib/utils"
 import { useCalendarOccurrences, type CalendarOccurrence } from "@/hooks/useCalendarOccurrences"
+import { GuideSlot } from "@/components/guidance/GuideSlot"
+import { calendarGuidanceFacts } from "@/features/guidance/calendarGuidanceFacts"
 import { useUserProfile } from "@/hooks/useUserProfile"
 import { getOccurrenceDetail } from "@/features/payments/paymentsApi"
 import {
@@ -109,7 +111,7 @@ export default function CalendarPage(){
   const isCurrentMonth = now.getFullYear() === displayYear && now.getMonth() === displayMonth
   const today = isCurrentMonth ? now.getDate() : -1
  
-  const byDay = groupByDay(occurrences)
+  const byDay = React.useMemo(() => groupByDay(occurrences), [occurrences])
   const summary = calcSummary(occurrences)
 
   const { user } = useUserProfile()
@@ -174,11 +176,19 @@ export default function CalendarPage(){
     }
   }
  
-  const visibleOccurrences = selectedDate === null
+  const visibleOccurrences = React.useMemo(
+    () => (selectedDate === null
       ? [...occurrences].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      : (byDay[selectedDate] ?? [])
+      : (byDay[selectedDate] ?? [])),
+    [selectedDate, occurrences, byDay],
+  )
  
   const monthLabel = MONTH_NAMES[displayMonth]
+
+  const guidanceFacts = React.useMemo(
+    () => calendarGuidanceFacts(occurrences, visibleOccurrences, { loading, error }),
+    [occurrences, visibleOccurrences, loading, error],
+  )
  
   return(
     <div className="min-h-screen bg-[#F4FBF7] pb-24 dark:bg-[#0b1326]">
@@ -206,6 +216,7 @@ export default function CalendarPage(){
           <Link
             to="/calendar/scheduled"
             aria-label="All scheduled payments"
+            data-tour="calendar.all"
             className="flex size-12 shrink-0 items-center justify-center rounded-full border-2 border-[#091828] bg-[#E3EAE6] shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#1c263c] dark:shadow-[4px_4px_0_#060e20]"
           >
             <AlignJustify className="size-5 text-[#091828] dark:text-[#a0aec0]" />
@@ -303,7 +314,7 @@ export default function CalendarPage(){
         </div>
  
         {/* CALENDAR GRID */}
-        <div className="mt-6" aria-label="Calendar">
+        <div className="mt-6" aria-label="Calendar" data-tour="calendar.grid">
           <div className="grid grid-cols-7">
             {DAY_HEADERS.map(d => (
               <div key={d} className="py-1 text-center text-[10px] font-semibold text-[#6b6375] dark:text-[#a0aec0]">
@@ -333,7 +344,7 @@ export default function CalendarPage(){
         </div>
  
         {/* CONTEXT PANEL */}
-        <div className="mt-6" style={{ transform: "rotate(1deg)" }}>
+        <div className="mt-6" style={{ transform: "rotate(1deg)" }} data-tour="calendar.day">
           <div className="rounded-2xl border-2 border-[#091828] bg-[#FFD9E1] px-5 py-4 shadow-[2px_2px_0_#091828] dark:border-[#060e20] dark:bg-[#2d1b2e] dark:shadow-[2px_2px_0_#060e20]">
             {selectedDate === null ? (
               <p className="text-xl font-extrabold text-[#091828] dark:text-white" aria-label="Showing all expenses">
@@ -347,6 +358,12 @@ export default function CalendarPage(){
           </div>
         </div>
  
+        <GuideSlot
+          surface="calendar"
+          facts={guidanceFacts}
+          className="mt-4"
+        />
+
         {/* EVENT LIST */}
         <div className="mt-4 flex flex-col gap-3">
           {loading ? (
