@@ -134,7 +134,7 @@ export default function ReceiptOccurrencePicker({
         selectedOccurrence.status !== 'CANCELLED' &&
         Number(selectedOccurrence.amountRemaining) > 0
     )
-    return (
+    return(
         <section className="rounded-3xl border-2 border-[#091828] bg-white p-5 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20] sm:p-6">
             <div className="flex items-start gap-3">
                 <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#E8E4F4] dark:bg-[#302A43]">
