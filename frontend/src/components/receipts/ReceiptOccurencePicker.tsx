@@ -170,8 +170,6 @@ export default function ReceiptOccurrencePicker({
                     <ChevronDown className={`size-5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* ////////////////////////////// OPTION 1 ///////////////////////////////////////////////////// */}
-
                 <div className="my-6 flex items-center gap-5">
                     <div className="h-px flex-1 bg-[#DCEFE8] dark:bg-[#2d3449]" />
                     <span className="px-2 text-xs font-bold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
@@ -179,11 +177,10 @@ export default function ReceiptOccurrencePicker({
                     </span>
                     <div className="h-px flex-1 bg-[#DCEFE8] dark:bg-[#2d3449]" />
                 </div>
-
                 <button
                     type="button"
                     onClick={onCreateObligation}
-                    className="flex w-full items-center gap-3 rounded-2xl border-2 border-[#091828] bg-[#F4FBF7] px-4 py-4 text-left transition-all                             hover:bg-[#E1F0E9] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none dark:border-[#060e20] dark:bg-[#1c263c] dark:shadow-[4px_4px_0_#060e20] dark:hover:bg-[#263D3A]"
+                    className="flex w-full items-center gap-3 rounded-2xl border-2 border-[#091828] bg-[#F4FBF7] px-4 py-4 text-left transition-all hover:bg-[#E1F0E9] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none dark:border-[#060e20] dark:bg-[#1c263c] dark:shadow-[4px_4px_0_#060e20] dark:hover:bg-[#263D3A]"
                 >
                     <span className="flex size-5 shrink-0 items-center justify-center text-xl font-black text-[#10775F] dark:text-[#5eead4]">
                         +
@@ -192,55 +189,9 @@ export default function ReceiptOccurrencePicker({
                         Create new payment occurrence
                     </span>
                 </button>
-                {/* //////////////////////////////////////////////////////////////////////////////////////////////// */}
-
 
                 {isOpen && (
                     <div className="mt-3 rounded-2xl border-2 border-[#091828] bg-[#F4FBF7] p-3 dark:border-white dark:bg-[#1c263c]">
-
-                        {/* ////////////////////////////// OPTION 2 ///////////////////////////////////////////////////// */}
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsOpen(false)
-                                onCreateObligation()
-                            }}
-                            className="
-                            flex w-full items-center gap-3
-                            rounded-2xl
-                            border-2 border-[#091828]
-                            bg-[#F4FBF7]
-                            px-4 py-4
-                            text-left
-                            shadow-[4px_4px_0_#091828]
-                            transition
-                            hover:bg-[#E1F0E9]
-                            active:translate-x-[2px]
-                            active:translate-y-[2px]
-                            active:shadow-none
-                            dark:border-[#060e20]
-                            dark:bg-[#1c263c]
-                            dark:shadow-[4px_4px_0_#060e20]
-                            dark:hover:bg-[#263D3A]
-                            "
-
-                        >
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#10775F] text-xl font-black text-white dark:bg-[#5eead4] dark:text-[#091828]">
-                                +
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                                <p className="text-sm font-extrabold">
-                                    Create new payment occurrence
-                                </p>
-
-                                <p className="mt-1 text-xs font-semibold text-[#10775F] dark:text-[#5eead4]">
-                                    This receipt isn't linked to an existing payment
-                                </p>
-                            </div>
-                        </button>
-                        {/* //////////////////////////////////////////////////////////////////////////////////////////////// */}
-
                         {loading && (
                             <output className="block px-2 py-3 text-sm font-medium">
                                 Loading available payments...
