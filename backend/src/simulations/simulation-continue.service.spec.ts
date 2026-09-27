@@ -69,6 +69,29 @@ describe('SimulationsService continueSession', () => {
       findFirst: jest.Mock<Promise<unknown>, [unknown]>;
       create: jest.Mock<Promise<unknown>, [unknown]>;
     };
+    simulationObligationSchedule: {
+      findFirst: jest.Mock<Promise<{ id: string } | null>, [unknown]>;
+      update: jest.Mock<
+        Promise<unknown>,
+        [{ where: { id: string }; data: { acknowledgedAt: Date } }]
+      >;
+    };
+    simulationEvent: {
+      findFirst: jest.Mock<Promise<{ id: string } | null>, [unknown]>;
+      update: jest.Mock<
+        Promise<unknown>,
+        [
+          {
+            where: { id: string };
+            data: {
+              status: string;
+              revealedAt: Date;
+              decisionExpiresAt: Date | null;
+            };
+          },
+        ]
+      >;
+    };
   };
   let service: SimulationsService;
 
@@ -78,7 +101,9 @@ describe('SimulationsService continueSession', () => {
         findUniqueOrThrow: jest
           .fn<Promise<unknown>, [unknown]>()
           .mockResolvedValueOnce(resultSession())
+          .mockResolvedValueOnce(refreshedSession())
           .mockResolvedValueOnce(refreshedSession()),
+        update: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
         updateMany: jest
           .fn<Promise<{ count: number }>, [UpdateManyArgs]>()
           .mockResolvedValue({ count: 1 }),
@@ -88,6 +113,37 @@ describe('SimulationsService continueSession', () => {
           .fn<Promise<unknown>, [unknown]>()
           .mockResolvedValue(null),
         create: jest.fn<Promise<unknown>, [unknown]>().mockResolvedValue({}),
+      },
+      simulationObligationSchedule: {
+        findFirst: jest
+          .fn<Promise<{ id: string } | null>, [unknown]>()
+          .mockResolvedValue({ id: 'schedule-1' }),
+        update: jest
+          .fn<
+            Promise<unknown>,
+            [{ where: { id: string }; data: { acknowledgedAt: Date } }]
+          >()
+          .mockResolvedValue({}),
+      },
+      simulationEvent: {
+        findFirst: jest
+          .fn<Promise<{ id: string } | null>, [unknown]>()
+          .mockResolvedValue(null),
+        update: jest
+          .fn<
+            Promise<unknown>,
+            [
+              {
+                where: { id: string };
+                data: {
+                  status: string;
+                  revealedAt: Date;
+                  decisionExpiresAt: Date | null;
+                };
+              },
+            ]
+          >()
+          .mockResolvedValue({}),
       },
     };
     prisma = {
@@ -141,6 +197,74 @@ describe('SimulationsService continueSession', () => {
 
     const update = transaction.simulationSession.updateMany.mock.calls[0][0];
     expect(update.data.nextDayAt).toBeNull();
+  });
+
+  it('persists popup acknowledgement before resuming timed progression', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow
+      .mockResolvedValueOnce(
+        resultSession({ presentationHold: 'NEW_OBLIGATION' }),
+      )
+      .mockResolvedValueOnce({ currentDay: 4 })
+      .mockResolvedValueOnce(refreshedSession({ presentationHold: 'NONE' }));
+    await service.continueSession('user-1', sessionId, idempotencyKey);
+    expect(
+      transaction.simulationObligationSchedule.update.mock.calls[0][0].where,
+    ).toEqual({ id: 'schedule-1' });
+    expect(
+      transaction.simulationObligationSchedule.update.mock.calls[0][0].data
+        .acknowledgedAt,
+    ).toBeInstanceOf(Date);
+    expect(
+      transaction.simulationSession.updateMany.mock.calls[0][0].where
+        .presentationHold.in,
+    ).toContain('NEW_OBLIGATION');
+  });
+
+  it('reveals a same-day event only after the new-obligation popup is acknowledged', async () => {
+    transaction.simulationSession.findUniqueOrThrow.mockReset();
+    transaction.simulationSession.findUniqueOrThrow
+      .mockResolvedValueOnce(
+        resultSession({ presentationHold: 'NEW_OBLIGATION' }),
+      )
+      .mockResolvedValueOnce(refreshedSession({ currentDay: 4 }))
+      .mockResolvedValueOnce(
+        refreshedSession({
+          presentationHold: 'EVENT_REVEAL',
+          events: [
+            {
+              id: 'event-next',
+              triggerDay: 4,
+              eventSnapshot: {
+                title: 'Event',
+                context: 'Context',
+                options: [
+                  {
+                    id: 'choice',
+                    label: 'Choice',
+                    immediateCost: '0.00',
+                    feeOrDebt: '0.00',
+                  },
+                ],
+              },
+              decisionExpiresAt: new Date('2026-09-17T14:00:30.000Z'),
+            },
+          ],
+        }),
+      );
+    transaction.simulationEvent.findFirst.mockResolvedValue({
+      id: 'event-next',
+    });
+    await service.continueSession('user-1', sessionId, idempotencyKey);
+    expect(
+      transaction.simulationObligationSchedule.update,
+    ).toHaveBeenCalledTimes(1);
+    expect(transaction.simulationEvent.update.mock.calls[0][0].where).toEqual({
+      id: 'event-next',
+    });
+    expect(
+      transaction.simulationEvent.update.mock.calls[0][0].data.status,
+    ).toBe('REVEALED');
   });
 
   it('rejects continuation outside a payment or event result without mutation', async () => {

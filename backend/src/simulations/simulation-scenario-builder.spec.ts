@@ -23,6 +23,14 @@ function randomSequence(values: number[]): () => number {
   return () => values[index++] ?? 0.5;
 }
 
+function seededRandom(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 48271) % 2_147_483_647;
+    return state / 2_147_483_647;
+  };
+}
+
 describe('buildSimulationScenario', () => {
   it('builds an affordable, resumable scenario with defaults and custom allocation rules', () => {
     const scenario = buildSimulationScenario({
@@ -32,8 +40,11 @@ describe('buildSimulationScenario', () => {
     });
 
     expect(scenario.startingBudget).toBe('4000.00');
-    expect(scenario.obligations.length).toBeGreaterThanOrEqual(5);
-    expect(scenario.obligations.length).toBeLessThanOrEqual(7);
+    expect(scenario.obligations).toHaveLength(5);
+    const initialDueDays = scenario.obligations.map((item) => item.dueDay);
+    expect(initialDueDays.some((day) => day <= 10)).toBe(true);
+    expect(initialDueDays.some((day) => day >= 11 && day <= 20)).toBe(true);
+    expect(initialDueDays.some((day) => day >= 21)).toBe(true);
     expect(scenario.events.length).toBeGreaterThanOrEqual(2);
     expect(scenario.events.length).toBeLessThanOrEqual(4);
     expect(
@@ -53,6 +64,80 @@ describe('buildSimulationScenario', () => {
       maxCurrentAmount: '4000.00',
       increment: '50.00',
     });
+    expect(scenario.scenarioVersion).toBe('catalogue-v4');
+    expect(scenario.obligations[0]).toEqual(
+      expect.objectContaining({
+        amountReference: '1000.00',
+        minimumCostFactor: '0.50',
+        maximumCostFactor: '1.50',
+      }),
+    );
+  });
+
+  it('always keeps the five-obligation count and due-day spread across random scenarios', () => {
+    for (let seed = 1; seed <= 100; seed += 1) {
+      const scenario = buildSimulationScenario({
+        obligations: activeObligations,
+        events: activeEvents,
+        random: seededRandom(seed),
+      });
+      const dueDays = scenario.obligations.map((item) => item.dueDay);
+
+      expect(scenario.obligations).toHaveLength(5);
+      expect(
+        new Set(scenario.obligations.map((item) => item.templateCode)).size,
+      ).toBe(5);
+      expect(dueDays.some((day) => day <= 10)).toBe(true);
+      expect(dueDays.some((day) => day >= 11 && day <= 20)).toBe(true);
+      expect(dueDays.some((day) => day >= 21 && day <= 30)).toBe(true);
+      expect(
+        scenario.obligations.reduce(
+          (total, obligation) => total + Number(obligation.amountDue),
+          0,
+        ),
+      ).toBeLessThanOrEqual(Number(scenario.initialObligationBudgetCap));
+    }
+  });
+
+  it('schedules hidden, distinct future obligations with stable snapshots and trigger days', () => {
+    const firstScenario = buildSimulationScenario({
+      obligations: activeObligations,
+      events: activeEvents,
+      random: randomSequence([0.5]),
+    });
+    const secondScenario = buildSimulationScenario({
+      obligations: activeObligations,
+      events: activeEvents,
+      random: randomSequence([0.5]),
+    });
+    const initialCodes = new Set(
+      firstScenario.obligations.map((item) => item.templateCode),
+    );
+    const scheduleKeys = firstScenario.obligationSchedules.map(
+      (item) => item.scheduleKey,
+    );
+    const scheduledCodes = firstScenario.obligationSchedules.map(
+      (item) => item.templateCode,
+    );
+
+    expect(firstScenario.obligationSchedules.length).toBeGreaterThanOrEqual(1);
+    expect(firstScenario.obligationSchedules.length).toBeLessThanOrEqual(2);
+    expect(new Set(scheduleKeys).size).toBe(scheduleKeys.length);
+    expect(new Set(scheduledCodes).size).toBe(scheduledCodes.length);
+    expect(scheduledCodes.every((code) => !initialCodes.has(code))).toBe(true);
+    for (const schedule of firstScenario.obligationSchedules) {
+      expect(schedule.triggerDay).toBeGreaterThanOrEqual(3);
+      expect(schedule.triggerDay).toBeLessThanOrEqual(24);
+      expect(schedule.obligationSnapshot.dueDay).toBeGreaterThan(
+        schedule.triggerDay,
+      );
+      expect(schedule.obligationSnapshot.templateCode).toBe(
+        schedule.templateCode,
+      );
+    }
+    expect(secondScenario.obligationSchedules).toEqual(
+      firstScenario.obligationSchedules,
+    );
   });
 
   it('excludes inactive content and expands selected event obligations into snapshots', () => {
@@ -81,6 +166,143 @@ describe('buildSimulationScenario', () => {
       .find((option) => option.introducedObligation)?.introducedObligation;
     expect(introducedObligation).toBeDefined();
     expect(introducedObligation?.templateCode).toBeTruthy();
+  });
+
+  it('excludes out-of-month catalogue obligations and installment snapshots', () => {
+    const obligations = activeObligations.map((item) =>
+      item.code === 'SIM_OBL_FRIEND_IOU' ? { ...item, dueDay: 34 } : item,
+    );
+    const installmentSchedule = [
+      {
+        templateCode: 'IN_MONTH',
+        name: 'In-month bill',
+        category: 'Debt',
+        amountDue: '100.00',
+        dueDay: 29,
+        basePoints: '10.00',
+        savingsPointsFactor: '0.80',
+        importance: 'STANDARD',
+        importanceWeight: '1.00',
+        baseMissPenalty: '20.00',
+      },
+      {
+        templateCode: 'OUT_OF_MONTH',
+        name: 'Later bill',
+        category: 'Debt',
+        amountDue: '100.00',
+        dueDay: 34,
+        basePoints: '10.00',
+        savingsPointsFactor: '0.80',
+        importance: 'STANDARD',
+        importanceWeight: '1.00',
+        baseMissPenalty: '20.00',
+      },
+    ];
+    const events = activeEvents.map((item) => {
+      const snapshot = item.eventSnapshot as {
+        options: Array<Record<string, unknown>>;
+        [key: string]: unknown;
+      };
+      return {
+        ...item,
+        eventSnapshot: {
+          ...snapshot,
+          options: snapshot.options.map((option, index) =>
+            index === 0 ? { ...option, installmentSchedule } : option,
+          ),
+        },
+      };
+    });
+    const scenario = buildSimulationScenario({
+      obligations,
+      events,
+      random: seededRandom(24),
+    });
+
+    expect(scenario.obligations.every((item) => item.dueDay <= 30)).toBe(true);
+    expect(
+      scenario.obligationSchedules.every(
+        (item) => item.obligationSnapshot.dueDay <= 30,
+      ),
+    ).toBe(true);
+    for (const option of scenario.events.flatMap(
+      (item) => item.eventSnapshot.options,
+    )) {
+      if (option.installmentSchedule) {
+        expect(
+          option.installmentSchedule.every((item) => item.dueDay <= 30),
+        ).toBe(true);
+      }
+      if (option.installmentSchedule?.length) {
+        expect(option.installmentSchedule).toEqual([
+          expect.objectContaining({ templateCode: 'IN_MONTH' }),
+        ]);
+      }
+    }
+  });
+
+  it('rejects an event option that introduces an out-of-month obligation', () => {
+    const obligations = activeObligations.map((item) =>
+      item.code === 'SIM_OBL_CAR_REPAIR_REPAYMENT'
+        ? { ...item, dueDay: 34 }
+        : item,
+    );
+    const events = activeEvents.map((item) => ({
+      ...item,
+      isActive: ['SIM_EVT_URGENT_CAR_REPAIR', 'SIM_EVT_MEDICAL_COST'].includes(
+        item.code,
+      ),
+    }));
+
+    expect(() =>
+      buildSimulationScenario({ obligations, events, random: seededRandom(7) }),
+    ).toThrow('unavailable obligation template: SIM_OBL_CAR_REPAIR_REPAYMENT');
+  });
+
+  it('preserves scoring metadata on event installments', () => {
+    const installmentSchedule = [
+      {
+        templateCode: 'SIM_OBL_CAR_REPAIR_REPAYMENT',
+        name: 'Car repair installment',
+        category: 'Debt',
+        amountDue: '350.00',
+        dueDay: 15,
+        basePoints: '35.00',
+        savingsPointsFactor: '0.80',
+        importance: 'HIGH',
+        importanceWeight: '1.50',
+        baseMissPenalty: '20.00',
+      },
+    ];
+    const events = activeEvents.map((item) => {
+      const snapshot = item.eventSnapshot as {
+        options: Array<Record<string, unknown>>;
+        expiryOutcome: Record<string, unknown>;
+        [key: string]: unknown;
+      };
+      return {
+        ...item,
+        eventSnapshot: {
+          ...snapshot,
+          options: snapshot.options.map((option, index) =>
+            index === 0 ? { ...option, installmentSchedule } : option,
+          ),
+        },
+      };
+    });
+    const scenario = buildSimulationScenario({
+      obligations: activeObligations,
+      events,
+      random: randomSequence([0.4, 0.1, 0.2, 0.3, 0.4, 0.5]),
+    });
+
+    expect(
+      scenario.events
+        .flatMap((item) => item.eventSnapshot.options)
+        .some(
+          (option) => option.installmentSchedule?.[0]?.importance === 'HIGH',
+        ),
+    ).toBe(true);
   });
 
   it('creates independent snapshots and rejects an insufficient catalogue', () => {

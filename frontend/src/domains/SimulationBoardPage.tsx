@@ -27,6 +27,8 @@ export default function SimulationBoardPage() {
 
     if (
       route !== 'board' &&
+      route !== 'new-obligation' &&
+      route !== 'event-reveal' &&
       route !== 'paused'
     ) {
       navigate(
@@ -130,6 +132,9 @@ export default function SimulationBoardPage() {
         onSimulationChange={setSimulation}
         onRefetch={refetch}
         onOpenObligation={(obligationId)=>{navigate(`/simulation/session/${sessionId}/obligations/${obligationId}`)}}
+        onCompareEventChoices={() => {
+          navigate(`/simulation/session/${sessionId}/event/decision`)
+        }}
         onLeave={() => {
           navigate('/simulation')
         }}

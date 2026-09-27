@@ -140,6 +140,16 @@ describe('SimulationsService resumeSession', () => {
     expect(transaction.simulationAction.create).toHaveBeenCalledTimes(1);
   });
 
+  it('resumes without starting the timer while the new-obligation popup remains unacknowledged', async () => {
+    setSessionResponses(
+      { pausedDecisionSeconds: null, presentationHold: 'NEW_OBLIGATION' },
+      { nextDayAt: null, presentationHold: 'NEW_OBLIGATION' },
+    );
+    await resume();
+    expect(getSessionUpdate().data.nextDayAt).toBeNull();
+    expect(getSessionUpdate().data.presentationHold).toBeUndefined();
+  });
+
   it('restores a revealed timed event decision using exactly the saved seconds', async () => {
     setSessionResponses(
       {

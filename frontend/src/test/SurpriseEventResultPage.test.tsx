@@ -71,22 +71,27 @@ describe('Surprise event result',()=>{
         renderRoute(resolvedEvent)
         expect(await screen.findByText('Pay for the repair now')).toBeInTheDocument()
         expect(screen.getByText(resolvedEvent.explanation)).toBeInTheDocument()
-        expect(screen.getByText('Decision applied!')).toBeInTheDocument()
+        expect(screen.getByText('Decision complete')).toBeInTheDocument()
     })
-    it('shows the returned financial effects and points',async()=>{
+    it('shows the returned cash paid today and points',async()=>{
         renderRoute(resolvedEvent)
-        expect(await screen.findByText('What changed?')).toBeInTheDocument()
-        expect(screen.getByText('Immediate cost')).toBeInTheDocument()
-        expect(screen.getByText('Paid from Current')).toBeInTheDocument()
-        expect(screen.getByText('Paid from Savings')).toBeInTheDocument()
-        expect(screen.getByText('Uncovered amount')).toBeInTheDocument()
-        expect(screen.getAllByText('+30.00 points')).toHaveLength(2)
+        expect(await screen.findByText('Cash today')).toBeInTheDocument()
+        expect(screen.getByText(/^R\s600 today$/)).toBeInTheDocument()
+        expect(screen.getByText(/^R\s600 paid now$/)).toBeInTheDocument()
+        expect(screen.getByText('Points earned')).toBeInTheDocument()
+        expect(screen.getByText('+30')).toBeInTheDocument()
+    })
+    it('shows savings use and an uncovered amount only when the server returns them',async()=>{
+        renderRoute({...resolvedEvent,currentUsed:'250.00',savingsUsed:'200.00',uncoveredAmount:'150.00'})
+        expect(await screen.findByText(/^R\s450 today$/)).toBeInTheDocument()
+        expect(screen.getByText(/R\s200 from Savings/)).toBeInTheDocument()
+        expect(screen.getByText(/R\s150 could not be covered/)).toBeInTheDocument()
     })
     it('shows the server-provided balances',async()=>{
         renderRoute(resolvedEvent)
-        expect(await screen.findByText('Your updated balances')).toBeInTheDocument()
-        expect(screen.getByText('Current score')).toBeInTheDocument()
-        expect(screen.getByText('+80.00 points')).toBeInTheDocument()
+        const balances=await screen.findByLabelText('Your updated balances')
+        expect(balances).toHaveTextContent(/Current\s*R\s2\s800/)
+        expect(balances).toHaveTextContent(/Savings\s*R\s1\s800/)
     })
     it('recovers after refresh without inventing the missing event explanation',async()=>{
         renderRoute()
@@ -111,7 +116,7 @@ describe('Surprise event result',()=>{
         renderRoute()
         expect((await screen.findAllByText('Time ran out')).length).toBeGreaterThan(0)
         expect(screen.getByText(/decision deadline passed/i)).toBeInTheDocument()
-        expect(screen.getByText('-10.00 points')).toBeInTheDocument()
+        expect(screen.getByText('-10')).toBeInTheDocument()
     })
     it('shows a newly introduced obligation from the returned simulation detail',async()=>{
         mockedGetSimulation.mockResolvedValue({
