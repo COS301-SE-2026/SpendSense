@@ -7,6 +7,9 @@ type QuizScenarioStore={
         }) => Promise<E2eUser|null>;
         create:(args:{ data:Record<string, unknown> }) => Promise<E2eUser>;
     };
+    quizSession:{
+        deleteMany:(args:{where:{userId:string;type:'DAILY'}})=>Promise<unknown>;
+    };
 };
 
 type QuizBrowserUserInput={
@@ -21,13 +24,13 @@ export async function createUserReadyForQuiz(
     const existingUser=await prisma.user.findUnique({
         where:{ supabaseAuthId:input.supabaseAuthId },
     });
-    if (existingUser) {
-        return { user:existingUser };
-    }
-    const user=await createUser(prisma, {
+    const user=existingUser ?? await createUser(prisma, {
         supabaseAuthId:input.supabaseAuthId,
         email:input.email,
         displayName:'E2E Quiz User',
+    });
+    await prisma.quizSession.deleteMany({
+        where:{userId:user.id,type:'DAILY'},
     });
     return { user };
 }

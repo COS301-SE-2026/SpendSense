@@ -100,6 +100,9 @@ const { PrismaClient } = requireFromProject('@prisma/client') as {
         update: Record<string, unknown>;
       }) => Promise<{ id: string }>;
     };
+    simulationSession: {
+      deleteMany: (args: { where: { userId: string } }) => Promise<unknown>;
+    };
     guidanceState: {
       upsert: (args: {
         where: { userId: string };
@@ -138,6 +141,7 @@ type ProvisionRequest = {
 const validScenarios = new Set([
   'payments.userWithUpcomingPayment',
   'quizzes.userReadyForDailyQuiz',
+  'simulations.userWithoutActiveSession',
   'profile.userWithProgress',
   'reminders.userWithPreferences',
   'notifications.userWithInboxItems',
@@ -258,6 +262,12 @@ const server = createServer(async (request, response) => {
         email,
       });
       sendJson(response, 201, quizScenario);
+      return;
+    }
+    if (scenario === 'simulations.userWithoutActiveSession') {
+      const user = await findOrCreateBrowserUser(supabaseAuthId, email);
+      await prisma.simulationSession.deleteMany({where: {userId: user.id}});
+      sendJson(response, 201, {user});
       return;
     }
     if (scenario === 'profile.userWithProgress') {

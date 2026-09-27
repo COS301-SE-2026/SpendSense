@@ -46,7 +46,7 @@ test.describe('Mascot guidance', ()=> {
             await page.getByRole('button', {name: 'Take the tour'}).click();
             await expect(tourDialog(page)).toBeVisible();
 
-            await tourDialog(page).getByRole('button', {name: 'Skip'}).click();
+            await tourDialog(page).getByRole('button', {name: 'End tour'}).click();
             await expect(tourDialog(page)).toBeHidden();
 
             await page.reload();

@@ -75,6 +75,9 @@ type E2eFixtures = {
     quizzes: {
       userReadyForDailyQuiz: () => Promise<QuizScenarioResult>;
     };
+    simulations: {
+      userWithoutActiveSession: () => Promise<{user: {id: string}}>;
+    };
     profile: {
       userWithProgress: (input?: {
         progress?: Partial<ProfileProgress>;
@@ -160,6 +163,13 @@ export const test = base.extend<E2eFixtures>({
         userReadyForDailyQuiz: () =>
           provisionScenario<QuizScenarioResult>(
             'quizzes.userReadyForDailyQuiz',
+          ),
+      },
+
+      simulations: {
+        userWithoutActiveSession: () =>
+          provisionScenario<{user: {id: string}}>(
+            'simulations.userWithoutActiveSession',
           ),
       },
 

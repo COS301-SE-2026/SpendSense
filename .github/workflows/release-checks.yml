@@ -119,6 +119,12 @@ jobs:
 
       # No --cov here yet: pytest-cov isn't in requirements-dev.txt today.
       # Tracked as a follow-up, not blocking this gate.
+      - name: Install Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
+          tesseract --version
+
       - name: Test AI service
         run: python -m pytest
 

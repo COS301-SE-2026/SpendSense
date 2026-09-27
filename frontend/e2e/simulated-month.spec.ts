@@ -10,10 +10,14 @@ async function startBriefing(page:import('@playwright/test').Page){
 }
 
 test.describe('Simulated Month',()=>{
+    test.beforeEach(async ({scenario})=>{
+        await scenario.simulations.userWithoutActiveSession()
+    })
     test('a player can create a month and review a budget before starting',async({page})=>{
         await startBriefing(page)
         await expect(page.getByRole('button',{name:'Review your month'})).toBeDisabled()
-        await page.getByRole('radio',{name:/80.*20/}).check()
+        await page.getByText('80 / 20').click()
+        await expect(page.getByRole('radio',{name:/80.*20/})).toBeChecked()
         await expect(page.getByRole('button',{name:'Review your month'})).toBeEnabled()
         await page.getByRole('button',{name:'Review your month'}).click()
         await expect(page.getByRole('heading',{name:'Your month at a glance'})).toBeVisible()
@@ -26,7 +30,8 @@ test.describe('Simulated Month',()=>{
     test('easy mode lets the player create an untimed month',async({page})=>{
         await page.goto('/simulation')
         await page.getByRole('button',{name:'Start simulation'}).click()
-        await page.getByRole('checkbox',{name:'Easy mode'}).check()
+        await page.getByText('Play at your own pace.').click()
+        await expect(page.getByRole('checkbox',{name:'Easy mode'})).toBeChecked()
         const created=page.waitForResponse(response=>
             response.url().endsWith('/simulations')&&
             response.request().method()==='POST'&&
