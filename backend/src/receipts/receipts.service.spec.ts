@@ -18,8 +18,6 @@ describe('ReceiptsService', () => {
   const mockPrismaService = {};
 
   beforeEach(async () => {
-
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReceiptsService,
