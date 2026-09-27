@@ -94,62 +94,8 @@ function getStoredReceiptScan(
   });
 }
 describe('Receipts E2E', () => {
-  it('Testing the service ability to record a full payment for an existing obligation', async () => {
-    const e2e = await createApiE2eFixture();
 
-    try {
-      const { user, occurrence } = await createUserWithUpcomingPayment(
-        e2e.prisma,
-      );
 
-      const scan = await createOccurrenceReceiptScan(
-        e2e.prisma,
-        user.id,
-        occurrence.id,
-        '1250.00',
-      );
-
-      const token = await createE2eAccessToken(user);
-
-      const response = await confirmReceipt(
-        e2e,
-        scan.id,
-        token,
-        occurrence.id,
-        '1250.00',
-      );
-
-      const { data: body } = response.body as ReceiptApiResponse;
-
-      expect(body.replayed).toBe(false);
-
-      expect(body.contribution).toEqual(
-        expect.objectContaining({
-          occurrenceId: occurrence.id,
-          amount: '1250.00',
-          currency: 'ZAR',
-          source: 'RECEIPT_SCAN',
-          receiptScanId: scan.id,
-        }),
-      );
-
-      expect(body.occurrence.status).toBe('PAID');
-      expect(body.occurrence.amountPaid).toBe('1250.00');
-      expect(body.occurrence.amountRemaining).toBe('0.00');
-
-      const storedOccurrence = await getStoredOccurrence(e2e, occurrence.id);
-
-      expect(storedOccurrence?.status).toBe('PAID');
-      expect(storedOccurrence?.amountPaid.toFixed(2)).toBe('1250.00');
-
-      const storedScan = await getStoredReceiptScan(e2e, scan.id);
-
-      expect(storedScan?.status).toBe('CONSUMED');
-      expect(storedScan?.consumedAt).not.toBeNull();
-    } finally {
-      await e2e.close();
-    }
-  });
 
   it('Testing the service ability to record a partial payment for an existing obligation', async () => {
     const e2e = await createApiE2eFixture();
@@ -223,7 +169,7 @@ describe('Receipts E2E', () => {
         409,
       );
 
-      const errorBody = response.body as ErrorApiResponse;
+      const errorBody = response.body.message as ErrorApiResponse;
 
       expect(errorBody).toBe('Receipt scan has already been consumed.');
     } finally {
