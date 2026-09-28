@@ -4,7 +4,7 @@ import {
 	Home,
 	Calendar as CalendarIcon,
 	Users,
-	Sparkles,
+	Smile,
 } from "lucide-react"
  
 import {AddTransactionButton} from "@/components/common/AddTransactionButton"
@@ -32,7 +32,7 @@ export function BottomNav({
 				<AddTransactionButton />
  
 				<BottomNavItem to="/friends" icon={<Users className="size-5" />} label="Friends" active={active === "friends"} />
-				<BottomNavItem to="/mascot" icon={<Sparkles className="size-5" />} label="Mascot" active={active === "mascot"} disabled={false} />
+				<BottomNavItem to="/mascot" icon={<Smile className="size-5" />} label="Mascot" active={active === "mascot"} disabled={false} />
 			</div>
 		</nav>
 	)

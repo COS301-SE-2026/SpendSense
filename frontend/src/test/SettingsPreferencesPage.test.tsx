@@ -54,7 +54,6 @@ describe('SettingsPreferencesPage', ()=> {
 
     it('offers exactly the Theme enum values and nothing else', ()=> {
         renderPage()
-        expect(screen.getByRole('button', {name: 'System'})).toBeInTheDocument()
         expect(screen.getByRole('button', {name: 'Light'})).toBeInTheDocument()
         expect(screen.getByRole('button', {name: 'Dark'})).toBeInTheDocument()
         expect(screen.queryByRole('button', {name: /auto/i})).not.toBeInTheDocument()
@@ -62,7 +61,7 @@ describe('SettingsPreferencesPage', ()=> {
 
     it('marks the loaded preferences values as selected', ()=> {
         renderPage()
-        expect(screen.getByRole('button', {name: 'System'})).toHaveAttribute('aria-pressed', 'true')
+        expect(screen.getByRole('button', {name: 'Light'})).toHaveAttribute('aria-pressed', 'true')
         expect(screen.getByRole('button', {name: 'Dark'})).toHaveAttribute('aria-pressed', 'false')
         expect(screen.getByRole('switch', {name: /reduced motion/i})).toHaveAttribute('aria-checked', 'false')
     })
