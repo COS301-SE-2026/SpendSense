@@ -9,6 +9,8 @@ import {
   NotificationType,
   Prisma,
   ScoreTier,
+  MascotMood,
+  CosmeticSlot,
 } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -205,7 +207,28 @@ export class FriendsService {
             displayName: true,
             avatarUrl: true,
             creditProfile: { select: { scoreTier: true } },
-            gamificationProfile: { select: { currentPaymentStreak: true } },
+            gamificationProfile: {
+              select: {
+                currentPaymentStreak: true,
+                mascotMood: true,
+              },
+            },
+            inventoryItems: {
+              where: {
+                equipped: true,
+                cosmeticItem: {
+                  isActive: true,
+                },
+              },
+              select: {
+                cosmeticItem: {
+                  select: {
+                    slot: true,
+                    code: true,
+                  },
+                },
+              },
+            },
             badges: {
               where: { earnedAt: { not: null } },
               select: { id: true },
@@ -247,6 +270,11 @@ export class FriendsService {
           scoreTier: friend.creditProfile.scoreTier,
           currentPaymentStreak: friend.gamificationProfile.currentPaymentStreak,
           badgeCount: friend.badges.length,
+          mascotMood: friend.gamificationProfile.mascotMood,
+          equippedCosmetics: friend.inventoryItems.map((item) => ({
+            slot: item.cosmeticItem.slot,
+            code: item.cosmeticItem.code,
+          })),
         },
       };
     });
@@ -418,6 +446,11 @@ export class FriendsService {
       currentPaymentStreak:
         friend.gamificationProfile?.currentPaymentStreak ?? 0,
       badgeCount: friend.badges.length,
+      mascotMood: friend.gamificationProfile?.mascotMood ?? MascotMood.NEUTRAL,
+      equippedCosmetics: friend.inventoryItems.map((item) => ({
+        slot: item.cosmeticItem.slot,
+        code: item.cosmeticItem.code,
+      })),
     };
   }
 
@@ -463,7 +496,28 @@ const friendSummarySelect = {
   displayName: true,
   avatarUrl: true,
   creditProfile: { select: { scoreTier: true } },
-  gamificationProfile: { select: { currentPaymentStreak: true } },
+  gamificationProfile: {
+    select: {
+      currentPaymentStreak: true,
+      mascotMood: true,
+    },
+  },
+  inventoryItems: {
+    where: {
+      equipped: true,
+      cosmeticItem: {
+        isActive: true,
+      },
+    },
+    select: {
+      cosmeticItem: {
+        select: {
+          slot: true,
+          code: true,
+        },
+      },
+    },
+  },
   badges: { where: { earnedAt: { not: null } }, select: { id: true } },
 } as const;
 
@@ -472,7 +526,16 @@ type FriendSummaryUser = {
   displayName: string | null;
   avatarUrl: string | null;
   creditProfile: { scoreTier: ScoreTier } | null;
-  gamificationProfile: { currentPaymentStreak: number } | null;
+  gamificationProfile: {
+    currentPaymentStreak: number;
+    mascotMood: MascotMood;
+  } | null;
+  inventoryItems: {
+    cosmeticItem: {
+      slot: CosmeticSlot;
+      code: string;
+    };
+  }[];
   badges: { id: string }[];
 };
 

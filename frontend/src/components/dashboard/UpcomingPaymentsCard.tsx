@@ -21,10 +21,10 @@ export function UpcomingPaymentsCard({ upcomingPayments }: UpcomingPaymentsCardP
         <CustomCard className="mt-6 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#131b2e] dark:shadow-lg dark:shadow-black/20">
             <SectionHeader title="Coming Up" meta={`${upcomingPayments.length} upcoming payments`} />
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
                 {
                     upcomingPayments.length > 0 ?
-                        (upcomingPayments.slice(0, 3).map((payment) => (<UpcomingPaymentItem key={payment.id} payment={payment} />)))
+                        (upcomingPayments.map((payment) => (<UpcomingPaymentItem key={payment.id} payment={payment} />)))
                         :
                         (
                             <div className="rounded-2xl bg-[#F4FBF7] p-4 dark:bg-[#1c263c]">

@@ -73,6 +73,17 @@ export const defaultBadges = [
     isActive: true,
   },
   {
+    code: 'FIRST_SIMULATION_COMPLETE',
+    name: 'Month Navigator',
+    description: 'Completed your first fictional simulated month.',
+    category: BadgeCategory.QUIZ,
+    criteriaType: BadgeCriteriaType.SIMULATION_COMPLETION_COUNT,
+    criteriaValue: 1,
+    bonusCoins: 0,
+    iconKey: 'calendar-check',
+    isActive: true,
+  },
+  {
     code: 'DEMO_READY',
     name: 'Demo Ready',
     description: 'Seeded profile for a complete Demo 1 walkthrough.',

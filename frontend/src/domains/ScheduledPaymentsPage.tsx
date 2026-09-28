@@ -153,6 +153,7 @@ function MonthSection({
 			aria-label={month.label}
 			className="mt-2 scroll-mt-4"
 			data-testid={`month-${month.key}`}
+			data-tour="scheduled.month"
 			data-current={isCurrent}
 		>
 			<div className="mb-2 flex items-baseline justify-between px-1">
@@ -212,6 +213,7 @@ function ScheduleRow({
 				type="button"
 				disabled={!payable || isTapping}
 				onClick={onTap}
+				data-tour="scheduled.occurrence"
 				className={cn("w-full text-left", payable && !isTapping ? "cursor-pointer" : "cursor-default")}
 				aria-label={
 					payable

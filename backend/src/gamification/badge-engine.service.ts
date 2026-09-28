@@ -28,6 +28,10 @@ type QuizBadgeInput = {
   sourceEventId: string;
   currentKnowledgeStreak: number;
 };
+type SimulationBadgeInput = {
+  userId: string;
+  sourceEventId: string;
+};
 type BadgeDefinitionCandidate = {
   id: string;
   code: string;
@@ -153,6 +157,41 @@ export class BadgeEngineService {
           : input.currentKnowledgeStreak;
       return progress >= badge.criteriaValue;
     });
+    return this.awardBadges(
+      input.userId,
+      input.sourceEventId,
+      qualifiedBadges,
+      client,
+    );
+  }
+  async evaluateSimulationBadges(
+    input: SimulationBadgeInput,
+    client: Prisma.TransactionClient,
+  ): Promise<string[]> {
+    const completedSimulationCount = await client.simulationSession.count({
+      where: {
+        userId: input.userId,
+        status: 'COMPLETED',
+      },
+    });
+    const badgeDefinitions = await client.badgeDefinition.findMany({
+      where: {
+        isActive: true,
+        NOT: { category: BadgeCategory.DEMO },
+        criteriaType: BadgeCriteriaType.SIMULATION_COMPLETION_COUNT,
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        criteriaType: true,
+        criteriaValue: true,
+        bonusCoins: true,
+      },
+    });
+    const qualifiedBadges = badgeDefinitions.filter(
+      (badge) => completedSimulationCount >= badge.criteriaValue,
+    );
     return this.awardBadges(
       input.userId,
       input.sourceEventId,

@@ -68,11 +68,13 @@ export default function MascotShopPage(){
  
     const sheetItem = items.find((item) => item.id === sheetItemId) ?? null
  
-	const visible = items.filter((item) => {
-		if (filter === "ALL") return true
-		if (filter === "OWNED") return item.owned
-		return item.slot === filter
-	})
+	const visible = items
+    .filter((item) => {
+        if (filter === "ALL") return true
+        if (filter === "OWNED") return item.owned
+        return item.slot === filter
+    })
+    .sort((a, b) => a.cost - b.cost)
 
     const ownedCount = items.filter((item) => item.owned).length
  
@@ -104,7 +106,11 @@ export default function MascotShopPage(){
 	}
 
     return(
-        <SubPageShell title="Shop" subtitle="Spend the coins you have earned or wear something you own.">
+        <SubPageShell
+			title="Shop"
+			subtitle="Spend the coins you have earned or wear something you own."
+			backTo="/mascot"
+		>
             <div className="flex items-center justify-between gap-3">
 				<FilterChips
 					options={FILTERS.map((entry) => ({

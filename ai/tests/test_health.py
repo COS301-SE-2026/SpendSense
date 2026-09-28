@@ -22,11 +22,6 @@ def test_spending_analysis_returns_placeholder():
     assert "spending" in data["message"].lower()
 
 
-def test_ocr_process_returns_placeholder():
-    response = client.post("/ocr/process", json={})
-
-    assert response.status_code == 200
-    data = response.json()
-    
-    assert data["status"] == "not_implemented"
-    assert "ocr" in data["message"].lower()
+def test_ocr_process_requires_upload():
+    response=client.post("/ocr/process",json={})
+    assert response.status_code==422

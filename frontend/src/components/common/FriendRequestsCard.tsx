@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { Check, X } from "lucide-react"
 
 import { CustomCard } from "@/components/ui/CustomCard"
+import { MascotPeek } from "@/components/guidance/MascotPeek"
 import { FriendAvatar } from "@/components/common/FriendAvatar"
 import { ErrorCard, LoadingCard } from "@/components/common/AsyncStates"
 import {
@@ -37,6 +38,7 @@ export function FriendRequestsCard({
 	const { decline: declineRequest } = useDeclineFriendRequest()
 	const [busyId, setBusyId] = React.useState<string | null>(null)
 	const [actionError, setActionError] = React.useState<string | null>(null)
+	const [newFriend, setNewFriend] = React.useState<string | null>(null)
 
 	const respond = async (request: FriendRequestSummary, accept: boolean) => {
 		setBusyId(request.id)
@@ -49,6 +51,7 @@ export function FriendRequestsCard({
 			}
 			removeLocally(request.id)
 			if (accept) {
+				setNewFriend(request.senderDisplayName)
 				onAccepted?.()
 			}
 		} catch (err) {
@@ -60,6 +63,16 @@ export function FriendRequestsCard({
 		}
 	}
 
+	const peek = newFriend ? (
+		<MascotPeek
+			key={newFriend}
+			surface="friends"
+			side="right"
+			manual
+			facts={{ friendJustAdded: true, friendName: newFriend }}
+		/>
+	) : null
+
 	if (isLoading) {
 		return <LoadingCard label="Loading friend requests" />
 	}
@@ -70,10 +83,16 @@ export function FriendRequestsCard({
 
 	const list = requests ?? []
 	if (list.length === 0) {
-		return <>{emptyState}</>
+		return (
+			<>
+				{emptyState}
+				{peek}
+			</>
+		)
 	}
 
 	return (
+		<>
 		<CustomCard variant="navyBorder" size="sm">
 			<div className="flex items-baseline justify-between gap-3">
 				<h2 className="text-base font-extrabold text-[#091828] dark:text-white">
@@ -138,5 +157,7 @@ export function FriendRequestsCard({
 				))}
 			</div>
 		</CustomCard>
+		{peek}
+		</>
 	)
 }

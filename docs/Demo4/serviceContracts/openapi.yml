@@ -1,0 +1,2314 @@
+openapi: 3.0.0
+paths:
+  /api/v1:
+    get:
+      operationId: AppController_getHello
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags:
+        - App
+  /api/v1/users/me:
+    get:
+      description: >-
+        Returns the internal SpendSense user profile for the current
+        Supabase-authenticated user. Creates the user and default profile
+        records on first call.
+      operationId: UsersController_getMe
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            The authenticated user profile and related default preference,
+            credit, and gamification records.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    user:
+                      id: 9f2d7f49-53a2-457c-8a50-8a9d22db83e4
+                      email: student@example.com
+                      displayName: Kyle
+                      avatarUrl: null
+                      monthlyBudget: null
+                      onboardingCompleted: false
+                      createdAt: '2026-05-20T10:00:00.000Z'
+                    preferences:
+                      theme: SYSTEM
+                      currency: ZAR
+                      language: en
+                      reducedMotion: false
+                    notificationPreferences:
+                      inAppEnabled: true
+                      emailEnabled: true
+                      pushEnabled: false
+                      smsEnabled: false
+                      defaultReminderDaysBefore: 3
+                      quietHoursStart: null
+                      quietHoursEnd: null
+                    creditProfile:
+                      currentScore: 600
+                      previousScore: 600
+                      scoreTier: GOOD
+                      onTimePaymentCount: 0
+                      latePaymentCount: 0
+                      missedPaymentCount: 0
+                      lastCalculatedAt: null
+                    gamificationProfile:
+                      coinBalance: 0
+                      xp: 0
+                      mascotLevel: 1
+                      mascotMood: NEUTRAL
+                      currentPaymentStreak: 0
+                      longestPaymentStreak: 0
+                      currentKnowledgeStreak: 0
+                      longestKnowledgeStreak: 0
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: Get the authenticated user profile
+      tags:
+        - users
+    patch:
+      description: >-
+        Updates user-editable profile fields. Email, identity, score,
+        gamification, and deletion fields are read-only.
+      operationId: UsersController_updateMe
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileDto'
+      responses:
+        '200':
+          description: The updated authenticated user profile and related records.
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: Update the authenticated user profile
+      tags:
+        - users
+  /api/v1/users/me/deactivate:
+    patch:
+      description: >-
+        Soft-deactivates the authenticated user account by setting deletedAt.
+        Related financial, score, and gamification history is preserved.
+      operationId: UsersController_deactivateMe
+      parameters: []
+      responses:
+        '200':
+          description: The authenticated user account was deactivated.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    deactivated: true
+                    deactivatedAt: '2026-07-21T10:00:00.000Z'
+        '401':
+          description: Missing, malformed, invalid, or deactivated account token.
+      security:
+        - bearer: []
+      summary: Deactivate the authenticated user account
+      tags:
+        - users
+  /api/v1/users/me/data:
+    delete:
+      description: >-
+        Fulfils a POPIA s24 deletion request. Irreversibly destroys every record
+        SpendSense holds for the authenticated user, including the user record
+        itself. Unlike deactivation, no financial, score, gamification, or quiz
+        history is retained. Shared reference data such as categories and badge
+        definitions is not affected.
+      operationId: UsersController_deleteMyData
+      parameters: []
+      responses:
+        '200':
+          description: All data for the authenticated user was deleted.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    deleted: true
+                    deletedAt: '2026-07-21T10:00:00.000Z'
+                    recordsDeleted:
+                      obligations: 4
+                      paymentOccurrences: 26
+                      paymentRecords: 18
+                      user: 1
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+        '404':
+          description: No SpendSense user exists for this Supabase identity.
+      security:
+        - bearer: []
+      summary: Permanently delete all data for the authenticated user
+      tags:
+        - users
+  /api/v1/users/me/export:
+    get:
+      description: >-
+        Returns a read-only JSON export containing the authenticated user's own
+        SpendSense data. Authentication secrets are excluded.
+      operationId: UsersController_exportMe
+      parameters: []
+      responses:
+        '200':
+          description: The authenticated user data export.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    exportedAt: '2026-07-21T10:00:00.000Z'
+                    user:
+                      id: 9f2d7f49-53a2-457c-8a50-8a9d22db83e4
+                      email: student@example.com
+                      displayName: Kyle
+                    preferences: {}
+                    notificationPreferences: {}
+                    creditProfile: {}
+                    gamificationProfile: {}
+                    obligations: []
+                    paymentOccurrences: []
+                    paymentRecords: []
+                    reminders: []
+                    notifications: []
+                    scoreEvents: []
+                    badges: []
+                    userEvents: []
+                    rewardTransactions: []
+                    quizSessions: []
+        '401':
+          description: Missing, malformed, invalid, or deactivated account token.
+      security:
+        - bearer: []
+      summary: Export the authenticated user data
+      tags:
+        - users
+  /api/v1/users/me/preferences:
+    patch:
+      description: >-
+        Updates the general application preferences for an authenticated user,
+        and creates the preference row if it is missing.
+      operationId: UsersController_updateMyPreferences
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePreferencesDto'
+      responses:
+        '200':
+          description: The persisted preference values.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    preferences:
+                      theme: LIGHT
+                      language: en
+                      currency: ZAR
+                      reducedMotion: false
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: Updates authenticated users preferences
+      tags:
+        - users
+  /api/v1/users/display-name/availability:
+    get:
+      operationId: DisplayNameAvailabilityController_checkAvailability
+      parameters:
+        - name: displayName
+          required: true
+          in: query
+          schema:
+            example: Kyle M
+      responses:
+        '200':
+          description: ''
+      summary: Check whether a display name can be used for signup
+      tags:
+        - users
+  /api/v1/health:
+    get:
+      description: >-
+        Reports high-level database and AI service availability without exposing
+        connection details or secrets.
+      operationId: HealthController_health
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            Backend health summary. The AI service may be down while the backend
+            is still degraded.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    status: degraded
+                    timestamp: '2026-05-20T10:00:00.000Z'
+                    version: 0.0.1
+                    services:
+                      database: up
+                      ai: down
+      summary: Check backend health
+      tags:
+        - health
+  /api/v1/obligations:
+    post:
+      operationId: ObligationsController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateObligationDto'
+      responses:
+        '201':
+          description: Obligation created successfully
+        '400':
+          description: Validation error or business rule violation
+        '401':
+          description: Unauthorised
+        '404':
+          description: Category not found
+      security:
+        - bearer: []
+      summary: Create a financial obligation with schedule, occurrences, and reminders
+      tags:
+        - obligations
+    get:
+      operationId: ObligationsController_list
+      parameters:
+        - name: status
+          required: false
+          in: query
+          schema:
+            example: ACTIVE
+            type: string
+            enum:
+              - ACTIVE
+              - PAUSED
+              - COMPLETED
+              - CANCELLED
+        - name: type
+          required: false
+          in: query
+          schema:
+            example: SUBSCRIPTION
+            type: string
+            enum:
+              - RENT
+              - SUBSCRIPTION
+              - BNPL
+              - UTILITY
+              - IOU
+              - CUSTOM
+        - name: categoryId
+          required: false
+          in: query
+          schema:
+            example: cat_abc123
+            type: string
+        - name: dueSoon
+          required: false
+          in: query
+          description: Sort by soonest upcoming occurrence first
+          schema:
+            example: true
+            type: boolean
+      responses:
+        '200':
+          description: Obligations list returned
+        '401':
+          description: Unauthorised
+      security:
+        - bearer: []
+      summary: List the authenticated user's financial obligations
+      tags:
+        - obligations
+  /api/v1/obligations/{id}:
+    get:
+      operationId: ObligationsController_findOne
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Obligation ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Obligation detail returned
+        '401':
+          description: Unauthorised
+        '404':
+          description: Financial obligation not found
+      security:
+        - bearer: []
+      summary: >-
+        Get one obligation with schedule, upcoming occurrences, and recent
+        payments
+      tags:
+        - obligations
+    patch:
+      operationId: ObligationsController_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Obligation ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateObligationDto'
+      responses:
+        '200':
+          description: Obligation updated
+        '401':
+          description: Unauthorised
+        '404':
+          description: Financial obligation not found
+      security:
+        - bearer: []
+      summary: Update an obligation and optionally regenerate future occurrences
+      tags:
+        - obligations
+    delete:
+      operationId: ObligationsController_archive
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Obligation ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Obligation archived
+        '401':
+          description: Unauthorised
+        '404':
+          description: Financial obligation not found
+      security:
+        - bearer: []
+      summary: Archive (soft-delete) an obligation and cancel future occurrences
+      tags:
+        - obligations
+  /api/v1/gamification/profile:
+    get:
+      description: >-
+        Returns the current coins, XP, streak, mascot state, mascot level
+        progress, mood reason, equipped cosmetics, and earned badges for the
+        Supabase-authenticated user.
+      operationId: GamificationController_getGamificationProfile
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            The current gamification profile, wrapped by the global response
+            envelope.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    coins: 145
+                    xp: 320
+                    paymentStreak: 4
+                    longestStreak: 7
+                    knowledgeStreak: 1
+                    longestKnowledgeStreak: 5
+                    mascotLevelProgress:
+                      currentLevelXp: 20
+                      xpForNextLevel: 100
+                      percentToNextLevel: 20
+                    mascotLevel: 3
+                    mascotMood: HAPPY
+                    equippedCosmetics:
+                      - slot: HAT
+                        code: party_hat
+                        iconKey: hat_party
+                    moodReason: Made a payment on time
+                    badges:
+                      - badgeKey: FIRST_ON_TIME_PAYMENT
+                        name: First On-Time Payment
+                        description: Made your first payment on time.
+                        category: PAYMENT
+                        iconKey: badge_first_payment
+                        earnedAt: '2026-05-18T09:00:00.000Z'
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: Get the authenticated user gamification profile
+      tags:
+        - gamification
+  /api/v1/notifications:
+    get:
+      operationId: NotificationsController_findAll
+      parameters: []
+      responses:
+        '200':
+          description: ''
+      tags:
+        - Notifications
+    delete:
+      operationId: NotificationsController_removeMany
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkNotificationIdsDto'
+      responses:
+        '200':
+          description: ''
+      tags:
+        - Notifications
+  /api/v1/notifications/{id}/read:
+    patch:
+      operationId: NotificationsController_markAsRead
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      tags:
+        - Notifications
+  /api/v1/notifications/{id}:
+    delete:
+      operationId: NotificationsController_remove
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+      tags:
+        - Notifications
+  /api/v1/notifications/read:
+    patch:
+      operationId: NotificationsController_markManyAsRead
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkNotificationIdsDto'
+      responses:
+        '200':
+          description: ''
+      tags:
+        - Notifications
+  /api/v1/payments/log:
+    post:
+      operationId: PaymentsController_logPayment
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogPaymentDto'
+      responses:
+        '201':
+          description: Payment logged successfully
+        '400':
+          description: Validation error or business rule violation
+        '401':
+          description: Unauthorised
+        '404':
+          description: Payment occurrence not found
+      security:
+        - bearer: []
+      summary: Log a payment for the authenticated user
+      tags:
+        - payments
+  /api/v1/credit-score:
+    get:
+      operationId: CreditScoreController_getInsights
+      parameters: []
+      responses:
+        '200':
+          description: Insights returned successfully
+        '401':
+          description: Unauthorised
+      security:
+        - bearer: []
+      summary: Get rule-based insights for the authenticated user
+      tags:
+        - credit-score
+  /api/v1/credit-profile:
+    get:
+      description: >-
+        Returns the current simulated credit profile for the
+        Supabase-authenticated user.
+      operationId: CreditController_getCreditProfile
+      parameters: []
+      responses:
+        '200':
+          description: The current credit profile, wrapped by the global response envelope.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    currentScore: 600
+                    previousScore: 600
+                    scoreTier: GOOD
+                    onTimeCount: 0
+                    lateCount: 0
+                    missedCount: 0
+                    lastCalculatedAt: null
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: Get the authenticated user credit profile
+      tags:
+        - credit-profile
+  /api/v1/credit-profile/events:
+    get:
+      description: >-
+        Returns the score history for the Supabase-authenticated user, ordered
+        newest first.
+      operationId: CreditController_getCreditProfileEvents
+      parameters: []
+      responses:
+        '200':
+          description: Credit score events, wrapped by the global response envelope.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    - id: score_event_1
+                      eventType: PAYMENT_ON_TIME
+                      pointsDelta: 8
+                      scoreBefore: 704
+                      scoreAfter: 712
+                      explanation: Paid Netflix Subscription on time.
+                      createdAt: '2026-05-20T10:00:00.000Z'
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: List authenticated user credit score events
+      tags:
+        - credit-profile
+  /api/v1/dashboard:
+    get:
+      operationId: DashboardController_getDashboard
+      parameters: []
+      responses:
+        '200':
+          description: Dashboard data returned successfully
+        '401':
+          description: User is not authenticated
+      security:
+        - bearer: []
+      summary: Get dashboard data for the current user
+      tags:
+        - dashboard
+  /api/v1/reminder-preferences:
+    get:
+      description: >-
+        Return the current reminder preference settings for the authenticated
+        user in Supabase.
+      operationId: RemindersController_getReminderPreferences
+      parameters: []
+      responses:
+        '200':
+          description: The current reminder preferences.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    quietHoursStart: null
+                    quietHoursEnd: null
+                    emailEnabled: true
+                    pushEnabled: false
+                    inAppEnabled: true
+                    smsEnabled: false
+                    defaultReminderDaysBefore: 3
+        '401':
+          description: Missing or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: Get authenticated users reminder preferences
+      tags:
+        - reminders
+    patch:
+      description: >-
+        Partially updates the reminder preference settings for the authenticated
+        user in Supabase.
+      operationId: RemindersController_updateReminderPreferences
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReminderPreferencesDto'
+      responses:
+        '200':
+          description: The updated reminder preferences.
+        '401':
+          description: Missing or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: Update authenticated users reminder preferences
+      tags:
+        - reminders
+  /api/v1/categories:
+    get:
+      description: >-
+        Returns seeded reference categories for the authenticated user flow. Use
+        the optional type query to filter obligation, expense, both, or all
+        categories.
+      operationId: CategoriesController_listCategories
+      parameters:
+        - name: type
+          required: false
+          in: query
+          description: Optional category filter. Defaults to ALL.
+          schema:
+            type: string
+            enum:
+              - OBLIGATION
+              - EXPENSE
+              - BOTH
+              - ALL
+      responses:
+        '200':
+          description: >-
+            Seeded reference categories, wrapped by the global response
+            envelope.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    - id: cat_rent
+                      name: Rent
+                      type: OBLIGATION
+                      iconKey: home
+                      colourKey: blue
+                      isDefault: true
+                    - id: cat_subscription
+                      name: Subscription
+                      type: BOTH
+                      iconKey: repeat
+                      colourKey: purple
+                      isDefault: true
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: List categories
+      tags:
+        - categories
+  /api/v1/payment-occurrences/upcoming:
+    get:
+      operationId: PaymentOccurrencesController_upcoming
+      parameters:
+        - name: from
+          required: false
+          in: query
+          description: Start date. Defaults to today.
+          schema:
+            example: '2026-05-19'
+            type: string
+        - name: to
+          required: false
+          in: query
+          description: End date. Defaults to 30 days from today.
+          schema:
+            example: '2026-06-30'
+            type: string
+        - name: status
+          required: false
+          in: query
+          description: Comma-separated statuses. Defaults to PENDING,OVERDUE.
+          schema:
+            example: PENDING,OVERDUE
+            type: string
+        - name: obligationId
+          required: false
+          in: query
+          description: Filter by obligation ID.
+          schema:
+            example: obl_abc123
+            type: string
+      responses:
+        '200':
+          description: Upcoming occurrences returned
+        '401':
+          description: Unauthorised
+      security:
+        - bearer: []
+      summary: Get upcoming payment occurrences for dashboard and timeline views
+      tags:
+        - payment-occurrences
+  /api/v1/payment-occurrences/{id}:
+    get:
+      operationId: PaymentOccurrencesController_findOne
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Occurrence ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Occurrence detail returned
+        '401':
+          description: Unauthorised
+        '404':
+          description: Payment occurrence not found
+      security:
+        - bearer: []
+      summary: >-
+        Get one payment occurrence with obligation context, payment record, and
+        score risk
+      tags:
+        - payment-occurrences
+  /api/v1/scheduler/run:
+    post:
+      description: >-
+        runs due reminder occurrence and processing immediately. Protected by a
+        shared secret header.
+      operationId: SchedulerController_runManually
+      parameters: []
+      responses:
+        '200':
+          description: Processing the counts for this run.
+        '401':
+          description: Missing or invalid secret header.
+      summary: Manually triggers the scheduler job
+      tags:
+        - scheduler
+  /api/v1/quiz/daily:
+    get:
+      description: >-
+        Returns the authenticated user’s daily quiz state for the current
+        Africa/Johannesburg calendar date without creating a session or awarding
+        rewards.
+      operationId: QuizController_getDaily
+      parameters: []
+      responses:
+        '200':
+          description: Daily quiz state wrapped by the global response envelope.
+          content:
+            application/json:
+              schema:
+                examples:
+                  available:
+                    value:
+                      data:
+                        date: '2026-07-13'
+                        status: AVAILABLE
+                        session: null
+                        rewardPreview:
+                          xp: 50
+                          coins: 25
+                        knowledgeStreak:
+                          current: 3
+                          longest: 7
+                  inProgress:
+                    value:
+                      data:
+                        date: '2026-07-13'
+                        status: IN_PROGRESS
+                        session:
+                          id: session_123
+                          type: DAILY
+                          status: IN_PROGRESS
+                          progress:
+                            correct: 2
+                            answeredAttempts: 3
+                            initialQuestions: 5
+                            remainingQueue: 4
+                        rewardPreview:
+                          xp: 50
+                          coins: 25
+                  completed:
+                    value:
+                      data:
+                        date: '2026-07-13'
+                        status: COMPLETED
+                        session:
+                          id: session_123
+                          type: DAILY
+                          status: COMPLETED
+                          score: 5
+                          totalQuestions: 5
+                          completedAt: '2026-07-13T08:12:00.000Z'
+                        reward:
+                          xp: 50
+                          coins: 25
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: Get daily quiz state
+      tags:
+        - quiz
+  /api/v1/quiz/sessions:
+    post:
+      description: >-
+        Creates a daily or topic quiz session, or returns the authenticated
+        user’s existing matching in-progress session. Questions are selected
+        server-side and never include the correct option key.
+      operationId: QuizController_createSession
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizSessionDto'
+      responses:
+        '200':
+          description: New or resumed quiz session wrapped by the global response envelope.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: session_123
+                    type: DAILY
+                    topic: null
+                    status: IN_PROGRESS
+                    startedAt: '2026-07-13T08:00:00.000Z'
+                    completedAt: null
+                    progress:
+                      correct: 0
+                      answeredAttempts: 0
+                      initialQuestions: 5
+                      remainingQueue: 5
+                    currentQuestion:
+                      id: question_123
+                      number: 1
+                      topic: CREDIT_SCORE
+                      prompt: >-
+                        Which behaviour is most likely to improve a simulated
+                        credit-health score?
+                      options:
+                        - key: A
+                          text: Paying obligations on time
+                        - key: B
+                          text: Ignoring overdue payments
+                    rewardPreview:
+                      xp: 50
+                      coins: 25
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+        '409':
+          description: >-
+            The daily quiz has already been completed or the request conflicts
+            with the session rules.
+      security:
+        - bearer: []
+      summary: Create or resume a quiz session
+      tags:
+        - quiz
+  /api/v1/quiz/sessions/{id}:
+    get:
+      description: >-
+        Returns an authenticated user’s quiz session for refresh and resume
+        support. Session ownership is enforced and correct answers are never
+        returned.
+      operationId: QuizController_getSession
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quiz session wrapped by the global response envelope.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: session_123
+                    type: DAILY
+                    topic: null
+                    status: IN_PROGRESS
+                    startedAt: '2026-07-13T08:00:00.000Z'
+                    completedAt: null
+                    progress:
+                      correct: 2
+                      answeredAttempts: 3
+                      initialQuestions: 5
+                      remainingQueue: 4
+                    currentQuestion:
+                      id: question_123
+                      number: 2
+                      topic: CREDIT_SCORE
+                      prompt: >-
+                        Which behaviour is most likely to improve a simulated
+                        credit-health score?
+                      options:
+                        - key: A
+                          text: Paying obligations on time
+                        - key: B
+                          text: Ignoring overdue payments
+                    result: null
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+        '404':
+          description: The session does not exist for the authenticated user.
+      security:
+        - bearer: []
+      summary: Get a quiz session
+      tags:
+        - quiz
+  /api/v1/quiz/sessions/{id}/answer:
+    post:
+      description: >-
+        Validates and records an answer, requeues incorrect questions, and
+        settles the session atomically when the queue is empty.
+      operationId: QuizController_submitAnswer
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitQuizAnswerDto'
+      responses:
+        '200':
+          description: >-
+            Answer feedback and the next quiz state wrapped by the global
+            response envelope.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    sessionId: session_123
+                    status: IN_PROGRESS
+                    feedback:
+                      isCorrect: true
+                      explanation: >-
+                        Paying on time provides positive evidence of reliable
+                        behaviour.
+                      requeued: false
+                    progress:
+                      correct: 3
+                      answeredAttempts: 4
+                      initialQuestions: 5
+                      remainingQueue: 2
+                    nextQuestion:
+                      id: question_456
+                      number: 5
+                      topic: CREDIT_SCORE
+                      prompt: Which action supports financial health?
+                      options:
+                        - key: A
+                          text: Pay on time
+                    result: null
+        '400':
+          description: The question is not current or the selected option is invalid.
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+        '404':
+          description: The session or question does not exist for the authenticated user.
+        '409':
+          description: >-
+            The session is already completed or the answer conflicts with the
+            current session state.
+      security:
+        - bearer: []
+      summary: Submit a quiz answer
+      tags:
+        - quiz
+  /api/v1/quiz/topics:
+    get:
+      description: >-
+        Returns every supported quiz topic and marks topics with active seeded
+        questions as available.
+      operationId: QuizController_listTopics
+      parameters: []
+      responses:
+        '200':
+          description: Quiz topics wrapped by the global response envelope.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    - key: CREDIT_SCORE
+                      name: Credit Score
+                      description: >-
+                        Learn how everyday payment behaviour affects financial
+                        health.
+                      available: true
+                      questionCount: 5
+                      rewardPreview:
+                        xp: 20
+                        coins: 10
+                    - key: INTEREST
+                      name: Interest
+                      description: >-
+                        Learn how interest changes the cost of borrowing and
+                        saving.
+                      available: false
+                      questionCount: 0
+                      rewardPreview: null
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: List quiz topics
+      tags:
+        - quiz
+  /api/v1/quiz/topics/{topic}:
+    get:
+      description: >-
+        Returns teaching content for an available topic without creating a quiz
+        session.
+      operationId: QuizController_getTopic
+      parameters:
+        - name: topic
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Topic teaching content wrapped by the global response envelope.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    key: CREDIT_SCORE
+                    name: Credit Score
+                    description: >-
+                      Learn how everyday payment behaviour affects financial
+                      health.
+                    teachingContent:
+                      title: How payment behaviour affects your score
+                      body: >-
+                        Paying obligations on time gives the model positive
+                        evidence of reliable behaviour. Late or missed payments
+                        can reduce the score.
+                      keyPoints:
+                        - On-time payments build positive history.
+                        - Late payments can reduce financial health.
+                        - SpendSense uses a simulated score for education.
+                    available: true
+                    questionCount: 5
+        '401':
+          description: Missing, malformed, or invalid Supabase Bearer token.
+        '404':
+          description: The topic is invalid or has no active seeded questions.
+      security:
+        - bearer: []
+      summary: Get quiz topic teaching content
+      tags:
+        - quiz
+  /api/v1/insights:
+    get:
+      operationId: InsightsController_getInsights
+      parameters: []
+      responses:
+        '200':
+          description: Insights returned successfully
+        '401':
+          description: Unauthorised
+      security:
+        - bearer: []
+      summary: Get rule-based insights for the authenticated user
+      tags:
+        - insights
+  /api/v1/cosmetics:
+    get:
+      description: >-
+        Returns every cosmetic item, as well as if the user owns it or has it
+        equipped.
+      operationId: CosmeticsController_getCatalogue
+      parameters: []
+      responses:
+        '200':
+          description: >-
+            The  cosmetics catalogue, with the user's status for the items equip
+            and owned status.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    - id: d1e2f3a4-b5c6-4d7e-8f9a-0b1c2d3e4f5a
+                      code: party_hat
+                      name: Party Hat
+                      slot: HAT
+                      cost: 50
+                      iconKey: hat_party
+                      equipped: false
+                      owned: false
+        '401':
+          description: Missing or invalid Supabase Bearer token.
+      security:
+        - bearer: []
+      summary: Get the cosmetics catalogue
+      tags:
+        - cosmetics
+  /api/v1/cosmetics/{id}/equip:
+    patch:
+      description: >-
+        Equips an owned cosmetic item, and unequips any item applied in the same
+        slot.
+      operationId: CosmeticsController_equip
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The cosmetic item was equipped successfully.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: hat-1-id
+                    slot: HAT
+                    equipped: true
+        '400':
+          description: The cosmetic item is not owned by the user.
+        '401':
+          description: Missing or invalid Supabase Bearer token.
+        '404':
+          description: The cosmetic item does not exist.
+      security:
+        - bearer: []
+      summary: Equip a cosmetic item
+      tags:
+        - cosmetics
+  /api/v1/cosmetics/{id}/unequip:
+    patch:
+      description: Unequips an active cosmetic item that is currently equipped by the user.
+      operationId: CosmeticsController_unequip
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The cosmetic item was unequipped successfully.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: hat-1-id
+                    slot: HAT
+                    equipped: false
+        '400':
+          description: The cosmetic item is not currently equipped.
+        '401':
+          description: Missing or invalid Supabase Bearer token.
+        '404':
+          description: The cosmetic item does not exist.
+      security:
+        - bearer: []
+      summary: Unequip a cosmetic item
+      tags:
+        - cosmetics
+  /api/v1/cosmetics/{id}/purchase:
+    post:
+      description: Purchases a cosmetic item using the current users coin balance.
+      operationId: CosmeticsController_purchase
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The cosmetic item was purchased successfully.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: hat-1-id
+                    code: party_hat
+                    owned: true
+                    coinBalance: 75
+        '400':
+          description: >-
+            The cosmetic item is already owned, or the user does not have enough
+            coins.
+        '401':
+          description: Missing or invalid Supabase Bearer token.
+        '404':
+          description: The cosmetic item does not exist.
+      security:
+        - bearer: []
+      summary: Purchase a cosmetic item
+      tags:
+        - cosmetics
+  /api/v1/wrapped/latest:
+    get:
+      operationId: MonthlyWrappedController_getMonthlyWrapped
+      parameters: []
+      responses:
+        '200':
+          description: Monthly Wrapped was returned successfully
+        '400':
+          description: Invalid year or month
+        '401':
+          description: Unauthorised
+      security:
+        - bearer: []
+      summary: Get the previous UTC calendar month's Wrapped
+      tags:
+        - wrapped
+  /api/v1/friends/search:
+    get:
+      description: >-
+        Matches display names and emails server-side without returning email
+        addresses. Excludes the caller, existing friends, and pending requests.
+      operationId: FriendsController_search
+      parameters:
+        - name: query
+          required: true
+          in: query
+          schema:
+            minLength: 2
+      responses:
+        '200':
+          description: Up to 20 privacy-safe user summaries.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    - id: 3c1f2a10-3e2b-4a2b-9f0a-1b2c3d4e5f6a
+                      displayName: Kahlan
+                      avatarUrl: null
+        '401':
+          description: Missing or invalid Bearer token.
+      security:
+        - bearer: []
+      summary: Search people to add as friends
+      tags:
+        - friends
+  /api/v1/friends/requests:
+    post:
+      operationId: FriendsController_createRequest
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFriendRequestDto'
+      responses:
+        '201':
+          description: The pending friend request.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
+                    senderId: 9f2d7f49-53a2-457c-8a50-8a9d22db83e4
+                    receiverId: 3c1f2a10-3e2b-4a2b-9f0a-1b2c3d4e5f6a
+                    status: PENDING
+                    createdAt: '2026-08-21T10:00:00.000Z'
+        '400':
+          description: >-
+            Invalid receiver, self-request, duplicate request, or existing
+            friendship.
+        '404':
+          description: Receiver does not exist.
+      security:
+        - bearer: []
+      summary: Send a friend request
+      tags:
+        - friends
+    get:
+      operationId: FriendsController_listRequests
+      parameters:
+        - name: direction
+          required: false
+          in: query
+          schema:
+            enum:
+              - incoming
+              - outgoing
+            type: string
+      responses:
+        '200':
+          description: ''
+      security:
+        - bearer: []
+      summary: List pending friend requests
+      tags:
+        - friends
+  /api/v1/friends/requests/{id}/accept:
+    patch:
+      operationId: FriendsController_acceptRequest
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Friend request is no longer pending.
+        '403':
+          description: Only the receiver may accept.
+        '404':
+          description: Friend request does not exist.
+      security:
+        - bearer: []
+      summary: Accept an incoming friend request
+      tags:
+        - friends
+  /api/v1/friends/requests/{id}/decline:
+    patch:
+      operationId: FriendsController_declineRequest
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Friend request is no longer pending.
+        '403':
+          description: Only the receiver may decline.
+        '404':
+          description: Friend request does not exist.
+      security:
+        - bearer: []
+      summary: Decline an incoming friend request
+      tags:
+        - friends
+  /api/v1/friends/requests/{id}:
+    delete:
+      operationId: FriendsController_cancelRequest
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Friend request is no longer pending.
+        '403':
+          description: Only the sender may cancel.
+        '404':
+          description: Friend request does not exist.
+      security:
+        - bearer: []
+      summary: Cancel an outgoing friend request
+      tags:
+        - friends
+  /api/v1/friends:
+    get:
+      operationId: FriendsController_listFriends
+      parameters: []
+      responses:
+        '200':
+          description: Privacy-safe summaries for every current friend.
+      security:
+        - bearer: []
+      summary: List the authenticated user’s friends
+      tags:
+        - friends
+  /api/v1/friends/leaderboard:
+    get:
+      operationId: FriendsController_listLeaderboard
+      parameters:
+        - name: page
+          required: false
+          in: query
+          schema:
+            minimum: 1
+            type: number
+        - name: metric
+          required: false
+          in: query
+          schema:
+            enum:
+              - xp
+              - coins
+              - streak
+            type: string
+      responses:
+        '200':
+          description: >-
+            A 20-entry leaderboard page with global ranks and pagination
+            metadata.
+      security:
+        - bearer: []
+      summary: Get the paginated friends leaderboard
+      tags:
+        - friends
+  /api/v1/friends/{friendId}:
+    get:
+      operationId: FriendsController_getFriend
+      parameters:
+        - name: friendId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The requested friend’s privacy-safe summary.
+        '404':
+          description: User is not a current friend.
+      security:
+        - bearer: []
+      summary: Get a friend’s public summary
+      tags:
+        - friends
+    delete:
+      operationId: FriendsController_removeFriend
+      parameters:
+        - name: friendId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Both friendship directions were removed.
+        '404':
+          description: User is not a current friend.
+      security:
+        - bearer: []
+      summary: Remove a current friend
+      tags:
+        - friends
+  /api/v1/wagers:
+    post:
+      operationId: WagersController_createWager
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWagerDto'
+      responses:
+        '201':
+          description: The pending wager was created.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+                    creatorId: 3c1f2a10-3e2b-4a2b-9f0a-1b2c3d4e5f6a
+                    opponentId: 9f2d7f49-53a2-457c-8a50-8a9d22db83e4
+                    taskType: ALL_PAYMENTS_ON_TIME
+                    stakeAmount: 50
+                    status: PENDING
+                    durationDays: 7
+                    invitedAt: '2026-08-09T09:00:00.000Z'
+                    startDate: null
+                    endDate: null
+                    resolvedAt: null
+                    creatorOutcome: null
+                    opponentOutcome: null
+                    isCreator: true
+        '400':
+          description: >-
+            Opponent is not a current friend, the caller challenged themselves,
+            or the creator has insufficient coins.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 400
+                  message: You can only create wagers with current friends
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers
+        '401':
+          description: Missing or invalid Bearer token.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 401
+                  message: Unauthorized
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers
+        '404':
+          description: Opponent does not exist.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 404
+                  message: Opponent not found
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers
+        '500':
+          description: Unexpected server failure.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 500
+                  message: Internal server error
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers
+      security:
+        - bearer: []
+      summary: Create a wager against a friend
+      tags:
+        - wagers
+    get:
+      operationId: WagersController_listWagers
+      parameters:
+        - name: status
+          required: false
+          in: query
+          description: Optional wager status filter.
+          schema:
+            enum:
+              - PENDING
+              - ACTIVE
+              - COMPLETED
+              - DECLINED
+              - CANCELLED
+              - EXPIRED
+            type: string
+      responses:
+        '200':
+          description: Wagers where the authenticated user is a participant.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    - id: c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+                      creatorId: 3c1f2a10-3e2b-4a2b-9f0a-1b2c3d4e5f6a
+                      creatorDisplayName: Kahlan
+                      opponentId: 9f2d7f49-53a2-457c-8a50-8a9d22db83e4
+                      opponentDisplayName: Rachel
+                      taskType: ALL_PAYMENTS_ON_TIME
+                      stakeAmount: 50
+                      status: ACTIVE
+                      durationDays: 7
+                      invitedAt: '2026-08-09T09:00:00.000Z'
+                      respondedAt: '2026-08-09T10:00:00.000Z'
+                      startDate: '2026-08-09T10:00:00.000Z'
+                      endDate: '2026-08-16T10:00:00.000Z'
+                      resolvedAt: null
+                      creatorOutcome: null
+                      opponentOutcome: null
+                      isCreator: true
+        '400':
+          description: Invalid wager status filter.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 400
+                  message: >-
+                    status must be one of the following values: PENDING, ACTIVE,
+                    COMPLETED, DECLINED, CANCELLED, EXPIRED
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers?status=INVALID
+        '401':
+          description: Missing or invalid Bearer token.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 401
+                  message: Unauthorized
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers
+        '500':
+          description: Unexpected server failure.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 500
+                  message: Internal server error
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers
+      security:
+        - bearer: []
+      summary: List the authenticated user’s wagers
+      tags:
+        - wagers
+  /api/v1/wagers/{id}:
+    get:
+      operationId: WagersController_getWager
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID of the wager.
+          schema:
+            example: c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+            type: string
+      responses:
+        '200':
+          description: The requested wager.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+                    creatorId: 3c1f2a10-3e2b-4a2b-9f0a-1b2c3d4e5f6a
+                    creatorDisplayName: Kahlan
+                    opponentId: 9f2d7f49-53a2-457c-8a50-8a9d22db83e4
+                    opponentDisplayName: Rachel
+                    taskType: ALL_PAYMENTS_ON_TIME
+                    stakeAmount: 50
+                    status: ACTIVE
+                    durationDays: 7
+                    invitedAt: '2026-08-09T09:00:00.000Z'
+                    respondedAt: '2026-08-09T10:00:00.000Z'
+                    startDate: '2026-08-09T10:00:00.000Z'
+                    endDate: '2026-08-16T10:00:00.000Z'
+                    resolvedAt: null
+                    creatorOutcome: null
+                    opponentOutcome: null
+                    isCreator: true
+        '401':
+          description: Missing or invalid Bearer token.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 401
+                  message: Unauthorized
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+        '403':
+          description: The authenticated user is not a participant in this wager.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 403
+                  message: You cannot access this wager
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+        '404':
+          description: Wager does not exist.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 404
+                  message: Wager not found
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+        '500':
+          description: Unexpected server failure.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 500
+                  message: Internal server error
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+      security:
+        - bearer: []
+      summary: Get a wager by ID
+      tags:
+        - wagers
+    delete:
+      operationId: WagersController_cancelWager
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID of the wager.
+          schema:
+            example: c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+            type: string
+      responses:
+        '200':
+          description: The wager was cancelled.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+                    status: CANCELLED
+        '400':
+          description: The wager is not pending.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 400
+                  message: Only a pending wager can be cancelled
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+        '401':
+          description: Missing or invalid Bearer token.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 401
+                  message: Unauthorized
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+        '403':
+          description: Only the creator can cancel the wager.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 403
+                  message: Only the creator can cancel this wager
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+        '404':
+          description: Wager does not exist.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 404
+                  message: Wager not found
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+        '500':
+          description: Unexpected server failure.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 500
+                  message: Internal server error
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+      security:
+        - bearer: []
+      summary: Cancel a pending wager
+      tags:
+        - wagers
+  /api/v1/wagers/{id}/accept:
+    patch:
+      operationId: WagersController_acceptWager
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID of the wager.
+          schema:
+            example: c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+            type: string
+      responses:
+        '200':
+          description: The wager was accepted and both stakes were deducted.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+                    status: ACTIVE
+                    respondedAt: '2026-08-09T10:00:00.000Z'
+                    startDate: '2026-08-09T10:00:00.000Z'
+                    endDate: '2026-08-16T10:00:00.000Z'
+                    coinBalance: 175
+        '400':
+          description: The wager is not pending or a participant has insufficient coins.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 400
+                  message: Only a pending wager can be accepted
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f/accept
+        '401':
+          description: Missing or invalid Bearer token.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 401
+                  message: Unauthorized
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f/accept
+        '403':
+          description: Only the invited opponent can accept the wager.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 403
+                  message: Only the invited opponent can accept this wager
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f/accept
+        '404':
+          description: Wager does not exist.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 404
+                  message: Wager not found
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f/accept
+        '500':
+          description: Unexpected server failure.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 500
+                  message: Internal server error
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f/accept
+      security:
+        - bearer: []
+      summary: Accept a pending wager
+      tags:
+        - wagers
+  /api/v1/wagers/{id}/decline:
+    patch:
+      operationId: WagersController_declineWager
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID of the wager.
+          schema:
+            example: c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+            type: string
+      responses:
+        '200':
+          description: The wager was declined.
+          content:
+            application/json:
+              schema:
+                example:
+                  data:
+                    id: c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f
+                    status: DECLINED
+        '400':
+          description: The wager is not pending.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 400
+                  message: Only a pending wager can be declined
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f/decline
+        '401':
+          description: Missing or invalid Bearer token.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 401
+                  message: Unauthorized
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f/decline
+        '403':
+          description: Only the invited opponent can decline the wager.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 403
+                  message: Only the invited opponent can decline this wager
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f/decline
+        '404':
+          description: Wager does not exist.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 404
+                  message: Wager not found
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f/decline
+        '500':
+          description: Unexpected server failure.
+          content:
+            application/json:
+              schema:
+                example:
+                  statusCode: 500
+                  message: Internal server error
+                  timestamp: '2026-08-10T10:00:00.000Z'
+                  path: /api/v1/wagers/c4d5e6f7-a8b9-4c0d-9e1f-2a3b4c5d6e7f/decline
+      security:
+        - bearer: []
+      summary: Decline a pending wager
+      tags:
+        - wagers
+info:
+  title: SpendSense Backend API
+  description: API documentation for the SpendSense NestJS backend.
+  version: '1.0'
+  contact: {}
+tags: []
+servers:
+  - url: http://localhost:3000
+    description: Local backend
+components:
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+  schemas:
+    UpdateProfileDto:
+      type: object
+      properties:
+        displayName:
+          type: string
+          example: Kyle M
+          minLength: 1
+          maxLength: 80
+        avatarUrl:
+          type: object
+          example: https://example.com/avatar.png
+          nullable: true
+        monthlyBudget:
+          type: number
+          example: 5000
+          minimum: 0
+          maximum: 9999999999.99
+        onboardingCompleted:
+          type: boolean
+          example: true
+    UpdatePreferencesDto:
+      type: object
+      properties:
+        theme:
+          type: string
+          enum:
+            - LIGHT
+            - DARK
+            - SYSTEM
+          example: LIGHT
+        language:
+          type: string
+          example: en
+          maxLength: 5
+        currency:
+          type: string
+          enum:
+            - ZAR
+            - USD
+            - EUR
+            - GBP
+          example: ZAR
+        reducedMotion:
+          type: boolean
+          example: true
+    CreateScheduleDto:
+      type: object
+      properties:
+        frequency:
+          type: string
+          enum:
+            - ONCE
+            - WEEKLY
+            - MONTHLY
+            - FIXED_INSTALLMENT
+          example: MONTHLY
+        interval:
+          type: number
+          example: 1
+          default: 1
+        dayOfMonth:
+          type: number
+          example: 1
+          description: Day of month (1-28) for MONTHLY schedules
+        totalOccurrences:
+          type: number
+          example: 6
+          description: Total instalments - required for FIXED_INSTALLMENT
+      required:
+        - frequency
+    CreateRemindersDto:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: true
+        daysBefore:
+          example:
+            - 3
+            - 1
+          type: array
+          items:
+            type: string
+        channels:
+          type: array
+          example:
+            - IN_APP
+          items:
+            type: string
+            enum:
+              - IN_APP
+              - EMAIL
+              - PUSH
+              - SMS
+    CreateObligationDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Netflix
+        description:
+          type: string
+          example: Monthly streaming subscription
+        type:
+          type: string
+          enum:
+            - RENT
+            - SUBSCRIPTION
+            - BNPL
+            - UTILITY
+            - IOU
+            - CUSTOM
+          example: SUBSCRIPTION
+        categoryId:
+          type: string
+          example: cat_subscriptions
+          description: Valid category ID
+        amount:
+          type: number
+          example: 199
+        currency:
+          type: string
+          enum:
+            - ZAR
+            - USD
+            - EUR
+            - GBP
+          example: ZAR
+          default: ZAR
+        priority:
+          type: string
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+          example: MEDIUM
+          default: MEDIUM
+        startDate:
+          type: string
+          example: '2026-05-01'
+        endDate:
+          type: string
+          example: null
+        schedule:
+          $ref: '#/components/schemas/CreateScheduleDto'
+        reminders:
+          $ref: '#/components/schemas/CreateRemindersDto'
+      required:
+        - name
+        - type
+        - categoryId
+        - amount
+        - startDate
+        - schedule
+    UpdateScheduleDto:
+      type: object
+      properties:
+        frequency:
+          type: string
+          enum:
+            - ONCE
+            - WEEKLY
+            - MONTHLY
+            - FIXED_INSTALLMENT
+        interval:
+          type: number
+        dayOfMonth:
+          type: number
+    UpdateObligationDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Netflix Premium
+        description:
+          type: string
+        amount:
+          type: number
+          example: 229
+        priority:
+          type: string
+          enum:
+            - LOW
+            - MEDIUM
+            - HIGH
+            - CRITICAL
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - PAUSED
+            - COMPLETED
+            - CANCELLED
+        endDate:
+          type: string
+          example: '2026-06-01'
+        schedule:
+          $ref: '#/components/schemas/UpdateScheduleDto'
+        regenerateFutureOccurrences:
+          type: boolean
+          example: true
+          description: Regenerate future unpaid occurrences after a schedule change
+    BulkNotificationIdsDto:
+      type: object
+      properties: {}
+    LogPaymentDto:
+      type: object
+      properties: {}
+    UpdateReminderPreferencesDto:
+      type: object
+      properties:
+        defaultReminderDaysBefore:
+          type: number
+          example: 3
+          enum:
+            - 1
+            - 3
+            - 5
+            - 7
+          description: Days before an occurrence is due to send reminder
+        inAppEnabled:
+          type: boolean
+          example: true
+          description: Whether the user will receive in app notifications
+    CreateQuizSessionDto:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - DAILY
+            - TOPIC
+          example: DAILY
+        topic:
+          type: string
+          enum:
+            - BUDGETING
+            - CREDIT_SCORE
+            - INTEREST
+            - DEBT
+            - BNPL
+            - SUBSCRIPTIONS
+          example: CREDIT_SCORE
+          description: Required when type is TOPIC.
+      required:
+        - type
+    SubmitQuizAnswerDto:
+      type: object
+      properties:
+        questionId:
+          type: string
+          example: question_123
+        selectedOptionKey:
+          type: string
+          example: A
+      required:
+        - questionId
+        - selectedOptionKey
+    CreateFriendRequestDto:
+      type: object
+      properties: {}
+    CreateWagerDto:
+      type: object
+      properties:
+        opponentId:
+          type: string
+          example: 9f2d7f49-53a2-457c-8a50-8a9d22db83e4
+          description: ID of the friend being challenged.
+        taskType:
+          type: string
+          enum:
+            - ALL_PAYMENTS_ON_TIME
+            - NO_MISSED_PAYMENTS
+            - MAINTAIN_PAYMENT_STREAK
+          example: ALL_PAYMENTS_ON_TIME
+          description: Task the participants will compete on.
+        stakeAmount:
+          type: number
+          example: 50
+          minimum: 0
+          description: Coin amount staked by each participant.
+        durationDays:
+          type: number
+          example: 7
+          minimum: 1
+          description: Length of the wager in days after acceptance.
+      required:
+        - opponentId
+        - taskType
+        - stakeAmount
+        - durationDays

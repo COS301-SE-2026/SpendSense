@@ -202,11 +202,11 @@ jobs:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
           for i in $(seq 1 10); do
-            if curl -fsS "$BACKEND_URL/api/v1/health/ready" | jq -e '.data.status == "healthy" or .data.status == "degraded"' >/dev/null; then
+            if curl -fsS "$BACKEND_URL/api/v1/health/ready" | jq -e '.data.status == "healthy"' >/dev/null; then
               echo "Readiness check passed"
               exit 0
             fi
-            echo "Attempt $i failed, retrying in 10s..."
+            echo "Attempt $i did not report a healthy backend, database, and AI service; retrying in 10s..."
             sleep 10
           done
           echo "Readiness check never passed after 10 attempts"

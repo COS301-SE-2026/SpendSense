@@ -3,7 +3,7 @@ import {describe, it, expect, vi, beforeEach} from "vitest"
 import {render, screen, waitFor, within} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import "@testing-library/jest-dom/vitest"
-import {MemoryRouter} from "react-router-dom"
+import {MemoryRouter, Route, Routes} from "react-router-dom"
 import MascotShopPage from "../domains/MascotShopPage"
 import type {CosmeticItem} from "../features/cosmetics/cosmeticsTypes"
 
@@ -55,6 +55,17 @@ vi.mock("@/hooks/useGamificationProfile", () => ({
         refetch: mockRefetchProfile,
     }),
 }))
+
+function renderPageWithRoutes(initialPath: string) {
+    return render(
+        <MemoryRouter initialEntries={[initialPath]}>
+            <Routes>
+                <Route path="/mascot/shop" element={<MascotShopPage />} />
+                <Route path="/mascot" element={<div>Mascot Home Test</div>} />
+            </Routes>
+        </MemoryRouter>
+    )
+}
 
 function crown(overrides: Partial<CosmeticItem> = {}): CosmeticItem{
     return {
@@ -235,5 +246,27 @@ describe("MascotShopPage", () => {
         renderPage()
         expect(await screen.findByText("Server exploded")).toBeInTheDocument()
         expect(screen.getByRole("button", {name: /please try again/i})).toBeInTheDocument()
+    })
+
+    it("returns to mascot home from shop back button", async () => {
+        const user = userEvent.setup()
+
+        renderPageWithRoutes("/mascot/shop")
+
+        await screen.findByText("Crown")
+        await user.click(screen.getByRole("button", {name: "Back"}))
+
+        expect(screen.getByText("Mascot Home Test")).toBeInTheDocument()
+    })
+
+    it("returns to mascot home from wardrobe back button", async () => {
+        const user = userEvent.setup()
+
+        renderPageWithRoutes("/mascot/shop?view=owned")
+
+        await screen.findByText(/wardrobe is empty/i)
+        await user.click(screen.getByRole("button", {name: "Back"}))
+
+        expect(screen.getByText("Mascot Home Test")).toBeInTheDocument()
     })
 })

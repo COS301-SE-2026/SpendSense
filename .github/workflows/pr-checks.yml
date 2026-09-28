@@ -107,5 +107,11 @@ jobs:
       - name: Lint AI service
         run: python -m ruff check .
 
+      - name: Install Tesseract
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
+          tesseract --version
+
       - name: Test AI service
         run: python -m pytest

@@ -66,12 +66,13 @@ export function StreakCarousel({
 
     return (
         <div
-			className={cn("relative w-full max-w-[280px]", className)}
+			className={cn("w-full max-w-[320px]", className)}
 			role="group"
 			aria-roledescription="carousel"
 			aria-label="Streaks"
 			onKeyDown={handleKeyDown}
 		>
+            <div className="relative">
             <div
 				className="overflow-hidden rounded-2xl bg-[#FFF4F7] dark:bg-[#1c263c]"
 				onTouchStart={handleTouchStart}
@@ -90,7 +91,7 @@ export function StreakCarousel({
                         return(
                             <div
 								key={panel.key}
-								className="flex w-full shrink-0 flex-col items-center px-9 py-4"
+								className="flex w-full shrink-0 flex-col items-center px-14 py-4"
 								role="group"
 								aria-roledescription="slide"
 								aria-label={`${panel.title}, ${panelIndex + 1} of ${count}`}
@@ -112,6 +113,7 @@ export function StreakCarousel({
 										(_, tickIndex)=> tickIndex,
 									)}
 									size="sm"
+									className="gap-1.5"
 									aria-label={`${panel.days} day ${panel.title.toLowerCase()}`}
 								/>
 
@@ -125,13 +127,13 @@ export function StreakCarousel({
                 </div>  
             </div>
 
-            {count >1 && (
+            {count > 1 && (
                 <>
                     <button
 						type="button"
 						onClick={goPrevious}
 						aria-label="Show previous streak"
-						className="absolute left-0 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#AC2A5D] shadow-sm transition hover:bg-[#FFD9E1] active:translate-x-[1px] dark:bg-[#131b2e] dark:text-[#ff6b9d] dark:hover:bg-[#2d1b2e]"
+						className="absolute left-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#AC2A5D] shadow-sm transition hover:bg-[#FFD9E1] active:translate-x-[1px] dark:bg-[#131b2e] dark:text-[#ff6b9d] dark:hover:bg-[#2d1b2e]"
 					>
 						<ChevronLeft className="size-4" />
 					</button>
@@ -140,11 +142,16 @@ export function StreakCarousel({
 						type="button"
 						onClick={goNext}
 						aria-label="Show next streak"
-						className="absolute right-0 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#AC2A5D] shadow-sm transition hover:bg-[#FFD9E1] active:translate-x-[1px] dark:bg-[#131b2e] dark:text-[#ff6b9d] dark:hover:bg-[#2d1b2e]"
+						className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#AC2A5D] shadow-sm transition hover:bg-[#FFD9E1] active:translate-x-[1px] dark:bg-[#131b2e] dark:text-[#ff6b9d] dark:hover:bg-[#2d1b2e]"
 					>
 						<ChevronRight className="size-4" />
 					</button>
+                </>
+            )}
+            </div>
 
+            {count > 1 && (
+                <>
                     <div className="mt-2 flex items-center justify-center gap-1.5">
 						{panels.map((panel, panelIndex)=> (
 							<button

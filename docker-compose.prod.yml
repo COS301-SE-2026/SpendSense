@@ -28,6 +28,8 @@ services:
     image: ghcr.io/${GHCR_OWNER}/spendsense-ai:${IMAGE_TAG:-latest}
     container_name: spendsense_ai
     restart: unless-stopped
+    env_file:
+      - .env.production
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)\""]
       interval: 10s

@@ -16,7 +16,7 @@ import {
 
 import { cn } from "@/lib/utils"
 
-type CarouselSlide = "wrapped" | "quests" | "insights" | "stickers"
+type CarouselSlide = "wrapped" | "simulation" | "quests" | "insights" | "stickers"
 
 type DashboardCarouselProps = {
     stickersCollected?: number
@@ -30,6 +30,7 @@ export function DashboardCarousel({ stickersCollected, stickersTotal, }: Dashboa
 
     const slides: CarouselSlide[] = [
         ...(showWrapped ? (["wrapped"] as CarouselSlide[]) : []),
+        "simulation",
         "quests",
         "insights",
         "stickers",
@@ -218,6 +219,39 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                 </Link>
             )
 
+        case "simulation":
+            return (
+                <Link
+                    to="/simulation"
+                    onClick={onClick}
+                    className={cn(sharedClass, "bg-[#DCEFE8] dark:bg-[#12463d] dark:text-white")}
+                    style={slideStyle}
+                    aria-label="Open Simulated month"
+                >
+                    <div className="flex items-center gap-3">
+                        <SlideIcon tone="lilac">
+                            <span className="relative grid size-6 place-items-center rounded-md border-2 border-[#091828] bg-[#FF6B9D] shadow-[1px_2px_0_#091828] [transform:rotate(-5deg)] dark:border-[#060e20] dark:shadow-[1px_2px_0_#060e20]">
+                                <span className="absolute -top-1.5 left-1 h-2.5 w-1 rounded-full border border-[#091828] bg-white dark:border-[#060e20]" />
+                                <span className="absolute -top-1.5 right-1 h-2.5 w-1 rounded-full border border-[#091828] bg-white dark:border-[#060e20]" />
+                                <strong className="text-[10px] font-black leading-none">30</strong>
+                            </span>
+                        </SlideIcon>
+                        <p className="flex-1 text-[11px] font-black uppercase tracking-[0.12em]">Simulated month</p>
+                        <ChevronRight className="size-5 text-[#16635A] dark:text-[#7fd8c4]" />
+                    </div>
+
+                    <h3 className="mt-2 text-lg font-extrabold leading-tight">Your 30-day money challenge</h3>
+                    <p className="mt-2 max-w-[28ch] text-xs leading-relaxed text-[#356B61] dark:text-[#b7e9dc]">
+                        Practise real-life choices with fictional money.
+                    </p>
+
+                    <div className="mt-3 flex w-fit items-center gap-2 rounded-xl border border-[#9CCFBE] bg-white/70 px-2.5 py-1.5 text-[10px] font-bold dark:border-[#2d7567] dark:bg-[#0b342d]">
+                        <span className="rounded-full bg-[#C5E6D8] px-1.5 py-0.5 font-black uppercase tracking-wide text-[#16635A] dark:bg-[#1c6256] dark:text-[#d8f6ec]">30 days</span>
+                        <span className="text-[#356B61] dark:text-[#b7e9dc]">Fictional budget</span>
+                    </div>
+                </Link>
+            )
+
         case "quests":
             return (
                 <Link
@@ -279,7 +313,7 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                 >
                     <div className="flex items-center gap-3">
                         <SlideIcon tone="yellow"> <Images className="size-5" /> </SlideIcon>
-                        <p className="flex-1 text-[11px] font-black uppercase tracking-[0.12em]"> Stickers</p>
+                        <p className="flex-1 text-[11px] font-black uppercase tracking-[0.12em]"> Badges </p>
                         {hasStickerCounts && stickersCollected !== undefined && (
                             <span className="whitespace-nowrap text-[10px] font-semibold text-[#6B6375] dark:text-[#a0aec0]">
                                 {stickersCollected} collected! {stickersRemaining} to go
@@ -289,11 +323,11 @@ function CarouselCard({ slide, wrappedMonth, hasStickerCounts, stickersCollected
                     </div>
 
                     <div className="mt-3 flex items-baseline justify-between gap-3">
-                        <h3 className="text-lg font-extrabold">Sticker album</h3>
+                        <h3 className="text-lg font-extrabold">Badge album</h3>
                     </div>
 
                     <p className="mt-3 text-xs leading-relaxed text-[#6B6375] dark:text-[#a0aec0]">
-                        Open your album to see the stickers you have earned.
+                        Open your album to see the badges you have earned.
                     </p>
 
                     <StickerPreview />

@@ -14,6 +14,7 @@ import {
   ScheduleFrequency,
   UserEventSourceType,
   UserEventType,
+  Prisma,
 } from '@prisma/client';
 import { CreateObligationDto } from './dto/create-obligation.dto';
 import { ListObligationsDto } from './dto/list-obligations.dto';
@@ -37,8 +38,19 @@ export class ObligationsService {
     dto: CreateObligationDto,
     defaultReminderDaysBefore: number,
   ) {
+    return this.prisma.$transaction((tx) =>
+      this.createWithTransaction(tx, userId, dto, defaultReminderDaysBefore),
+    );
+  }
+
+  async createWithTransaction(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    dto: CreateObligationDto,
+    defaultReminderDaysBefore: number,
+  ) {
     // validate that category actually exists
-    const category = await this.prisma.category.findUnique({
+    const category = await tx.category.findUnique({
       where: { id: dto.categoryId },
     });
 
@@ -62,155 +74,151 @@ export class ObligationsService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const obligation = await tx.financialObligation.create({
-        data: {
-          userId,
-          categoryId: dto.categoryId,
-          name: dto.name,
-          description: dto.description,
-          type: dto.type,
-          status: ObligationStatus.ACTIVE,
-          amount: dto.amount,
-          currency: dto.currency ?? Currency.ZAR,
-          priority: dto.priority ?? ObligationPriority.MEDIUM,
-          startDate: new Date(dto.startDate),
-          endDate: dto.endDate ? new Date(dto.endDate) : null,
-        },
-        include: {
-          category: { select: { id: true, name: true, iconKey: true } },
-        },
-      });
+    const obligation = await tx.financialObligation.create({
+      data: {
+        userId,
+        categoryId: dto.categoryId,
+        name: dto.name,
+        description: dto.description,
+        type: dto.type,
+        status: ObligationStatus.ACTIVE,
+        amount: dto.amount,
+        currency: dto.currency ?? Currency.ZAR,
+        priority: dto.priority ?? ObligationPriority.MEDIUM,
+        startDate: new Date(dto.startDate),
+        endDate: dto.endDate ? new Date(dto.endDate) : null,
+      },
+      include: {
+        category: { select: { id: true, name: true, iconKey: true } },
+      },
+    });
 
-      const schedule = await tx.paymentSchedule.create({
-        data: {
-          obligationId: obligation.id,
-          frequency: dto.schedule.frequency,
-          interval: dto.schedule.interval ?? 1,
-          dayOfMonth: dto.schedule.dayOfMonth ?? null,
-          startDate: new Date(dto.startDate),
-          endDate: dto.endDate ? new Date(dto.endDate) : null,
-          totalOccurrences: dto.schedule.totalOccurrences ?? null,
-          isActive: true,
-        },
-      });
+    const schedule = await tx.paymentSchedule.create({
+      data: {
+        obligationId: obligation.id,
+        frequency: dto.schedule.frequency,
+        interval: dto.schedule.interval ?? 1,
+        dayOfMonth: dto.schedule.dayOfMonth ?? null,
+        startDate: new Date(dto.startDate),
+        endDate: dto.endDate ? new Date(dto.endDate) : null,
+        totalOccurrences: dto.schedule.totalOccurrences ?? null,
+        isActive: true,
+      },
+    });
 
-      const occurrenceDates = generateOccurrenceDates(
-        dto.schedule.frequency,
-        dto.schedule.interval ?? 1,
-        dto.schedule.dayOfMonth,
-        new Date(dto.startDate),
-        dto.endDate ? new Date(dto.endDate) : null,
-        dto.schedule.totalOccurrences ?? null,
-      );
+    const occurrenceDates = generateOccurrenceDates(
+      dto.schedule.frequency,
+      dto.schedule.interval ?? 1,
+      dto.schedule.dayOfMonth,
+      new Date(dto.startDate),
+      dto.endDate ? new Date(dto.endDate) : null,
+      dto.schedule.totalOccurrences ?? null,
+    );
 
-      const occurrences = await Promise.all(
-        occurrenceDates.map((dueDate, index) =>
-          tx.paymentOccurrence.create({
-            data: {
-              userId,
-              obligationId: obligation.id,
-              scheduleId: schedule.id,
-              dueDate,
-              amountDue: dto.amount,
-              currency: dto.currency ?? Currency.ZAR,
-              status: PaymentOccurrenceStatus.PENDING,
-              sequenceNumber: index + 1,
-            },
-          }),
-        ),
-      );
+    const occurrences = await Promise.all(
+      occurrenceDates.map((dueDate, index) =>
+        tx.paymentOccurrence.create({
+          data: {
+            userId,
+            obligationId: obligation.id,
+            scheduleId: schedule.id,
+            dueDate,
+            amountDue: dto.amount,
+            currency: dto.currency ?? Currency.ZAR,
+            status: PaymentOccurrenceStatus.PENDING,
+            sequenceNumber: index + 1,
+          },
+        }),
+      ),
+    );
 
-      const remindersEnabled = dto.reminders?.enabled !== false;
-      const daysBefore = dto.reminders?.daysBefore ?? [
-        defaultReminderDaysBefore,
-      ];
-      const channels = dto.reminders?.channels ?? [ReminderChannel.IN_APP];
+    const remindersEnabled = dto.reminders?.enabled !== false;
+    const daysBefore = dto.reminders?.daysBefore ?? [defaultReminderDaysBefore];
+    const channels = dto.reminders?.channels ?? [ReminderChannel.IN_APP];
 
-      const createdReminders: Array<{
-        id: string;
-        occurrenceId: string;
-        channel: string;
-        scheduledFor: Date;
-        status: string;
-      }> = [];
-      if (remindersEnabled) {
-        for (const occurrence of occurrences) {
-          for (const days of daysBefore) {
-            const scheduledFor = new Date(occurrence.dueDate);
-            scheduledFor.setDate(scheduledFor.getDate() - days);
+    const createdReminders: Array<{
+      id: string;
+      occurrenceId: string;
+      channel: string;
+      scheduledFor: Date;
+      status: string;
+    }> = [];
+    if (remindersEnabled) {
+      for (const occurrence of occurrences) {
+        for (const days of daysBefore) {
+          const scheduledFor = new Date(occurrence.dueDate);
+          scheduledFor.setDate(scheduledFor.getDate() - days);
 
-            if (scheduledFor > new Date()) {
-              const reminder = await tx.reminder.create({
-                data: {
-                  userId,
-                  occurrenceId: occurrence.id,
-                  channel: channels[0] ?? ReminderChannel.IN_APP,
-                  scheduledFor,
-                  status: ReminderStatus.SCHEDULED,
-                  priority: obligation.priority,
-                  message: `${obligation.name} is due in ${days} day${days === 1 ? '' : 's'}.`,
-                },
-              });
-              createdReminders.push(reminder);
-            }
+          if (scheduledFor > new Date()) {
+            const reminder = await tx.reminder.create({
+              data: {
+                userId,
+                occurrenceId: occurrence.id,
+                channel: channels[0] ?? ReminderChannel.IN_APP,
+                scheduledFor,
+                status: ReminderStatus.SCHEDULED,
+                priority: obligation.priority,
+                message: `${obligation.name} is due in ${days} day${days === 1 ? '' : 's'}.`,
+              },
+            });
+            createdReminders.push(reminder);
           }
         }
       }
+    }
 
-      const event = await tx.userEvent.create({
-        data: {
-          userId,
-          eventType: UserEventType.OBLIGATION_CREATED,
-          sourceType: UserEventSourceType.FINANCIAL_OBLIGATION,
-          sourceId: obligation.id,
-        },
-      });
-      const settlement = await this.rewardService.settleAction(tx, {
+    const event = await tx.userEvent.create({
+      data: {
+        userId,
+        eventType: UserEventType.OBLIGATION_CREATED,
+        sourceType: UserEventSourceType.FINANCIAL_OBLIGATION,
+        sourceId: obligation.id,
+      },
+    });
+    const settlement = await this.rewardService.settleAction(tx, {
+      userId,
+      sourceEventId: event.id,
+      xp: { amount: OBLIGATION_LOG_XP },
+    });
+    await this.badgeEngineService.evaluateObligationBadges(
+      {
         userId,
         sourceEventId: event.id,
-        xp: { amount: OBLIGATION_LOG_XP },
-      });
-      await this.badgeEngineService.evaluateObligationBadges(
-        {
-          userId,
-          sourceEventId: event.id,
-        },
-        tx,
-      );
+      },
+      tx,
+    );
 
-      return {
-        obligation,
-        schedule,
-        generatedOccurrences: occurrences.map((o) => ({
-          id: o.id,
-          dueDate: o.dueDate,
-          amountDue: Number(o.amountDue),
-          status: o.status,
-          sequenceNumber: o.sequenceNumber,
-        })),
+    return {
+      obligation,
+      schedule,
+      generatedOccurrences: occurrences.map((o) => ({
+        id: o.id,
+        dueDate: o.dueDate,
+        amountDue: Number(o.amountDue),
+        status: o.status,
+        sequenceNumber: o.sequenceNumber,
+      })),
 
-        createdReminders: createdReminders.map((r) => ({
-          id: r.id,
-          occurrenceId: r.occurrenceId,
-          channel: r.channel,
-          scheduledFor: r.scheduledFor,
-          status: r.status,
-        })),
+      createdReminders: createdReminders.map((r) => ({
+        id: r.id,
+        occurrenceId: r.occurrenceId,
+        channel: r.channel,
+        scheduledFor: r.scheduledFor,
+        status: r.status,
+      })),
 
-        event: {
-          type: event.eventType,
-          sourceType: event.sourceType,
-          sourceId: event.sourceId,
-        },
-        rewards: {
-          xpAwarded: OBLIGATION_LOG_XP,
-          xp: settlement.xp ?? 0,
-          mascotLevel: settlement.mascotLevel ?? 0,
-          leveledUp: settlement.leveledUp ?? false,
-        },
-      };
-    });
+      event: {
+        type: event.eventType,
+        sourceType: event.sourceType,
+        sourceId: event.sourceId,
+      },
+      rewards: {
+        xpAwarded: OBLIGATION_LOG_XP,
+        xp: settlement.xp ?? 0,
+        mascotLevel: settlement.mascotLevel ?? 0,
+        leveledUp: settlement.leveledUp ?? false,
+      },
+    };
   }
 
   async list(userId: string, query: ListObligationsDto) {

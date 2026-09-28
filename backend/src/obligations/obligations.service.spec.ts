@@ -23,6 +23,7 @@ describe('ObligationsService', () => {
     settleAction: jest.Mock;
   };
   let transaction: {
+    category: { findUnique: jest.Mock };
     paymentOccurrence: { create: jest.Mock };
     paymentSchedule: { create: jest.Mock };
     userEvent: { create: jest.Mock };
@@ -51,6 +52,11 @@ describe('ObligationsService', () => {
 
   beforeEach(() => {
     transaction = {
+      category: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'category-1',
+        }),
+      },
       paymentOccurrence: {
         create: jest.fn().mockResolvedValue({
           id: 'occurrence-1',
