@@ -144,12 +144,17 @@ jobs:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
           for i in $(seq 1 10); do
-            if curl -sf "$BACKEND_URL/api/v1/health"; then
-              echo "Health check passed"
+            if response="$(curl --fail --silent --show-error --max-time 10 "$BACKEND_URL/api/v1/health")" \
+              && jq -e '
+                .data.status == "healthy"
+                and .data.services.database == "up"
+                and .data.services.ai == "up"
+              ' >/dev/null <<<"$response"; then
+              echo "Backend, database, and AI health checks passed"
               exit 0
             fi
-            echo "Attempt $i failed, retrying in 10s..."
+            echo "Attempt $i did not report a healthy backend, database, and AI service; retrying in 10s..."
             sleep 10
           done
-          echo "Health check never passed after 10 attempts"
+          echo "Deployment health check never passed after 10 attempts"
           exit 1
