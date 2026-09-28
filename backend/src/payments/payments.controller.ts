@@ -40,6 +40,7 @@ import { ContributionHistoryQueryDto } from './dto/contribution-history-query.dt
 import { PaymentQueriesService } from './payment-queries.service';
 
 import { VoidContributionDto } from './dto/void-contribution.dto';
+import { CreateOneOffPaymentDto } from './dto/create-one-off-payment.dto';
 
 @ApiTags('payments')
 @ApiBearerAuth()
@@ -258,6 +259,39 @@ export class PaymentsController {
       user.id,
       contributionId,
       dto.reason,
+    );
+  }
+
+  @Post('one-off')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create and fully settle a new one-off payment',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    schema: {
+      type: 'string',
+      format: 'uuid',
+    },
+  })
+  async createOneOffPayment(
+    @CurrentAuthUser() authUser: AuthUser,
+    @Body() dto: CreateOneOffPaymentDto,
+    @Headers('idempotency-key') idempotencyKey: string,
+  ) {
+    if (!isUUID(idempotencyKey, '4')) {
+      throw new BadRequestException(
+        'A valid UUID Idempotency-Key header is required',
+      );
+    }
+
+    const user = await this.usersService.findOrCreateUser(authUser);
+
+    return this.paymentsService.createOneOffPayment(
+      user.id,
+      dto,
+      idempotencyKey,
     );
   }
 }
