@@ -13,6 +13,11 @@ import {
   ScoreTier,
   UserEventSourceType,
   UserEventType,
+  Currency,
+  ObligationPriority,
+  ObligationType,
+  PaymentContributionSource,
+  ScheduleFrequency,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LogPaymentDto } from './dto/log-payment.dto';
@@ -20,6 +25,10 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { BadgeEngineService } from '../gamification/badge-engine.service';
 import { RewardService } from '../rewards/reward.service';
 import { CreditScoreService } from '../credit-score/credit-score.service';
+
+import { ObligationsService } from '../obligations/obligations.service';
+import { PaymentContributionsService } from './payment-contributions.service';
+import { CreateOneOffPaymentDto } from './dto/create-one-off-payment.dto';
 
 const ON_TIME_COINS = 15;
 const ON_TIME_XP = 10;
@@ -77,6 +86,9 @@ export class PaymentsService {
     private readonly badgeEngineService: BadgeEngineService,
     private readonly rewardService: RewardService,
     private readonly creditScoreService: CreditScoreService,
+
+    private readonly obligationsService: ObligationsService,
+    private readonly paymentContributionsService: PaymentContributionsService,
   ) {}
 
   async logPayment(
@@ -306,6 +318,74 @@ export class PaymentsService {
           simulatedInterest: simulatedInterestCalculation,
         },
       };
+    });
+  }
+
+  async createOneOffPayment(
+    userId: string,
+    dto: CreateOneOffPaymentDto,
+    idempotencyKey: string,
+  ) {
+    const category = await this.prisma.category.findFirst({
+      where: {
+        name: 'Custom',
+      },
+    });
+
+    if (!category) {
+      throw new BadRequestException('Custom category could not be found');
+    }
+
+    const paidDate = new Date(dto.paidDate);
+
+    const obligationDto = {
+      name: dto.name.trim(),
+      categoryId: category.id,
+      type: ObligationType.CUSTOM,
+      priority: ObligationPriority.LOW,
+      amount: dto.amount,
+      currency: Currency.ZAR,
+      startDate: dto.paidDate,
+
+      schedule: {
+        frequency: ScheduleFrequency.ONCE,
+        interval: 1,
+      },
+
+      reminders: {
+        enabled: false,
+      },
+    };
+
+    return this.prisma.$transaction(async (tx) => {
+      const obligation = await this.obligationsService.createWithTransaction(
+        tx,
+        userId,
+        obligationDto,
+        0,
+      );
+
+      const occurrence = obligation.generatedOccurrences[0];
+
+      if (!occurrence) {
+        throw new BadRequestException(
+          'No payment occurrence was generated for the obligation',
+        );
+      }
+
+      return this.paymentContributionsService.createContributionWithTransaction(
+        tx,
+        {
+          userId,
+          occurrenceId: occurrence.id,
+          amount: new Prisma.Decimal(dto.amount),
+          currency: Currency.ZAR,
+          paidDate,
+          source: PaymentContributionSource.MANUAL,
+          idempotencyKey,
+          notes: dto.notes?.trim() || undefined,
+        },
+      );
     });
   }
 }

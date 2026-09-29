@@ -7,6 +7,7 @@ import type {Notification,NotificationsResponse} from "../types/NotificationType
 const mocks=vi.hoisted(()=>({
     getNotifications:vi.fn(),
     refreshUnreadCount:vi.fn(),
+    getCurrentSession:vi.fn(),
 }))
 
 vi.mock("../features/notifications/notificationsApi",()=>({
@@ -37,6 +38,10 @@ vi.mock("../components/notifications/NotificationToast",()=>({
             </button>
         </div>
     ),
+}))
+
+vi.mock("../features/auth/auth.service",()=>({
+    getCurrentSession:mocks.getCurrentSession,
 }))
 
 import {NotificationListener} from "../features/notifications/NotificationListener"
@@ -120,7 +125,11 @@ describe("NotificationListener",()=>{
     beforeEach(()=>{
         vi.useFakeTimers()
         vi.clearAllMocks()
+
         mocks.refreshUnreadCount.mockResolvedValue(undefined)
+        mocks.getCurrentSession.mockResolvedValue({
+            access_token:"test-token",
+        })
     })
     afterEach(()=>{
         cleanup()

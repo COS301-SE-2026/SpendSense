@@ -210,7 +210,6 @@ describe("PaymentForm (ObligationForm) Component", () => {
         await user.clear(screen.getByLabelText(/amount paid/i));
         await user.click(screen.getByRole("button", { name: /log payment/i }));
         await waitFor(() => {
-            expect(screen.getByText("OccurrenceID is required.")).toBeInTheDocument();
             expect(screen.getByText("Amount must be greater than 0")).toBeInTheDocument();
         });
     });

@@ -1,20 +1,11 @@
 import * as React from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { Calendar, Repeat2, PiggyBank, CreditCard, Banknote, Bell } from "lucide-react"
+import { PiggyBank, Bell } from "lucide-react"
 import { CustomCard } from "@/components/ui/CustomCard"
 import { Toggle } from "@/components/common/Toggle"
 import { useGuidanceOptional } from "@/features/guidance/useGuidance"
 import { getReminderPreferences, updateReminderPreferences } from "@/features/reminders/remindersApi"
-import { cn } from "@/lib/utils"
 import { updateMe } from "@/features/users/usersApi"
-
-const GOAL_OPTIONS = [
-    {id: "payments", label: "Pay on time", icon: <Calendar className="size-5"/>},
-    {id: "savings", label: "Save more money", icon: <PiggyBank className="size-5"/>},
-    {id: "habits", label: "Build lasting habits", icon: <Repeat2 className="size-5"/>},
-    {id: "spending", label: "Cut back on spending", icon: <Banknote className="size-5"/>},
-    {id: "credit", label: "Learn about credit", icon: <CreditCard className="size-5"/>},
-]
 
 const REMINDER_DAY_OPTIONS = [1, 3, 5, 7]
 
@@ -29,7 +20,6 @@ export default function OnboardingPage(){
     const nav = useNavigate()
     const guidance = useGuidanceOptional()
 
-    const [goals, setGoals] = React.useState<string[]>([])
     const [reminderDaysBefore, setReminderDaysBefore] = React.useState(3)
     const [inAppEnabled, setInAppEnabled] = React.useState(true)
     const [error, setError] = React.useState(false)
@@ -52,12 +42,6 @@ export default function OnboardingPage(){
         })
         return () => { cancelled = true }
     }, [])
-
-    function toggleGoal(id: string){
-        setGoals((prev)=>
-            prev.includes(id) ? prev.filter((g)=> g !== id) : [...prev, id]
-        )
-    }
 
     function leaveOnboarding(forceTour: boolean = false){
         if(guidance){
@@ -148,29 +132,7 @@ export default function OnboardingPage(){
                     <p className="mt-1 text-sm text-[#6B6375]">Customise your experience, or skip and change it later.</p>
                 </div>
 
-                <CustomCard variant="navyBorder" className="mt-6 bg-white p-5 rounded-3xl">
-                    <h2 className="font-bold text-sm text-[#091828]">What are your main goals?</h2>
-
-                    <div className="mt-4 grid grid-cols-3 gap-2">
-                        {GOAL_OPTIONS.map((goal)=>{
-                            const selected = goals.includes(goal.id)
-
-                            return(
-                                <button
-                                    key={goal.id}
-                                    type="button"
-                                    onClick={()=> toggleGoal(goal.id)}
-                                    className={cn("flex flex-col items-center rounded-2xl gap-2 border-2 text-center transition px-2 py-4", selected ? "border-[#AC2A5D] bg-[#FFD8E6]" : "border-[#E8E4F4] bg-white")}
-                                >
-                                    <span className={cn(selected ? "text-[#AC2A5D]" : "text-[#091828]")}>{goal.icon}</span>
-                                    <span className="font-semibold text-[11px] leading-tight text-[#091828]">{goal.label}</span>
-                                </button>
-                            )
-                        })}
-                    </div>
-                </CustomCard>
-
-                <CustomCard variant="navyBorder" size="sm" className="mt-4">
+                <CustomCard variant="navyBorder" size="sm" className="mt-6">
                     <div className="flex items-start gap-3">
                         <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#FFD8E6] text-[#AC2A5D]">
                             <PiggyBank className="size-4"/>
