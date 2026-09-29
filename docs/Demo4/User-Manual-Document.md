@@ -339,14 +339,14 @@ Profile is your personal identity and settings hub. It shows who you are in the 
 
 ### How to get here
 
-Tap **Profile** in the bottom navigation.
+Tap the **User** icon in the top right corner of **Home**.
 
 ![Profile](images/user-manual-assets/profile.png)
 
 At the top you will see your avatar, display name, current level and tier (for example "Level 2, Good"), your streak in days, your coin balance, and the month and year you joined. Below that is a list of links:
 
 - **Edit Profile**, update your display name and see basic account details.
-- **Settings**, general preferences, notifications, and account tools.
+- **Settings**, general preferences, notifications, and account tools. The **Cog** icon in the top right corner.
 - **Friends & Social**, opens the Friends Hub.
 - **Sticker Album**, opens your badge collection.
 - **Wrapped**, a summary look back at your activity.
@@ -398,7 +398,7 @@ Monthly Wrapped is a look back at your recent SpendSense activity. It brings tog
 
 ### How to get here
 
-Open **Profile**, then tap **Wrapped**.
+Open **Profile**, then tap **Wrapped**. Or open **Insights**, then tap **Monthly Wrapped**
 
 ![Monthly Wrapped](images/user-manual-assets/monthly-wrapped.png)
 
