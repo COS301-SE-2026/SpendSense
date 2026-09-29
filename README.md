@@ -138,6 +138,7 @@ Track what you owe and when it is due. See exactly how your payment behaviour wo
 <summary> <b> Demo 4</b> </summary>
 
 * [Software Requirements Specification (SRS)](./docs/Demo4/SRS.md)
+  * [NFR Table with Proof](./docs/Demo4/NFR%20Table.md) 
 * [Software Architecture Specification (SAS)](./docs/Demo4/SAS.md)
 * [Updated Brand Style Guide](https://cos301-se-2026.github.io/SpendSense/)
 * [Coding Standards Document](./docs/Demo4/Coding-Standards-Document.md)

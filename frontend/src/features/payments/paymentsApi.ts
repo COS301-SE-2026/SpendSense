@@ -168,3 +168,21 @@ export async function createManualContribution(
         body:JSON.stringify(body),
     })
 }
+
+export type CreateOneOffPaymentBody = {
+    name: string;
+    amount: number;
+    paidDate: string;
+    notes?: string;
+};
+
+export async function createOneOffPayment(
+    body: CreateOneOffPaymentBody,
+    idempotencyKey: string,
+){
+    return apiDataFetch<ManualContributionResult>('/payments/one-off',{
+        method:'POST',
+        headers:{'Idempotency-Key':idempotencyKey},
+        body:JSON.stringify(body),
+    })
+}

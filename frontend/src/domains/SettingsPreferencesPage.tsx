@@ -11,7 +11,7 @@ import {setTheme} from "@/lib/theme"
 import {setReducedMotion} from "@/lib/motion"
 
 
-const THEMES: UserPreferences["theme"][]=["SYSTEM", "LIGHT", "DARK"]
+const THEMES: UserPreferences["theme"][]=["LIGHT", "DARK"]
 const CURRENCIES=["ZAR"]
 const LANGUAGES=[{code: "en", label: "English"}]
 
@@ -25,7 +25,8 @@ export default function SettingsPreferencesPage(){
 
     React.useEffect(()=> {
         if(user?.preferences){
-            const savedTheme = user.preferences.theme as UserPreferences["theme"]
+            const savedTheme: UserPreferences["theme"] =
+                user.preferences.theme === "DARK" ? "DARK" : "LIGHT"
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setPrefs({
                 theme: savedTheme,
