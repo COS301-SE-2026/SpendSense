@@ -21,10 +21,15 @@ This manual explains how to use the SpendSense website. It walks through every s
 10. [Sticker Album](#10-sticker-album)
 11. [Friends Hub](#11-friends-hub)
 12. [Profile](#12-profile)
-13. [Settings](#13-settings)
-14. [Notifications](#14-notifications)
-15. [Help and Support](#15-help-and-support)
-16. [Glossary](#17-glossary)
+13. [Mascot Home](#13-mascot-home)
+14. [Monthly Wrapped](#14-monthly-wrapped)
+15. [Settings](#15-settings)
+16. [Notifications](#16-notifications)
+17. [Help and Support](#17-help-and-support)
+18. [Receipt Scanning and Partial Payments](#18-receipt-scanning-and-partial-payments)
+19. [Mascot Guidance](#19-mascot-guidance)
+20. [Simulated Month](#20-simulated-month)
+21. [Glossary](#21-glossary)
 
 ---
 
@@ -114,6 +119,8 @@ From the top of the screen down, the Dashboard shows:
 - **An Insights shortcut**, linking to a deeper breakdown of your spending.
 - **A Friends shortcut**, linking to the Friends Hub.
 - **A Stickers preview**, showing how many stickers you have collected out of the total, with a button to open the full album.
+- **Try Simulated Month**, which opens the fictional budgeting game described in [Section 18](#18-simulated-month).
+- **Your mascot guide**, which can open with a short daily note based on your recorded activity. You can hide it and bring it back from the tab on the side of the screen.
 
 ### How to get here
 
@@ -152,31 +159,43 @@ Once saved, the obligation appears on your Calendar with a payment schedule alre
 
 ## 6. Logging a Payment
 
-Once an obligation is due, or once you have actually paid it, you log the payment so SpendSense can update your record, your score, and your rewards.
+Once an obligation is due, or once you have actually paid some or all of it, you log the payment so SpendSense can update the amount still outstanding. A payment does not have to settle the full amount at once.
 
 ### How to get here
 
 There are two paths:
 
 - Tap the **+** button in the bottom navigation and choose to log a payment.
-- From the Calendar, tap an obligation that is due or overdue and select **Tap to pay**.
+- From the Calendar or Scheduled Payments page, open an outstanding payment and continue to the payment form.
 
 ![Add payment form](images/user-manual-assets/payment.png)
 
 ### What to fill in
 
-1. **Occurrence ID**, which identifies which scheduled payment you are settling. This is already filled in for you when you log a payment from the Calendar page.
-2. **Amount paid**.
+1. **Allocate payment to**, choose the scheduled payment that the money belongs to. If you opened the form from a payment occurrence, it may already be selected.
+2. **Amount paid**, enter the amount you are recording. It cannot be more than the balance that is still outstanding.
 3. **Date paid**.
-4. **Notes** (optional), for example "paid 1 day early".
+4. **Notes** (optional).
+
+The selected payment shows the original amount, what has already been recorded, and how much is still outstanding. SpendSense also shows the expected remaining balance before you submit.
 
 Tap **Log Payment** to save it.
 
-### What happens after you log a payment
+### Partial payments
 
-- If you paid on or before the due date, the payment is marked on time, your score can go up, your payment streak can grow, and you could earn coins, XP, or a badge.
-- If you paid after the due date, the payment is marked late. SpendSense calculates a simulated interest cost so you can see the consequence of paying late, and your score is brought down based on how late it was.
-- If a payment is not logged within a month of the due date, SpendSense automatically marks it as missed, which lowers your score and can break your payment streak.
+If the amount you enter is less than the remaining balance, SpendSense records a partial payment. The result shows **Partial payment recorded** and the amount still outstanding.
+
+No final settlement reward is given until the full payment occurrence has been settled. A later payment can be recorded against the same occurrence until the remaining balance reaches zero.
+
+### What happens after you complete a payment
+
+Once the remaining balance reaches zero, SpendSense marks the payment as completed and shows the score and reward effects returned by the system.
+
+- An on-time final payment can improve your simulated credit score and may award XP, coins, or a badge.
+- A payment completed after its due date is recorded as late.
+- If a payment is only partly paid after the due date, the remaining amount is still outstanding until it is completed.
+
+You can also choose **Scan receipt instead** from the payment form. Receipt scanning is covered in [Section 16](#16-receipt-scanning-and-partial-payments).
 
 ---
 
@@ -266,7 +285,7 @@ At the top, a counter shows how many stickers you have found out of the total, a
 
 ## 11. Friends Hub
 
-Friends Hub is where the social side of SpendSense lives: connecting with friendsand comparing progress.
+Friends Hub is where the social side of SpendSense lives. You can manage your friends, compare progress, and challenge a friend to work on the same money habit.
 
 ### How to get here
 
@@ -276,11 +295,41 @@ Tap **View Friends** on the Dashboard, or open **Friends & Social** from Profile
 
 The Friends Hub has three tabs:
 
-- **Feed**, updates from people you are connected with.
-- **Friends**, the list of people you are currently connected to, along with a count.
-- **Leaderboard**, a ranking of you and your friends based on progress.
+- **Friends**, your current friends and any friend requests waiting for you.
+- **Leaderboard**, a ranking of you and your friends.
+- **Wagers**, friend challenges that are waiting for a response, currently active, or already finished.
 
-Tap the person-plus icon in the top right to send a new friend request.
+Use the search button at the top to open your friends list, or tap the person-plus button to find someone and send a friend request.
+
+### Friends and friend profiles
+
+Tap a friend to open their profile.
+
+![Friend Profile](images/user-manual-assets/friend-profile.png)
+
+A friend's public profile shows the information they share with friends, including their mascot, score tier, payment streak, and number of badges. From here you can start a challenge with that friend. You can also remove them from your friends list if you no longer want to stay connected.
+
+### Leaderboard
+
+Open the **Leaderboard** tab or tap **View leaderboard** to compare your progress with your friends.
+
+![Friends Leaderboard](images/user-manual-assets/friends-leaderboard.png)
+
+The leaderboard can be viewed by **XP**, **Coins**, or **Payment streak**. The top positions are shown first, followed by the rest of the ranking.
+
+### Friend challenges
+
+Open the **Wagers** tab to see your friend challenges. These are challenges where both people put down the same number of SpendSense coins and try to complete the selected money habit.
+
+![Friend Challenges](images/user-manual-assets/friend-challenges.png)
+
+Challenges can be based on making all payments on time, having no missed payments, or maintaining a payment streak. When you create one, choose the friend, the task, how many coins each person will put in, and how long the challenge will run.
+
+![New Friend Challenge](images/user-manual-assets/new-friend-challenge.png)
+
+No coins move until the other person accepts the challenge. Once it is active, SpendSense tracks the selected habit automatically. When the challenge ends, the result is worked out from the activity recorded in SpendSense.
+
+You do not need to submit proof or manually mark the challenge as complete.
 
 ---
 
@@ -312,9 +361,63 @@ Tap **Edit Profile** to open the edit screen.
 
 Your avatar is generated automatically from your display name. You can change your **Display Name** here. Your **Email** is shown for reference only. Changing it is not done on this screen, it goes through account security instead, since email changes affect how you log in. Your **Member Since** date is also shown for reference. Tap **Save Changes** once you are done.
 
+
 ---
 
-## 13. Settings
+## 13. Mascot Home
+
+Mascot Home is where you can see your SpendSense mascot and the progress linked to it. Your mascot changes with your activity and can wear cosmetics that you collect or buy with SpendSense coins.
+
+### How to get here
+
+Open **Profile**, then tap **Mascot Home**.
+
+![Mascot Home](images/user-manual-assets/mascot-home.png)
+
+At the top of Mascot Home you can see your mascot level and current coin balance. The main card shows your mascot, its current mood, and any cosmetics it is wearing.
+
+Below the mascot is your progress toward the next mascot level. You can also see your current payment streak, quiz streak, and how many stickers you have collected.
+
+### Shop and wardrobe
+
+Tap **Open the shop** to browse cosmetics for your mascot.
+
+![Mascot Shop](images/user-manual-assets/mascot-shop.png)
+
+The shop can be filtered by all items, hats, accessories, or items you already own. Each item shows whether you own it and, if not, how many coins it costs.
+
+When you choose an item, you can buy it with coins if you have enough. Items you own are kept in your wardrobe and can be equipped or taken off later.
+
+The coins used here are SpendSense reward coins. Buying a mascot item does not affect any payment or financial record.
+
+---
+
+## 14. Monthly Wrapped
+
+Monthly Wrapped is a look back at your recent SpendSense activity. It brings together your payment progress, simulated credit score, streaks, rewards, and learning activity for the month.
+
+### How to get here
+
+Open **Profile**, then tap **Wrapped**.
+
+![Monthly Wrapped](images/user-manual-assets/monthly-wrapped.png)
+
+Wrapped is shown as a short set of slides. It moves through the month one section at a time, and you can also move backwards or forwards yourself.
+
+The slides cover:
+
+- **Credit score**, showing how your simulated score changed during the month.
+- **Payments**, showing your on-time, late, and missed payments.
+- **Best streak**, showing your strongest payment streak for the month.
+- **Achievements**, showing badges and rewards earned during the month.
+- **Learning**, showing completed quizzes and your knowledge streak.
+- **Summary**, bringing the main parts of the month together at the end.
+
+Wrapped uses the activity already recorded in SpendSense. It does not change your score, rewards, payments, or streaks.
+
+---
+
+## 15. Settings
 
 Settings is where you control how SpendSense behaves for you: general preferences, what you get notified about, and account level actions.
 
@@ -329,10 +432,11 @@ Settings is split into three sections:
 - **General Preferences**, theme, currency, language, and reduced motion.
 - **Notifications and Reminders**, turn on or off notifications and reminders, and choose when you want to receive them.
 - **Account**, logout, deactivate your account, and export your data.
+- **Mascot Guidance**, available under General Preferences, where you can turn mascot tips on or off, choose whether the daily Dashboard guide opens automatically, restart the guided tour, and show dismissed tips again.
 
 ---
 
-## 14. Notifications
+## 16. Notifications
 
 Notifications keep you informed about payments coming up, payments that were missed, and anything else that needs your attention.
 
@@ -352,9 +456,9 @@ The list is paginated, with **Previous** and **Next** buttons and a page indicat
 
 ---
 
-## 15. Help and Support
+## 17. Help and Support
 
-Help and Support is the in-app help centre. It repeats the getting started walkthrough, and answers common questions.
+Help and Support is the in-app help centre. It has the getting started guide, mascot guidance controls, and answers to common questions.
 
 ### How to get here
 
@@ -364,15 +468,22 @@ Open **Profile**, then tap **Help & Support**.
 
 ### Getting Started
 
-The same seven step walkthrough shown to new users lives here permanently:
+The Getting Started guide covers the main parts of SpendSense:
 
 1. **Start on the Dashboard.** Your home base, where you see your simulated credit score, upcoming payments, recent activity, and links to everything else.
-2. **Add your obligations and log payments.** Use the plus button to log payments and add financial obligations such as rent, subscriptions, and loan repayments. Each one gets a payment schedule SpendSense tracks for you.
-3. **Log and track payments on the Calendar.** The Calendar shows when payments are due. Logging a payment when you make it, and paying on time, builds your score and your streak.
-4. **Watch your credit score respond.** Your simulated credit score reacts to your financial behaviour and habits. On-time payments push it up, missed or late payments pull it down.
-5. **Complete quests and earn rewards.** Quests give you XP, coins, and stickers for good financial habits: daily check-ins, quizzes, streaks, and challenges.
-6. **Review your Insights.** Insights breaks down where your money goes and spots trends: spending changes, payments coming due, and how your streak is going.
-7. **Make it yours in Profile.** Profile is your identity and settings hub: edit your details, tweak preferences and notifications, and see your tier, streak, and coins.
+2. **Add your obligations and log payments.** Use the plus button to add financial obligations and record payments against their schedules.
+3. **Log and track payments on the Calendar.** The Calendar shows when payments are due and what still needs attention.
+4. **Watch your credit score respond.** Your simulated credit score reacts to your recorded payment behaviour.
+5. **Complete quests and earn rewards.** Quests give you XP, coins, and stickers for completing activities.
+6. **Review your Insights.** Insights breaks down recorded payment patterns and upcoming pressure.
+7. **Learn with daily and topic quizzes.** Daily quizzes build your Knowledge Streak, while topic quizzes let you learn about a specific subject at your own pace.
+8. **Meet your mascot.** Mascot Home shows your mascot, mood, level, and cosmetics. The mascot can also give short guidance on supported pages.
+9. **Compare with Friends.** Add friends, follow activity, and compare progress.
+10. **Take on Wagers.** Wagers are friendly coin challenges between friends. No real money is involved.
+11. **Keep an eye on Notifications.** Payment reminders, rewards, and friend activity are collected here.
+12. **Make it yours in Profile.** Edit your details and open your settings, account tools, and other personal pages.
+
+At the top of Help and Support you can also start or replay the mascot guided tour and change the mascot guidance settings.
 
 ### Frequently Asked Questions
 
@@ -383,16 +494,232 @@ A searchable FAQ list is provided, covering questions such as:
 - What is the difference between an obligation and a payment?
 - What happens if I miss a payment?
 - What are coins and XP for?
-- How do payment streaks work?
+- What is the difference between the daily quiz and a topic quiz?
+- How do I turn the mascot's tips off, or take the tour again?
+- Where did my mascot go on the Dashboard?
 - How do I change my name or notification settings?
 - Can I export or delete my data?
-- I found a bug or need more help, who do I contact?
+- What is Monthly Wrapped?
+- Do wagers cost real money?
 
 Tap any question to expand its answer, or use the search box to jump straight to a topic.
 
 ---
 
-## 16. Glossary
+## 18. Receipt Scanning and Partial Payments
+
+Receipt scanning helps you record a payment from a receipt without treating the scan as the final decision. SpendSense reads possible details from the image, then asks you to check them before anything is recorded.
+
+### How to get here
+
+Open **Add Payment** and tap **Scan receipt instead**. If you came from a specific payment, SpendSense can carry that payment into the scan as a suggested starting point.
+
+![Receipt scan](images/user-manual-assets/receipt-scan.png)
+
+### Scanning a receipt
+
+1. Tap **Take photo** to use your camera, or choose an image from your device.
+2. Check the preview. You can remove the image or choose another one before scanning.
+3. Tap the scan button to let SpendSense read the receipt.
+4. If camera access is not available, you can still upload an image instead.
+
+Receipt scanning accepts JPEG and PNG images. If the image cannot be read, you can try another photo or return to the normal payment form.
+
+### Reviewing the result
+
+After the scan finishes, SpendSense opens the Receipt Review page.
+
+![Receipt review](images/user-manual-assets/receipt-review.png)
+
+The scan can suggest details such as the amount, date, merchant, and currency. These are suggestions only. No payment has been recorded yet.
+
+1. Check the extracted receipt details and correct anything that is wrong.
+2. Choose the outstanding payment occurrence that this receipt belongs to.
+3. Check the current amount due, amount already paid, and amount remaining.
+4. Confirm the amount you want to record.
+5. Submit the reviewed payment.
+
+A receipt review expires after a limited time. If it has expired, scan the receipt again.
+
+### After you confirm
+
+If the amount is less than the outstanding balance, the result is a **Partial payment recorded** and the remaining amount stays open.
+
+If the payment settles the full remaining balance, SpendSense completes that occurrence and shows the score and reward result returned by the system.
+
+The uploaded receipt image is used for scanning and is not kept as a permanent receipt image in your account.
+
+---
+
+## 19. Mascot Guidance
+
+Your mascot can now help explain parts of SpendSense while you use them. The guidance uses fixed in-app messages and the information already shown by SpendSense. It does not make payments, answer quizzes for you, or make financial decisions for you.
+
+### Guided tour
+
+The mascot guided tour can be started from the Dashboard, Help and Support, or the Mascot Guidance settings.
+
+![Mascot guided tour](images/user-manual-assets/mascot-guided-tour.png)
+
+The tour moves through five main areas:
+
+1. **Dashboard**, where you see your score, progress, upcoming payments, and daily guide.
+2. **Calendar**, where scheduled payment occurrences and their statuses are shown.
+3. **Payments**, where you can check balances and record full or partial payments.
+4. **Quizzes**, where daily and topic quizzes are completed.
+5. **Insights**, where recorded payment patterns are explained.
+
+Use **Next** and **Back** to move through the tour. You can skip the current feature, end the tour, or close it and return later. Your progress is saved so the tour can be replayed from the beginning when you want to see it again.
+
+### Guidance on the Dashboard
+
+The mascot appears on the Dashboard with a short daily guide.
+
+![Mascot daily guide](images/user-manual-assets/mascot-daily-guide.png)
+
+The note can point you toward things such as an available daily quiz, payments recorded today, or a page worth checking next. If automatic daily opening is enabled, the guide opens once for that day on that browser.
+
+Tap the mascot to hide it. A small tab appears briefly at the side of the screen so you can bring the mascot back.
+
+### Guidance on other pages
+
+The mascot can also show short messages on the Calendar, payment flow, quizzes, and Insights.
+
+For example, it can explain that a payment still has a balance left, remind you that an overdue payment may be marked late, explain quiz feedback after you answer, or point out what an Insights card means.
+
+The mascot does not reveal quiz answers before you submit them, and its guidance does not change your payments, score, rewards, quiz progress, or mascot mood.
+
+### Changing mascot guidance settings
+
+Open **Profile**, then **Settings**, then **General Preferences**. You can also use the same controls from Help and Support.
+
+You can:
+
+- Turn mascot tips on or off.
+- Choose whether today's Dashboard guide opens automatically.
+- Start the guided tour again.
+- Show tips that you previously dismissed.
+
+Turning tips off does not remove your saved tour progress.
+
+---
+
+## 20. Simulated Month
+
+Simulated Month is a fictional budgeting game where you manage one 30-day month. The money, obligations, payments, and score inside the simulation are separate from your real SpendSense records.
+
+### How to get here
+
+From the Dashboard, tap **Try Simulated Month**.
+
+![Simulated Month entry](images/user-manual-assets/simulation-entry.png)
+
+If you already have an unfinished month, the entry page shows **Resume** and **Discard**. If you have completed a month before, you can also open your last completed summary.
+
+### Starting a month
+
+Tap **Start simulation** to open the introduction.
+
+![Simulated Month how it works](images/user-manual-assets/simulation-how-it-works.png)
+
+The introduction explains the basic rules:
+
+- The month has 30 fictional days.
+- You pay fictional obligations and deal with surprise events.
+- Your choices change your simulation score.
+- Nothing in the game changes your real payments or financial records.
+
+The normal mode is timed. Each simulated day lasts about 15 seconds. Turn on **Easy mode** if you want to play without the automatic timer and advance the days yourself.
+
+Tap **Continue** when you are ready.
+
+### Setting up your budget
+
+SpendSense gives the simulation a fictional starting budget. You then choose how to split it between **Current** and **Savings**.
+
+![Simulated Month budget setup](images/user-manual-assets/simulation-budget.png)
+
+Choose one of the suggested splits, or enter a custom Current amount when the option is available. Current is used first when you make a fictional payment, and Savings is used as a backup if Current is not enough.
+
+After choosing the split, continue to the month overview.
+
+### Reviewing the month
+
+The Month Overview shows your starting Current and Savings amounts and the fictional obligations that are already scheduled.
+
+![Simulated Month overview](images/user-manual-assets/simulation-overview.png)
+
+This is only a preview. No payments are made and the score does not change on this page.
+
+Tap **Start month** when you are ready to begin.
+
+### Playing the month
+
+The main game board shows the current day, score, budget left, Current balance, Savings balance, and the obligations in the month.
+
+![Simulated Month board](images/user-manual-assets/simulation-board.png)
+
+In timed mode the month moves forward automatically. In Easy mode, tap **Advance day** when the option is available.
+
+When an obligation becomes payable, open it to see the amount, due day, and the money currently available.
+
+![Simulation obligation](images/user-manual-assets/simulation-obligation.png)
+
+Simulation payments are always for the full amount. SpendSense uses Current first and then Savings if more money is needed. If the two balances together are not enough, the payment is not recorded.
+
+After a successful payment, the result shows how much came from Current and Savings and how many points were awarded.
+
+![Simulation payment result](images/user-manual-assets/simulation-payment-result.png)
+
+Tap **Return to month** to continue.
+
+### Surprise events
+
+A simulated month contains surprise events. When one appears, open it to see what has changed.
+
+![Simulation surprise event](images/user-manual-assets/simulation-event.png)
+
+The event shows its situation and the choices that are available. In timed mode the decision has its own countdown. Easy mode has no event deadline.
+
+Choose an option and confirm it. The result then shows the effect on your fictional balances, the points gained or lost, and a short explanation of what happened.
+
+![Simulation event result](images/user-manual-assets/simulation-event-result.png)
+
+Tap **Back to game** to continue the month.
+
+### Pausing or leaving
+
+Use **Pause** on the game board to stop the timed simulation.
+
+Tap **Resume month** when you are ready to continue. You can also choose to leave the simulation.
+
+If you choose to leave, SpendSense asks whether you want to keep the run for later or discard it.
+
+- **Keep playing** closes the message and returns to the game.
+- **Save and exit** leaves the simulation available to resume later.
+- **Discard run** permanently abandons that fictional run and asks for confirmation first.
+
+If a saved run exists, SpendSense restores the latest valid simulation state when you resume it.
+
+### Completing the month
+
+After the final day, SpendSense shows the Month Complete screen.
+
+![Simulated Month complete](images/user-manual-assets/simulation-summary.png)
+
+The summary shows your final score, remaining Current and Savings balances, the budget result, and how your obligations and events ended. Completing a simulated month awards 15 XP. The first completed month can also unlock the first-completion badge. The simulation does not award coins.
+
+Tap **Review score breakdown** to see more detail.
+
+![Simulation score breakdown](images/user-manual-assets/simulation-score-breakdown.png)
+
+The score breakdown shows the final budget result, obligation and event outcomes, and the most recent score changes. The recent activity section is not a complete history of every score event in the month.
+
+You can return to the Dashboard or start another fictional month from the summary.
+
+---
+
+## 21. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -406,7 +733,15 @@ Tap any question to expand its answer, or use the search box to jump straight to
 | XP | Experience points earned from good habits, which contribute to your level. |
 | Coins | An in-app currency earned from good habits, which can be spent on rewards. |
 | Sticker / badge | A collectible reward unlocked by reaching a milestone. |
+| Payment contribution | One amount recorded toward a payment occurrence. An occurrence can have more than one contribution before it is fully paid. |
+| Partial payment | A payment contribution that leaves some of the occurrence balance still outstanding. |
+| Receipt scan | A short-lived review of possible details read from an uploaded receipt before the user confirms a payment. |
+| Mascot guidance | Fixed in-app tips and walkthrough messages shown by the mascot on supported pages. |
+| Simulated Month | A fictional 30-day budgeting game that uses separate fictional balances, obligations, events, and points. |
+| Current | The main fictional spending balance used in Simulated Month. |
+| Savings | The fictional backup balance used in Simulated Month after Current when a payment needs more funds. |
+| Simulation points | Points used only inside Simulated Month to show the result of fictional decisions. |
 
 ---
 
-*This manual reflects the current state of the SpendSense application.
+*This manual reflects the current state of the SpendSense application.*
