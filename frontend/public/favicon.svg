@@ -1,11 +1,8 @@
-<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img">
-  <title>SpendSense mark</title>
-
-  <polyline points="18,42 50,14 82,42" fill="none" stroke="#000000" stroke-width="3"   stroke-linecap="round" stroke-linejoin="round"/>
-  <polyline points="18,42 50,14 82,42" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-
-  <polyline points="18,62 50,34 82,62" fill="none" stroke="#000000" stroke-width="2"   stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
-  <polyline points="18,62 50,34 82,62" fill="none" stroke="#ffffff" stroke-width="1"   stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
-
-  <circle cx="50" cy="80" r="4.5" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 100 100" role="img" aria-labelledby="title desc">
+  <title id="title">SpendSense</title>
+  <desc id="desc">Two stacked upward chevrons above a dot</desc>
+  <rect x="2" y="2" width="96" height="96" rx="22" fill="#f4fbf7" />
+  <polyline points="18,44 50,10 82,44" fill="none" stroke="#091828" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+  <polyline points="18,67 50,33 82,67" fill="none" stroke="#091828" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" />
+  <circle cx="50" cy="87" r="5" fill="#091828" />
 </svg>
