@@ -1,8 +1,7 @@
 import * as React from "react"
 import {NotificationToast} from "@/components/notifications/NotificationToast"
 import {getNotifications} from "./notificationsApi"
-import {useNotifications} from "./useNotifications"
-import {getCurrentSession} from "@/features/auth/auth.service"
+import { useNotifications } from "./useNotifications"
 import type {Notification} from "@/types/NotificationTypes"
 
 const POLL_INTERVAL_MS=30000
@@ -40,16 +39,8 @@ export function NotificationListener(){
             if(requestPendingRef.current){
                 return
             }
-
             requestPendingRef.current=true
-
             try{
-                const session=await getCurrentSession()
-
-                if(!session?.access_token){
-                    return
-                }
-
                 const response=await getNotifications({
                     page:1,
                     perPage:POLL_PAGE_SIZE,
