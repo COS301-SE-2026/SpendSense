@@ -9,7 +9,7 @@ import { createManualContribution, getUpcomingOccurrences, type ManualContributi
 import type { CalendarOccurrence } from "../hooks/useCalendarOccurrences";
 import { getReceiptOccurrenceBalance, type ReceiptOccurrence } from "../features/receipts/receiptOccurrencesApi";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
-import { Calendar as CalenderIcon, CheckCircle2, Coins, Flame, TrendingUp, X, Camera, ChevronDown, Check, CreditCard } from "lucide-react";
+import { Calendar as CalenderIcon, CheckCircle2, Coins, Flame, TrendingUp, X, Camera, ChevronDown, Check, CreditCard, Plus } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { GuideSlot } from "@/components/guidance/GuideSlot";
 import { MascotPeek } from "@/components/guidance/MascotPeek";
@@ -247,7 +247,7 @@ export default function ObligationForm() {
                 setPaymentResult(result);
                 setShowPopup(true);
                 guidance?.requestDailyRefresh();
-            } catch(error) {
+            } catch (error) {
                 console.error("Failed to create one-off payment:", error);
                 setSubmitError("Unable to create the payment. Please try again.");
             } finally {
@@ -308,7 +308,6 @@ export default function ObligationForm() {
     }
 
 
-    const [isNewPaymentOpen, setIsNewPaymentOpen] = useState(false);
     const [newPaymentName, setNewPaymentName] = useState("");
     const [createNewPayment, setCreateNewPayment] = useState(false);
 
@@ -424,6 +423,8 @@ export default function ObligationForm() {
                                                                     field.onChange(occurrence.id)
                                                                     setAmountEdited(false)
                                                                     setIsOccurrencePickerOpen(false)
+                                                                    setCreateNewPayment(false)
+                                                                    setNewPaymentName("")
                                                                 }}
                                                                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-[#F4FBF7] dark:hover:bg-[#1c263c] ${field.value === occurrence.id ? 'bg-[#DCEFE8] dark:bg-[#0f4f42]' : ''}`}
                                                             >
@@ -466,62 +467,30 @@ export default function ObligationForm() {
                                                 <div className="h-px flex-1 bg-[#DCEFE8] dark:bg-[#2d3449]" />
                                             </div>
 
-                                            <Popover
-                                                open={isNewPaymentOpen}
-                                                onOpenChange={open => {
-                                                    setIsNewPaymentOpen(open);
-                                                    if (open) {
-                                                        setCreateNewPayment(true);
-                                                        field.onChange("");
-                                                        setAmountEdited(false);
-                                                        setIsOccurrencePickerOpen(false);
-                                                    }
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setCreateNewPayment(prev => {
+                                                        const next = !prev;
+                                                        if (next) {
+                                                            field.onChange("");
+                                                            setAmountEdited(false);
+                                                            setCurrentBalance(null);
+                                                            setIsOccurrencePickerOpen(false);
+                                                        } else {
+                                                            setNewPaymentName("");
+                                                        }
+                                                        return next;
+                                                    });
                                                 }}
+                                                className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-semibold transition-transform duration-150 active:scale-[0.97] ${createNewPayment
+                                                    ? "bg-[#E8E4F4] text-[#5B4D8B] dark:bg-[#28223f] dark:text-[#c5b3f0]"
+                                                    : "bg-white text-[#091828] dark:bg-[#131b2e] dark:text-white"
+                                                    }`}
                                             >
-                                                <PopoverTrigger asChild>
-                                                    <button
-                                                        type="button"
-                                                        aria-label="Create new payment"
-                                                        aria-expanded={isNewPaymentOpen}
-                                                        className="flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3.5 text-left text-[#091828] outline-none dark:bg-[#131b2e] dark:text-white"
-                                                    >
-                                                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#E8E4F4] text-[#5B4D8B] dark:bg-[#28223f] dark:text-[#c5b3f0]">
-                                                            <CreditCard className="size-5" />
-                                                        </div>
-
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="truncate text-sm font-semibold">
-                                                                {"Create new payment"}
-                                                            </p>
-                                                            <p className="mt-0.5 text-xs text-[#6b6375] dark:text-[#a0aec0]">
-                                                                {newPaymentName ? "New one-off payment" : "Enter a new payment name"}
-                                                            </p>
-                                                        </div>
-
-                                                        <ChevronDown
-                                                            className={`size-5 shrink-0 text-[#6b6375] transition-transform dark:text-[#a0aec0] ${isNewPaymentOpen ? "rotate-180" : ""}`}
-                                                        />
-                                                    </button>
-                                                </PopoverTrigger>
-
-                                                <PopoverContent
-                                                    align="start"
-                                                    className="w-[var(--radix-popover-trigger-width)] rounded-2xl border-2 border-[#091828] bg-white p-3 shadow-[4px_4px_0_#091828] dark:border-[#060e20] dark:bg-[#131b2e] dark:shadow-[4px_4px_0_#060e20]"
-                                                >
-                                                    <p className="px-2 pb-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-[#6b6375] dark:text-[#a0aec0]">
-                                                        Payment name
-                                                    </p>
-
-                                                    <input
-                                                        type="text"
-                                                        value={newPaymentName}
-                                                        onChange={e => setNewPaymentName(e.target.value)}
-                                                        placeholder="e.g. Woolworths groceries"
-                                                        autoFocus
-                                                        className="w-full rounded-xl bg-[#F4FBF7] px-3 py-3 text-sm font-semibold text-[#091828] outline-none placeholder:text-[#9b96a8] dark:bg-[#1c263c] dark:text-white dark:placeholder:text-[#a0aec0]"
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
+                                                <Plus className="size-5" />
+                                                {createNewPayment ? "Creating new payment" : "Create new payment"}
+                                            </button>
 
 
                                         </div>
@@ -540,6 +509,28 @@ export default function ObligationForm() {
                             currentBalance={balanceForSelection}
                         />
                     )}
+
+                    {createNewPayment && (
+                        <div className="space-y-1">
+                            <label
+                                htmlFor="newPaymentName"
+                                className="text-xs font-semibold text-[#091828] dark:text-white"
+                            >
+                                Payment name
+                            </label>
+
+                            <input
+                                id="newPaymentName"
+                                type="text"
+                                value={newPaymentName}
+                                onChange={e => setNewPaymentName(e.target.value)}
+                                placeholder="e.g. Woolworths groceries"
+                                autoFocus
+                                className="w-full rounded-2xl bg-white px-4 py-3.5 text-sm text-[#091828] outline-none placeholder:text-[#9b96a8] dark:bg-[#131b2e] dark:text-white dark:placeholder:text-[#a0aec0]"
+                            />
+                        </div>
+                    )}
+
                     <div className="space-y-1">
                         <label htmlFor="amountPaid" className="text-xs font-semibold text-[#091828] dark:text-white">Amount paid</label>
                         <input
