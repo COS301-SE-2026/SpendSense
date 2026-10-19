@@ -27,6 +27,12 @@ type DailyGuidanceResponse = {
 };
 
 const DISMISSIBLE_TIP = 'calendar.overdue.explainer';
+const todaysDismissal = () => ({
+  id: DISMISSIBLE_TIP,
+  date: new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Johannesburg',
+  }).format(new Date()),
+});
 
 describe('Mascot Guidance E2E', () => {
   describe('authentication', () => {
@@ -79,7 +85,7 @@ describe('Mascot Guidance E2E', () => {
             tipsEnabled: false,
             walkthroughStatus: 'IN_PROGRESS',
             walkthroughStep: 2,
-            dismissedTipIds: [DISMISSIBLE_TIP],
+            dismissedTipIds: [todaysDismissal()],
           },
         );
         const token = await createE2eAccessToken(user);
@@ -286,7 +292,7 @@ describe('Mascot Guidance E2E', () => {
         const { user } = await createUserWithGuidanceState(
           e2e.prisma,
           {},
-          { dismissedTipIds: [DISMISSIBLE_TIP] },
+          { dismissedTipIds: [todaysDismissal()] },
         );
         const token = await createE2eAccessToken(user);
 
@@ -393,7 +399,7 @@ describe('Mascot Guidance E2E', () => {
           completedOccurrenceCount: 0,
           totalsByCurrency: [],
         });
-        expect(body.data.dailyQuiz.status).toBe('UNAVAILABLE');
+        expect(body.data.dailyQuiz.status).toBe('AVAILABLE');
         expect(body.data.dailyQuiz.sessionId).toBeNull();
         expect(body.data.streaks).toEqual({ payment: 0, knowledge: 0 });
       } finally {

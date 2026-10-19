@@ -7,6 +7,7 @@ export const DISMISSIBLE_GUIDANCE_TIP_IDS = [
   'dashboard.daily.recorded-quiz-complete',
   'dashboard.daily.recorded-quiz-waiting',
   'dashboard.daily.up-to-date',
+  'dashboard.daily.check-in',
   'calendar.empty.no-obligations',
   'calendar.overdue.explainer',
   'calendar.occurrence.partial-balance',

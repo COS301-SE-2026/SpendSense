@@ -26,7 +26,7 @@ export type GuidanceStateInput={
     dailyExpansionEnabled: boolean;
     walkthroughStatus: 'NOT_STARTED'|'IN_PROGRESS'|'COMPLETED'|'SKIPPED';
     walkthroughStep: number;
-    dismissedTipIds: string[];
+    dismissedTipIds: Array<string|{id:string;date:string}>;
 };
 
 const defaultGuidanceState: GuidanceStateInput={
