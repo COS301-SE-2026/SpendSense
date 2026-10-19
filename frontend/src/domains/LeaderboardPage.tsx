@@ -34,9 +34,9 @@ export default function LeaderboardPage() {
 	}
 
 	const podiumStyles = [
-		{ bg: "bg-[#FFE9B5] dark:bg-[#3f2e00]", icon: "text-[#7A5A00] dark:text-[#ffd166]", height: "pt-6" },
-		{ bg: "bg-[#E3EAE6] dark:bg-[#1c263c]", icon: "text-[#3E4A55] dark:text-[#dae2fd]", height: "pt-9" },
-		{ bg: "bg-[#FCE0E8] dark:bg-[#2d1b2e]", icon: "text-[#AC2A5D] dark:text-[#ff6b9d]", height: "pt-9" },
+		{ bg: "bg-[#FFE9B5] dark:bg-[#3f2e00]", icon: "text-[#7A5A00] dark:text-[#ffd166]", height: "pt-12", order: "order-2 col-start-2" },
+		{ bg: "bg-[#E3EAE6] dark:bg-[#1c263c]", icon: "text-[#3E4A55] dark:text-[#dae2fd]", height: "pt-7", order: "order-1 col-start-1" },
+		{ bg: "bg-[#FCE0E8] dark:bg-[#2d1b2e]", icon: "text-[#AC2A5D] dark:text-[#ff6b9d]", height: "pt-3", order: "order-3 col-start-3" },
 	]
 
 	return (
@@ -108,6 +108,7 @@ export default function LeaderboardPage() {
 											"flex flex-col items-center gap-1 rounded-xl border-2 border-[#091828] px-2 pb-3 dark:border-[#2d3449]",
 											podiumStyles[index].bg,
 											podiumStyles[index].height,
+											podiumStyles[index].order,
 										)}
 									>
 										<Medal className={cn("size-5", podiumStyles[index].icon)} />
