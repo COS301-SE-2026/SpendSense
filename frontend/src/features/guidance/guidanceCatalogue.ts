@@ -77,6 +77,19 @@ export const GUIDANCE_CATALOGUE:readonly GuideCandidate[]=[
         ],
         eligible:(facts)=>numberEquals(facts,'payableCount',0)&&stringEquals(facts,'dailyQuizStatus','COMPLETED'),
     },
+    {
+        id:'dashboard.daily.check-in',
+        surface:'dashboard',
+        kind:'ordinary',
+        priority:10,
+        dismissible:true,
+        text:'Welcome back! Take a look at what is coming up so nothing catches you by surprise.',
+        actions:[
+            {label:'Open calendar',to:GUIDANCE_ROUTES.calendar},
+            {label:'Open insights',to:GUIDANCE_ROUTES.insights},
+        ],
+        eligible:(facts)=>isFalse(facts,'factsUnavailable')&&stringIn(facts,'dailyQuizStatus',['AVAILABLE','IN_PROGRESS','COMPLETED','UNAVAILABLE']),
+    },
 
     {
         id:'calendar.empty.no-obligations',

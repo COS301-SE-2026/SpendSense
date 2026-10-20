@@ -124,6 +124,13 @@ export function GuidanceProvider({
         return ()=>window.removeEventListener('focus',refresh)
     },[])
 
+    const previousLocalDate=React.useRef(localDate)
+    React.useEffect(()=>{
+        if(previousLocalDate.current===localDate) return
+        previousLocalDate.current=localDate
+        setReloadToken((token)=>token+1)
+    },[localDate])
+
     const save=React.useCallback((
         patch:GuidanceStatePatch,
         optimistic:(prev:GuidanceState)=>GuidanceState,

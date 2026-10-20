@@ -93,9 +93,9 @@ describe('GuidanceController', () => {
         totalsByCurrency: [],
       },
       dailyQuiz: {
-        status: 'UNAVAILABLE' as const,
+        status: 'AVAILABLE' as const,
         sessionId: null,
-        canStart: false,
+        canStart: true,
         canResume: false,
       },
       streaks: {
