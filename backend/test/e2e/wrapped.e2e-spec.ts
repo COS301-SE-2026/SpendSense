@@ -8,13 +8,25 @@ type ApiResponse<T> = {
   data: T;
 };
 
+function previousUtcMonth() {
+  const now = new Date();
+  const previous = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+  );
+  return {
+    year: previous.getUTCFullYear(),
+    month: previous.getUTCMonth() + 1,
+  };
+}
+
 describe('Monthly Wrapped E2E', () => {
   it('E2E for getBadgesForMonth() - badges earned by the authenticated user during the requested month', async () => {
     const fixture = await createApiE2eFixture();
     try {
+      const { year, month } = previousUtcMonth();
       const scenario = await createMonthlyWrappedScenario(fixture.prisma, {
-        year: 2026,
-        month: 8,
+        year,
+        month,
       });
 
       const token = await createE2eAccessToken({
@@ -24,17 +36,13 @@ describe('Monthly Wrapped E2E', () => {
 
       const response = await request(fixture.app.getHttpServer())
         .get('/api/v1/wrapped/latest')
-        .query({
-          year: 2026,
-          month: 8,
-        })
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
       const body = response.body as ApiResponse<WrappedSummary>;
       const wrapped = body.data;
 
-      expect(wrapped.month).toBe(8);
+      expect(wrapped.month).toBe(month);
       expect(wrapped.numberBadgesEarned).toBe(2);
       expect(wrapped.arrayBadgesEarned).toHaveLength(2);
       expect(wrapped.arrayBadgesEarned[0]).toMatchObject({
@@ -69,9 +77,10 @@ describe('Monthly Wrapped E2E', () => {
   it('E2E for getScoreMovementForMonth() - tracks the usersscore movement for the month', async () => {
     const fixture = await createApiE2eFixture();
     try {
+      const { year, month } = previousUtcMonth();
       const scenario = await createMonthlyWrappedScenario(fixture.prisma, {
-        year: 2026,
-        month: 8,
+        year,
+        month,
       });
 
       const token = await createE2eAccessToken({
@@ -81,10 +90,6 @@ describe('Monthly Wrapped E2E', () => {
 
       const response = await request(fixture.app.getHttpServer())
         .get('/api/v1/wrapped/latest')
-        .query({
-          year: 2026,
-          month: 8,
-        })
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
