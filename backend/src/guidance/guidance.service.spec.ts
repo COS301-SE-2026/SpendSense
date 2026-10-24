@@ -30,6 +30,11 @@ type GuidanceUpsertArgs = {
   };
 };
 
+const NOW = new Date('2026-09-19T10:00:00.000Z');
+const TODAY = '2026-09-19';
+const OVERDUE_TIP = 'calendar.overdue.explainer';
+const TODAYS_DISMISSAL = { id: OVERDUE_TIP, date: TODAY };
+
 describe('GuidanceService', () => {
   let service: GuidanceService;
 
@@ -121,12 +126,12 @@ describe('GuidanceService', () => {
       dailyExpansionEnabled: false,
       walkthroughStatus: GuidanceWalkthroughStatus.IN_PROGRESS,
       walkthroughStep: 2,
-      dismissedTipIds: ['calendar.overdue.explainer'],
+      dismissedTipIds: [TODAYS_DISMISSAL],
       createdAt: new Date('2026-09-17T10:00:00.000Z'),
       updatedAt,
     });
 
-    await expect(service.getState(authUser)).resolves.toEqual({
+    await expect(service.getState(authUser, NOW)).resolves.toEqual({
       tipsEnabled: false,
       dailyExpansionEnabled: false,
       walkthrough: {
@@ -256,7 +261,7 @@ describe('GuidanceService', () => {
       dailyExpansionEnabled: false,
       walkthroughStatus: GuidanceWalkthroughStatus.IN_PROGRESS,
       walkthroughStep: 2,
-      dismissedTipIds: ['calendar.overdue.explainer'],
+      dismissedTipIds: [TODAYS_DISMISSAL],
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -275,9 +280,13 @@ describe('GuidanceService', () => {
       updatedAt,
     });
 
-    await service.updateState(authUser, {
-      tipsEnabled: false,
-    });
+    await service.updateState(
+      authUser,
+      {
+        tipsEnabled: false,
+      },
+      NOW,
+    );
 
     expect(prisma.guidanceState.upsert).toHaveBeenCalledWith({
       where: {
@@ -289,13 +298,13 @@ describe('GuidanceService', () => {
         dailyExpansionEnabled: true,
         walkthroughStatus: GuidanceWalkthroughStatus.IN_PROGRESS,
         walkthroughStep: 2,
-        dismissedTipIds: ['calendar.overdue.explainer'],
+        dismissedTipIds: [TODAYS_DISMISSAL],
       },
       update: {
         tipsEnabled: false,
         walkthroughStatus: GuidanceWalkthroughStatus.IN_PROGRESS,
         walkthroughStep: 2,
-        dismissedTipIds: ['calendar.overdue.explainer'],
+        dismissedTipIds: [TODAYS_DISMISSAL],
       },
     });
   });
@@ -342,7 +351,7 @@ describe('GuidanceService', () => {
     prisma.guidanceState.findUnique.mockResolvedValue({
       walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
       walkthroughStep: 0,
-      dismissedTipIds: ['calendar.overdue.explainer'],
+      dismissedTipIds: [],
     });
 
     prisma.guidanceState.upsert.mockResolvedValue({
@@ -350,21 +359,19 @@ describe('GuidanceService', () => {
       dailyExpansionEnabled: true,
       walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
       walkthroughStep: 0,
-      dismissedTipIds: ['calendar.overdue.explainer'],
+      dismissedTipIds: [TODAYS_DISMISSAL],
       updatedAt: new Date(),
     });
 
-    await service.updateState(authUser, {
-      dismissTipId: 'calendar.overdue.explainer',
-    });
+    await expect(
+      service.updateState(authUser, { dismissTipId: OVERDUE_TIP }, NOW),
+    ).resolves.toMatchObject({ dismissedTipIds: [OVERDUE_TIP] });
 
     expect(prisma.guidanceState.upsert).toHaveBeenCalledTimes(1);
 
     const upsertCall = prisma.guidanceState.upsert.mock.calls[0][0];
 
-    expect(upsertCall.update.dismissedTipIds).toEqual([
-      'calendar.overdue.explainer',
-    ]);
+    expect(upsertCall.update.dismissedTipIds).toEqual([TODAYS_DISMISSAL]);
   });
 
   it('will reset tips that are dismissed', async () => {
@@ -424,7 +431,7 @@ describe('GuidanceService', () => {
     prisma.guidanceState.findUnique.mockResolvedValue({
       walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
       walkthroughStep: 0,
-      dismissedTipIds: ['calendar.overdue.explainer'],
+      dismissedTipIds: [TODAYS_DISMISSAL],
     });
 
     prisma.guidanceState.upsert.mockResolvedValue({
@@ -432,19 +439,65 @@ describe('GuidanceService', () => {
       dailyExpansionEnabled: true,
       walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
       walkthroughStep: 0,
-      dismissedTipIds: ['calendar.overdue.explainer'],
+      dismissedTipIds: [TODAYS_DISMISSAL],
       updatedAt: new Date(),
     });
 
-    await service.updateState(authUser, {
-      dismissTipId: 'calendar.overdue.explainer',
-    });
+    await service.updateState(authUser, { dismissTipId: OVERDUE_TIP }, NOW);
 
     const upsertCall = prisma.guidanceState.upsert.mock.calls[0][0];
 
-    expect(upsertCall.update.dismissedTipIds).toEqual([
-      'calendar.overdue.explainer',
-    ]);
+    expect(upsertCall.update.dismissedTipIds).toEqual([TODAYS_DISMISSAL]);
+  });
+
+  it('will not return tips that were dismissed on a previous day', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.guidanceState.findUnique.mockResolvedValue({
+      tipsEnabled: true,
+      dailyExpansionEnabled: true,
+      walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
+      walkthroughStep: 0,
+      dismissedTipIds: [
+        { id: OVERDUE_TIP, date: '2026-09-18' },
+        'dashboard.daily.up-to-date',
+        { id: 'dashboard.daily.nothing-recorded', date: TODAY },
+      ],
+      updatedAt: new Date(),
+    });
+
+    await expect(service.getState(authUser, NOW)).resolves.toMatchObject({
+      dismissedTipIds: ['dashboard.daily.nothing-recorded'],
+    });
+  });
+
+  it('will drop expired dismissals when a tip is dismissed again the next day', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.guidanceState.findUnique.mockResolvedValue({
+      walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
+      walkthroughStep: 0,
+      dismissedTipIds: [{ id: OVERDUE_TIP, date: '2026-09-18' }],
+    });
+
+    prisma.guidanceState.upsert.mockResolvedValue({
+      tipsEnabled: true,
+      dailyExpansionEnabled: true,
+      walkthroughStatus: GuidanceWalkthroughStatus.NOT_STARTED,
+      walkthroughStep: 0,
+      dismissedTipIds: [TODAYS_DISMISSAL],
+      updatedAt: new Date(),
+    });
+
+    await service.updateState(authUser, { dismissTipId: OVERDUE_TIP }, NOW);
+
+    const upsertCall = prisma.guidanceState.upsert.mock.calls[0][0];
+
+    expect(upsertCall.update.dismissedTipIds).toEqual([TODAYS_DISMISSAL]);
   });
 
   it('will reject replay with a nonzero walkthrough step', async () => {
@@ -606,6 +659,37 @@ describe('GuidanceService', () => {
     });
   });
 
+  it('will treat an abandoned daily quiz as available to start again', async () => {
+    usersService.findOrCreateUser.mockResolvedValue({
+      id: 'user-1',
+    } as Awaited<ReturnType<UsersService['findOrCreateUser']>>);
+
+    prisma.quizSession.findFirst.mockResolvedValue({
+      id: 'quiz-1',
+      status: 'ABANDONED',
+      score: 1,
+      totalQuestions: 5,
+      startedAt: new Date('2026-09-20T08:00:00.000Z'),
+      completedAt: null,
+      coinsAwarded: 0,
+      xpAwarded: 0,
+    });
+
+    prisma.gamificationProfile.findUnique.mockResolvedValue(null);
+
+    const result = await service.getDailyFacts(
+      authUser,
+      new Date('2026-09-20T10:00:00.000Z'),
+    );
+
+    expect(result.dailyQuiz).toEqual({
+      status: 'AVAILABLE',
+      sessionId: null,
+      canStart: true,
+      canResume: false,
+    });
+  });
+
   it('will return valid empty daily facts for when there is no activity', async () => {
     usersService.findOrCreateUser.mockResolvedValue({
       id: 'user-1',
@@ -620,9 +704,9 @@ describe('GuidanceService', () => {
     );
 
     expect(result.dailyQuiz).toEqual({
-      status: 'UNAVAILABLE',
+      status: 'AVAILABLE',
       sessionId: null,
-      canStart: false,
+      canStart: true,
       canResume: false,
     });
 
