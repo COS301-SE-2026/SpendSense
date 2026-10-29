@@ -65,7 +65,7 @@ describe('GuidanceProvider',()=>{
 
         await userEvent.click(screen.getByText('dismiss'))
 
-        expect(screen.getByTestId('guide')).toHaveTextContent('none')
+        expect(screen.getByTestId('guide')).toHaveTextContent('dashboard.daily.check-in')
         await waitFor(()=>expect(api.calls).toContainEqual({dismissTipId:'dashboard.daily.nothing-recorded'}))
     })
 

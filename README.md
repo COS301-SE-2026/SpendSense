@@ -7,7 +7,7 @@
 
 <br><br>
 
-<img src="docs/assets/MARK2-logo.png" width="430" alt="Team MARK2" />
+<img src="docs/assets/MARK2-logo.png" width="380" alt="Team MARK2" />
 
 <br><br>
 
@@ -47,7 +47,7 @@ _COS 301 Capstone 2026 · Team MARK2 · EPI-USE Labs & Advance · University of 
 
 ## Live Demo
 
-**[https://d33z1c39vjhkej.cloudfront.net](https://d33z1c39vjhkej.cloudfront.net)**
+**[spendsense.co.za](https://www.spendsense.co.za/)**
 
 <img src="docs/assets/qr.png" width="150" alt="QR code to live demo" />
 
@@ -116,7 +116,6 @@ Track what you owe and when it is due. See exactly how your payment behaviour wo
 * [Coding Standards Document](./docs/Demo2/Coding-Standards-Document.md)
 * [User Manual Document](./docs/Demo2/User-Manual-Document.md)
 * [Testing Policy Document](./docs/Demo2/Testing-Policy-Document.md)
-* [Demo 2 Video](https://drive.google.com/drive/folders/1RXFea81VvkyAPmqBhXl9xXfcXl81wNEq?usp=sharing)
 
 </details>
 
@@ -129,7 +128,6 @@ Track what you owe and when it is due. See exactly how your payment behaviour wo
 * [Coding Standards Document](./docs/Demo3/Coding-Standards-Document.md)
 * [User Manual Document](./docs/Demo3/User-Manual-Document.md)
 * [Testing Policy Document](./docs/Demo3/Testing-Policy-Document.md)
-* [Demo 3 Video](https://drive.google.com/drive/folders/1RXFea81VvkyAPmqBhXl9xXfcXl81wNEq?usp=sharing)
 
 
 </details>
@@ -144,7 +142,7 @@ Track what you owe and when it is due. See exactly how your payment behaviour wo
 * [Coding Standards Document](./docs/Demo4/Coding-Standards-Document.md)
 * [User Manual Document](./docs/Demo4/User-Manual-Document.md)
 * [Testing Policy Document](./docs/Demo4/Testing-Policy-Document.md)
-* [Demo 4 Video] 
+* [Demo 4 Video](https://drive.google.com/drive/u/3/folders/1IMIlr_9ouq9NGPDAro_WfrAe6gqC79nP)
 
 </details>
 
@@ -243,9 +241,10 @@ SpendSense/
 ├── ai/               # Python FastAPI AI microservice
 ├── docs/             # Project documentation
 │   ├── Demo1/        # Demo 1 Documentation
-|   ├── Demo2/        # Demo 2 Documentation
+│   ├── Demo2/        # Demo 2 Documentation
 │   ├── assets/       # logo images and animations
-│   └── team/         # team images
+│   └── team/         # team images and CVs
+│       └── cvs/      # team CVs (PDF)
 ├── scripts/          # Helper scripts for local development
 └── docker-compose.yml
 ```
@@ -457,6 +456,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
       <br>
       <a href="https://github.com/Ally-Andre"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
       <a href="https://www.linkedin.com/in/allyson-andre"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+      <a href="docs/team/cvs/Allyson_Andre_CV.pdf"><img src="https://img.shields.io/badge/CV-View_PDF-0A66C2?style=for-the-badge&logo=adobeacrobatreader&logoColor=white" alt="CV"></a>
     </td>
   </tr>
 </table>
@@ -480,6 +480,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
       <br>
       <a href="https://github.com/Morgan-Wat"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
       <a href="https://www.linkedin.com/in/morgan-wattrus-302711282/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+      <a href="docs/team/cvs/Morgan_Wattrus_CV.pdf"><img src="https://img.shields.io/badge/CV-View_PDF-0A66C2?style=for-the-badge&logo=adobeacrobatreader&logoColor=white" alt="CV"></a>
     </td>
   </tr>
 </table>
@@ -503,6 +504,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
       <br>
       <a href="https://github.com/kahlanhgrmn"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
       <a href="https://www.linkedin.com/in/kahlan-hagerman"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+      <a href="docs/team/cvs/Kahlan_Hagerman_CV.pdf"><img src="https://img.shields.io/badge/CV-View_PDF-0A66C2?style=for-the-badge&logo=adobeacrobatreader&logoColor=white" alt="CV"></a>
     </td>
   </tr>
 </table>
@@ -526,6 +528,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
       <br>
       <a href="https://github.com/KyleMcCalgan"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
       <a href="https://www.linkedin.com/in/kyle-mccalgan"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+      <a href="docs/team/cvs/Kyle_McCalgan_CV.pdf"><img src="https://img.shields.io/badge/CV-View_PDF-0A66C2?style=for-the-badge&logo=adobeacrobatreader&logoColor=white" alt="CV"></a>
     </td>
   </tr>
 </table>
@@ -549,6 +552,7 @@ For a pre-populated walkthrough account, create or choose a dedicated Supabase A
       <br>
       <a href="https://github.com/rachelclifford27"><img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
       <a href="https://www.linkedin.com/in/rachel-clifford-368842401/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"></a>
+      <a href="docs/team/cvs/Rachel_Clifford_CV.pdf"><img src="https://img.shields.io/badge/CV-View_PDF-0A66C2?style=for-the-badge&logo=adobeacrobatreader&logoColor=white" alt="CV"></a>
     </td>
   </tr>
 </table>

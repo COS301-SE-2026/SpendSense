@@ -6,8 +6,10 @@ import {
 import {
   GuidanceWalkthroughStatus,
   QuizSessionType,
+  QuizSessionStatus,
   PaymentContributionState,
 } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import {
@@ -25,6 +27,11 @@ type GuidanceDateRange = {
   date: string;
   start: Date;
   end: Date;
+};
+
+type StoredDismissal = {
+  id: string;
+  date: string;
 };
 
 @Injectable()
@@ -109,6 +116,32 @@ export class GuidanceService {
       start,
       end,
     };
+  }
+
+  private todaysDismissals(
+    stored: Prisma.JsonValue,
+    date: string,
+  ): StoredDismissal[] {
+    if (!Array.isArray(stored)) return [];
+
+    const dismissals: StoredDismissal[] = [];
+
+    for (const entry of stored) {
+      if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+        continue;
+      }
+      const { id, date: dismissedOn } = entry as Record<string, unknown>;
+      if (
+        typeof id === 'string' &&
+        dismissedOn === date &&
+        DISMISSIBLE_GUIDANCE_TIP_ID_SET.has(id) &&
+        !dismissals.some((dismissal) => dismissal.id === id)
+      ) {
+        dismissals.push({ id, date });
+      }
+    }
+
+    return dismissals.slice(0, MAX_DISMISSED_TIP_IDS);
   }
 
   async getDailyFacts(authUser: AuthUser, now = new Date()) {
@@ -212,19 +245,20 @@ export class GuidanceService {
           totalsByCurrency: paymentTotals,
         },
 
-        dailyQuiz: dailyQuiz
-          ? {
-              status: dailyQuiz.status,
-              sessionId: dailyQuiz.id,
-              canStart: false,
-              canResume: dailyQuiz.status === 'IN_PROGRESS',
-            }
-          : {
-              status: 'UNAVAILABLE' as const,
-              sessionId: null,
-              canStart: false,
-              canResume: false,
-            },
+        dailyQuiz:
+          dailyQuiz && dailyQuiz.status !== QuizSessionStatus.ABANDONED
+            ? {
+                status: dailyQuiz.status,
+                sessionId: dailyQuiz.id,
+                canStart: false,
+                canResume: dailyQuiz.status === QuizSessionStatus.IN_PROGRESS,
+              }
+            : {
+                status: 'AVAILABLE' as const,
+                sessionId: null,
+                canStart: true,
+                canResume: false,
+              },
 
         streaks: {
           payment: gamificationProfile?.currentPaymentStreak ?? 0,
@@ -238,8 +272,9 @@ export class GuidanceService {
     }
   }
 
-  async getState(authUser: AuthUser) {
+  async getState(authUser: AuthUser, now = new Date()) {
     const user = await this.usersService.findOrCreateUser(authUser);
+    const { date } = this.getJohannesburgDateRange(now);
 
     const state = await this.prisma.guidanceState.findUnique({
       where: {
@@ -267,15 +302,22 @@ export class GuidanceService {
         status: state.walkthroughStatus,
         currentStep: state.walkthroughStep,
       },
-      dismissedTipIds: state.dismissedTipIds,
+      dismissedTipIds: this.todaysDismissals(state.dismissedTipIds, date).map(
+        (dismissal) => dismissal.id,
+      ),
       updatedAt: state.updatedAt,
     };
   }
 
-  async updateState(authUser: AuthUser, dto: UpdateGuidanceStateDto) {
+  async updateState(
+    authUser: AuthUser,
+    dto: UpdateGuidanceStateDto,
+    now = new Date(),
+  ) {
     this.validateUpdate(dto);
 
     const user = await this.usersService.findOrCreateUser(authUser);
+    const { date } = this.getJohannesburgDateRange(now);
 
     const existingState = await this.prisma.guidanceState.findUnique({
       where: {
@@ -283,36 +325,26 @@ export class GuidanceService {
       },
     });
 
-    const storedDismissedTipIds = existingState?.dismissedTipIds;
-
-    let dismissedTipIds: string[] = Array.isArray(storedDismissedTipIds)
-      ? storedDismissedTipIds.filter(
-          (tipId): tipId is string =>
-            typeof tipId === 'string' &&
-            DISMISSIBLE_GUIDANCE_TIP_ID_SET.has(tipId),
-        )
-      : [];
-
-    dismissedTipIds = [...new Set(dismissedTipIds)].slice(
-      0,
-      MAX_DISMISSED_TIP_IDS,
+    let dismissals = this.todaysDismissals(
+      existingState?.dismissedTipIds ?? [],
+      date,
     );
 
     if (dto.resetDismissedTips === true) {
-      dismissedTipIds = [];
+      dismissals = [];
     }
 
     if (
       dto.dismissTipId !== undefined &&
-      !dismissedTipIds.includes(dto.dismissTipId)
+      !dismissals.some((dismissal) => dismissal.id === dto.dismissTipId)
     ) {
-      if (dismissedTipIds.length >= MAX_DISMISSED_TIP_IDS) {
+      if (dismissals.length >= MAX_DISMISSED_TIP_IDS) {
         this.invalidGuidanceState(
           `A maximum of ${MAX_DISMISSED_TIP_IDS} guidance tips can be dismissed`,
         );
       }
 
-      dismissedTipIds = [...dismissedTipIds, dto.dismissTipId];
+      dismissals = [...dismissals, { id: dto.dismissTipId, date }];
     }
 
     let walkthroughStatus =
@@ -343,7 +375,7 @@ export class GuidanceService {
         dailyExpansionEnabled: dto.dailyExpansionEnabled ?? true,
         walkthroughStatus,
         walkthroughStep,
-        dismissedTipIds,
+        dismissedTipIds: dismissals,
       },
       update: {
         ...(dto.tipsEnabled !== undefined && {
@@ -354,7 +386,7 @@ export class GuidanceService {
         }),
         walkthroughStatus,
         walkthroughStep,
-        dismissedTipIds,
+        dismissedTipIds: dismissals,
       },
     });
 
@@ -365,7 +397,7 @@ export class GuidanceService {
         status: state.walkthroughStatus,
         currentStep: state.walkthroughStep,
       },
-      dismissedTipIds: state.dismissedTipIds,
+      dismissedTipIds: dismissals.map((dismissal) => dismissal.id),
       updatedAt: state.updatedAt,
     };
   }
